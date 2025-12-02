@@ -8,7 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
   },
   "workspaces": [
     "apps/*",
@@ -19,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@changesets/cli": "^2.29.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.3",
