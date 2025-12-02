@@ -1,0 +1,64 @@
+services:
+  # ------------------------------------
+  # 1. SERVER
+  # ------------------------------------
+  server:
+    container_name: domas_server
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      # - DATABASE_URL=postgresql://postgres:pass@domas_db:5432/domas
+    volumes:
+      # mapping for HOT RELOAD
+      - ./apps/server/src:/app/apps/server/src
+      - ./packages:/app/packages
+      # Protect dependencies
+      - /app/node_modules
+    networks:
+      - domas_net
+
+  # ------------------------------------
+  # 2. STUDENT CLIENT
+  # ------------------------------------
+  client-student:
+    container_name: domas_student
+    build:
+      context: .
+      dockerfile: apps/client-student/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./apps/client-student/src:/app/apps/client-student/src
+      - ./packages:/app/packages
+      - /app/node_modules
+    networks:
+      - domas_net
+
+  # ------------------------------------
+  # 3. ADMIN CLIENT
+  # ------------------------------------
+  client-admin:
+    container_name: domas_admin
+    build:
+      context: .
+      dockerfile: apps/client-admin/Dockerfile
+    ports:
+      - "5174:5174"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./apps/client-admin/src:/app/apps/client-admin/src
+      - ./packages:/app/packages
+      - /app/node_modules
+    networks:
+      - domas_net
+
+networks:
+  domas_net:
+    driver: bridge

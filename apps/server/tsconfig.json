@@ -1,0 +1,11 @@
+{
+  "extends": "@domas/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@domas/ts-types": ["../../packages/ts-types/src"]
+    }
+  },
+  "include": ["src", "test"],
+  "exclude": ["node_modules", "dist"]
+}

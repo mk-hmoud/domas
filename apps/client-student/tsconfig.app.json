@@ -1,0 +1,24 @@
+{
+  "extends": "@domas/tsconfig/vite.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+
+    // We strictly define paths here so VS Code finds your shared packages
+    "paths": {
+      "@dorm/ui": ["../../packages/ui/src"],
+      "@dorm/ts-types": ["../../packages/ts-types/src"]
+    },
+
+    // Specific overrides for the App
+    "types": ["vite/client"],
+    "noEmit": true,
+
+    // Vite defaults we want to keep specific to the app instance
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["src"]
+}

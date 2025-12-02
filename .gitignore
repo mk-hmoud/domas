@@ -1,0 +1,35 @@
+# Dependencies
+**/node_modules
+
+# Build output
+dist
+.next
+/apps/tsconfig/dist
+
+# Turborepo
+.turbo
+
+# Local environment variables
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-error.log*
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDEs
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage
