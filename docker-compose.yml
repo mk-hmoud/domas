@@ -11,7 +11,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      # - DATABASE_URL=postgresql://postgres:pass@domas_db:5432/domas
+      - DATABASE_URL=postgresql://postgres:postgres@domas_db:5432/domas
     volumes:
       # mapping for HOT RELOAD
       - ./apps/server/src:/app/apps/server/src
@@ -20,6 +20,8 @@ services:
       - /app/node_modules
     networks:
       - domas_net
+    depends_on:
+      - db
 
   # ------------------------------------
   # 2. STUDENT CLIENT
@@ -59,6 +61,26 @@ services:
     networks:
       - domas_net
 
+  # ------------------------------------
+  # 4. DATABASE
+  # ------------------------------------
+  db:
+    container_name: domas_db
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: domas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - domas_net
+
 networks:
   domas_net:
     driver: bridge
+
+volumes:
+  postgres_data:
