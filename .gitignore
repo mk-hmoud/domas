@@ -9,6 +9,9 @@ dist
 # Turborepo
 .turbo
 
+# Environment variables
+.env
+
 # Local environment variables
 .env.local
 .env.*.local
