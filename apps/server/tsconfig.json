@@ -4,7 +4,8 @@
     "baseUrl": ".",
     "paths": {
       "@domas/ts-types": ["../../packages/ts-types/src"]
-    }
+    },
+    "outDir": "./dist"
   },
   "include": ["src", "test"],
   "exclude": ["node_modules", "dist"]
