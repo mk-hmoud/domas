@@ -58,6 +58,7 @@ async function run() {
       '../../packages/database/02_domain_schema.sql',
       '../../packages/database/03_triggers.sql',
       '../../packages/database/04_apply_triggers.sql',
+      '../../packages/database/05_session_store.sql',
     ];
 
     for (const file of files) {

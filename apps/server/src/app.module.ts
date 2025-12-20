@@ -5,6 +5,8 @@ import { AppService } from './app.service';
 import { LoggerModule } from 'nestjs-pino';
 import { DatabaseModule } from './core/database/database.module';
 import { databaseConfig } from './config';
+import { AuthModule } from './domain/auth/auth.module';
+import { UsersModule } from './domain/users/users.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { databaseConfig } from './config';
       },
     }),
     DatabaseModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

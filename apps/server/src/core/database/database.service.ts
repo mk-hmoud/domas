@@ -62,6 +62,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  public getPool(): Pool {
+    return this.pool;
+  }
+
   async query<T extends QueryResultRow = any>(
     text: string,
     params?: any[],
