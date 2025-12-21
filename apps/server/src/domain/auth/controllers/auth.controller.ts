@@ -7,17 +7,19 @@ import {
   HttpCode,
   HttpStatus,
   Res,
+  Body,
 } from '@nestjs/common';
 import { LocalAuthGuard } from '../guards/local-auth.guard';
 import { AuthenticatedGuard } from '../guards/authenticated.guard';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import { LoginDto } from '../dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Request() req: ExpressRequest) {
+  async login(@Body() loginDto: LoginDto, @Request() req: ExpressRequest) {
     return req.user;
   }
 

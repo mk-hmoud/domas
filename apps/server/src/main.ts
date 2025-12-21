@@ -4,12 +4,21 @@ import { Logger } from 'nestjs-pino';
 import session from 'express-session';
 import * as passport from 'passport';
 import { DatabaseService } from './core/database/database.service';
+import { ValidationPipe } from '@nestjs/common';
 
 const pgSession = require('connect-pg-simple')(session);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true, // strip properties not in the DTO
+      forbidNonWhitelisted: true, // throw error if unknown properties are present
+    }),
+  );
 
   const databaseService = app.get(DatabaseService);
   const pool = databaseService.getPool();
