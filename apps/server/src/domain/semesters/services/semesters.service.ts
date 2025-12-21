@@ -3,12 +3,29 @@ import { SemestersRepository } from '../repositories/semesters.repository';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
 import { UpdateSemesterDto } from '../dto/update-semester.dto';
 import { Semester } from '../entities/semester.entity';
+import { AuditService } from '../../audit/services/audit.service';
 
 @Injectable()
 export class SemestersService {
-  constructor(private readonly semestersRepository: SemestersRepository) {}
+  constructor(
+    private readonly semestersRepository: SemestersRepository,
+    private readonly auditService: AuditService,
+  ) {}
 
   async create(data: CreateSemesterDto): Promise<Semester> {
+    //
+    // **
+    //    Commented out for now, as I'm not sure if it should be partitioned
+    //    automatically on creation or should be more direct and intentional.
+    // **
+    //
+    // Create audit partitions for the new semester
+    // await this.auditService.createSemesterPartition(
+    //   data.name,
+    //   data.startDate,
+    //   data.endDate,
+    // );
+
     if (data.isActive) {
       await this.semestersRepository.deactivateAll();
     }
