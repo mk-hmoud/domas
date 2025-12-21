@@ -7,6 +7,7 @@ import { DatabaseModule } from './core/database/database.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
 import { UsersModule } from './domain/users/users.module';
+import { SemestersModule } from './domain/semesters/semesters.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UsersModule } from './domain/users/users.module';
     DatabaseModule,
     UsersModule,
     AuthModule,
+    SemestersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
