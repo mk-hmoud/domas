@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 import { Semester } from '../entities/semester.entity';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
@@ -8,7 +9,11 @@ import { UpdateSemesterDto } from '../dto/update-semester.dto';
 export class SemestersRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async create(data: CreateSemesterDto): Promise<Semester> {
+  private getClient(client?: PoolClient): Pool | PoolClient {
+    return client || this.db.getPool();
+  }
+
+  async create(data: CreateSemesterDto, client?: PoolClient): Promise<Semester> {
     const query = `
       INSERT INTO semesters (name, start_date, end_date, is_active)
       VALUES ($1, $2, $3, $4)
@@ -21,12 +26,16 @@ export class SemestersRepository {
         created_at as "createdAt", 
         updated_at as "updatedAt"
     `;
-    const values = [data.name, data.startDate, data.endDate, data.isActive || false];
-    const result = await this.db.query<Semester>(query, values);
+    const result = await this.getClient(client).query<Semester>(query, [
+      data.name,
+      data.startDate,
+      data.endDate,
+      data.isActive || false,
+    ]);
     return new Semester(result.rows[0]);
   }
 
-  async findAll(): Promise<Semester[]> {
+  async findAll(client?: PoolClient): Promise<Semester[]> {
     const query = `
       SELECT 
         id, 
@@ -39,11 +48,11 @@ export class SemestersRepository {
       FROM semesters
       ORDER BY start_date DESC
     `;
-    const result = await this.db.query<Semester>(query);
+    const result = await this.getClient(client).query<Semester>(query);
     return result.rows.map((row) => new Semester(row));
   }
 
-  async findById(id: number): Promise<Semester | null> {
+  async findById(id: number, client?: PoolClient): Promise<Semester | null> {
     const query = `
       SELECT 
         id, 
@@ -56,11 +65,11 @@ export class SemestersRepository {
       FROM semesters
       WHERE id = $1
     `;
-    const result = await this.db.query<Semester>(query, [id]);
+    const result = await this.getClient(client).query<Semester>(query, [id]);
     return result.rows[0] ? new Semester(result.rows[0]) : null;
   }
 
-  async update(id: number, data: UpdateSemesterDto): Promise<Semester | null> {
+  async update(id: number, data: UpdateSemesterDto, client?: PoolClient): Promise<Semester | null> {
     const updates: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -83,7 +92,7 @@ export class SemestersRepository {
     }
 
     if (updates.length === 0) {
-      return this.findById(id);
+      return this.findById(id, client);
     }
 
     values.push(id);
@@ -101,18 +110,18 @@ export class SemestersRepository {
         updated_at as "updatedAt"
     `;
 
-    const result = await this.db.query<Semester>(query, values);
+    const result = await this.getClient(client).query<Semester>(query, values);
     return result.rows[0] ? new Semester(result.rows[0]) : null;
   }
 
-  async delete(id: number): Promise<boolean> {
+  async delete(id: number, client?: PoolClient): Promise<boolean> {
     const query = `DELETE FROM semesters WHERE id = $1`;
-    const result = await this.db.query(query, [id]);
+    const result = await this.getClient(client).query(query, [id]);
     return (result.rowCount || 0) > 0;
   }
 
-  async deactivateAll(): Promise<void> {
+  async deactivateAll(client?: PoolClient): Promise<void> {
     const query = `UPDATE semesters SET is_active = FALSE WHERE is_active = TRUE`;
-    await this.db.query(query);
+    await this.getClient(client).query(query);
   }
 }

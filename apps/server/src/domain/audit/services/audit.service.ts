@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PoolClient } from 'pg';
 import { AuditInfrastructureRepository } from '../repositories/audit-infrastructure.repository';
 import { AuditLogsRepository } from '../repositories/audit-logs.repository';
 
@@ -9,8 +10,18 @@ export class AuditService {
     private readonly auditLogsRepository: AuditLogsRepository,
   ) {}
 
-  async createSemesterPartition(name: string, startDate: string, endDate: string): Promise<void> {
-    return this.auditInfrastructureRepository.createSemesterPartition(name, startDate, endDate);
+  async createSemesterPartition(
+    name: string,
+    startDate: string,
+    endDate: string,
+    client?: PoolClient,
+  ): Promise<void> {
+    return this.auditInfrastructureRepository.createSemesterPartition(
+      name,
+      startDate,
+      endDate,
+      client,
+    );
   }
 
   async getRecentChanges(limit?: number) {

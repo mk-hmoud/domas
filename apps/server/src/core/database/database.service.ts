@@ -2,14 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit, Logger, Inject } from '@nest
 import type { ConfigType } from '@nestjs/config';
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 import { databaseConfig } from '../../config';
-
-// user context interface, used for audit triggers.
-export interface AuditUserContext {
-  userId: string; // UUID
-  username: string;
-  ipAddress: string;
-  userAgent?: string;
-}
+import { AuditUserContext } from '../../common/interfaces/audit-user-context.interface';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {

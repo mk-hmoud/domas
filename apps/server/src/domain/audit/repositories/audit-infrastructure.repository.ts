@@ -1,12 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 
 @Injectable()
 export class AuditInfrastructureRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async createSemesterPartition(name: string, startDate: string, endDate: string): Promise<void> {
+  private getClient(client?: PoolClient): Pool | PoolClient {
+    return client || this.db.getPool();
+  }
+
+  async createSemesterPartition(
+    name: string,
+    startDate: string,
+    endDate: string,
+    client?: PoolClient,
+  ): Promise<void> {
     const query = `SELECT audit.create_semester_partition($1, $2, $3)`;
-    await this.db.query(query, [name, startDate, endDate]);
+    await this.getClient(client).query(query, [name, startDate, endDate]);
   }
 }

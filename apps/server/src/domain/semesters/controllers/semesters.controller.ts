@@ -15,6 +15,8 @@ import { SemestersService } from '../services/semesters.service';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
 import { UpdateSemesterDto } from '../dto/update-semester.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
+import { UserContext } from '../../../core/decorators/user-context.decorator';
+import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 
 @Controller('semesters')
 @UseGuards(AuthenticatedGuard)
@@ -22,8 +24,8 @@ export class SemestersController {
   constructor(private readonly semestersService: SemestersService) {}
 
   @Post()
-  create(@Body() createSemesterDto: CreateSemesterDto) {
-    return this.semestersService.create(createSemesterDto);
+  create(@Body() createSemesterDto: CreateSemesterDto, @UserContext() context: AuditUserContext) {
+    return this.semestersService.create(createSemesterDto, context);
   }
 
   @Get()
@@ -37,18 +39,22 @@ export class SemestersController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateSemesterDto: UpdateSemesterDto) {
-    return this.semestersService.update(id, updateSemesterDto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSemesterDto: UpdateSemesterDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.semestersService.update(id, updateSemesterDto, context);
   }
 
   @Patch(':id/toggle-active')
-  toggleActive(@Param('id', ParseIntPipe) id: number) {
-    return this.semestersService.toggleActive(id);
+  toggleActive(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.semestersService.toggleActive(id, context);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.semestersService.delete(id);
+  remove(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.semestersService.delete(id, context);
   }
 }
