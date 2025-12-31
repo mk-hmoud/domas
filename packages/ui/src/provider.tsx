@@ -1,5 +1,6 @@
 import { MantineProvider } from "@mantine/core";
 import { theme } from "./theme";
+import "./i18n"; // Initialize i18n
 import "@mantine/core/styles.css";
 
 interface DomMantineProviderProps {
@@ -7,5 +8,9 @@ interface DomMantineProviderProps {
 }
 
 export function DomMantineProvider({ children }: DomMantineProviderProps) {
-  return <MantineProvider theme={theme}>{children}</MantineProvider>;
+  return (
+    <MantineProvider theme={theme} defaultColorScheme="auto">
+      {children}
+    </MantineProvider>
+  );
 }

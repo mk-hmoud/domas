@@ -1,0 +1,13 @@
+{
+  "welcome_back": "Tekrar hoş geldiniz!",
+  "no_account": "Henüz bir hesabınız yok mu?",
+  "create_account": "Hesap oluştur",
+  "email": "E-posta",
+  "password": "Şifre",
+  "your_password": "Şifreniz",
+  "remember_me": "Beni hatırla",
+  "forgot_password": "Şifremi unuttum?",
+  "sign_in": "Giriş yap",
+  "toggle_theme": "Temayı değiştir",
+  "switch_language": "Dili değiştir"
+}

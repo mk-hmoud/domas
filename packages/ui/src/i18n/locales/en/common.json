@@ -1,0 +1,13 @@
+{
+  "welcome_back": "Welcome back!",
+  "no_account": "Do not have an account yet?",
+  "create_account": "Create account",
+  "email": "Email",
+  "password": "Password",
+  "your_password": "Your password",
+  "remember_me": "Remember me",
+  "forgot_password": "Forgot password?",
+  "sign_in": "Sign in",
+  "toggle_theme": "Toggle theme",
+  "switch_language": "Switch language"
+}

@@ -4,7 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client-admin</title>
+    <title>DOMAS-Dorm</title>
+    <script>
+      try {
+        var colorScheme = localStorage.getItem('mantine-color-scheme');
+        var systemColorScheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        
+        if (colorScheme === 'dark' || (!colorScheme && systemColorScheme === 'dark')) {
+          document.documentElement.setAttribute('data-mantine-color-scheme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-mantine-color-scheme', 'light');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
