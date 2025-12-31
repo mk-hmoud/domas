@@ -6,8 +6,8 @@
 
     // We strictly define paths here so VS Code finds your shared packages
     "paths": {
-      "@dorm/ui": ["../../packages/ui/src"],
-      "@dorm/ts-types": ["../../packages/ts-types/src"]
+      "@domas/ui": ["../../packages/ui/src"],
+      "@domas/ts-types": ["../../packages/ts-types/src"]
     },
 
     // Specific overrides for the App

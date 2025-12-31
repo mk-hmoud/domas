@@ -1,6 +1,24 @@
 services:
+
   # ------------------------------------
-  # 1. SERVER
+  # 1. DATABASE
+  # ------------------------------------
+  db:
+    container_name: domas_db
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: domas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - domas_net
+
+  # ------------------------------------
+  # 2. SERVER
   # ------------------------------------
   server:
     container_name: domas_server
@@ -24,7 +42,7 @@ services:
       - db
 
   # ------------------------------------
-  # 2. STUDENT CLIENT
+  # 3. STUDENT CLIENT
   # ------------------------------------
   client-student:
     container_name: domas_student
@@ -43,7 +61,7 @@ services:
       - domas_net
 
   # ------------------------------------
-  # 3. ADMIN CLIENT
+  # 4. ADMIN CLIENT
   # ------------------------------------
   client-admin:
     container_name: domas_admin
@@ -62,19 +80,21 @@ services:
       - domas_net
 
   # ------------------------------------
-  # 4. DATABASE
+  # 5. DORM CLIENT
   # ------------------------------------
-  db:
-    container_name: domas_db
-    image: postgres:16-alpine
+  client-admin:
+    container_name: domas_dorm
+    build:
+      context: .
+      dockerfile: apps/client-dorm/Dockerfile
     ports:
-      - "5432:5432"
+      - "5175:5175"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: domas
+      - VITE_API_URL=http://localhost:3000
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./apps/client-dorm/src:/app/apps/client-dorm/src
+      - ./packages:/app/packages
+      - /app/node_modules
     networks:
       - domas_net
 
