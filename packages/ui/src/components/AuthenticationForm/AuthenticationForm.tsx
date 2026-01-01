@@ -9,7 +9,7 @@ import {
 } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 
-export function AuthenticationForm() {
+export function AuthenticationForm({ onSubmit }: { onSubmit?: () => void }) {
   const { t } = useTranslation();
 
   return (
@@ -27,7 +27,7 @@ export function AuthenticationForm() {
           {t("forgot_password")}
         </Anchor>
       </Group>
-      <Button fullWidth mt="xl">
+      <Button fullWidth mt="xl" onClick={onSubmit}>
         {t("sign_in")}
       </Button>
     </Paper>
