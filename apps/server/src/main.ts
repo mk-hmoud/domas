@@ -2,14 +2,22 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import session from 'express-session';
-import * as passport from 'passport';
+import passport from 'passport';
 import { DatabaseService } from './core/database/database.service';
 import { ValidationPipe } from '@nestjs/common';
 
 const pgSession = require('connect-pg-simple')(session);
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    cors: {
+      origin: true,
+      credentials: true,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
+    },
+  });
   app.useLogger(app.get(Logger));
 
   app.useGlobalPipes(

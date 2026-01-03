@@ -53,12 +53,12 @@ async function run() {
     await client.connect();
 
     const files = [
-      '../../packages/database/00_roles.sql',
-      '../../packages/database/01_infrastructure.sql',
-      '../../packages/database/02_domain_schema.sql',
-      '../../packages/database/03_triggers.sql',
-      '../../packages/database/04_apply_triggers.sql',
-      '../../packages/database/05_session_store.sql',
+      '../../../packages/database/00_roles.sql',
+      '../../../packages/database/01_infrastructure.sql',
+      '../../../packages/database/02_domain_schema.sql',
+      '../../../packages/database/03_triggers.sql',
+      '../../../packages/database/04_apply_triggers.sql',
+      '../../../packages/database/05_session_store.sql',
     ];
 
     for (const file of files) {

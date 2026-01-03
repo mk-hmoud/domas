@@ -116,6 +116,7 @@ CREATE TABLE audit.sensitive_operations (
     event_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
     user_id UUID NOT NULL,
+    username VARCHAR(100),
     operation_type VARCHAR(100) NOT NULL, -- 'BULK_DELETE', 'DATA_EXPORT', 'PERMISSION_CHANGE', 'PAYMENT_MODIFY'
     
     affected_count INT, -- How many records affected
