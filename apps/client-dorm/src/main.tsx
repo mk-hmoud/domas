@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import { DomMantineProvider } from '@domas/ui';
+import { AuthProvider } from '@domas/client-core';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <DomMantineProvider>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </DomMantineProvider>
   </StrictMode>,
 );

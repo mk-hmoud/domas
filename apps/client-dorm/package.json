@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@domas/client-core": "^0.0.0",
     "@domas/ts-types": "*",
     "@domas/ui": "*",
     "@tabler/icons-react": "^3.36.0",
