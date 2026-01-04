@@ -9,5 +9,9 @@
   "forgot_password": "Şifremi unuttum?",
   "sign_in": "Giriş yap",
   "toggle_theme": "Temayı değiştir",
-  "switch_language": "Dili değiştir"
+  "switch_language": "Dili değiştir",
+  "login_failed": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
+  "invalid_email": "Geçersiz e-posta",
+  "password_too_short": "Şifre en az 6 karakter içermelidir",
+  "field_required": "Bu alan zorunludur"
 }

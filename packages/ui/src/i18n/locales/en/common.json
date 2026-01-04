@@ -9,5 +9,9 @@
   "forgot_password": "Forgot password?",
   "sign_in": "Sign in",
   "toggle_theme": "Toggle theme",
-  "switch_language": "Switch language"
+  "switch_language": "Switch language",
+  "login_failed": "Login failed. Please check your credentials.",
+  "invalid_email": "Invalid email",
+  "password_too_short": "Password should include at least 6 characters",
+  "field_required": "This field is required"
 }
