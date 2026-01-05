@@ -15,6 +15,7 @@ interface LinksGroupProps {
   icon: React.FC<any>;
   label: string;
   initiallyOpened?: boolean;
+  link?: string;
   links?: { label: string; link: string }[];
   onLinkClick?: (link: string) => void;
 }
@@ -23,6 +24,7 @@ export function LinksGroup({
   icon: Icon,
   label,
   initiallyOpened,
+  link,
   links,
   onLinkClick,
 }: LinksGroupProps) {
@@ -46,7 +48,13 @@ export function LinksGroup({
   return (
     <>
       <UnstyledButton
-        onClick={() => setOpened((o) => !o)}
+        onClick={() => {
+          if (hasLinks) {
+            setOpened((o) => !o);
+          } else if (link) {
+            onLinkClick?.(link);
+          }
+        }}
         className={classes.control}
       >
         <Group justify="space-between" gap={0}>

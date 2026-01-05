@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
+import { DashboardLayout } from './layouts/DashboardLayout';
+import { DashboardHome } from './pages/DashboardHome';
+import { UsersListPage } from './pages/UsersListPage';
 import { ProtectedRoute } from '@domas/client-core';
 
 function App() {
@@ -12,10 +14,13 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <DashboardLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="users" element={<UsersListPage />} />
+        </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

@@ -8,6 +8,7 @@ interface NavbarNestedProps {
     label: string;
     icon: React.FC<any>;
     initiallyOpened?: boolean;
+    link?: string;
     links?: { label: string; link: string }[];
   }[];
   header?: ReactNode;
