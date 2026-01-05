@@ -11,10 +11,13 @@ interface NavbarNestedProps {
     links?: { label: string; link: string }[];
   }[];
   header?: ReactNode;
+  onLinkClick?: (link: string) => void;
 }
 
-export function NavbarNested({ data, header }: NavbarNestedProps) {
-  const links = data.map((item) => <LinksGroup {...item} key={item.label} />);
+export function NavbarNested({ data, header, onLinkClick }: NavbarNestedProps) {
+  const links = data.map((item) => (
+    <LinksGroup {...item} key={item.label} onLinkClick={onLinkClick} />
+  ));
 
   return (
     <nav className={classes.navbar}>
