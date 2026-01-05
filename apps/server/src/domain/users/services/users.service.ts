@@ -6,6 +6,8 @@ import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UserRole } from '../../../common/enums/user-role.enum';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 
 @Injectable()
 export class UsersService {
@@ -35,6 +37,13 @@ export class UsersService {
         client,
       );
     }, context);
+  }
+
+  async findAll(
+    pagination: PaginationDto,
+    role?: UserRole | UserRole[],
+  ): Promise<PaginatedResult<User>> {
+    return this.usersRepository.findAll(pagination, role);
   }
 
   async findByEmail(email: string): Promise<User | null> {
