@@ -1,7 +1,20 @@
 import { useState } from "react";
-import { TextInput, PasswordInput, Button, Modal, Select } from "@mantine/core";
+import {
+  TextInput,
+  PasswordInput,
+  Button,
+  Modal,
+  Select,
+  ActionIcon,
+  Tooltip,
+  rem,
+  Group,
+} from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
+import { useTranslation } from "react-i18next";
 import { UserRole, CreateUser } from "@domas/ts-types";
+import { IconRefresh, IconEye, IconEyeOff } from "@tabler/icons-react";
 
 interface CreateUserModalProps {
   opened: boolean;
@@ -16,7 +29,9 @@ export function CreateUserModal({
   onSubmit,
   roles,
 }: CreateUserModalProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [visible, { toggle }] = useDisclosure(false);
 
   const availableRoles = roles || [
     UserRole.ADMIN,
@@ -33,10 +48,23 @@ export function CreateUserModal({
       role: availableRoles[0],
     },
     validate: {
-      email: (val) => (/^\S+@\S+$/.test(val) ? null : "Invalid email"),
-      password: (val) => (val.length <= 6 ? "Password too short" : null),
+      email: (val) => (/^\S+@\S+$/.test(val) ? null : t("invalid_email")),
+      password: (val) => (val.length < 6 ? t("password_too_short") : null),
     },
   });
+
+  const generatePassword = () => {
+    const chars =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+    const length = 12;
+    let password = "";
+    const array = new Uint32Array(length);
+    window.crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+      password += chars[array[i] % chars.length];
+    }
+    form.setFieldValue("password", password);
+  };
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
@@ -56,35 +84,64 @@ export function CreateUserModal({
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Create New User">
+    <Modal opened={opened} onClose={onClose} title={t("create_new_user")}>
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <TextInput
-          label="Email"
+          label={t("email")}
           placeholder="user@example.com"
           required
           {...form.getInputProps("email")}
         />
         <PasswordInput
-          label="Password"
-          placeholder="Secure password"
+          label={t("password")}
+          placeholder={t("your_password")}
           required
           mt="md"
+          visible={visible}
+          onVisibilityChange={toggle}
+          rightSectionWidth={70}
+          rightSection={
+            <Group gap={0}>
+              <Tooltip
+                label={visible ? t("hide_password") : t("show_password")}
+              >
+                <ActionIcon variant="subtle" color="gray" onClick={toggle}>
+                  {visible ? (
+                    <IconEyeOff style={{ width: rem(16), height: rem(16) }} />
+                  ) : (
+                    <IconEye style={{ width: rem(16), height: rem(16) }} />
+                  )}
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label={t("generate_password")}>
+                <ActionIcon
+                  variant="light"
+                  color="blue"
+                  onClick={generatePassword}
+                >
+                  <IconRefresh style={{ width: rem(16), height: rem(16) }} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          }
           {...form.getInputProps("password")}
         />
         <Select
-          label="Role"
-          placeholder="Pick one"
+          label={t("role")}
+          placeholder={t("pick_one")}
           mt="md"
           disabled={availableRoles.length <= 1}
           data={availableRoles.map((role) => ({
             value: role,
-            label:
-              role.charAt(0).toUpperCase() + role.slice(1).replace("_", " "),
+            label: t(`roles.${role}`, {
+              defaultValue:
+                role.charAt(0).toUpperCase() + role.slice(1).replace("_", " "),
+            }),
           }))}
           {...form.getInputProps("role")}
         />
         <Button fullWidth mt="xl" type="submit" loading={loading}>
-          Create User
+          {t("create_user")}
         </Button>
       </form>
     </Modal>

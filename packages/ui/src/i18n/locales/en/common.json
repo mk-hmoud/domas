@@ -13,5 +13,19 @@
   "login_failed": "Login failed. Please check your credentials.",
   "invalid_email": "Invalid email",
   "password_too_short": "Password should include at least 6 characters",
-  "field_required": "This field is required"
+  "field_required": "This field is required",
+  "create_new_user": "Create New User",
+  "create_user": "Create User",
+  "pick_one": "Pick one",
+  "role": "Role",
+  "hide_password": "Hide password",
+  "show_password": "Show password",
+  "generate_password": "Generate secure password",
+  "roles": {
+    "admin": "Admin",
+    "dorm_manager": "Dorm Manager",
+    "dorm_staff": "Dorm Staff",
+    "accounting_staff": "Accounting Staff",
+    "student": "Student"
+  }
 }

@@ -13,5 +13,19 @@
   "login_failed": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
   "invalid_email": "Geçersiz e-posta",
   "password_too_short": "Şifre en az 6 karakter içermelidir",
-  "field_required": "Bu alan zorunludur"
+  "field_required": "Bu alan zorunludur",
+  "create_new_user": "Yeni Kullanıcı Oluştur",
+  "create_user": "Kullanıcı Oluştur",
+  "pick_one": "Birini seçin",
+  "role": "Rol",
+  "hide_password": "Şifreyi gizle",
+  "show_password": "Şifreyi göster",
+  "generate_password": "Güvenli şifre oluştur",
+  "roles": {
+    "admin": "Yönetici",
+    "dorm_manager": "Yurt Müdürü",
+    "dorm_staff": "Yurt Personeli",
+    "accounting_staff": "Muhasebe Personeli",
+    "student": "Öğrenci"
+  }
 }
