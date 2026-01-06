@@ -66,8 +66,8 @@ export function HeaderBar({
 
       <Group>
         <Group gap="xs">
-          <ThemeToggle />
           <LanguageSwitcher />
+          <ThemeToggle />
         </Group>
 
         {user && (
