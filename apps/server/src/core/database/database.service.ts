@@ -86,9 +86,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           throw new Error(`Invalid UUID format for AuditUserContext.userId: ${userContext.userId}`);
         }
 
-        // Basic IP validation (IPv4 or IPv6)
-        // Loose, not strict rfc compliance.
-        const ipRegex = /^(?:\d{1,3}\.){3}\d{1,3}$|^(?:[a-f0-9:]+:+)+[a-f0-9]+$/i;
+        // Basic IP validation (IPv4, IPv6, or IPv4-mapped IPv6)
+        const ipRegex = /^[0-9a-fA-F:.]*$/;
         if (!ipRegex.test(userContext.ipAddress)) {
           throw new Error(
             `Invalid IP format for AuditUserContext.ipAddress: ${userContext.ipAddress}`,

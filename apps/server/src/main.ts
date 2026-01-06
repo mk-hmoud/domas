@@ -1,10 +1,11 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import session from 'express-session';
 import passport from 'passport';
 import { DatabaseService } from './core/database/database.service';
 import { ValidationPipe } from '@nestjs/common';
+import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 
 const pgSession = require('connect-pg-simple')(session);
 
@@ -19,6 +20,9 @@ async function bootstrap() {
     },
   });
   app.useLogger(app.get(Logger));
+
+  const httpAdapter = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
   app.useGlobalPipes(
     new ValidationPipe({

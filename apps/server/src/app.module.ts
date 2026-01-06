@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LoggerModule } from 'nestjs-pino';
+import { AppLoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './core/database/database.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
@@ -16,16 +16,7 @@ import { LocationsModule } from './domain/locations/locations.module';
       isGlobal: true,
       load: [databaseConfig],
     }),
-    LoggerModule.forRoot({
-      pinoHttp: {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            singleLine: true,
-          },
-        },
-      },
-    }),
+    AppLoggerModule,
     DatabaseModule,
     UsersModule,
     AuthModule,

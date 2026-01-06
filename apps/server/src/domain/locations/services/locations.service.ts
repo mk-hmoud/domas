@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
@@ -11,6 +11,8 @@ import type { AuditUserContext } from '../../../common/interfaces/audit-user-con
 
 @Injectable()
 export class LocationsService {
+  private readonly logger = new Logger(LocationsService.name);
+
   constructor(
     private readonly locationsRepository: LocationsRepository,
     private readonly db: DatabaseService,
@@ -22,7 +24,8 @@ export class LocationsService {
   }
 
   async create(data: CreateLocationDto, context: AuditUserContext): Promise<Location> {
-    return this.db.transaction(async (client) => {
+    this.logger.log({ data }, 'Creating new location');
+    const location = await this.db.transaction(async (client) => {
       let treePath = this.sanitizeForPath(data.name);
 
       if (data.parentId) {
@@ -42,6 +45,8 @@ export class LocationsService {
         client,
       );
     }, context);
+    this.logger.log({ locationId: location.id }, 'Location created successfully');
+    return location;
   }
 
   async findAll(pagination: PaginationDto): Promise<PaginatedResult<Location>> {
@@ -77,7 +82,8 @@ export class LocationsService {
   }
 
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
-    return this.db.transaction(async (client) => {
+    this.logger.log({ locationId: id, data }, 'Updating location');
+    const location = await this.db.transaction(async (client) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) {
         throw new NotFoundException(`Location with ID ${id} not found`);
@@ -85,15 +91,19 @@ export class LocationsService {
 
       return this.locationsRepository.update(id, data, client);
     }, context);
+    this.logger.log({ locationId: id }, 'Location updated successfully');
+    return location;
   }
 
   async delete(id: number, context: AuditUserContext): Promise<void> {
-    return this.db.transaction(async (client) => {
+    this.logger.log({ locationId: id }, 'Deleting location');
+    await this.db.transaction(async (client) => {
       const exists = await this.locationsRepository.exists(id, client);
       if (!exists) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
       await this.locationsRepository.delete(id, client);
     }, context);
+    this.logger.log({ locationId: id }, 'Location deleted successfully');
   }
 }
