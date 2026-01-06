@@ -124,4 +124,59 @@ export class UsersRepository {
     const result = await this.getClient(client).query<User>(query, [id]);
     return result.rows[0] ? new User(result.rows[0]) : null;
   }
+
+  async delete(id: string, client?: PoolClient): Promise<boolean> {
+    const query = `DELETE FROM users WHERE id = $1`;
+    const result = await this.getClient(client).query(query, [id]);
+    return (result.rowCount || 0) > 0;
+  }
+
+  async update(
+    id: string,
+    data: { email?: string; role?: UserRole; isActive?: boolean; passwordHash?: string },
+    client?: PoolClient,
+  ): Promise<User | null> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (data.email !== undefined) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(data.email);
+    }
+    if (data.role !== undefined) {
+      updates.push(`role = $${paramIndex++}`);
+      values.push(data.role);
+    }
+    if (data.isActive !== undefined) {
+      updates.push(`is_active = $${paramIndex++}`);
+      values.push(data.isActive);
+    }
+    if (data.passwordHash !== undefined) {
+      updates.push(`password_hash = $${paramIndex++}`);
+      values.push(data.passwordHash);
+    }
+
+    if (updates.length === 0) {
+      return this.findById(id, client);
+    }
+
+    values.push(id);
+    const query = `
+      UPDATE users
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING 
+        id, 
+        email, 
+        password_hash as "passwordHash", 
+        role, 
+        is_active as "isActive", 
+        created_at as "createdAt", 
+        updated_at as "updatedAt"
+    `;
+
+    const result = await this.getClient(client).query<User>(query, values);
+    return result.rows[0] ? new User(result.rows[0]) : null;
+  }
 }

@@ -4,6 +4,7 @@ import {
   User,
   FindAllUsersDto,
   PaginatedResult,
+  UpdateUserDto,
 } from "@domas/ts-types";
 
 export const users = {
@@ -17,5 +18,19 @@ export const users = {
       params,
     });
     return response.data;
+  },
+
+  findById: async (id: string): Promise<User> => {
+    const response = await apiClient.get<User>(`/users/${id}`);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdateUserDto): Promise<User> => {
+    const response = await apiClient.patch<User>(`/users/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/users/${id}`);
   },
 };
