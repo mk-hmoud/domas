@@ -11,4 +11,6 @@ export * from "./components/LanguageSwitcher";
 export * from "./components/AuthenticationForm";
 export * from "./components/CreateUserModal";
 export * from "./components/UsersTable";
+export * from "./components/HeaderBar";
+
 export * from "./layouts/DashboardLayout";

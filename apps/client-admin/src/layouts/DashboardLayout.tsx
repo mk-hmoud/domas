@@ -8,6 +8,7 @@ import {
   IconLayoutDashboard,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '@domas/client-core';
 
 const navData = [
   { label: 'Dashboard', icon: IconLayoutDashboard, link: '/dashboard' },
@@ -44,20 +45,23 @@ const navData = [
 
 export function DashboardLayout() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   return (
     <SharedDashboardLayout
       navData={navData}
       onNavigate={(link) => navigate(link)}
-      header={
-        <Group justify="space-between">
-          <Group gap={8}>
-            <IconBuildingSkyscraper size={28} />
-            <Text fw={700} size="lg">
-              ADMIN
-            </Text>
-          </Group>
-          <Code fw={700}>v1.0.0</Code>
+      user={user || undefined}
+      onLogout={logout}
+      headerLogo={
+        <Group gap={8}>
+          <IconBuildingSkyscraper size={28} />
+          <Text fw={700} size="lg">
+            ADMIN
+          </Text>
+          <Code fw={700} ml="xs">
+            v1.0.0
+          </Code>
         </Group>
       }
     >
