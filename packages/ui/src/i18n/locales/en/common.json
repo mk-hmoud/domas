@@ -27,5 +27,11 @@
     "dorm_staff": "Dorm Staff",
     "accounting_staff": "Accounting Staff",
     "student": "Student"
-  }
+  },
+  "delete_user_title": "Delete User",
+  "delete_user_message": "Are you sure you want to delete {{email}}? This action cannot be undone.",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "delete_success": "User deleted successfully",
+  "delete_error": "Failed to delete user"
 }
