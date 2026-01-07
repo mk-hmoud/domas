@@ -16,7 +16,7 @@ CREATE TYPE occupancy_status AS ENUM (
     'active',
     'checked_out'
 );
-CREATE TYPE location_type AS ENUM ('campus', 'building', 'block', 'floor', 'room');
+CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room');
 
 -- =============================================
 -- 2. PHYSICAL HIERARCHY (The Assets)

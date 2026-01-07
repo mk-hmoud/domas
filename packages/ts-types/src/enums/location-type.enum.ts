@@ -1,4 +1,5 @@
 export enum LocationType {
+  UNIVERSITY = "university",
   CAMPUS = "campus",
   BUILDING = "building",
   BLOCK = "block",
