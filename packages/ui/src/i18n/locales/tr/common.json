@@ -19,5 +19,7 @@
   "confirm": "Onayla",
   "cancel": "İptal",
   "delete_success": "Kullanıcı başarıyla silindi",
-  "delete_error": "Kullanıcı silinemedi"
+  "delete_error": "Kullanıcı silinemedi",
+  "delete_location_title": "Lokasyonu Sil",
+  "delete_location_message": "{{name}} lokasyonunu silmek istediğinize emin misiniz? Alt lokasyonlar da silinecektir."
 }

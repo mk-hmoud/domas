@@ -11,7 +11,11 @@ export * from "./components/LanguageSwitcher";
 export * from "./components/AuthenticationForm";
 export * from "./components/CreateUserModal";
 export * from "./components/DeleteUserModal";
+export * from "./components/ConfirmDeleteModal";
 export * from "./components/UsersTable";
-export * from "./components/HeaderBar";
+export * from "./components/Locations/LocationTree";
+export * from "./components/Locations/LocationDetail";
+export * from "./components/Locations/LocationsManager";
+export * from "./components/Locations/CreateLocationModal";
 
 export * from "./layouts/DashboardLayout";

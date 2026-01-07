@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { DashboardHome } from './pages/DashboardHome';
 import { UsersListPage } from './pages/UsersListPage';
+import { LocationsPage } from './pages/LocationsPage';
 import { ProtectedRoute } from '@domas/client-core';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="users" element={<UsersListPage />} />
+          <Route path="locations" element={<LocationsPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
