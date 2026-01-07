@@ -32,6 +32,7 @@ import {
   LocationNode,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
+import { useTranslation } from "react-i18next";
 
 function LocationIcon({ type }: { type: LocationType }) {
   switch (type) {
@@ -68,6 +69,7 @@ function findPath(
 }
 
 function LocationsContent() {
+  const { t } = useTranslation();
   const {
     treeData,
     selectedNode,
@@ -163,20 +165,20 @@ function LocationsContent() {
             breadcrumbs={breadcrumbs}
             actions={
               <>
-                <Button variant="default">Edit</Button>
+                <Button variant="default">{t("edit")}</Button>
                 <Button
                   variant="default"
                   color="red"
                   leftSection={<IconTrash size={16} />}
                   onClick={handleDeleteSelected}
                 >
-                  Delete
+                  {t("delete")}
                 </Button>
                 <Button
                   leftSection={<IconPlus size={16} />}
                   onClick={handleOpenCreateChild}
                 >
-                  Add Child
+                  {t("add_child")}
                 </Button>
               </>
             }
@@ -184,7 +186,7 @@ function LocationsContent() {
             {selectedNode.type === LocationType.FLOOR ? (
               <>
                 <Text c="dimmed" mb="md">
-                  Rooms on this floor
+                  {t("rooms_on_floor")}
                 </Text>
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                   {children.map((room) => (
@@ -202,7 +204,7 @@ function LocationsContent() {
                         </Badge>
                       </Group>
                       <Text size="xs" c="dimmed" mb={4}>
-                        Occupancy: 0 / {room.capacity}
+                        {t("occupancy_label")}: 0 / {room.capacity}
                       </Text>
                       <Progress value={0} color="blue" size="md" radius="xl" />
                     </Card>
@@ -224,14 +226,14 @@ function LocationsContent() {
                         <LocationIcon type={child.type} />
                         <Text>{child.name}</Text>
                         <Badge ml="auto" variant="dot">
-                          Active
+                          {t("active")}
                         </Badge>
                       </Group>
                     </Paper>
                   ))
                 ) : (
                   <Text c="dimmed" ta="center" py="xl">
-                    No sub-locations found. Add one to get started.
+                    {t("no_sub_locations")}
                   </Text>
                 )}
               </SimpleGrid>
@@ -239,7 +241,7 @@ function LocationsContent() {
           </LocationDetail>
         ) : (
           <Center h="100%">
-            <Text c="dimmed">Select a location to view details</Text>
+            <Text c="dimmed">{t("select_location_prompt")}</Text>
           </Center>
         )}
       </LocationsManager>
@@ -256,8 +258,8 @@ function LocationsContent() {
         opened={deleteModalOpened}
         onClose={() => setDeleteModalOpened(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete Location"
-        message={`Are you sure you want to delete "${nodeToDelete?.name}"? All its children will also be deleted.`}
+        title={t("delete_location_title")}
+        message={t("delete_location_message", { name: nodeToDelete?.name })}
       />
     </>
   );

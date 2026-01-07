@@ -10,6 +10,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { CreateLocationDto, LocationType, GenderType } from "@domas/ts-types";
+import { useTranslation } from "react-i18next";
 
 interface CreateLocationModalProps {
   opened: boolean;
@@ -26,6 +27,7 @@ export function CreateLocationModal({
   parentId,
   parentType,
 }: CreateLocationModalProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<CreateLocationDto>({
@@ -38,8 +40,8 @@ export function CreateLocationModal({
       isGuestZone: false,
     },
     validate: {
-      name: (val) => (val.length < 2 ? "Name is too short" : null),
-      type: (val) => (!val ? "Type is required" : null),
+      name: (val) => (val.length < 2 ? t("validation_name_short") : null),
+      type: (val) => (!val ? t("validation_type_required") : null),
     },
   });
 
@@ -90,19 +92,19 @@ export function CreateLocationModal({
     <Modal
       opened={opened}
       onClose={onClose}
-      title={parentId ? "Add Child Location" : "Create Root Location"}
+      title={parentId ? t("add_child_location") : t("create_root_location")}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <TextInput
-          label="Name"
-          placeholder="e.g. Main Campus, Block A, Room 101"
+          label={t("name_label")}
+          placeholder={t("name_placeholder")}
           required
           mb="md"
           {...form.getInputProps("name")}
         />
 
         <Select
-          label="Type"
+          label={t("type_label")}
           data={typeOptions}
           required
           mb="md"
@@ -110,16 +112,16 @@ export function CreateLocationModal({
         />
 
         <NumberInput
-          label="Capacity"
-          description="Max number of occupants (mainly for Rooms)"
+          label={t("capacity_label")}
+          description={t("capacity_description")}
           mb="md"
           min={0}
           {...form.getInputProps("capacity")}
         />
 
         <Select
-          label="Gender Lock"
-          placeholder="None"
+          label={t("gender_lock_label")}
+          placeholder={t("none")}
           data={genderOptions}
           clearable
           mb="md"
@@ -127,17 +129,17 @@ export function CreateLocationModal({
         />
 
         <Checkbox
-          label="Is Guest Zone?"
+          label={t("is_guest_zone_label")}
           mb="xl"
           {...form.getInputProps("isGuestZone", { type: "checkbox" })}
         />
 
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button type="submit" loading={loading}>
-            Create
+            {t("create")}
           </Button>
         </Group>
       </form>

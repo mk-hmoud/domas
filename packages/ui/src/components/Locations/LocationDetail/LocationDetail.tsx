@@ -3,12 +3,9 @@ import {
   Group,
   Breadcrumbs,
   Anchor,
-  Text,
   Title,
-  Button,
   ScrollArea,
 } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
 import { ReactNode } from "react";
 
 interface LocationDetailProps {

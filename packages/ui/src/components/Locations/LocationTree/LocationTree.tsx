@@ -18,6 +18,7 @@ import {
   IconBed,
   IconSchool,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 export interface LocationNode {
   id: number | string;
@@ -97,6 +98,8 @@ export function LocationTree({
   onAddChildToSelected,
   onDeleteSelected,
 }: LocationTreeProps) {
+  const { t } = useTranslation();
+
   return (
     <Paper
       withBorder
@@ -111,13 +114,13 @@ export function LocationTree({
         }}
       >
         <Group justify="space-between">
-          <Text fw={700}>Locations</Text>
+          <Text fw={700}>{t("locations")}</Text>
           <Group gap={4}>
             {onAddChildToSelected && selectedId && (
               <ActionIcon
                 variant="light"
                 onClick={onAddChildToSelected}
-                title="Add Child"
+                title={t("add_child")}
               >
                 <IconPlus style={{ width: rem(16), height: rem(16) }} />
               </ActionIcon>
@@ -127,14 +130,14 @@ export function LocationTree({
                 variant="light"
                 color="red"
                 onClick={onDeleteSelected}
-                title="Delete Selected"
+                title={t("delete_selected")}
               >
                 <IconTrash style={{ width: rem(16), height: rem(16) }} />
               </ActionIcon>
             )}
             {onAddRoot && (
               <Button size="xs" variant="light" onClick={onAddRoot}>
-                Add Root
+                {t("add_root")}
               </Button>
             )}
           </Group>
