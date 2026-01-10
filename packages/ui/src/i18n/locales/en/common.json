@@ -58,6 +58,40 @@
   "rooms_on_floor": "Rooms on this floor",
   "occupancy_label": "Occupancy",
   "active": "Active",
+  "inactive": "Inactive",
+  "status": "Status",
+  "created_at": "Created At",
   "no_sub_locations": "No sub-locations found. Add one to get started.",
-  "select_location_prompt": "Select a location to view details"
+  "select_location_prompt": "Select a location to view details",
+  "account_settings": "Account settings",
+  "logout": "Logout",
+  "application": "Application",
+  "nav": {
+    "dashboard": "Dashboard",
+    "overview": "Overview",
+    "management": "Management",
+    "students": "Students",
+    "staff": "Staff",
+    "locations": "Locations",
+    "support": "Support",
+    "complaints": "Complaints",
+    "user_management": "User Management",
+    "all_users": "All Users",
+    "roles": "Roles",
+    "permissions": "Permissions",
+    "monitoring": "Monitoring",
+    "audit_logs": "Audit Logs",
+    "system_logs": "System Logs",
+    "access_logs": "Access Logs",
+    "analytics": "Analytics",
+    "system": "System",
+    "semesters": "Semesters",
+    "settings": "Settings",
+    "backups": "Backups"
+  },
+  "dashboard": {
+    "welcome_user": "Welcome, {{email}}!",
+    "staff_portal_intro": "Welcome to the staff portal. Manage students, staff and rooms here.",
+    "staff_dashboard_title": "Staff Dashboard"
+  }
 }

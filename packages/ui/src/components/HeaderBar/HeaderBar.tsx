@@ -12,6 +12,7 @@ import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
 import { ReactNode, forwardRef } from "react";
 import { User } from "@domas/ts-types";
+import { useTranslation } from "react-i18next";
 import classes from "./HeaderBar.module.css";
 
 export interface HeaderBarProps {
@@ -60,6 +61,8 @@ export function HeaderBar({
   onLogout,
   onNavigate,
 }: HeaderBarProps) {
+  const { t } = useTranslation();
+
   return (
     <header className={classes.header}>
       <Group>{logo}</Group>
@@ -80,14 +83,14 @@ export function HeaderBar({
               <UserButton name={user.email.split("@")[0]} email={user.email} />
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Label>Application</Menu.Label>
+              <Menu.Label>{t("application")}</Menu.Label>
               <Menu.Item
                 leftSection={
                   <IconSettings style={{ width: rem(14), height: rem(14) }} />
                 }
                 onClick={() => onNavigate?.("/dashboard/settings")}
               >
-                Account settings
+                {t("account_settings")}
               </Menu.Item>
               <Menu.Divider />
               <Menu.Item
@@ -97,7 +100,7 @@ export function HeaderBar({
                 }
                 onClick={onLogout}
               >
-                Logout
+                {t("logout")}
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>

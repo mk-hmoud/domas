@@ -1,6 +1,7 @@
 import { Table, Group, Badge, ActionIcon } from "@mantine/core";
 import { IconTrash, IconPencil } from "@tabler/icons-react";
 import { User, UserRole } from "@domas/ts-types";
+import { useTranslation } from "react-i18next";
 
 interface UsersTableProps {
   data: User[];
@@ -9,6 +10,8 @@ interface UsersTableProps {
 }
 
 export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
+  const { t } = useTranslation();
+
   const rows = data.map((user) => (
     <Table.Tr key={user.id}>
       <Table.Td>{user.email}</Table.Td>
@@ -25,10 +28,10 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
                   : "gray"
           }
         >
-          {user.role}
+          {t(`roles.${user.role}`)}
         </Badge>
       </Table.Td>
-      <Table.Td>{user.isActive ? "Active" : "Inactive"}</Table.Td>
+      <Table.Td>{user.isActive ? t("active") : t("inactive")}</Table.Td>
       <Table.Td>{new Date(user.createdAt).toLocaleDateString()}</Table.Td>
       <Table.Td>
         <Group gap={0} justify="flex-end">
@@ -55,10 +58,10 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
     <Table>
       <Table.Thead>
         <Table.Tr>
-          <Table.Th>Email</Table.Th>
-          <Table.Th>Role</Table.Th>
-          <Table.Th>Status</Table.Th>
-          <Table.Th>Created At</Table.Th>
+          <Table.Th>{t("email")}</Table.Th>
+          <Table.Th>{t("role")}</Table.Th>
+          <Table.Th>{t("status")}</Table.Th>
+          <Table.Th>{t("created_at")}</Table.Th>
           <Table.Th />
         </Table.Tr>
       </Table.Thead>
