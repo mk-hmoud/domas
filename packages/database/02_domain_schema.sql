@@ -9,13 +9,25 @@
 CREATE TYPE user_role AS ENUM ('admin', 'dorm_manager', 'dorm_staff', 'accounting_staff', 'student');
 CREATE TYPE gender_type AS ENUM ('male', 'female');
 CREATE TYPE bed_status AS ENUM ('available', 'occupied', 'maintenance');
-CREATE TYPE occupancy_status AS ENUM (
-    'pending_payment',
-    'paid',
-    'approved',
+
+CREATE TYPE booking_status_enum AS ENUM (
+    'draft',
+    'pending_accounting',
+    'ready_for_checkin',
     'active',
-    'checked_out'
+    'completed',
+    'cancelled',
+    'rejected'
 );
+
+CREATE TYPE payment_status_enum AS ENUM (
+    'pending',
+    'partial',
+    'paid',
+    'failed',
+    'refunded'
+);
+
 CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room');
 
 -- =============================================
@@ -117,13 +129,23 @@ CREATE TABLE student_profiles (
 CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES users(id),
-    bed_id INT REFERENCES beds(id),
-    semester_id INT REFERENCES semesters(id), -- Link booking to a specific business cycle
+    bed_id INT NOT NULL REFERENCES beds(id), -- reserve bed
+    semester_id INT REFERENCES semesters(id), 
     
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     
-    status occupancy_status DEFAULT 'pending_payment',
+    -- states
+    status booking_status_enum DEFAULT 'draft',
+    payment_status payment_status_enum DEFAULT 'pending',
+    
+    -- accounting gatekeeper
+    is_accounting_approved BOOLEAN DEFAULT FALSE,
+    accounting_approved_at TIMESTAMPTZ,
+    accounting_approved_by UUID REFERENCES users(id),
+    
+    checked_in_at TIMESTAMPTZ,
+    checked_out_at TIMESTAMPTZ,
     
     -- Wet Signature Tracking
     contract_signed BOOLEAN DEFAULT FALSE,
@@ -132,14 +154,17 @@ CREATE TABLE bookings (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
-    -- Ensure booking dates are logical
-    CONSTRAINT chk_booking_dates CHECK (end_date > start_date)
-);
+    CONSTRAINT chk_booking_dates CHECK (end_date > start_date),
 
--- Prevent overlapping bookings for the same bed
-CREATE UNIQUE INDEX idx_no_overlapping_bookings 
-ON bookings(bed_id, semester_id) 
-WHERE status IN ('active', 'approved', 'paid', 'pending_payment');
+    -- Prevent overlapping bookings for the same bed using GIST Exclusion
+    -- Allows multiple bookings in one semester IF dates don't overlap
+    CONSTRAINT no_overlapping_dates_for_bed
+    EXCLUDE USING GIST (
+        bed_id WITH =,
+        daterange(start_date, end_date, '[]') WITH &&
+    )
+    WHERE (status NOT IN ('cancelled', 'rejected', 'draft'))
+);
 
 CREATE INDEX idx_bookings_semester ON bookings(semester_id);
 
