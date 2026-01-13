@@ -10,10 +10,10 @@ export * from "./interfaces/location.interface";
 export * from "./interfaces/bed.interface";
 export * from "./interfaces/semester.interface";
 export * from "./interfaces/paginated-result.interface";
+export * from "./interfaces/booking.interface";
 
 export * from "./dtos/login-credentials.dto";
 export * from "./dtos/create-user.dto";
-export * from "./dtos/update-user.dto";
 export * from "./dtos/pagination.dto";
 export * from "./dtos/create-location.dto";
 export * from "./dtos/update-location.dto";
@@ -22,3 +22,6 @@ export * from "./dtos/update-bed.dto";
 export * from "./dtos/create-semester.dto";
 export * from "./dtos/update-semester.dto";
 export * from "./dtos/find-all-users.dto";
+export * from "./dtos/create-booking.dto";
+export * from "./dtos/update-booking.dto";
+export * from "./dtos/approve-financials.dto";
