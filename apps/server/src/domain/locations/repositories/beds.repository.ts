@@ -4,6 +4,8 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { Bed } from '../entities/bed.entity';
 import { IBedsRepository } from '../interfaces/beds-repository.interface';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 
 @Injectable()
 export class BedsRepository implements IBedsRepository {
@@ -27,6 +29,56 @@ export class BedsRepository implements IBedsRepository {
     const values = [data.locationId, data.label, data.status || BedStatus.AVAILABLE];
     const result = await this.getClient(client).query<Bed>(query, values);
     return new Bed(result.rows[0]);
+  }
+
+  async findAll(
+    pagination: PaginationDto,
+    filters?: { locationId?: number; status?: BedStatus },
+    client?: PoolClient,
+  ): Promise<PaginatedResult<Bed>> {
+    const { page = 1, limit = 10 } = pagination;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT 
+        id, 
+        location_id as "locationId", 
+        label, 
+        status, 
+        updated_at as "updatedAt"
+      FROM beds
+    `;
+    const values: any[] = [];
+    const conditions: string[] = [];
+
+    if (filters?.locationId) {
+      conditions.push(`location_id = $${values.length + 1}`);
+      values.push(filters.locationId);
+    }
+    if (filters?.status) {
+      conditions.push(`status = $${values.length + 1}`);
+      values.push(filters.status);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    query += ` ORDER BY location_id ASC, label ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    const countQuery = `SELECT COUNT(*) FROM beds ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}`;
+
+    const dbClient = this.getClient(client);
+    const [result, countResult] = await Promise.all([
+      dbClient.query<Bed>(query, [...values, limit, offset]),
+      dbClient.query<{ count: string }>(countQuery, values),
+    ]);
+
+    return {
+      data: result.rows.map((row) => new Bed(row)),
+      total: parseInt(countResult.rows[0].count, 10),
+      page,
+      limit,
+    };
   }
 
   async findById(id: number, client?: PoolClient): Promise<Bed | null> {

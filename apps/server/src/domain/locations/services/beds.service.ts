@@ -5,6 +5,9 @@ import { UpdateBedDto } from '../dto/update-bed.dto';
 import { Bed } from '../entities/bed.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { BedStatus } from '../../../common/enums/bed-status.enum';
 
 @Injectable()
 export class BedsService {
@@ -12,6 +15,13 @@ export class BedsService {
     private readonly bedsRepository: BedsRepository,
     private readonly db: DatabaseService,
   ) {}
+
+  async findAll(
+    pagination: PaginationDto,
+    filters?: { locationId?: number; status?: BedStatus },
+  ): Promise<PaginatedResult<Bed>> {
+    return this.bedsRepository.findAll(pagination, filters);
+  }
 
   async create(data: CreateBedDto, context: AuditUserContext): Promise<Bed> {
     return this.db.transaction(async (client) => {

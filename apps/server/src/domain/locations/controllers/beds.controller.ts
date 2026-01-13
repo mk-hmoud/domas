@@ -15,6 +15,7 @@ import {
 import { BedsService } from '../services/beds.service';
 import { CreateBedDto } from '../dto/create-bed.dto';
 import { UpdateBedDto } from '../dto/update-bed.dto';
+import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
@@ -32,6 +33,12 @@ export class BedsController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.bedsService.findById(id);
+  }
+
+  @Get()
+  findAll(@Query() query: FindAllBedsDto) {
+    const { locationId, status, ...pagination } = query;
+    return this.bedsService.findAll(pagination, { locationId, status });
   }
 
   @Patch(':id')
