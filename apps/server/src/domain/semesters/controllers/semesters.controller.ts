@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { SemestersService } from '../services/semesters.service';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
@@ -17,6 +18,7 @@ import { UpdateSemesterDto } from '../dto/update-semester.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { FindAllSemestersDto } from '../dto/find-all-semesters.dto';
 
 @Controller('semesters')
 @UseGuards(AuthenticatedGuard)
@@ -29,8 +31,8 @@ export class SemestersController {
   }
 
   @Get()
-  findAll() {
-    return this.semestersService.findAll();
+  findAll(@Query() query: FindAllSemestersDto) {
+    return this.semestersService.findAll(query);
   }
 
   @Get(':id')

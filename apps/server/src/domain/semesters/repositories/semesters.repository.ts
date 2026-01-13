@@ -4,6 +4,8 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { Semester } from '../entities/semester.entity';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
 import { UpdateSemesterDto } from '../dto/update-semester.dto';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 
 @Injectable()
 export class SemestersRepository {
@@ -35,7 +37,13 @@ export class SemestersRepository {
     return new Semester(result.rows[0]);
   }
 
-  async findAll(client?: PoolClient): Promise<Semester[]> {
+  async findAll(
+    pagination: PaginationDto,
+    client?: PoolClient,
+  ): Promise<PaginatedResult<Semester>> {
+    const { page = 1, limit = 10 } = pagination;
+    const offset = (page - 1) * limit;
+
     const query = `
       SELECT 
         id, 
@@ -47,9 +55,22 @@ export class SemestersRepository {
         updated_at as "updatedAt"
       FROM semesters
       ORDER BY start_date DESC
+      LIMIT $1 OFFSET $2
     `;
-    const result = await this.getClient(client).query<Semester>(query);
-    return result.rows.map((row) => new Semester(row));
+    const countQuery = `SELECT COUNT(*) FROM semesters`;
+
+    const dbClient = this.getClient(client);
+    const [result, countResult] = await Promise.all([
+      dbClient.query<Semester>(query, [limit, offset]),
+      dbClient.query<{ count: string }>(countQuery),
+    ]);
+
+    return {
+      data: result.rows.map((row) => new Semester(row)),
+      total: parseInt(countResult.rows[0].count, 10),
+      page,
+      limit,
+    };
   }
 
   async findById(id: number, client?: PoolClient): Promise<Semester | null> {

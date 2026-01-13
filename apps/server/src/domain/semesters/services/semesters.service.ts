@@ -6,6 +6,8 @@ import { Semester } from '../entities/semester.entity';
 import { AuditService } from '../../audit/services/audit.service';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 
 @Injectable()
 export class SemestersService {
@@ -38,8 +40,8 @@ export class SemestersService {
     }, context);
   }
 
-  async findAll(): Promise<Semester[]> {
-    return this.semestersRepository.findAll();
+  async findAll(pagination: PaginationDto): Promise<PaginatedResult<Semester>> {
+    return this.semestersRepository.findAll(pagination);
   }
 
   async findById(id: number): Promise<Semester> {
