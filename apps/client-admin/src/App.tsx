@@ -4,6 +4,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { DashboardHome } from './pages/DashboardHome';
 import { UsersListPage } from './pages/UsersListPage';
 import { LocationsPage } from './pages/LocationsPage';
+import { SemestersPage } from './pages/SemestersPage';
 import { ProtectedRoute } from '@domas/client-core';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route index element={<DashboardHome />} />
           <Route path="users" element={<UsersListPage />} />
           <Route path="locations" element={<LocationsPage />} />
+          <Route path="semesters" element={<SemestersPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

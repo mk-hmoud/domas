@@ -212,7 +212,7 @@ CREATE INDEX idx_student_profiles_name ON student_profiles(last_name, first_name
 CREATE INDEX idx_beds_status ON beds(status) WHERE status = 'available';
 CREATE INDEX idx_bookings_student ON bookings(student_id, status);
 CREATE INDEX idx_bookings_active ON bookings(status, start_date, end_date) 
-    WHERE status IN ('active', 'approved');
+    WHERE status IN ('active', 'ready_for_checkin');
 CREATE INDEX idx_transactions_pending ON transactions(is_approved, created_at) 
     WHERE is_approved = FALSE;
 CREATE INDEX idx_locations_gender_lock ON locations(gender_lock) 

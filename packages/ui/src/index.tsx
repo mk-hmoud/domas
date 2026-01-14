@@ -17,5 +17,6 @@ export * from "./components/Locations/LocationTree";
 export * from "./components/Locations/LocationDetail";
 export * from "./components/Locations/LocationsManager";
 export * from "./components/Locations/CreateLocationModal";
+export * from "./components/Semesters";
 
 export * from "./layouts/DashboardLayout";
