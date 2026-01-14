@@ -105,87 +105,114 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =============================================
 -- PARTITION MANAGEMENT
 -- =============================================
-CREATE OR REPLACE FUNCTION audit.create_semester_partition(
-    semester_name TEXT, 
-    p_start_date DATE, 
-    p_end_date DATE
-)
+CREATE OR REPLACE FUNCTION audit.maintain_partitions()
 RETURNS void AS $$
 DECLARE
-    safe_name TEXT;
+    current_q_start DATE;
+    q_end DATE;
     partition_suffix TEXT;
-    
-    event_log_name TEXT;
-    auth_log_name TEXT;
-    ops_log_name TEXT;
-    access_log_name TEXT;
+    i INT;
+    target_date DATE;
+    -- Centralized list of tables to manage
+    target_tables TEXT[] := ARRAY[
+        'audit.event_log', 
+        'audit.auth_log', 
+        'audit.sensitive_operations', 
+        'public.access_logs'
+    ];
+    t TEXT;
 BEGIN
-    -- Validation
-    IF p_start_date >= p_end_date THEN
-        RAISE EXCEPTION 'Semester start date must be before end date';
-    END IF;
-
-    -- Sanitize name: "Fall 2024" -> "fall_2024"
-    safe_name := lower(regexp_replace(semester_name, '[^a-zA-Z0-9]', '_', 'g'));
+    -- Start of current quarter
+    current_q_start := date_trunc('quarter', CURRENT_DATE);
     
-    -- Ensure uniqueness (e.g., prevent collision if "Fall 2024" is created twice)
-    partition_suffix := safe_name;
-
-    event_log_name := 'event_log_' || partition_suffix;
-    auth_log_name  := 'auth_log_' || partition_suffix;
-    ops_log_name   := 'sensitive_operations_' || partition_suffix;
-    access_log_name := 'access_logs_' || partition_suffix;
-    
-    -- 1. Create event_log partition
-    EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS audit.%I PARTITION OF audit.event_log FOR VALUES FROM (%L) TO (%L)',
-        event_log_name, p_start_date, p_end_date
-    );
-    
-    -- 2. Create auth_log partition
-    EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS audit.%I PARTITION OF audit.auth_log FOR VALUES FROM (%L) TO (%L)',
-        auth_log_name, p_start_date, p_end_date
-    );
-    
-    -- 3. Create sensitive_operations partition
-    EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS audit.%I PARTITION OF audit.sensitive_operations FOR VALUES FROM (%L) TO (%L)',
-        ops_log_name, p_start_date, p_end_date
-    );
-
-    -- 4. Create access_logs partition (Public Schema)
-    EXECUTE format(
-        'CREATE TABLE IF NOT EXISTS public.%I PARTITION OF public.access_logs FOR VALUES FROM (%L) TO (%L)',
-        access_log_name, p_start_date, p_end_date
-    );
-    
-    RAISE NOTICE 'Created partitions for semester: % (Audit Tables: %, %, % | Public: %)', 
-        semester_name, event_log_name, auth_log_name, ops_log_name, access_log_name;
+    -- Create partitions for Current (0) and Next (1) Quarter
+    FOR i IN 0..1 LOOP
+        target_date := current_q_start + (i * INTERVAL '3 months');
+        q_end := target_date + INTERVAL '3 months';
+        
+        -- Suffix example: _y2024_q1
+        partition_suffix := '_y' || to_char(target_date, 'YYYY') || '_q' || to_char(target_date, 'Q');
+        
+        FOREACH t IN ARRAY target_tables
+        LOOP
+            EXECUTE format(
+                'CREATE TABLE IF NOT EXISTS %I.%I%s PARTITION OF %s FOR VALUES FROM (%L) TO (%L)',
+                split_part(t, '.', 1), -- Schema
+                split_part(t, '.', 2), -- Table Name
+                partition_suffix,      -- Suffix
+                t,                     -- Full Parent Name
+                target_date, 
+                q_end
+            );
+        END LOOP;
+        
+        RAISE NOTICE 'Ensured partitions exist for suffix %', partition_suffix;
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- ARCHIVE OLD PARTITIONS (Run yearly)
+-- ARCHIVE OLD PARTITIONS
 -- =============================================
-CREATE OR REPLACE FUNCTION audit.archive_old_partition(years_to_keep INT DEFAULT 3)
+CREATE OR REPLACE FUNCTION audit.archive_old_partitions(years_to_keep INT DEFAULT 3)
 RETURNS void AS $$
 DECLARE
     archive_year INT;
-    partition_name TEXT;
+    partition_suffix TEXT;
+    q INT;
+    -- Same target tables list
+    target_tables TEXT[] := ARRAY[
+        'audit.event_log', 
+        'audit.auth_log', 
+        'audit.sensitive_operations', 
+        'public.access_logs'
+    ];
+    t TEXT;
+    schema_name TEXT;
+    parent_table_name TEXT;
+    full_partition_name TEXT;
+    short_partition_name TEXT;
 BEGIN
+    -- Determine the specific year to archive
     archive_year := EXTRACT(YEAR FROM CURRENT_DATE) - years_to_keep;
     
-    -- Detach old partitions (they remain as regular tables)
-    partition_name := 'audit.event_log_' || archive_year;
-    EXECUTE format('ALTER TABLE audit.event_log DETACH PARTITION %s', partition_name);
-    
-    -- Export to external storage?
-    
-    -- Or compress and move to archive schema
-    EXECUTE format('ALTER TABLE %s SET SCHEMA audit_archive', partition_name);
-    
-    RAISE NOTICE 'Archived partition: %', partition_name;
+    FOR q IN 1..4 LOOP
+        partition_suffix := '_y' || archive_year || '_q' || q;
+        
+        FOREACH t IN ARRAY target_tables
+        LOOP
+            schema_name := split_part(t, '.', 1);
+            parent_table_name := split_part(t, '.', 2);
+            short_partition_name := parent_table_name || partition_suffix;
+            full_partition_name := schema_name || '.' || short_partition_name;
+            
+            -- 1. Check if the active partition exists
+            IF EXISTS (
+                SELECT 1 FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = schema_name 
+                AND c.relname = short_partition_name
+            ) THEN
+                -- 2. Check if it already exists in the ARCHIVE (Collision prevention)
+                IF EXISTS (
+                    SELECT 1 FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'audit_archive' 
+                    AND c.relname = short_partition_name
+                ) THEN
+                    RAISE WARNING 'Table % already exists in audit_archive. Skipping move.', short_partition_name;
+                ELSE
+                    -- 3. Detach
+                    EXECUTE format('ALTER TABLE %s DETACH PARTITION %s', t, full_partition_name);
+                    
+                    -- 4. Move to Archive
+                    EXECUTE format('ALTER TABLE %s SET SCHEMA audit_archive', full_partition_name);
+                    
+                    RAISE NOTICE 'Archived: % -> audit_archive.%', full_partition_name, short_partition_name;
+                END IF;
+            END IF;
+        END LOOP;
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 

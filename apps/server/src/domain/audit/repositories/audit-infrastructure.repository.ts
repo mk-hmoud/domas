@@ -10,13 +10,13 @@ export class AuditInfrastructureRepository {
     return client || this.db.getPool();
   }
 
-  async createSemesterPartition(
-    name: string,
-    startDate: string,
-    endDate: string,
-    client?: PoolClient,
-  ): Promise<void> {
-    const query = `SELECT audit.create_semester_partition($1, $2, $3)`;
-    await this.getClient(client).query(query, [name, startDate, endDate]);
+  async maintainPartitions(client?: PoolClient): Promise<void> {
+    const query = `SELECT audit.maintain_partitions()`;
+    await this.getClient(client).query(query);
+  }
+
+  async archiveOldPartitions(client?: PoolClient): Promise<void> {
+    const query = `SELECT audit.archive_old_partitions(3)`;
+    await this.getClient(client).query(query);
   }
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppLoggerModule } from './core/logger/logger.module';
@@ -17,6 +18,7 @@ import { BookingsModule } from './domain/bookings/bookings.module';
       isGlobal: true,
       load: [databaseConfig],
     }),
+    ScheduleModule.forRoot(),
     AppLoggerModule,
     DatabaseModule,
     UsersModule,
