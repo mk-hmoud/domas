@@ -9,43 +9,46 @@ import {
 } from '@tabler/icons-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
-
-const navData = [
-  { label: 'Dashboard', icon: IconLayoutDashboard, link: '/dashboard' },
-  {
-    label: 'User Management',
-    icon: IconUsers,
-    links: [
-      { label: 'All Users', link: '/dashboard/users' },
-      { label: 'Roles', link: '/dashboard/roles' },
-      { label: 'Permissions', link: '/dashboard/permissions' },
-    ],
-  },
-  {
-    label: 'Monitoring',
-    icon: IconChartBar,
-    links: [
-      { label: 'Audit Logs', link: '/dashboard/logs/audit' },
-      { label: 'System Logs', link: '/dashboard/logs/system' },
-      { label: 'Access Logs', link: '/dashboard/logs/access' },
-      { label: 'Analytics', link: '/dashboard/analytics' },
-    ],
-  },
-  {
-    label: 'System',
-    icon: IconSettings,
-    links: [
-      { label: 'Semesters', link: '/dashboard/semesters' },
-      { label: 'Locations', link: '/dashboard/locations' },
-      { label: 'Settings', link: '/dashboard/settings' },
-      { label: 'Backups', link: '/dashboard/backups' },
-    ],
-  },
-];
+import { useTranslation } from 'react-i18next';
 
 export function DashboardLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
+
+  const navData = [
+    { label: t('nav.dashboard'), icon: IconLayoutDashboard, link: '/dashboard' },
+    {
+      label: t('nav.user_management'),
+      icon: IconUsers,
+      links: [
+        { label: t('nav.all_users'), link: '/dashboard/users' },
+        { label: t('nav.bookings'), link: '/dashboard/bookings' },
+        { label: t('nav.roles'), link: '/dashboard/roles' },
+        { label: t('nav.permissions'), link: '/dashboard/permissions' },
+      ],
+    },
+    {
+      label: t('nav.monitoring'),
+      icon: IconChartBar,
+      links: [
+        { label: t('nav.audit_logs'), link: '/dashboard/logs/audit' },
+        { label: t('nav.system_logs'), link: '/dashboard/logs/system' },
+        { label: t('nav.access_logs'), link: '/dashboard/logs/access' },
+        { label: t('nav.analytics'), link: '/dashboard/analytics' },
+      ],
+    },
+    {
+      label: t('nav.system'),
+      icon: IconSettings,
+      links: [
+        { label: t('nav.semesters'), link: '/dashboard/semesters' },
+        { label: t('nav.locations'), link: '/dashboard/locations' },
+        { label: t('nav.settings'), link: '/dashboard/settings' },
+        { label: t('nav.backups'), link: '/dashboard/backups' },
+      ],
+    },
+  ];
 
   return (
     <SharedDashboardLayout

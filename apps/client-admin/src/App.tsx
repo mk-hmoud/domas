@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { DashboardHome } from './pages/DashboardHome';
 import { UsersListPage } from './pages/UsersListPage';
+import { BookingsPage } from './pages/BookingsPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { SemestersPage } from './pages/SemestersPage';
 import { ProtectedRoute } from '@domas/client-core';
@@ -22,6 +23,7 @@ function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="users" element={<UsersListPage />} />
+          <Route path="bookings" element={<BookingsPage />} />
           <Route path="locations" element={<LocationsPage />} />
           <Route path="semesters" element={<SemestersPage />} />
         </Route>

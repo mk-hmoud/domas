@@ -5,3 +5,4 @@ export * from "./pages/SharedLoginPage";
 export * from "./pages/SharedLocationsPage";
 export * from "./pages/SharedUsersPage";
 export * from "./pages/SharedSemestersPage";
+export * from "./pages/SharedBookingsPage";
