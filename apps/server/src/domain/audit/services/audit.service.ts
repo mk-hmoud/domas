@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PoolClient } from 'pg';
 import { AuditInfrastructureRepository } from '../repositories/audit-infrastructure.repository';
 import { AuditLogsRepository } from '../repositories/audit-logs.repository';
+import { SearchAuditDto } from '../dto/search-audit.dto';
 
 @Injectable()
 export class AuditService implements OnModuleInit {
@@ -33,6 +34,10 @@ export class AuditService implements OnModuleInit {
     } catch (error) {
       this.logger.error('Monthly audit maintenance failed', error);
     }
+  }
+
+  async search(dto: SearchAuditDto) {
+    return this.auditLogsRepository.search(dto);
   }
 
   async maintainPartitions(client?: PoolClient): Promise<void> {

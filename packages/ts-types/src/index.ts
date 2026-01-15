@@ -11,6 +11,7 @@ export * from "./interfaces/bed.interface";
 export * from "./interfaces/semester.interface";
 export * from "./interfaces/paginated-result.interface";
 export * from "./interfaces/booking.interface";
+export * from "./interfaces/audit.interface";
 
 export * from "./dtos/login-credentials.dto";
 export * from "./dtos/create-user.dto";
@@ -28,3 +29,4 @@ export * from "./dtos/find-all-users.dto";
 export * from "./dtos/create-booking.dto";
 export * from "./dtos/update-booking.dto";
 export * from "./dtos/approve-financials.dto";
+export * from "./dtos/search-audit.dto";
