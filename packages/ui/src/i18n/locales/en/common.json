@@ -119,5 +119,47 @@
     "welcome_user": "Welcome, {{email}}!",
     "staff_portal_intro": "Welcome to the staff portal. Manage students, staff and rooms here.",
     "staff_dashboard_title": "Staff Dashboard"
+  },
+  "audit": {
+    "search_logs": "Search Logs",
+    "log_details": "Log Details",
+    "suspicious_activity": "Suspicious Activity",
+    "bulk_operations": "Bulk Operations",
+    "filters": "Filters",
+    "search_placeholder": "Search table or User UUID...",
+    "filter_by_action": "Filter by Action",
+    "clear_dates": "Clear Dates",
+    "search": "Search",
+    "rows_per_page": "Rows per page",
+    "no_logs_found": "No audit logs found matching criteria",
+    "no_suspicious_activity": "No suspicious activity detected",
+    "no_bulk_operations": "No bulk operations found",
+    "failed_login_attempts": "Failed login attempts",
+    "last_attempt": "Last attempt",
+    "timestamp": "Timestamp",
+    "user": "User",
+    "table": "Table",
+    "action": "Action",
+    "record_id": "Record ID",
+    "changed_fields": "Changed Fields",
+    "operation": "Operation",
+    "resource": "Resource",
+    "affected": "Affected",
+    "actions": {
+      "insert": "Insert",
+      "update": "Update",
+      "delete": "Delete",
+      "truncate": "Truncate"
+    },
+    "presets": {
+      "all": "All",
+      "today": "Today",
+      "this_week": "This Week",
+      "this_month": "This Month"
+    },
+    "new_data": "New Data",
+    "deleted_data": "Deleted Data",
+    "before": "Before",
+    "after": "After"
   }
 }

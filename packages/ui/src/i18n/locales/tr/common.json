@@ -119,5 +119,47 @@
     "welcome_user": "Hoş geldiniz, {{email}}!",
     "staff_portal_intro": "Personel portalına hoş geldiniz. Öğrencileri, personeli ve odaları buradan yönetin.",
     "staff_dashboard_title": "Personel Paneli"
+  },
+  "audit": {
+    "search_logs": "Kayıtları Ara",
+    "log_details": "Kayıt Detayları",
+    "suspicious_activity": "Şüpheli Aktivite",
+    "bulk_operations": "Toplu İşlemler",
+    "filters": "Filtreler",
+    "search_placeholder": "Tablo veya Kullanıcı UUID ara...",
+    "filter_by_action": "İşleme Göre Filtrele",
+    "clear_dates": "Tarihleri Temizle",
+    "search": "Ara",
+    "rows_per_page": "Sayfa başına satır",
+    "no_logs_found": "Kriterlere uyan denetim kaydı bulunamadı",
+    "no_suspicious_activity": "Şüpheli aktivite tespit edilmedi",
+    "no_bulk_operations": "Toplu işlem bulunamadı",
+    "failed_login_attempts": "Başarısız giriş denemeleri",
+    "last_attempt": "Son deneme",
+    "timestamp": "Zaman Damgası",
+    "user": "Kullanıcı",
+    "table": "Tablo",
+    "action": "İşlem",
+    "record_id": "Kayıt ID",
+    "changed_fields": "Değişen Alanlar",
+    "operation": "Operasyon",
+    "resource": "Kaynak",
+    "affected": "Etkilenen",
+    "actions": {
+      "insert": "Ekle",
+      "update": "Güncelle",
+      "delete": "Sil",
+      "truncate": "Kes/Boşalt"
+    },
+    "presets": {
+      "all": "Tümü",
+      "today": "Bugün",
+      "this_week": "Bu Hafta",
+      "this_month": "Bu Ay"
+    },
+    "new_data": "Yeni Veri",
+    "deleted_data": "Silinen Veri",
+    "before": "Önce",
+    "after": "Sonra"
   }
 }

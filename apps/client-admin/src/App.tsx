@@ -6,6 +6,7 @@ import { UsersListPage } from './pages/UsersListPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { SemestersPage } from './pages/SemestersPage';
+import { AuditLogsPage } from './pages/AuditLogsPage';
 import { ProtectedRoute } from '@domas/client-core';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="locations" element={<LocationsPage />} />
           <Route path="semesters" element={<SemestersPage />} />
+          <Route path="logs/audit" element={<AuditLogsPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
