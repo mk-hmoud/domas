@@ -10,6 +10,7 @@ CREATE TYPE user_role AS ENUM ('admin', 'dorm_manager', 'dorm_staff', 'accountin
 CREATE TYPE gender_type AS ENUM ('male', 'female');
 CREATE TYPE bed_status AS ENUM ('available', 'occupied', 'maintenance');
 
+-- Booking Statuses
 CREATE TYPE booking_status_enum AS ENUM (
     'draft',
     'pending_accounting',
@@ -30,6 +31,17 @@ CREATE TYPE payment_status_enum AS ENUM (
 
 CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room');
 
+-- Semester Statuses
+CREATE TYPE semester_status_enum AS ENUM (
+    'planned',
+    'open',
+    'active',
+    'closed',
+    'archived'
+);
+
+CREATE TYPE semester_type_enum AS ENUM ('fall', 'spring', 'summer');
+
 -- =============================================
 -- 2. PHYSICAL HIERARCHY (The Assets)
 -- =============================================
@@ -46,7 +58,7 @@ CREATE TABLE locations (
     
     -- GENDER LOCK
     -- Can be set at ANY level. If NULL, it is open/inherited.
-    gender_lock gender_type DEFAULT NULL, 
+    gender_lock gender_type DEFAULT NULL,
     
     -- Guest Isolation
     is_guest_zone BOOLEAN DEFAULT FALSE,
@@ -60,39 +72,6 @@ CREATE TABLE locations (
 );
 
 CREATE INDEX idx_locations_path ON locations USING GIST (tree_path);
-
--- =============================================
--- 2.1 TIME DIMENSION (Semesters)
--- =============================================
-CREATE TABLE semesters (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name VARCHAR(50) NOT NULL, -- e.g., "Fall 2024", "Spring 2025"
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    is_active BOOLEAN DEFAULT FALSE, -- Only one should be true at a time
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    CONSTRAINT chk_date_order CHECK (end_date > start_date)
-);
-
--- Ensure only one active semester (optional, handled by app logic usually, but partial index helps)
-CREATE UNIQUE INDEX idx_one_active_semester ON semesters (is_active) WHERE is_active = TRUE;
-
-
--- =============================================
--- 3. INVENTORY
--- =============================================
-CREATE TABLE beds (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    location_id INT REFERENCES locations(id) ON DELETE CASCADE,
-    label VARCHAR(10) NOT NULL, -- "A", "B"
-    status bed_status DEFAULT 'available',
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    CONSTRAINT fk_bed_room_check CHECK (location_id IS NOT NULL)
-);
 
 -- =============================================
 -- 3. ACTORS (Users & Profiles)
@@ -123,6 +102,70 @@ CREATE TABLE student_profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+
+-- =============================================
+-- 2.1 TIME DIMENSION (Semesters)
+-- =============================================
+CREATE TABLE semesters (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    -- 1. Identity
+    type semester_type_enum NOT NULL,            
+    academic_year VARCHAR(20) NOT NULL,     -- "2024-2025"
+    display_name VARCHAR(100),              -- "2024-2025 Fall"
+
+    -- 2. Living Window (Physical Dates)
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    
+    -- 3. Booking Window (Application Dates)
+    booking_start_date DATE,           
+    booking_end_date DATE,             
+    
+    -- 4. Financials (Deposits)
+    deposit_amount_try NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    deposit_amount_foreign NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    foreign_currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    
+    payment_deadline_date DATE,             
+    
+    -- 5. Lifecycle
+    status semester_status_enum DEFAULT 'planned',
+    auto_activate BOOLEAN DEFAULT TRUE,    
+    auto_close BOOLEAN DEFAULT TRUE,       
+    
+    -- Meta
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    
+    -- Constraints
+    CONSTRAINT uq_semester_term UNIQUE (academic_year, type),
+    CONSTRAINT chk_semester_dates CHECK (end_date > start_date),
+    CONSTRAINT chk_booking_window CHECK (
+        (booking_start_date IS NULL OR booking_end_date IS NULL) OR
+        (booking_start_date <= booking_end_date)
+    )
+);
+
+-- Ensure only one active semester (optional)
+CREATE UNIQUE INDEX idx_one_active_semester ON semesters (status) WHERE status = 'active';
+
+
+-- =============================================
+-- 3. INVENTORY
+-- =============================================
+CREATE TABLE beds (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    location_id INT REFERENCES locations(id) ON DELETE CASCADE,
+    label VARCHAR(10) NOT NULL, -- "A", "B"
+    status bed_status DEFAULT 'available',
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    CONSTRAINT fk_bed_room_check CHECK (location_id IS NOT NULL)
+);
+
+
 -- =============================================
 -- 5. BOOKING & FINANCE
 -- =============================================
@@ -130,7 +173,7 @@ CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES users(id),
     bed_id INT NOT NULL REFERENCES beds(id), -- reserve bed
-    semester_id INT REFERENCES semesters(id), 
+    semester_id INT REFERENCES semesters(id),
     
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
@@ -144,6 +187,7 @@ CREATE TABLE bookings (
     accounting_approved_at TIMESTAMPTZ,
     accounting_approved_by UUID REFERENCES users(id),
     
+    -- Access Control Timing
     checked_in_at TIMESTAMPTZ,
     checked_out_at TIMESTAMPTZ,
     
@@ -157,7 +201,6 @@ CREATE TABLE bookings (
     CONSTRAINT chk_booking_dates CHECK (end_date > start_date),
 
     -- Prevent overlapping bookings for the same bed using GIST Exclusion
-    -- Allows multiple bookings in one semester IF dates don't overlap
     CONSTRAINT no_overlapping_dates_for_bed
     EXCLUDE USING GIST (
         bed_id WITH =,

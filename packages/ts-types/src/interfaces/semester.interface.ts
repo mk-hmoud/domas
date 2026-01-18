@@ -1,9 +1,22 @@
+import { SemesterStatus } from "../enums/semester-status.enum";
+import { SemesterType } from "../enums/semester-type.enum";
+
 export interface Semester {
   id: number;
-  name: string;
-  startDate: string; // Dates often transmitted as ISO strings
+  type: SemesterType;
+  academicYear: string;
+  displayName: string;
+  startDate: string;
   endDate: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  bookingStartDate: string;
+  bookingEndDate: string;
+  depositAmountTry: number;
+  depositAmountForeign: number;
+  foreignCurrencyCode: string;
+  paymentDeadlineDate?: string;
+  status: SemesterStatus;
+  autoActivate: boolean;
+  autoClose: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -152,4 +152,10 @@ export class BookingsRepository {
     const result = await this.getClient(client).query(query, values);
     return result.rows.map((row) => this.mapRowToEntity(row));
   }
+
+  async countBySemester(semesterId: number, client?: PoolClient): Promise<number> {
+    const query = `SELECT COUNT(*) FROM bookings WHERE semester_id = $1`;
+    const result = await this.getClient(client).query<{ count: string }>(query, [semesterId]);
+    return parseInt(result.rows[0].count, 10);
+  }
 }

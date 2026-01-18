@@ -15,25 +15,63 @@ export class SemestersRepository {
     return client || this.db.getPool();
   }
 
-  async create(data: CreateSemesterDto, client?: PoolClient): Promise<Semester> {
-    const query = `
-      INSERT INTO semesters (name, start_date, end_date, is_active)
-      VALUES ($1, $2, $3, $4)
-      RETURNING 
-        id, 
-        name, 
-        start_date as "startDate", 
-        end_date as "endDate", 
-        is_active as "isActive", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+  private get selectColumns(): string {
+    return `
+      id, 
+      type, 
+      academic_year as "academicYear", 
+      display_name as "displayName",
+      start_date as "startDate", 
+      end_date as "endDate",
+      booking_start_date as "bookingStartDate",
+      booking_end_date as "bookingEndDate",
+      deposit_amount_try::numeric as "depositAmountTry",
+      deposit_amount_foreign::numeric as "depositAmountForeign",
+      foreign_currency_code as "foreignCurrencyCode",
+      payment_deadline_date as "paymentDeadlineDate",
+      status,
+      auto_activate as "autoActivate",
+      auto_close as "autoClose",
+      created_at as "createdAt", 
+      updated_at as "updatedAt",
+      created_by as "createdBy"
     `;
-    const result = await this.getClient(client).query<Semester>(query, [
-      data.name,
+  }
+
+  private generateDisplayName(academicYear: string, type: string): string {
+    const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+    return `${academicYear} ${capitalizedType}`;
+  }
+
+  async create(data: CreateSemesterDto, client?: PoolClient): Promise<Semester> {
+    const displayName = this.generateDisplayName(data.academicYear, data.type);
+
+    const query = `
+      INSERT INTO semesters (
+        type, academic_year, display_name, start_date, end_date, booking_start_date, booking_end_date,
+        deposit_amount_try, deposit_amount_foreign, foreign_currency_code, payment_deadline_date,
+        status, auto_activate, auto_close
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING ${this.selectColumns}
+    `;
+    const values = [
+      data.type,
+      data.academicYear,
+      displayName,
       data.startDate,
       data.endDate,
-      data.isActive || false,
-    ]);
+      data.bookingStartDate || null,
+      data.bookingEndDate || null,
+      data.depositAmountTry || 0,
+      data.depositAmountForeign || 0,
+      data.foreignCurrencyCode || 'EUR',
+      data.paymentDeadlineDate || null,
+      data.status,
+      data.autoActivate || false,
+      data.autoClose || false,
+    ];
+    const result = await this.getClient(client).query<Semester>(query, values);
     return new Semester(result.rows[0]);
   }
 
@@ -45,14 +83,7 @@ export class SemestersRepository {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT 
-        id, 
-        name, 
-        start_date as "startDate", 
-        end_date as "endDate", 
-        is_active as "isActive", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM semesters
       ORDER BY start_date DESC
       LIMIT $1 OFFSET $2
@@ -75,14 +106,7 @@ export class SemestersRepository {
 
   async findById(id: number, client?: PoolClient): Promise<Semester | null> {
     const query = `
-      SELECT 
-        id, 
-        name, 
-        start_date as "startDate", 
-        end_date as "endDate", 
-        is_active as "isActive", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM semesters
       WHERE id = $1
     `;
@@ -95,22 +119,39 @@ export class SemestersRepository {
     const values: any[] = [];
     let paramIndex = 1;
 
-    if (data.name !== undefined) {
-      updates.push(`name = $${paramIndex++}`);
-      values.push(data.name);
+    // Helper to add update fields
+    const addUpdate = (col: string, val: any) => {
+      updates.push(`${col} = $${paramIndex++}`);
+      values.push(val);
+    };
+
+    if (data.type) addUpdate('type', data.type);
+    if (data.academicYear) addUpdate('academic_year', data.academicYear);
+
+    // Handle Display Name Update
+    if (data.type || data.academicYear) {
+      const current = await this.findById(id, client);
+      if (current) {
+        const newYear = data.academicYear || current.academicYear;
+        const newType = data.type || current.type;
+        const newDisplayName = this.generateDisplayName(newYear, newType);
+        addUpdate('display_name', newDisplayName);
+      }
     }
-    if (data.startDate !== undefined) {
-      updates.push(`start_date = $${paramIndex++}`);
-      values.push(data.startDate);
-    }
-    if (data.endDate !== undefined) {
-      updates.push(`end_date = $${paramIndex++}`);
-      values.push(data.endDate);
-    }
-    if (data.isActive !== undefined) {
-      updates.push(`is_active = $${paramIndex++}`);
-      values.push(data.isActive);
-    }
+
+    if (data.startDate) addUpdate('start_date', data.startDate);
+    if (data.endDate) addUpdate('end_date', data.endDate);
+    if (data.bookingStartDate !== undefined) addUpdate('booking_start_date', data.bookingStartDate);
+    if (data.bookingEndDate !== undefined) addUpdate('booking_end_date', data.bookingEndDate);
+    if (data.depositAmountTry !== undefined) addUpdate('deposit_amount_try', data.depositAmountTry);
+    if (data.depositAmountForeign !== undefined)
+      addUpdate('deposit_amount_foreign', data.depositAmountForeign);
+    if (data.foreignCurrencyCode) addUpdate('foreign_currency_code', data.foreignCurrencyCode);
+    if (data.paymentDeadlineDate !== undefined)
+      addUpdate('payment_deadline_date', data.paymentDeadlineDate);
+    if (data.status) addUpdate('status', data.status);
+    if (data.autoActivate !== undefined) addUpdate('auto_activate', data.autoActivate);
+    if (data.autoClose !== undefined) addUpdate('auto_close', data.autoClose);
 
     if (updates.length === 0) {
       return this.findById(id, client);
@@ -121,14 +162,7 @@ export class SemestersRepository {
       UPDATE semesters
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING 
-        id, 
-        name, 
-        start_date as "startDate", 
-        end_date as "endDate", 
-        is_active as "isActive", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      RETURNING ${this.selectColumns}
     `;
 
     const result = await this.getClient(client).query<Semester>(query, values);
@@ -142,7 +176,12 @@ export class SemestersRepository {
   }
 
   async deactivateAll(client?: PoolClient): Promise<void> {
-    const query = `UPDATE semesters SET is_active = FALSE WHERE is_active = TRUE`;
+    // Legacy support: "deactivate" now means setting status away from ACTIVE?
+    // Or we strictly enforce only ONE active semester via DB Constraint.
+    // If the service logic tries to set one to Active, we might need to "Close" the others?
+    // For now, let's assume specific logic in Service.
+    // But this method was generic "turn off all".
+    const query = `UPDATE semesters SET status = 'closed' WHERE status = 'active'`;
     await this.getClient(client).query(query);
   }
 }

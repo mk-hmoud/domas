@@ -4,6 +4,8 @@ export * from "./enums/gender-type.enum";
 export * from "./enums/bed-status.enum";
 export * from "./enums/booking-ops-status.enum";
 export * from "./enums/payment-status.enum";
+export * from "./enums/semester-status.enum";
+export * from "./enums/semester-type.enum";
 
 export * from "./interfaces/user.interface";
 export * from "./interfaces/location.interface";
@@ -25,6 +27,7 @@ export * from "./dtos/find-all-beds.dto";
 export * from "./dtos/create-semester.dto";
 export * from "./dtos/update-semester.dto";
 export * from "./dtos/find-all-semesters.dto";
+export * from "./dtos/update-status.dto";
 export * from "./dtos/find-all-users.dto";
 export * from "./dtos/create-booking.dto";
 export * from "./dtos/update-booking.dto";

@@ -5,6 +5,7 @@ import {
   UpdateSemesterDto,
   FindAllSemestersDto,
   PaginatedResult,
+  SemesterStatus,
 } from "@domas/ts-types";
 
 export const semesters = {
@@ -33,9 +34,13 @@ export const semesters = {
     return response.data;
   },
 
-  toggleActive: async (id: number): Promise<Semester> => {
+  updateStatus: async (
+    id: number,
+    status: SemesterStatus,
+  ): Promise<Semester> => {
     const response = await apiClient.patch<Semester>(
-      `/semesters/${id}/toggle-active`,
+      `/semesters/${id}/status`,
+      { status },
     );
     return response.data;
   },
