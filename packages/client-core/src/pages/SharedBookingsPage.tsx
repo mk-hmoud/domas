@@ -142,7 +142,7 @@ export function SharedBookingsPage() {
         }))}
         semesters={allSemesters.map((s) => ({
           value: s.id.toString(),
-          label: s.name,
+          label: s.displayName,
         }))}
       />
     </Container>

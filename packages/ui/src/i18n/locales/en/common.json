@@ -161,5 +161,37 @@
     "deleted_data": "Deleted Data",
     "before": "Before",
     "after": "After"
+  },
+  "semester": {
+    "active_warning_title": "Active Semester",
+    "active_warning_text": "This semester is currently active. Some core identity and financial fields are locked to maintain data integrity.",
+    "duration": "Duration",
+    "financials": "Financials",
+    "type": "Type",
+    "academic_year": "Academic Year",
+    "booking_start": "Booking Start",
+    "booking_end": "Booking End",
+    "deposit_try": "Deposit (TRY)",
+    "deposit_foreign": "Deposit (Foreign)",
+    "currency": "Currency",
+    "auto_activate": "Auto Activate",
+    "auto_close": "Auto Close",
+    "types": {
+      "fall": "Fall",
+      "spring": "Spring",
+      "summer": "Summer"
+    },
+    "statuses": {
+      "planned": "Planned",
+      "open": "Open",
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived"
+    },
+    "actions": {
+      "set_active": "Set Active",
+      "close": "Close",
+      "archive": "Archive"
+    }
   }
 }

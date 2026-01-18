@@ -20,6 +20,7 @@ import {
   IconTrash,
   IconCheck,
   IconX,
+  IconArchive,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { semesters } from "@domas/api-client";
@@ -27,6 +28,7 @@ import {
   Semester,
   CreateSemesterDto,
   UpdateSemesterDto,
+  SemesterStatus,
 } from "@domas/ts-types";
 import { ConfirmDeleteModal, SemesterModal } from "@domas/ui";
 
@@ -103,9 +105,12 @@ export function SharedSemestersPage() {
     }
   };
 
-  const handleToggleActive = async (semester: Semester) => {
+  const handleUpdateStatus = async (
+    semester: Semester,
+    status: SemesterStatus,
+  ) => {
     try {
-      await semesters.toggleActive(semester.id);
+      await semesters.updateStatus(semester.id, status);
       fetchData();
     } catch (error) {
       console.error(error);
@@ -123,7 +128,24 @@ export function SharedSemestersPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString("en-GB");
+  };
+
+  const getStatusColor = (status: SemesterStatus) => {
+    switch (status) {
+      case SemesterStatus.ACTIVE:
+        return "green";
+      case SemesterStatus.OPEN:
+        return "blue";
+      case SemesterStatus.PLANNED:
+        return "yellow";
+      case SemesterStatus.CLOSED:
+        return "gray";
+      case SemesterStatus.ARCHIVED:
+        return "dark";
+      default:
+        return "gray";
+    }
   };
 
   return (
@@ -146,26 +168,26 @@ export function SharedSemestersPage() {
               <Table.Th>{t("semester_name")}</Table.Th>
               <Table.Th>{t("start_date")}</Table.Th>
               <Table.Th>{t("end_date")}</Table.Th>
-              <Table.Th>{t("is_active")}</Table.Th>
+              <Table.Th>{t("status")}</Table.Th>
               <Table.Th style={{ width: 80 }} />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {data.map((semester) => (
               <Table.Tr key={semester.id}>
-                <Table.Td fw={500}>{semester.name}</Table.Td>
-                <Table.Td>{formatDate(semester.startDate.toString())}</Table.Td>
-                <Table.Td>{formatDate(semester.endDate.toString())}</Table.Td>
+                <Table.Td fw={500}>
+                  {semester.displayName ||
+                    `${semester.academicYear} ${semester.type}`}
+                </Table.Td>
+                <Table.Td>{formatDate(semester.startDate)}</Table.Td>
+                <Table.Td>{formatDate(semester.endDate)}</Table.Td>
                 <Table.Td>
-                  {semester.isActive ? (
-                    <Badge color="green" variant="light">
-                      {t("active")}
-                    </Badge>
-                  ) : (
-                    <Badge color="gray" variant="light">
-                      Inactive
-                    </Badge>
-                  )}
+                  <Badge
+                    color={getStatusColor(semester.status)}
+                    variant="light"
+                  >
+                    {t(`semester.statuses.${semester.status}`)}
+                  </Badge>
                 </Table.Td>
                 <Table.Td>
                   <Menu shadow="md" width={200}>
@@ -182,18 +204,36 @@ export function SharedSemestersPage() {
                       >
                         {t("edit")}
                       </Menu.Item>
+
+                      <Menu.Label>{t("status")}</Menu.Label>
                       <Menu.Item
-                        leftSection={
-                          semester.isActive ? (
-                            <IconX size={14} />
-                          ) : (
-                            <IconCheck size={14} />
-                          )
+                        leftSection={<IconCheck size={14} />}
+                        onClick={() =>
+                          handleUpdateStatus(semester, SemesterStatus.ACTIVE)
                         }
-                        onClick={() => handleToggleActive(semester)}
+                        disabled={semester.status === SemesterStatus.ACTIVE}
                       >
-                        {semester.isActive ? "Deactivate" : "Activate"}
+                        {t("semester.actions.set_active")}
                       </Menu.Item>
+                      <Menu.Item
+                        leftSection={<IconX size={14} />}
+                        onClick={() =>
+                          handleUpdateStatus(semester, SemesterStatus.CLOSED)
+                        }
+                        disabled={semester.status === SemesterStatus.CLOSED}
+                      >
+                        {t("semester.actions.close")}
+                      </Menu.Item>
+                      <Menu.Item
+                        leftSection={<IconArchive size={14} />}
+                        onClick={() =>
+                          handleUpdateStatus(semester, SemesterStatus.ARCHIVED)
+                        }
+                        disabled={semester.status === SemesterStatus.ARCHIVED}
+                      >
+                        {t("semester.actions.archive")}
+                      </Menu.Item>
+
                       <Menu.Divider />
                       <Menu.Item
                         color="red"
@@ -229,6 +269,7 @@ export function SharedSemestersPage() {
         onClose={() => setCreateModalOpened(false)}
         onSubmit={handleCreate}
         loading={modalLoading}
+        lastSemester={data.length > 0 ? data[0] : undefined}
       />
 
       <SemesterModal
@@ -250,7 +291,9 @@ export function SharedSemestersPage() {
         }}
         onConfirm={handleDelete}
         title={t("delete_semester_title")}
-        message={t("delete_semester_message", { name: selectedSemester?.name })}
+        message={t("delete_semester_message", {
+          name: selectedSemester?.displayName,
+        })}
       />
     </Container>
   );

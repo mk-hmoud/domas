@@ -161,5 +161,37 @@
     "deleted_data": "Silinen Veri",
     "before": "Önce",
     "after": "Sonra"
+  },
+  "semester": {
+    "active_warning_title": "Aktif Dönem",
+    "active_warning_text": "Bu dönem şu anda aktiftir. Veri bütünlüğünü korumak için bazı temel kimlik ve finansal alanlar kilitlenmiştir.",
+    "duration": "Süre",
+    "financials": "Finansal",
+    "type": "Tür",
+    "academic_year": "Akademik Yıl",
+    "booking_start": "Rezervasyon Başlangıcı",
+    "booking_end": "Rezervasyon Bitişi",
+    "deposit_try": "Depozito (TRY)",
+    "deposit_foreign": "Depozito (Döviz)",
+    "currency": "Para Birimi",
+    "auto_activate": "Otomatik Etkinleştir",
+    "auto_close": "Otomatik Kapat",
+    "types": {
+      "fall": "Güz",
+      "spring": "Bahar",
+      "summer": "Yaz"
+    },
+    "statuses": {
+      "planned": "Planlanan",
+      "open": "Açık",
+      "active": "Aktif",
+      "closed": "Kapalı",
+      "archived": "Arşivlendi"
+    },
+    "actions": {
+      "set_active": "Aktif Et",
+      "close": "Kapat",
+      "archive": "Arşivle"
+    }
   }
 }

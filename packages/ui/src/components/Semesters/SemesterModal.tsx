@@ -1,14 +1,33 @@
 import { useEffect } from "react";
-import { Modal, TextInput, Button, Group, Switch } from "@mantine/core";
+import {
+  Modal,
+  Button,
+  Group,
+  Switch,
+  Select,
+  NumberInput,
+  SimpleGrid,
+  Divider,
+  Alert,
+  Stack,
+} from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateSemesterDto, Semester } from "@domas/ts-types";
+import {
+  CreateSemesterDto,
+  Semester,
+  SemesterType,
+  SemesterStatus,
+} from "@domas/ts-types";
+import { IconInfoCircle } from "@tabler/icons-react";
 
 interface SemesterModalProps {
   opened: boolean;
   onClose: () => void;
   onSubmit: (values: CreateSemesterDto) => Promise<void>;
   initialValues?: Semester | null;
+  lastSemester?: Semester | null; // For smart pre-filling
   loading?: boolean;
 }
 
@@ -17,100 +36,325 @@ export function SemesterModal({
   onClose,
   onSubmit,
   initialValues,
+  lastSemester,
   loading = false,
 }: SemesterModalProps) {
   const { t } = useTranslation();
 
-  const form = useForm<CreateSemesterDto>({
+  const form = useForm<any>({
     initialValues: {
-      name: "",
-      startDate: "",
-      endDate: "",
-      isActive: false,
+      type: SemesterType.FALL,
+      academicYear: "",
+      startDate: null,
+      endDate: null,
+      bookingStartDate: null,
+      bookingEndDate: null,
+      depositAmountTry: 0,
+      depositAmountForeign: 0,
+      foreignCurrencyCode: "USD",
+      status: SemesterStatus.PLANNED,
+      autoActivate: false,
+      autoClose: false,
     },
     validate: {
-      name: (val) => (val.length < 2 ? t("validation_name_short") : null),
-      startDate: (val) => (!val ? t("field_required") : null),
-      endDate: (val, values) => {
-        if (!val) return t("field_required");
-        if (new Date(val) <= new Date(values.startDate)) {
-          return t("validation_date_order");
-        }
-        return null;
-      },
+      academicYear: (val) => (val ? null : t("field_required")),
+      startDate: (val) => (val ? null : t("field_required")),
+      endDate: (val) => (val ? null : t("field_required")),
+      bookingStartDate: (val) => (val ? null : t("field_required")),
+      bookingEndDate: (val) => (val ? null : t("field_required")),
     },
+  });
+
+  // Generate Academic Year Options (Current Year +/- 2)
+  const currentYear = new Date().getFullYear();
+  const academicYearOptions = Array.from({ length: 5 }, (_, i) => {
+    const startYear = currentYear - 2 + i;
+    return `${startYear}-${startYear + 1}`;
   });
 
   useEffect(() => {
     if (opened) {
       if (initialValues) {
         form.setValues({
-          name: initialValues.name,
-          startDate: new Date(initialValues.startDate)
-            .toISOString()
-            .split("T")[0],
-          endDate: new Date(initialValues.endDate).toISOString().split("T")[0],
-          isActive: initialValues.isActive,
+          type: initialValues.type,
+          academicYear: initialValues.academicYear,
+          startDate: initialValues.startDate
+            ? new Date(initialValues.startDate)
+            : null,
+          endDate: initialValues.endDate
+            ? new Date(initialValues.endDate)
+            : null,
+          bookingStartDate: initialValues.bookingStartDate
+            ? new Date(initialValues.bookingStartDate)
+            : null,
+          bookingEndDate: initialValues.bookingEndDate
+            ? new Date(initialValues.bookingEndDate)
+            : null,
+          depositAmountTry: initialValues.depositAmountTry,
+          depositAmountForeign: initialValues.depositAmountForeign,
+          foreignCurrencyCode: initialValues.foreignCurrencyCode,
+          status: initialValues.status,
+          autoActivate: initialValues.autoActivate,
+          autoClose: initialValues.autoClose,
+        });
+      } else if (lastSemester) {
+        // Smart Pre-fill Logic
+        let nextType = SemesterType.FALL;
+        let nextYear = lastSemester.academicYear;
+        let nextStartDate: Date | null = null;
+
+        if (lastSemester.type === SemesterType.FALL) {
+          nextType = SemesterType.SPRING;
+        } else if (lastSemester.type === SemesterType.SPRING) {
+          nextType = SemesterType.SUMMER;
+        } else if (lastSemester.type === SemesterType.SUMMER) {
+          nextType = SemesterType.FALL;
+          // Increment Academic Year if moving from Summer -> Fall
+          const [start, end] = lastSemester.academicYear.split("-").map(Number);
+          if (!isNaN(start) && !isNaN(end)) {
+            nextYear = `${start + 1}-${end + 1}`;
+          }
+        }
+
+        if (lastSemester.endDate) {
+          const lastEnd = new Date(lastSemester.endDate);
+          nextStartDate = new Date(lastEnd);
+          nextStartDate.setDate(lastEnd.getDate() + 1);
+        }
+
+        form.setValues({
+          type: nextType,
+          academicYear: nextYear,
+          startDate: nextStartDate,
+          endDate: null,
+          bookingStartDate: null,
+          bookingEndDate: null,
+          depositAmountTry: lastSemester.depositAmountTry,
+          depositAmountForeign: lastSemester.depositAmountForeign,
+          foreignCurrencyCode: lastSemester.foreignCurrencyCode,
+          status: SemesterStatus.PLANNED,
+          autoActivate: false,
+          autoClose: false,
         });
       } else {
         form.reset();
+        // Set default academic year if resetting
+        const defaultYear = `${currentYear}-${currentYear + 1}`;
+        form.setFieldValue("academicYear", defaultYear);
       }
     }
-  }, [opened, initialValues]);
+  }, [opened, initialValues, lastSemester]);
 
-  const handleSubmit = async (values: typeof form.values) => {
-    // Ensure dates are in ISO format if needed, but YYYY-MM-DD from date input is usually fine for backend or needs conversion
-    // Backend CreateSemesterDto expects string (ISO or date).
-    await onSubmit(values);
+  const handleSubmit = async (values: any) => {
+    const toIso = (date: any) => {
+      if (!date) return undefined;
+      if (date instanceof Date) return date.toISOString();
+      return date; // Assume it's already a string if not a Date
+    };
+
+    // Convert Dates back to ISO strings for the API
+    const payload: CreateSemesterDto = {
+      ...values,
+      startDate: toIso(values.startDate),
+      endDate: toIso(values.endDate),
+      bookingStartDate: toIso(values.bookingStartDate),
+      bookingEndDate: toIso(values.bookingEndDate),
+    };
+    await onSubmit(payload);
     onClose();
   };
+
+  const currentStatus = form.values.status;
+  const isIdentityLocked =
+    currentStatus === SemesterStatus.OPEN ||
+    currentStatus === SemesterStatus.ACTIVE;
+  const isFinancialLocked =
+    currentStatus === SemesterStatus.ACTIVE ||
+    currentStatus === SemesterStatus.CLOSED ||
+    currentStatus === SemesterStatus.ARCHIVED;
+  const isActive = currentStatus === SemesterStatus.ACTIVE;
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
       title={initialValues ? t("edit_semester") : t("create_semester")}
+      size="lg"
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <TextInput
-          label={t("semester_name")}
-          placeholder="e.g. 2024 Spring"
-          required
-          mb="md"
-          {...form.getInputProps("name")}
-        />
+        <Stack gap="md">
+          {isActive && initialValues && (
+            <Alert
+              icon={<IconInfoCircle size={16} />}
+              title={t("semester.active_warning_title", {
+                defaultValue: "Active Semester",
+              })}
+              color="blue"
+              variant="light"
+            >
+              {t("semester.active_warning_text", {
+                defaultValue:
+                  "This semester is currently active. Some core identity and financial fields are locked to maintain data integrity.",
+              })}
+            </Alert>
+          )}
 
-        <TextInput
-          type="date"
-          label={t("start_date")}
-          required
-          mb="md"
-          {...form.getInputProps("startDate")}
-        />
+          <SimpleGrid cols={2}>
+            <Select
+              label={t("semester.type", { defaultValue: "Type" })}
+              data={[
+                { value: SemesterType.FALL, label: t("semester.types.fall") },
+                {
+                  value: SemesterType.SPRING,
+                  label: t("semester.types.spring"),
+                },
+                {
+                  value: SemesterType.SUMMER,
+                  label: t("semester.types.summer"),
+                },
+              ]}
+              required
+              disabled={isIdentityLocked}
+              {...form.getInputProps("type")}
+            />
+            <Select
+              label={t("semester.academic_year", {
+                defaultValue: "Academic Year",
+              })}
+              placeholder="e.g. 2023-2024"
+              data={academicYearOptions}
+              required
+              searchable
+              disabled={isIdentityLocked}
+              {...form.getInputProps("academicYear")}
+            />
+          </SimpleGrid>
 
-        <TextInput
-          type="date"
-          label={t("end_date")}
-          required
-          mb="md"
-          {...form.getInputProps("endDate")}
-        />
+          <Divider
+            label={t("semester.duration", { defaultValue: "Duration" })}
+            labelPosition="center"
+          />
 
-        <Switch
-          label={t("is_active")}
-          mb="xl"
-          checked={form.values.isActive}
-          {...form.getInputProps("isActive", { type: "checkbox" })}
-        />
+          <SimpleGrid cols={2}>
+            <DatePickerInput
+              label={t("start_date")}
+              required
+              maxDate={
+                isActive && initialValues
+                  ? new Date(initialValues.startDate)
+                  : undefined
+              }
+              {...form.getInputProps("startDate")}
+            />
+            <DatePickerInput
+              label={t("end_date")}
+              required
+              minDate={
+                isActive && initialValues
+                  ? new Date(initialValues.endDate)
+                  : undefined
+              }
+              {...form.getInputProps("endDate")}
+            />
+          </SimpleGrid>
 
-        <Group justify="flex-end">
-          <Button variant="default" onClick={onClose}>
-            {t("cancel")}
-          </Button>
-          <Button type="submit" loading={loading}>
-            {initialValues ? t("save") : t("create")}
-          </Button>
-        </Group>
+          <SimpleGrid cols={2}>
+            <DatePickerInput
+              label={t("semester.booking_start", {
+                defaultValue: "Booking Start",
+              })}
+              required
+              {...form.getInputProps("bookingStartDate")}
+            />
+            <DatePickerInput
+              label={t("semester.booking_end", { defaultValue: "Booking End" })}
+              required
+              {...form.getInputProps("bookingEndDate")}
+            />
+          </SimpleGrid>
+
+          <Divider
+            label={t("semester.financials", { defaultValue: "Financials" })}
+            labelPosition="center"
+          />
+
+          <SimpleGrid cols={3}>
+            <NumberInput
+              label={t("semester.deposit_try", {
+                defaultValue: "Deposit (TRY)",
+              })}
+              min={0}
+              disabled={isFinancialLocked}
+              {...form.getInputProps("depositAmountTry")}
+            />
+            <NumberInput
+              label={t("semester.deposit_foreign", {
+                defaultValue: "Deposit (Foreign)",
+              })}
+              min={0}
+              disabled={isFinancialLocked}
+              {...form.getInputProps("depositAmountForeign")}
+            />
+            <Select
+              label={t("semester.currency", { defaultValue: "Currency" })}
+              data={["USD", "EUR", "GBP"]}
+              disabled={isFinancialLocked}
+              {...form.getInputProps("foreignCurrencyCode")}
+            />
+          </SimpleGrid>
+
+          <Select
+            label={t("status")}
+            data={[
+              {
+                value: SemesterStatus.PLANNED,
+                label: t("semester.statuses.planned"),
+              },
+              {
+                value: SemesterStatus.OPEN,
+                label: t("semester.statuses.open"),
+              },
+              {
+                value: SemesterStatus.ACTIVE,
+                label: t("semester.statuses.active"),
+              },
+              {
+                value: SemesterStatus.CLOSED,
+                label: t("semester.statuses.closed"),
+              },
+              {
+                value: SemesterStatus.ARCHIVED,
+                label: t("semester.statuses.archived"),
+              },
+            ]}
+            required
+            {...form.getInputProps("status")}
+          />
+
+          <Group>
+            <Switch
+              label={t("semester.auto_activate", {
+                defaultValue: "Auto Activate",
+              })}
+              checked={form.values.autoActivate}
+              {...form.getInputProps("autoActivate", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("semester.auto_close", { defaultValue: "Auto Close" })}
+              checked={form.values.autoClose}
+              {...form.getInputProps("autoClose", { type: "checkbox" })}
+            />
+          </Group>
+
+          <Group justify="flex-end" mt="xl">
+            <Button variant="default" onClick={onClose}>
+              {t("cancel")}
+            </Button>
+            <Button type="submit" loading={loading}>
+              {initialValues ? t("save") : t("create")}
+            </Button>
+          </Group>
+        </Stack>
       </form>
     </Modal>
   );
