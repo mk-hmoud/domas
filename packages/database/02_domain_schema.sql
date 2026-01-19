@@ -87,6 +87,16 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- =============================================
+-- 3.1 GEOGRAPHY (Countries)
+-- =============================================
+CREATE TABLE countries (
+    code CHAR(2) PRIMARY KEY, -- ISO 3166-1 alpha-2 (e.g., 'TR', 'US', 'DE')
+    name VARCHAR(100) NOT NULL,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE students (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
@@ -100,7 +110,7 @@ CREATE TABLE students (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     gender gender_type NOT NULL,
-    nationality_code CHAR(2),
+    nationality_code CHAR(2) REFERENCES countries(code),
     
     -- 4. Contact (Might differ from User email)
     email VARCHAR(150), 

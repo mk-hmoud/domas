@@ -4,9 +4,11 @@ import * as crypto from 'crypto';
 import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/domain/users/services/users.service';
 import { LocationsService } from '../src/domain/locations/services/locations.service';
+import { DatabaseService } from '../src/core/database/database.service';
 import { UserRole } from '../src/common/enums/user-role.enum';
 import { LocationType } from '../src/common/enums/location-type.enum';
 import { AuditUserContext } from '../src/common/interfaces/audit-user-context.interface';
+import { COUNTRIES } from '@domas/ts-types';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -15,6 +17,7 @@ async function bootstrap() {
 
   const usersService = app.get(UsersService);
   const locationsService = app.get(LocationsService);
+  const db = app.get(DatabaseService);
   const logger = new Logger('SystemInit');
 
   const systemContext: AuditUserContext = {
@@ -25,6 +28,20 @@ async function bootstrap() {
   };
 
   try {
+    // 0. Handle Countries
+    const countryCheck = await db.query('SELECT COUNT(*) FROM countries');
+    if (parseInt(countryCheck.rows[0].count, 10) === 0) {
+      console.log('\ud83c\udf0d  Populating countries table...');
+
+      for (const [code, name] of COUNTRIES) {
+        await db.query(
+          'INSERT INTO countries (code, name) VALUES ($1, $2) ON CONFLICT (code) DO NOTHING',
+          [code, name],
+        );
+      }
+      console.log('\u2705 Countries populated.');
+    }
+
     // 1. Handle Admin User
     const adminExists = await usersService.existsByRole(UserRole.ADMIN);
     if (!adminExists) {
@@ -44,28 +61,25 @@ async function bootstrap() {
       });
 
       // Print credentials
+      const border = '════════════════════════════════════════════════════════════';
       console.log('\n');
+      console.log(`\u2554${border}\u2557`);
+      console.log(`\u2551                                                            \u2551`);
       console.log(
-        '\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557',
+        `\u2551   \ud83d\ude80 DORM SYSTEM PRODUCTION INITIALIZED                    \u2551`,
       );
-      console.log('\u2551                                                             \u2551');
+      console.log(`\u2551                                                            \u2551`);
+      console.log(`\u2551   Use these credentials to log in and create your          \u2551`);
+      console.log(`\u2551   personal account immediately.                            \u2551`);
+      console.log(`\u2551                                                            \u2551`);
+      console.log(`\u2551   \ud83d\udce7 Email:    ${email.padEnd(43)} \u2551`);
+      console.log(`\u2551   \ud83d\udd11 Password: \x1b[32m${password.padEnd(43)}\x1b[0m \u2551`);
+      console.log(`\u2551                                                            \u2551`);
       console.log(
-        '\u2551   \ud83d\ude80 DORM SYSTEM PRODUCTION INITIALIZED                     \u2551',
+        `\u2551   \u26a0\ufe0f  STORE THIS SECURELY. IT CANNOT BE RECOVERED.          \u2551`,
       );
-      console.log('\u2551                                                             \u2551');
-      console.log('\u2551   Use these credentials to log in and create your           \u2551');
-      console.log('\u2551   personal account immediately.                             \u2551');
-      console.log('\u2551                                                             \u2551');
-      console.log(`\u2551   \ud83d\udce7 Email:    ${email.padEnd(37)}\u2551`);
-      console.log(`\u2551   \ud83d\udd11 Password: \x1b[32m${password.padEnd(37)}\x1b[0m\u2551`);
-      console.log('\u2551                                                             \u2551');
-      console.log(
-        '\u2551   \u26a0\ufe0f  STORE THIS SECURELY. IT CANNOT BE RECOVERED.           \u2551',
-      );
-      console.log('\u2551                                                             \u2551');
-      console.log(
-        '\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d',
-      );
+      console.log(`\u2551                                                            \u2551`);
+      console.log(`\u255a${border}\u255d`);
       console.log('\n');
     } else {
       console.log('\u2705 Admin user already exists. Skipping user creation.');
