@@ -30,10 +30,10 @@ CREATE TRIGGER update_users_modtime
 BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Student Profiles
-DROP TRIGGER IF EXISTS update_student_profiles_modtime ON student_profiles;
-CREATE TRIGGER update_student_profiles_modtime
-BEFORE UPDATE ON student_profiles
+-- Students
+DROP TRIGGER IF EXISTS update_students_modtime ON students;
+CREATE TRIGGER update_students_modtime
+BEFORE UPDATE ON students
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Bookings
@@ -62,11 +62,11 @@ CREATE TRIGGER audit_users_change
 AFTER INSERT OR UPDATE OR DELETE ON users
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
--- Student Profiles (PK: 'user_id')
-DROP TRIGGER IF EXISTS audit_profiles_change ON student_profiles;
-CREATE TRIGGER audit_profiles_change
-AFTER INSERT OR UPDATE OR DELETE ON student_profiles
-FOR EACH ROW EXECUTE FUNCTION audit.log_change('user_id');
+-- Students
+DROP TRIGGER IF EXISTS audit_students_change ON students;
+CREATE TRIGGER audit_students_change
+AFTER INSERT OR UPDATE OR DELETE ON students
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- Locations
 DROP TRIGGER IF EXISTS audit_locations_change ON locations;

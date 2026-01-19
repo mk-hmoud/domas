@@ -6,4 +6,5 @@ export * from "./endpoints/beds";
 export * from "./endpoints/semesters";
 export * from "./endpoints/bookings";
 export * from "./endpoints/audit";
+export * from "./endpoints/students";
 export * from "./endpoints/semesters";

@@ -87,21 +87,42 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE student_profiles (
-    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    student_number VARCHAR(50) UNIQUE NOT NULL,
+CREATE TABLE students (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- 2. Optional Link to Auth System
+    -- If NULL: Staff entered this student manually. They cannot log in yet.
+    -- If SET: This student has a portal account.
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    
+    -- 3. Core Info
+    student_number VARCHAR(50) UNIQUE NOT NULL, -- The University ID (e.g. 2024001)
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    gender gender_type NOT NULL, -- Matched against location.gender_lock
-    nationality_code CHAR(2),    -- ISO Code (US, TR, DE)
+    gender gender_type NOT NULL,
+    nationality_code CHAR(2),
     
-    -- Student Information
+    -- 4. Contact (Might differ from User email)
+    email VARCHAR(150), 
+    phone_number VARCHAR(50),
+    
+    -- 5. Profile Data (Height, weight, habits - strictly domain data)
     profile_data JSONB DEFAULT '{}'::jsonb,
     
-    -- risk_score INT DEFAULT 0, -- do we need this?
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    -- 6. Meta
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Audit: Who created this profile? (Important for Manual Entry)
+    created_by_user_id UUID REFERENCES users(id)
 );
 
+-- Constraint: A User account can only claim ONE Student profile
+CREATE UNIQUE INDEX idx_students_user_link ON students(user_id) WHERE user_id IS NOT NULL;
+
+-- Index for searching manual students
+CREATE INDEX idx_students_search ON students(student_number, last_name, email);
 
 -- =============================================
 -- 2.1 TIME DIMENSION (Semesters)
@@ -171,7 +192,7 @@ CREATE TABLE beds (
 -- =============================================
 CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID REFERENCES users(id),
+    student_id UUID REFERENCES students(id),
     bed_id INT NOT NULL REFERENCES beds(id), -- reserve bed
     semester_id INT REFERENCES semesters(id),
     
@@ -204,7 +225,8 @@ CREATE TABLE bookings (
     CONSTRAINT no_overlapping_dates_for_bed
     EXCLUDE USING GIST (
         bed_id WITH =,
-        daterange(start_date, end_date, '[]') WITH &&
+        -- '[)' to allow checkout/checkin on the same day
+        daterange(start_date, end_date, '[)') WITH &&
     )
     WHERE (status NOT IN ('cancelled', 'rejected', 'draft'))
 );
@@ -215,7 +237,7 @@ CREATE INDEX idx_bookings_semester ON bookings(semester_id);
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID REFERENCES bookings(id),
-    payer_id UUID REFERENCES users(id),
+    payer_id UUID REFERENCES students(id),
     
     amount NUMERIC(10, 2) NOT NULL,
     transaction_type VARCHAR(20) CHECK (transaction_type IN ('rent', 'deposit', 'fine')),
@@ -250,8 +272,8 @@ CREATE TABLE access_logs (
 CREATE TABLE access_logs_default PARTITION OF access_logs DEFAULT;
 
 
-CREATE INDEX idx_student_profiles_gender ON student_profiles(gender);
-CREATE INDEX idx_student_profiles_name ON student_profiles(last_name, first_name);
+CREATE INDEX idx_students_gender ON students(gender);
+CREATE INDEX idx_students_name ON students(last_name, first_name);
 CREATE INDEX idx_beds_status ON beds(status) WHERE status = 'available';
 CREATE INDEX idx_bookings_student ON bookings(student_id, status);
 CREATE INDEX idx_bookings_active ON bookings(status, start_date, end_date) 
