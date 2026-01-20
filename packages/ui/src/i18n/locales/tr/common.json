@@ -12,6 +12,8 @@
   "switch_language": "Dili değiştir",
   "login_failed": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
   "invalid_email": "Geçersiz e-posta",
+  "invalid_phone": "Geçersiz telefon numarası",
+  "invalid_number": "Değer bir sayı olmalıdır",
   "password_too_short": "Şifre en az 6 karakter içermelidir",
   "field_required": "Bu alan zorunludur",
   "delete_user_title": "Kullanıcıyı Sil",
@@ -193,5 +195,25 @@
       "close": "Kapat",
       "archive": "Arşivle"
     }
-  }
+  },
+  "student_number": "Öğrenci Numarası",
+  "national_id": "Kimlik No",
+  "birth_date": "Doğum Tarihi",
+  "first_name": "Ad",
+  "last_name": "Soyad",
+  "full_name": "Ad Soyad",
+  "gender": "Cinsiyet",
+  "nationality": "Uyruk",
+  "nationality_code": "Uyruk",
+  "user_id": "Kullanıcı ID",
+  "phone_number": "Telefon Numarası",
+  "create_student": "Öğrenci Oluştur",
+  "edit_student": "Öğrenciyi Düzenle",
+  "view_details": "Detayları Görüntüle",
+  "student_details": "Öğrenci Detayları",
+  "select_country": "Ülke seçin",
+  "save": "Kaydet",
+  "male": "Erkek",
+  "female": "Kadın",
+  "students": "Öğrenciler"
 }

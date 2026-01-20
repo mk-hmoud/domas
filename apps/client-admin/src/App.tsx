@@ -7,6 +7,7 @@ import { BookingsPage } from './pages/BookingsPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
+import { StudentsPage } from './pages/StudentsPage';
 import { ProtectedRoute } from '@domas/client-core';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="users" element={<UsersListPage />} />
+          <Route path="students" element={<StudentsPage />} />
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="locations" element={<LocationsPage />} />
           <Route path="semesters" element={<SemestersPage />} />

@@ -12,6 +12,8 @@
   "switch_language": "Switch language",
   "login_failed": "Login failed. Please check your credentials.",
   "invalid_email": "Invalid email",
+  "invalid_phone": "Invalid phone number",
+  "invalid_number": "Value must be a number",
   "password_too_short": "Password should include at least 6 characters",
   "field_required": "This field is required",
   "create_new_user": "Create New User",
@@ -193,5 +195,25 @@
       "close": "Close",
       "archive": "Archive"
     }
-  }
+  },
+  "student_number": "Student Number",
+  "national_id": "National ID",
+  "birth_date": "Birth Date",
+  "first_name": "First Name",
+  "last_name": "Last Name",
+  "full_name": "Full Name",
+  "gender": "Gender",
+  "nationality": "Nationality",
+  "nationality_code": "Nationality",
+  "user_id": "User ID",
+  "phone_number": "Phone Number",
+  "create_student": "Create Student",
+  "edit_student": "Edit Student",
+  "view_details": "View Details",
+  "student_details": "Student Details",
+  "select_country": "Select country",
+  "save": "Save",
+  "male": "Male",
+  "female": "Female",
+  "students": "Students"
 }

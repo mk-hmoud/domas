@@ -41,7 +41,7 @@ import { IncomingMessage } from 'http';
                   }
                 : undefined,
               ip: req.ip || req.socket?.remoteAddress,
-              userAgent: req.headers['user-agent'],
+              userAgent: req.headers?.['user-agent'],
             };
           },
           res(res) {

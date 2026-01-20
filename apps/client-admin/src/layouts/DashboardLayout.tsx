@@ -23,6 +23,7 @@ export function DashboardLayout() {
       icon: IconUsers,
       links: [
         { label: t('nav.all_users'), link: '/dashboard/users' },
+        { label: t('nav.students'), link: '/dashboard/students' },
         { label: t('nav.bookings'), link: '/dashboard/bookings' },
         { label: t('nav.roles'), link: '/dashboard/roles' },
         { label: t('nav.permissions'), link: '/dashboard/permissions' },

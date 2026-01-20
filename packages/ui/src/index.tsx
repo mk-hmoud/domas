@@ -19,5 +19,6 @@ export * from "./components/Locations/LocationsManager";
 export * from "./components/Locations/CreateLocationModal";
 export * from "./components/Semesters";
 export * from "./components/CreateBookingModal";
+export * from "./components/Students";
 
 export * from "./layouts/DashboardLayout";
