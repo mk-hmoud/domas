@@ -1,4 +1,13 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Length, IsEmail } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  IsEmail,
+  IsDateString,
+} from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 
 export class CreateStudentDto {
@@ -20,8 +29,16 @@ export class CreateStudentDto {
 
   @IsString()
   @Length(2, 2)
+  @IsNotEmpty()
+  nationalityCode!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  nationalId!: string;
+
+  @IsDateString()
   @IsOptional()
-  nationalityCode?: string;
+  birthDate?: string;
 
   @IsEmail()
   @IsOptional()

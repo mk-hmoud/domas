@@ -7,7 +7,9 @@ export class Student {
   firstName!: string;
   lastName!: string;
   gender!: GenderType;
-  nationalityCode?: string;
+  nationalityCode!: string;
+  nationalId!: string;
+  birthDate?: Date;
   email?: string;
   phoneNumber?: string;
   profileData?: any; // JSONB

@@ -110,7 +110,9 @@ CREATE TABLE students (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     gender gender_type NOT NULL,
-    nationality_code CHAR(2) REFERENCES countries(code),
+    nationality_code CHAR(2) NOT NULL REFERENCES countries(code),
+    national_id VARCHAR(50) NOT NULL,
+    birth_date DATE,
     
     -- 4. Contact (Might differ from User email)
     email VARCHAR(150), 
@@ -133,6 +135,7 @@ CREATE UNIQUE INDEX idx_students_user_link ON students(user_id) WHERE user_id IS
 
 -- Index for searching manual students
 CREATE INDEX idx_students_search ON students(student_number, last_name, email);
+CREATE UNIQUE INDEX idx_students_national_id ON students(national_id);
 
 -- =============================================
 -- 2.1 TIME DIMENSION (Semesters)

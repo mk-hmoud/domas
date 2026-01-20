@@ -1,4 +1,13 @@
-import { IsEnum, IsOptional, IsString, Length, IsEmail, IsUUID, IsBoolean } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+  IsEmail,
+  IsUUID,
+  IsBoolean,
+  IsDateString,
+} from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 
 export class UpdateStudentDto {
@@ -22,6 +31,14 @@ export class UpdateStudentDto {
   @Length(2, 2)
   @IsOptional()
   nationalityCode?: string;
+
+  @IsString()
+  @IsOptional()
+  nationalId?: string;
+
+  @IsDateString()
+  @IsOptional()
+  birthDate?: string;
 
   @IsEmail()
   @IsOptional()

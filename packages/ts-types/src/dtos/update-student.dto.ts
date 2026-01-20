@@ -6,6 +6,8 @@ export interface UpdateStudentDto {
   lastName?: string;
   gender?: GenderType;
   nationalityCode?: string;
+  nationalId?: string;
+  birthDate?: string;
   email?: string;
   phoneNumber?: string;
   userId?: string;
