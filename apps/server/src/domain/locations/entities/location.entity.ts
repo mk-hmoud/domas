@@ -1,5 +1,6 @@
 import { GenderType } from '../../../common/enums/gender-type.enum';
 import { LocationType } from '../../../common/enums/location-type.enum';
+import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class Location {
   id!: number;
@@ -8,6 +9,8 @@ export class Location {
   type!: LocationType;
   genderLock!: GenderType | null;
   isGuestZone!: boolean;
+  isTrOnly!: boolean;
+  ownership!: LocationOwnership;
   capacity!: number;
   basePrice!: number | null;
   createdAt!: Date;

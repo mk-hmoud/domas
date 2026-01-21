@@ -9,6 +9,6 @@ import { BedsRepository } from './repositories/beds.repository';
 @Module({
   controllers: [LocationsController, BedsController],
   providers: [LocationsService, LocationsRepository, BedsService, BedsRepository],
-  exports: [LocationsService, BedsService],
+  exports: [LocationsService, BedsService, LocationsRepository, BedsRepository],
 })
 export class LocationsModule {}

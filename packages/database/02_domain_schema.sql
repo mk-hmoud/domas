@@ -30,6 +30,7 @@ CREATE TYPE payment_status_enum AS ENUM (
 );
 
 CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room');
+CREATE TYPE location_ownership_type AS ENUM ('dorm', 'rectorate');
 
 -- Semester Statuses
 CREATE TYPE semester_status_enum AS ENUM (
@@ -62,6 +63,8 @@ CREATE TABLE locations (
     
     -- Guest Isolation
     is_guest_zone BOOLEAN DEFAULT FALSE,
+    is_tr_only BOOLEAN DEFAULT FALSE,
+    ownership location_ownership_type DEFAULT 'dorm',
     
     -- Room Specifics (Only used if type = 'room')
     capacity INT DEFAULT 0,

@@ -2,7 +2,9 @@ export * from "./constants/countries";
 
 export * from "./enums/user-role.enum";
 export * from "./enums/location-type.enum";
+export * from "./enums/location-ownership.enum";
 export * from "./enums/gender-type.enum";
+
 export * from "./enums/bed-status.enum";
 export * from "./enums/booking-ops-status.enum";
 export * from "./enums/payment-status.enum";

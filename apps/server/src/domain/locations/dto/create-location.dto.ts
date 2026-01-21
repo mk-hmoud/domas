@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
+import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class CreateLocationDto {
   @IsString()
@@ -29,6 +30,14 @@ export class CreateLocationDto {
   @IsBoolean()
   @IsOptional()
   isGuestZone?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isTrOnly?: boolean = false;
+
+  @IsEnum(LocationOwnership)
+  @IsOptional()
+  ownership?: LocationOwnership = LocationOwnership.DORM;
 
   @IsNumber()
   @Min(0)

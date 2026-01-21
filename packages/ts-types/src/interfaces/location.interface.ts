@@ -1,5 +1,6 @@
 import { LocationType } from "../enums/location-type.enum";
 import { GenderType } from "../enums/gender-type.enum";
+import { LocationOwnership } from "../enums/location-ownership.enum";
 
 export interface Location {
   id: number;
@@ -8,6 +9,8 @@ export interface Location {
   type: LocationType;
   genderLock: GenderType | null;
   isGuestZone: boolean;
+  isTrOnly: boolean;
+  ownership: LocationOwnership;
   capacity: number;
   basePrice: number | null;
   createdAt: Date;

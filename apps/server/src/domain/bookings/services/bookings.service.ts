@@ -4,7 +4,6 @@ import {
   BadRequestException,
   Logger,
   ForbiddenException,
-  ConflictException,
 } from '@nestjs/common';
 import { BookingsRepository } from '../repositories/bookings.repository';
 import { CreateBookingDto } from '../dto/create-booking.dto';
@@ -14,6 +13,12 @@ import { Booking } from '../entities/booking.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
+import { LocationsRepository } from '../../locations/repositories/locations.repository';
+import { BedsRepository } from '../../locations/repositories/beds.repository';
+import { StudentsRepository } from '../../students/repositories/students.repository';
+import { UsersService } from '../../users/services/users.service';
+import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { UserRole } from '../../../common/enums/user-role.enum';
 
 @Injectable()
 export class BookingsService {
@@ -21,28 +26,50 @@ export class BookingsService {
 
   constructor(
     private readonly bookingsRepository: BookingsRepository,
+    private readonly locationsRepository: LocationsRepository,
+    private readonly bedsRepository: BedsRepository,
+    private readonly studentsRepository: StudentsRepository,
+    private readonly usersService: UsersService,
     private readonly db: DatabaseService,
   ) {}
 
   async create(data: CreateBookingDto, context: AuditUserContext): Promise<Booking> {
     this.logger.log({ studentId: data.studentId, bedId: data.bedId }, 'Creating new booking');
 
-    return this.db.transaction(async (client) => {
-      // Ensure student exists? (Rely on FK for now)
+    // 1. Fetch Constraints Data
+    const student = await this.studentsRepository.findById(data.studentId);
+    if (!student) throw new NotFoundException(`Student with ID ${data.studentId} not found`);
 
-      try {
-        const booking = await this.bookingsRepository.create(data, client);
-        this.logger.log({ bookingId: booking.id }, 'Booking created successfully');
-        return booking;
-      } catch (error: any) {
-        // Postgres Error 23P01 = exclusion_violation
-        if (error.code === '23P01') {
-          throw new ConflictException(
-            'Double Booking Detected: This bed is already occupied for the selected dates.',
-          );
-        }
-        throw error;
+    const bed = await this.bedsRepository.findById(data.bedId);
+    if (!bed) throw new NotFoundException(`Bed with ID ${data.bedId} not found`);
+
+    const room = await this.locationsRepository.findById(bed.locationId);
+    if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
+
+    // 2. Fetch hierarchy for inheritance checks (isTrOnly and Ownership)
+    const hierarchy = await this.locationsRepository.findWithAncestors(room.id);
+
+    // 3. Check TR Only Constraint (Inherited)
+    const isTrOnly = hierarchy.some((loc) => loc.isTrOnly);
+    if (isTrOnly && student.nationalityCode !== 'TR') {
+      throw new BadRequestException('This location is reserved for Turkish citizens only');
+    }
+
+    // 4. Check Ownership Constraint (Rectorate - Inherited)
+    const isRectorate = hierarchy.some((loc) => loc.ownership === LocationOwnership.RECTORATE);
+
+    if (isRectorate) {
+      // Check if user is Admin
+      const user = await this.usersService.findById(context.userId);
+      if (!user || user.role !== UserRole.ADMIN) {
+        throw new ForbiddenException('Only Admins can book Rectorate-owned locations');
       }
+    }
+
+    return this.db.transaction(async (client) => {
+      const booking = await this.bookingsRepository.create(data, client);
+      this.logger.log({ bookingId: booking.id }, 'Booking created successfully');
+      return booking;
     }, context);
   }
 
@@ -118,9 +145,6 @@ export class BookingsService {
       }
 
       const updated = await this.bookingsRepository.checkIn(id, client);
-
-      // LOGIC: Trigger other side effects?
-      // e.g. Update User.isActive = true if first booking?
 
       this.logger.log({ bookingId: id }, 'Check-in completed');
       return updated!;

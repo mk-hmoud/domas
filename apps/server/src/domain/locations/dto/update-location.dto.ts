@@ -1,6 +1,7 @@
 import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
+import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class UpdateLocationDto {
   @IsString()
@@ -18,6 +19,14 @@ export class UpdateLocationDto {
   @IsBoolean()
   @IsOptional()
   isGuestZone?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isTrOnly?: boolean;
+
+  @IsEnum(LocationOwnership)
+  @IsOptional()
+  ownership?: LocationOwnership;
 
   @IsNumber()
   @Min(0)

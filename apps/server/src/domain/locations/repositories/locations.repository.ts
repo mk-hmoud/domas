@@ -6,6 +6,7 @@ import { ILocationsRepository } from '../interfaces/locations-repository.interfa
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
+import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 @Injectable()
 export class LocationsRepository implements ILocationsRepository {
@@ -15,29 +16,30 @@ export class LocationsRepository implements ILocationsRepository {
     return client || this.db.getPool();
   }
 
+  private get selectColumns(): string {
+    return `
+      id, 
+      name, 
+      tree_path as "treePath", 
+      type, 
+      gender_lock as "genderLock", 
+      is_guest_zone as "isGuestZone", 
+      is_tr_only as "isTrOnly",
+      ownership,
+      capacity, 
+      base_price as "basePrice", 
+      created_at as "createdAt", 
+      updated_at as "updatedAt"
+    `;
+  }
+
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, 
-        tree_path, 
-        type, 
-        gender_lock, 
-        is_guest_zone, 
-        capacity, 
-        base_price
+        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, ownership, capacity, base_price
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING ${this.selectColumns}
     `;
     const values = [
       data.name,
@@ -45,6 +47,8 @@ export class LocationsRepository implements ILocationsRepository {
       data.type,
       data.genderLock || null,
       data.isGuestZone || false,
+      data.isTrOnly || false,
+      data.ownership || LocationOwnership.DORM,
       data.capacity || 0,
       data.basePrice || null,
     ];
@@ -60,17 +64,7 @@ export class LocationsRepository implements ILocationsRepository {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       ORDER BY tree_path ASC
       LIMIT $1 OFFSET $2
@@ -93,17 +87,7 @@ export class LocationsRepository implements ILocationsRepository {
 
   async findById(id: number, client?: PoolClient): Promise<Location | null> {
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE id = $1
     `;
@@ -113,17 +97,7 @@ export class LocationsRepository implements ILocationsRepository {
 
   async findByTreePath(path: string, client?: PoolClient): Promise<Location | null> {
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE tree_path = $1
     `;
@@ -133,17 +107,7 @@ export class LocationsRepository implements ILocationsRepository {
 
   async findByType(type: LocationType, client?: PoolClient): Promise<Location[]> {
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE type = $1
       ORDER BY tree_path ASC
@@ -158,17 +122,7 @@ export class LocationsRepository implements ILocationsRepository {
     client?: PoolClient,
   ): Promise<Location[]> {
     let query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE tree_path <@ $1 AND tree_path != $1
     `;
@@ -186,23 +140,11 @@ export class LocationsRepository implements ILocationsRepository {
   }
 
   async findChildren(id: number, client?: PoolClient): Promise<Location[]> {
-    // First get the path of the parent
     const parent = await this.findById(id, client);
     if (!parent) return [];
 
-    // Find direct children (nlevel = parent.nlevel + 1)
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE tree_path <@ $1 
         AND nlevel(tree_path) = nlevel($1) + 1
@@ -217,17 +159,7 @@ export class LocationsRepository implements ILocationsRepository {
     if (!target) return [];
 
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE tree_path @> $1
       ORDER BY tree_path ASC
@@ -241,31 +173,19 @@ export class LocationsRepository implements ILocationsRepository {
     const values: any[] = [];
     let paramIndex = 1;
 
-    if (data.name !== undefined) {
-      updates.push(`name = $${paramIndex++}`);
-      values.push(data.name);
-    }
-    if (data.type !== undefined) {
-      updates.push(`type = $${paramIndex++}`);
-      values.push(data.type);
-    }
-    if (data.genderLock !== undefined) {
-      updates.push(`gender_lock = $${paramIndex++}`);
-      values.push(data.genderLock);
-    }
-    if (data.isGuestZone !== undefined) {
-      updates.push(`is_guest_zone = $${paramIndex++}`);
-      values.push(data.isGuestZone);
-    }
-    if (data.capacity !== undefined) {
-      updates.push(`capacity = $${paramIndex++}`);
-      values.push(data.capacity);
-    }
-    if (data.basePrice !== undefined) {
-      updates.push(`base_price = $${paramIndex++}`);
-      values.push(data.basePrice);
-    }
-    // tree_path update not supported directly via this method yet
+    const addUpdate = (col: string, val: any) => {
+      updates.push(`${col} = $${paramIndex++}`);
+      values.push(val);
+    };
+
+    if (data.name !== undefined) addUpdate('name', data.name);
+    if (data.type !== undefined) addUpdate('type', data.type);
+    if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
+    if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
+    if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
+    if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
+    if (data.capacity !== undefined) addUpdate('capacity', data.capacity);
+    if (data.basePrice !== undefined) addUpdate('base_price', data.basePrice);
 
     if (updates.length === 0) {
       const loc = await this.findById(id, client);
@@ -278,17 +198,7 @@ export class LocationsRepository implements ILocationsRepository {
       UPDATE locations
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      RETURNING ${this.selectColumns}
     `;
 
     const result = await this.getClient(client).query<Location>(query, values);
@@ -314,17 +224,7 @@ export class LocationsRepository implements ILocationsRepository {
 
   async searchByName(queryStr: string, client?: PoolClient): Promise<Location[]> {
     const query = `
-      SELECT 
-        id, 
-        name, 
-        tree_path as "treePath", 
-        type, 
-        gender_lock as "genderLock", 
-        is_guest_zone as "isGuestZone", 
-        capacity, 
-        base_price as "basePrice", 
-        created_at as "createdAt", 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM locations
       WHERE name ILIKE $1
       ORDER BY tree_path ASC
