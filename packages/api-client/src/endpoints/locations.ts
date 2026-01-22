@@ -5,11 +5,19 @@ import {
   UpdateLocationDto,
   PaginatedResult,
   PaginationDto,
+  BulkCreateLocationDto,
+  BulkUpdateLocationDto,
+  BulkDeleteLocationDto,
 } from "@domas/ts-types";
 
 export const locations = {
   create: async (data: CreateLocationDto): Promise<Location> => {
     const response = await apiClient.post<Location>("/locations", data);
+    return response.data;
+  },
+
+  createMany: async (data: BulkCreateLocationDto): Promise<Location[]> => {
+    const response = await apiClient.post<Location[]>("/locations/bulk", data);
     return response.data;
   },
 
@@ -54,7 +62,15 @@ export const locations = {
     return response.data;
   },
 
+  updateMany: async (data: BulkUpdateLocationDto): Promise<void> => {
+    await apiClient.patch("/locations/bulk", data);
+  },
+
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/locations/${id}`);
+  },
+
+  deleteMany: async (data: BulkDeleteLocationDto): Promise<void> => {
+    await apiClient.post("/locations/bulk-delete", data);
   },
 };

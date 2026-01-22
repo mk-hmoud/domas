@@ -2,12 +2,18 @@ import { BadRequestException, Injectable, NotFoundException, Logger } from '@nes
 import { LocationsRepository } from '../repositories/locations.repository';
 import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
+import {
+  BulkCreateLocationDto,
+  BulkUpdateLocationDto,
+  BulkDeleteLocationDto,
+} from '../dto/bulk-location.dto';
 import { Location } from '../entities/location.entity';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { PoolClient } from 'pg';
 
 @Injectable()
 export class LocationsService {
@@ -23,9 +29,16 @@ export class LocationsService {
     return str.replace(/[^a-zA-Z0-9_]/g, '_');
   }
 
-  async create(data: CreateLocationDto, context: AuditUserContext): Promise<Location> {
-    this.logger.log({ data }, 'Creating new location');
-    const location = await this.db.transaction(async (client) => {
+  // Internal helper to avoid nested transactions overhead if needed,
+  // but for now reusing create is safer logic-wise.
+  // We will modify create to accept an optional client to participate in external transaction.
+
+  async create(
+    data: CreateLocationDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
       let treePath = this.sanitizeForPath(data.name);
 
       if (data.parentId) {
@@ -36,17 +49,42 @@ export class LocationsService {
         treePath = `${parent.treePath}.${treePath}`;
       }
 
-      // Merge treePath into the data object for the repository
-      return this.locationsRepository.create(
-        {
-          ...data,
-          treePath,
-        },
-        client,
-      );
-    }, context);
+      return this.locationsRepository.create({ ...data, treePath }, client);
+    };
+
+    if (externalClient) {
+      return operation(externalClient);
+    }
+
+    this.logger.log({ data }, 'Creating new location');
+    const location = await this.db.transaction(operation, context);
     this.logger.log({ locationId: location.id }, 'Location created successfully');
     return location;
+  }
+
+  async createMany(dto: BulkCreateLocationDto, context: AuditUserContext): Promise<Location[]> {
+    this.logger.log({ count: dto.locations.length }, 'Bulk creating locations');
+    return this.db.transaction(async (client) => {
+      const results: Location[] = [];
+      for (const loc of dto.locations) {
+        results.push(await this.create(loc, context, client));
+      }
+      return results;
+    }, context);
+  }
+
+  async updateMany(dto: BulkUpdateLocationDto, context: AuditUserContext): Promise<void> {
+    this.logger.log({ count: dto.ids.length, data: dto.data }, 'Bulk updating locations');
+    await this.db.transaction(async (client) => {
+      await this.locationsRepository.updateMany(dto.ids, dto.data, client);
+    }, context);
+  }
+
+  async deleteMany(dto: BulkDeleteLocationDto, context: AuditUserContext): Promise<void> {
+    this.logger.log({ count: dto.ids.length }, 'Bulk deleting locations');
+    await this.db.transaction(async (client) => {
+      await this.locationsRepository.deleteMany(dto.ids, client);
+    }, context);
   }
 
   async findAll(pagination: PaginationDto): Promise<PaginatedResult<Location>> {

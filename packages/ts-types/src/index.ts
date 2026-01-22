@@ -26,6 +26,7 @@ export * from "./dtos/update-user.dto";
 export * from "./dtos/pagination.dto";
 export * from "./dtos/create-location.dto";
 export * from "./dtos/update-location.dto";
+export * from "./dtos/bulk-location.dto";
 export * from "./dtos/create-bed.dto";
 export * from "./dtos/update-bed.dto";
 export * from "./dtos/find-all-beds.dto";

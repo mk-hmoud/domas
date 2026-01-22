@@ -205,9 +205,64 @@ export class LocationsRepository implements ILocationsRepository {
     return new Location(result.rows[0]);
   }
 
+  async updateMany(ids: number[], data: Partial<Location>, client?: PoolClient): Promise<void> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (data.name !== undefined) {
+      updates.push(`name = $${paramIndex++}`);
+      values.push(data.name);
+    }
+    if (data.type !== undefined) {
+      updates.push(`type = $${paramIndex++}`);
+      values.push(data.type);
+    }
+    if (data.genderLock !== undefined) {
+      updates.push(`gender_lock = $${paramIndex++}`);
+      values.push(data.genderLock);
+    }
+    if (data.isGuestZone !== undefined) {
+      updates.push(`is_guest_zone = $${paramIndex++}`);
+      values.push(data.isGuestZone);
+    }
+    if (data.isTrOnly !== undefined) {
+      updates.push(`is_tr_only = $${paramIndex++}`);
+      values.push(data.isTrOnly);
+    }
+    if (data.ownership !== undefined) {
+      updates.push(`ownership = $${paramIndex++}`);
+      values.push(data.ownership);
+    }
+    if (data.capacity !== undefined) {
+      updates.push(`capacity = $${paramIndex++}`);
+      values.push(data.capacity);
+    }
+    if (data.basePrice !== undefined) {
+      updates.push(`base_price = $${paramIndex++}`);
+      values.push(data.basePrice);
+    }
+
+    if (updates.length === 0) return;
+
+    values.push(ids);
+    const query = `
+      UPDATE locations
+      SET ${updates.join(', ')}
+      WHERE id = ANY($${paramIndex})
+    `;
+
+    await this.getClient(client).query(query, values);
+  }
+
   async delete(id: number, client?: PoolClient): Promise<void> {
     const query = `DELETE FROM locations WHERE id = $1`;
     await this.getClient(client).query(query, [id]);
+  }
+
+  async deleteMany(ids: number[], client?: PoolClient): Promise<void> {
+    const query = `DELETE FROM locations WHERE id = ANY($1)`;
+    await this.getClient(client).query(query, [ids]);
   }
 
   async exists(id: number, client?: PoolClient): Promise<boolean> {

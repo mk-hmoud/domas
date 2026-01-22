@@ -15,6 +15,11 @@ import {
 import { LocationsService } from '../services/locations.service';
 import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
+import {
+  BulkCreateLocationDto,
+  BulkUpdateLocationDto,
+  BulkDeleteLocationDto,
+} from '../dto/bulk-location.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
@@ -28,6 +33,23 @@ export class LocationsController {
   @Post()
   create(@Body() createLocationDto: CreateLocationDto, @UserContext() context: AuditUserContext) {
     return this.locationsService.create(createLocationDto, context);
+  }
+
+  @Post('bulk')
+  createMany(@Body() dto: BulkCreateLocationDto, @UserContext() context: AuditUserContext) {
+    return this.locationsService.createMany(dto, context);
+  }
+
+  @Patch('bulk')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateMany(@Body() dto: BulkUpdateLocationDto, @UserContext() context: AuditUserContext) {
+    return this.locationsService.updateMany(dto, context);
+  }
+
+  @Post('bulk-delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteMany(@Body() dto: BulkDeleteLocationDto, @UserContext() context: AuditUserContext) {
+    return this.locationsService.deleteMany(dto, context);
   }
 
   @Get()
