@@ -205,6 +205,8 @@
   "student_number": "Öğrenci Numarası",
   "national_id": "Kimlik No",
   "birth_date": "Doğum Tarihi",
+  "birth_place": "Doğum Yeri",
+  "department": "Bölüm",
   "first_name": "Ad",
   "last_name": "Soyad",
   "full_name": "Ad Soyad",

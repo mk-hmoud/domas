@@ -205,6 +205,8 @@
   "student_number": "Student Number",
   "national_id": "National ID",
   "birth_date": "Birth Date",
+  "birth_place": "Birth Place",
+  "department": "Department",
   "first_name": "First Name",
   "last_name": "Last Name",
   "full_name": "Full Name",

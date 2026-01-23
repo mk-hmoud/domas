@@ -15,6 +15,7 @@ import {
   Student,
   GenderType,
   COUNTRIES,
+  DEPARTMENTS,
 } from "@domas/ts-types";
 import { IconPhone } from "@tabler/icons-react";
 
@@ -39,6 +40,11 @@ export function StudentModal({
     [],
   );
 
+  const departmentOptions = useMemo(
+    () => DEPARTMENTS.map((dept) => ({ value: dept, label: dept })),
+    [],
+  );
+
   const form = useForm<any>({
     initialValues: {
       studentNumber: "",
@@ -48,6 +54,8 @@ export function StudentModal({
       nationalityCode: "",
       nationalId: "",
       birthDate: null,
+      birthPlace: "",
+      department: "",
       email: "",
       phoneNumber: "",
     },
@@ -61,6 +69,9 @@ export function StudentModal({
       nationalityCode: (val) => (val ? null : t("field_required")),
       firstName: (val) => (val ? null : t("field_required")),
       lastName: (val) => (val ? null : t("field_required")),
+      birthDate: (val) => (val ? null : t("field_required")),
+      birthPlace: (val) => (val ? null : t("field_required")),
+      department: (val) => (val ? null : t("field_required")),
       email: (val) =>
         !val || /^\S+@\S+$/.test(val) ? null : t("invalid_email"),
       phoneNumber: (val) =>
@@ -81,6 +92,8 @@ export function StudentModal({
           birthDate: initialValues.birthDate
             ? new Date(initialValues.birthDate)
             : null,
+          birthPlace: initialValues.birthPlace || "",
+          department: initialValues.department || "",
           email: initialValues.email || "",
           phoneNumber: initialValues.phoneNumber || "",
         });
@@ -100,11 +113,12 @@ export function StudentModal({
         gender: values.gender,
         nationalityCode: values.nationalityCode,
         nationalId: values.nationalId,
-        birthDate: values.birthDate
-          ? values.birthDate instanceof Date
+        birthDate:
+          values.birthDate instanceof Date
             ? values.birthDate.toISOString()
-            : values.birthDate
-          : undefined,
+            : values.birthDate,
+        birthPlace: values.birthPlace,
+        department: values.department,
         email: values.email || undefined,
         phoneNumber: values.phoneNumber
           ? values.phoneNumber.replace(/\s/g, "")
@@ -171,7 +185,23 @@ export function StudentModal({
           />
           <DatePickerInput
             label={t("birth_date", { defaultValue: "Birth Date" })}
+            required
             {...form.getInputProps("birthDate")}
+          />
+        </SimpleGrid>
+
+        <SimpleGrid cols={2} mt="md">
+          <TextInput
+            label={t("birth_place", { defaultValue: "Birth Place" })}
+            required
+            {...form.getInputProps("birthPlace")}
+          />
+          <Select
+            label={t("department", { defaultValue: "Department" })}
+            data={departmentOptions}
+            searchable
+            required
+            {...form.getInputProps("department")}
           />
         </SimpleGrid>
 

@@ -7,7 +7,9 @@ export interface CreateStudentDto {
   gender: GenderType;
   nationalityCode: string;
   nationalId: string;
-  birthDate?: string;
+  birthDate: string;
+  birthPlace: string;
+  department: string;
   email?: string;
   phoneNumber?: string;
   userId?: string;

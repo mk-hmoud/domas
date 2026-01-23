@@ -8,6 +8,8 @@ export interface UpdateStudentDto {
   nationalityCode?: string;
   nationalId?: string;
   birthDate?: string;
+  birthPlace?: string;
+  department?: string;
   email?: string;
   phoneNumber?: string;
   userId?: string;

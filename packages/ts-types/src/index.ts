@@ -1,4 +1,5 @@
 export * from "./constants/countries";
+export * from "./constants/departments";
 
 export * from "./enums/user-role.enum";
 export * from "./enums/location-type.enum";

@@ -115,7 +115,9 @@ CREATE TABLE students (
     gender gender_type NOT NULL,
     nationality_code CHAR(2) NOT NULL REFERENCES countries(code),
     national_id VARCHAR(50) NOT NULL,
-    birth_date DATE,
+    birth_date DATE NOT NULL,
+    birth_place VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
     
     -- 4. Contact (Might differ from User email)
     email VARCHAR(150), 

@@ -26,6 +26,8 @@ export class StudentsRepository {
       nationalityCode: row.nationality_code,
       nationalId: row.national_id,
       birthDate: row.birth_date,
+      birthPlace: row.birth_place,
+      department: row.department,
       email: row.email,
       phoneNumber: row.phone_number,
       profileData: row.profile_data,
@@ -43,10 +45,11 @@ export class StudentsRepository {
   ): Promise<Student> {
     const query = `
       INSERT INTO students (
-        student_number, first_name, last_name, gender, nationality_code, national_id, birth_date,
+        student_number, first_name, last_name, gender, nationality_code, national_id, 
+        birth_date, birth_place, department,
         email, phone_number, user_id, created_by_user_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
     const values = [
@@ -56,7 +59,9 @@ export class StudentsRepository {
       data.gender,
       data.nationalityCode,
       data.nationalId,
-      data.birthDate || null,
+      data.birthDate,
+      data.birthPlace,
+      data.department,
       data.email || null,
       data.phoneNumber || null,
       data.userId || null,
@@ -83,6 +88,8 @@ export class StudentsRepository {
     if (data.nationalityCode !== undefined) addUpdate('nationality_code', data.nationalityCode);
     if (data.nationalId !== undefined) addUpdate('national_id', data.nationalId);
     if (data.birthDate !== undefined) addUpdate('birth_date', data.birthDate);
+    if (data.birthPlace !== undefined) addUpdate('birth_place', data.birthPlace);
+    if (data.department !== undefined) addUpdate('department', data.department);
     if (data.email !== undefined) addUpdate('email', data.email);
     if (data.phoneNumber !== undefined) addUpdate('phone_number', data.phoneNumber);
     if (data.userId !== undefined) addUpdate('user_id', data.userId);

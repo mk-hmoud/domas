@@ -7,8 +7,10 @@ import {
   Length,
   IsEmail,
   IsDateString,
+  IsIn,
 } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
+import { DEPARTMENTS } from '@domas/ts-types';
 
 export class CreateStudentDto {
   @IsString()
@@ -37,8 +39,17 @@ export class CreateStudentDto {
   nationalId!: string;
 
   @IsDateString()
-  @IsOptional()
-  birthDate?: string;
+  @IsNotEmpty()
+  birthDate!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  birthPlace!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(DEPARTMENTS)
+  department!: string;
 
   @IsEmail()
   @IsOptional()
