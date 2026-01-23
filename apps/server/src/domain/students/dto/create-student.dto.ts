@@ -10,7 +10,7 @@ import {
   IsIn,
 } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { DEPARTMENTS } from '@domas/ts-types';
+import { DEPARTMENTS } from '../../../common/constants/departments';
 
 export class CreateStudentDto {
   @IsString()
