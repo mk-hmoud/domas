@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import {
   Title,
   Container,
-  Table,
-  Badge,
   Card,
   Text,
   Group,
@@ -15,17 +13,10 @@ import {
   Drawer,
   Stack,
   Box,
-  Menu,
-  ActionIcon,
   Code,
+  Badge,
 } from "@mantine/core";
-import {
-  IconPlus,
-  IconSearch,
-  IconDotsVertical,
-  IconEdit,
-  IconEye,
-} from "@tabler/icons-react";
+import { IconPlus, IconSearch, IconEdit } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students } from "@domas/api-client";
 import {
@@ -34,7 +25,7 @@ import {
   PaginatedResult,
   COUNTRIES,
 } from "@domas/ts-types";
-import { StudentModal } from "@domas/ui";
+import { StudentModal, StudentsTable } from "@domas/ui";
 
 export function SharedStudentsPage() {
   const { t } = useTranslation();
@@ -135,79 +126,14 @@ export function SharedStudentsPage() {
       </Card>
 
       <Paper withBorder radius="md">
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>
-                {t("student_number", { defaultValue: "Student Number" })}
-              </Table.Th>
-              <Table.Th>
-                {t("full_name", { defaultValue: "Full Name" })}
-              </Table.Th>
-              <Table.Th>{t("gender", { defaultValue: "Gender" })}</Table.Th>
-              <Table.Th>
-                {t("nationality", { defaultValue: "Nationality" })}
-              </Table.Th>
-              <Table.Th>{t("status", { defaultValue: "Status" })}</Table.Th>
-              <Table.Th style={{ width: 80 }} />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.data.map((student) => (
-              <Table.Tr
-                key={student.id}
-                onClick={() => setSelectedStudent(student)}
-                style={{ cursor: "pointer" }}
-              >
-                <Table.Td>{student.studentNumber}</Table.Td>
-                <Table.Td>
-                  {student.firstName} {student.lastName}
-                </Table.Td>
-                <Table.Td>{t(student.gender)}</Table.Td>
-                <Table.Td>{getCountryName(student.nationalityCode)}</Table.Td>
-                <Table.Td>
-                  <Badge color={student.isActive ? "green" : "gray"}>
-                    {student.isActive ? t("active") : t("inactive")}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Menu shadow="md" width={200} withinPortal>
-                    <Menu.Target>
-                      <ActionIcon
-                        variant="subtle"
-                        color="gray"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <IconDotsVertical size={16} />
-                      </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      <Menu.Item
-                        leftSection={<IconEye size={14} />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedStudent(student);
-                        }}
-                      >
-                        {t("view_details", { defaultValue: "View Details" })}
-                      </Menu.Item>
-                      <Menu.Item
-                        leftSection={<IconEdit size={14} />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingStudent(student);
-                          setEditModalOpened(true);
-                        }}
-                      >
-                        {t("edit")}
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        <StudentsTable
+          data={data.data}
+          onSelect={setSelectedStudent}
+          onEdit={(student) => {
+            setEditingStudent(student);
+            setEditModalOpened(true);
+          }}
+        />
         {data.data.length === 0 && !loading && (
           <Text c="dimmed" ta="center" py="xl">
             No students found
