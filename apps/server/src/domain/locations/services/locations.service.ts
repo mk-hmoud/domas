@@ -24,11 +24,6 @@ export class LocationsService {
     private readonly db: DatabaseService,
   ) {}
 
-  private sanitizeForPath(str: string): string {
-    // Keep only alphanumeric and underscore
-    return str.replace(/[^a-zA-Z0-9_]/g, '_');
-  }
-
   // Internal helper to avoid nested transactions overhead if needed,
   // but for now reusing create is safer logic-wise.
   // We will modify create to accept an optional client to participate in external transaction.
@@ -39,7 +34,13 @@ export class LocationsService {
     externalClient?: PoolClient,
   ): Promise<Location> {
     const operation = async (client: PoolClient) => {
-      let treePath = this.sanitizeForPath(data.name);
+      const tempPath = 'temp';
+      const created = await this.locationsRepository.create(
+        { ...data, treePath: tempPath },
+        client,
+      );
+
+      let treePath = created.id.toString();
 
       if (data.parentId) {
         const parent = await this.locationsRepository.findById(data.parentId, client);
@@ -49,7 +50,7 @@ export class LocationsService {
         treePath = `${parent.treePath}.${treePath}`;
       }
 
-      return this.locationsRepository.create({ ...data, treePath }, client);
+      return this.locationsRepository.update(created.id, { treePath } as any, client);
     };
 
     if (externalClient) {

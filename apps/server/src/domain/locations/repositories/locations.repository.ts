@@ -179,6 +179,7 @@ export class LocationsRepository implements ILocationsRepository {
     };
 
     if (data.name !== undefined) addUpdate('name', data.name);
+    if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
