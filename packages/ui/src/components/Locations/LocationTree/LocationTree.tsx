@@ -1,22 +1,23 @@
+import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@mantine/hooks";
 import {
-  NavLink,
   ScrollArea,
-  Group,
   Text,
-  Button,
   Paper,
-  ActionIcon,
   rem,
+  TextInput,
+  Badge,
+  Collapse,
+  UnstyledButton,
+  Group,
+  Box,
 } from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { LocationType } from "@domas/ts-types";
+import { LocationIcon } from "../LocationIcon";
 import {
-  IconBuildingSkyscraper,
-  IconBuilding,
-  IconLayoutDashboard,
-  IconStairs,
-  IconBed,
-  IconSchool,
+  IconSearch,
+  IconChevronRight,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
@@ -32,73 +33,197 @@ export interface LocationTreeProps {
   data: LocationNode[];
   selectedId?: number | string;
   onSelect: (node: LocationNode) => void;
-  onAddRoot?: () => void;
-  onAddChildToSelected?: () => void;
-  onDeleteSelected?: () => void;
 }
 
-function LocationIcon({ type }: { type: LocationType }) {
-  const iconProps = { style: { width: rem(16), height: rem(16) } };
-  switch (type) {
-    case LocationType.UNIVERSITY:
-      return <IconSchool {...iconProps} />;
-    case LocationType.CAMPUS:
-      return <IconBuildingSkyscraper {...iconProps} />;
-    case LocationType.BUILDING:
-      return <IconBuilding {...iconProps} />;
-    case LocationType.BLOCK:
-      return <IconLayoutDashboard {...iconProps} />;
-    case LocationType.FLOOR:
-      return <IconStairs {...iconProps} />;
-    case LocationType.ROOM:
-      return <IconBed {...iconProps} />;
-    default:
-      return null;
-  }
+interface TreeItemProps {
+  node: LocationNode;
+  selectedId?: number | string;
+  onSelect: (n: LocationNode) => void;
+  level: number;
+  forceExpand?: boolean;
 }
 
 function TreeItem({
   node,
   selectedId,
   onSelect,
-}: {
-  node: LocationNode;
-  selectedId?: number | string;
-  onSelect: (n: LocationNode) => void;
-}) {
-  const hasChildren = node.children && node.children.length > 0;
+  level,
+  forceExpand,
+}: TreeItemProps) {
+  const [opened, setOpened] = useState(false);
+  const childCount = node.children ? node.children.length : 0;
+  const hasChildren = childCount > 0;
+  // Handle string vs number ID comparison safely
+  const isSelected = String(node.id) === String(selectedId);
+
+  useEffect(() => {
+    if (forceExpand) {
+      setOpened(true);
+    }
+  }, [forceExpand]);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpened((o) => !o);
+  };
+
+  const handleSelect = () => {
+    onSelect(node);
+  };
+
+  const getStatusColor = (status?: string) => {
+    if (status === "available") return "var(--mantine-color-green-filled)";
+    if (status === "occupied") return "var(--mantine-color-blue-filled)";
+    if (status === "maintenance") return "var(--mantine-color-orange-filled)";
+    return "transparent";
+  };
 
   return (
-    <NavLink
-      key={node.id}
-      label={node.name}
-      leftSection={<LocationIcon type={node.type} />}
-      active={String(node.id) === String(selectedId)}
-      onClick={() => onSelect(node)}
-      defaultOpened
-    >
-      {hasChildren &&
-        node.children!.map((child) => (
-          <TreeItem
-            key={child.id}
-            node={child}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
-        ))}
-    </NavLink>
+    <>
+      <UnstyledButton
+        onClick={handleSelect}
+        style={{
+          display: "block",
+          width: "100%",
+          padding: `${rem(6)} ${rem(12)}`,
+          paddingLeft: `calc(${rem(12)} + ${rem(level * 16)})`,
+          backgroundColor: isSelected
+            ? "var(--mantine-color-blue-light)"
+            : "transparent",
+          color: isSelected
+            ? "var(--mantine-color-blue-filled)"
+            : "var(--mantine-color-text)",
+          borderRadius: rem(4),
+          marginBottom: rem(2),
+          transition: "background-color 0.1s ease",
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected)
+            e.currentTarget.style.backgroundColor =
+              "var(--mantine-color-default-hover)";
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected)
+            e.currentTarget.style.backgroundColor = "transparent";
+        }}
+      >
+        <Group wrap="nowrap" gap={6}>
+          <Box
+            style={{
+              width: rem(20),
+              height: rem(20),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: hasChildren ? "pointer" : "default",
+              borderRadius: rem(4),
+              transition: "background-color 0.1s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (hasChildren)
+                e.currentTarget.style.backgroundColor =
+                  "var(--mantine-color-default-hover)";
+            }}
+            onMouseLeave={(e) => {
+              if (hasChildren)
+                e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            onClick={hasChildren ? handleToggle : undefined}
+          >
+            {hasChildren &&
+              (opened ? (
+                <IconChevronDown style={{ width: rem(14) }} />
+              ) : (
+                <IconChevronRight style={{ width: rem(14) }} />
+              ))}
+          </Box>
+
+          <LocationIcon type={node.type} />
+
+          <Text
+            size="sm"
+            style={{
+              flex: 1,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {node.name}
+          </Text>
+
+          {node.type === LocationType.BED ? (
+            <Box
+              style={{
+                width: rem(8),
+                height: rem(8),
+                borderRadius: "50%",
+                backgroundColor: getStatusColor(node.status),
+              }}
+            />
+          ) : (
+            childCount > 0 && (
+              <Badge size="xs" variant="light" color="gray" circle>
+                {childCount}
+              </Badge>
+            )
+          )}
+        </Group>
+      </UnstyledButton>
+
+      {hasChildren && (
+        <Collapse in={opened}>
+          {node.children!.map((child) => (
+            <TreeItem
+              key={child.id}
+              node={child}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              level={level + 1}
+              forceExpand={forceExpand}
+            />
+          ))}
+        </Collapse>
+      )}
+    </>
   );
+}
+
+// Helper to filter tree
+function filterTree(nodes: LocationNode[], query: string): LocationNode[] {
+  if (!query) return nodes;
+  const lowerQuery = query.toLowerCase();
+
+  const filtered: LocationNode[] = [];
+
+  for (const node of nodes) {
+    const children = node.children
+      ? filterTree(node.children, query)
+      : undefined;
+    const matches = node.name.toLowerCase().includes(lowerQuery);
+
+    if (matches || (children && children.length > 0)) {
+      filtered.push({ ...node, children: children || [] });
+    }
+  }
+
+  return filtered;
 }
 
 export function LocationTree({
   data,
   selectedId,
   onSelect,
-  onAddRoot,
-  onAddChildToSelected,
-  onDeleteSelected,
 }: LocationTreeProps) {
   const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
+
+  const filteredData = useMemo(
+    () => filterTree(data, debouncedQuery),
+    [data, debouncedQuery],
+  );
+  const isFiltering = debouncedQuery.length > 0;
 
   return (
     <Paper
@@ -113,45 +238,33 @@ export function LocationTree({
           borderBottom: "1px solid var(--mantine-color-default-border)",
         }}
       >
-        <Group justify="space-between">
-          <Text fw={700}>{t("locations")}</Text>
-          <Group gap={4}>
-            {onAddChildToSelected && selectedId && (
-              <ActionIcon
-                variant="light"
-                onClick={onAddChildToSelected}
-                title={t("add_child")}
-              >
-                <IconPlus style={{ width: rem(16), height: rem(16) }} />
-              </ActionIcon>
-            )}
-            {onDeleteSelected && selectedId && (
-              <ActionIcon
-                variant="light"
-                color="red"
-                onClick={onDeleteSelected}
-                title={t("delete_selected")}
-              >
-                <IconTrash style={{ width: rem(16), height: rem(16) }} />
-              </ActionIcon>
-            )}
-            {onAddRoot && (
-              <Button size="xs" variant="light" onClick={onAddRoot}>
-                {t("add_root")}
-              </Button>
-            )}
-          </Group>
-        </Group>
+        <TextInput
+          placeholder={t("search_placeholder", { defaultValue: "Search..." })}
+          leftSection={
+            <IconSearch style={{ width: rem(16), height: rem(16) }} />
+          }
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+        />
       </div>
       <ScrollArea style={{ flex: 1 }}>
-        {data.map((node) => (
-          <TreeItem
-            key={node.id}
-            node={node}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
-        ))}
+        <Box p="xs">
+          {filteredData.map((node) => (
+            <TreeItem
+              key={node.id}
+              node={node}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              level={0}
+              forceExpand={isFiltering}
+            />
+          ))}
+          {filteredData.length === 0 && (
+            <Text c="dimmed" size="sm" ta="center" py="md">
+              No locations found
+            </Text>
+          )}
+        </Box>
       </ScrollArea>
     </Paper>
   );

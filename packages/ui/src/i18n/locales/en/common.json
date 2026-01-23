@@ -38,7 +38,13 @@
   "delete_error": "Failed to delete user",
   "delete_location_title": "Delete Location",
   "delete_location_message": "Are you sure you want to delete {{name}}? All children will also be deleted.",
+  "delete_confirm_count": "Delete {{count}} items?",
+  "select_all": "Select All",
+  "selected": "Selected",
+  "duplicate": "Duplicate",
   "locations": "Locations",
+  "locations_management": "Locations Management",
+  "search_placeholder": "Search...",
   "semesters": "Semesters",
   "semesters_page_title": "Semesters Management",
   "semester_name": "Semester Name",
@@ -215,5 +221,25 @@
   "save": "Save",
   "male": "Male",
   "female": "Female",
-  "students": "Students"
+  "students": "Students",
+  "create_bed": "Create Bed",
+  "bed_label": "Bed Label",
+  "bed_status": {
+    "available": "Available",
+    "occupied": "Occupied",
+    "maintenance": "Maintenance"
+  },
+  "ownership": "Ownership",
+  "is_tr_only": "TR Citizens Only?",
+  "base_price": "Base Price",
+  "bulk_create": "Bulk Create",
+  "bulk_edit": "Bulk Edit",
+  "single_create": "Single Create",
+  "prefix": "Prefix",
+  "start_number": "Start Number",
+  "end_number": "End Number",
+  "ownerships": {
+    "dorm": "Dorm",
+    "rectorate": "Rectorate"
+  }
 }

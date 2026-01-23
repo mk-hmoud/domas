@@ -7,8 +7,9 @@ import {
   useMemo,
 } from "react";
 import { Location, CreateLocationDto } from "@domas/ts-types";
-import { locations } from "@domas/api-client";
+import { locations, beds } from "@domas/api-client";
 import { LocationNode } from "@domas/ui";
+import { LocationType } from "@domas/ts-types";
 
 interface LocationsContextType {
   treeData: LocationNode[];
@@ -80,8 +81,44 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
   const refreshTree = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const result = await locations.findAll({ limit: 1000 });
-      const builtTree = buildTree(result.data);
+      const [locsRes, bedsRes] = await Promise.all([
+        locations.findAll({ limit: 1000 }),
+        beds.findAll({ limit: 10000 }),
+      ]);
+
+      const builtTree = buildTree(locsRes.data);
+
+      // Attach beds to rooms
+      const bedsByRoom = new Map<number, any[]>();
+      bedsRes.data.forEach((bed) => {
+        if (!bedsByRoom.has(bed.locationId)) bedsByRoom.set(bed.locationId, []);
+        bedsByRoom.get(bed.locationId)?.push({
+          ...bed, // Include other bed props first
+          id: `bed-${bed.id}`, // Unique ID for tree
+          name: bed.label,
+          type: LocationType.BED,
+          treePath: "",
+          children: [],
+          status: bed.status, // Pass status for color coding
+        });
+      });
+
+      const addBedsToTree = (nodes: LocationNode[]) => {
+        for (const node of nodes) {
+          if (node.type === LocationType.ROOM) {
+            const roomBeds = bedsByRoom.get(Number(node.id));
+            if (roomBeds) {
+              // Sort beds by label
+              roomBeds.sort((a, b) => a.name.localeCompare(b.name));
+              node.children = [...(node.children || []), ...roomBeds];
+            }
+          }
+          if (node.children) addBedsToTree(node.children);
+        }
+      };
+
+      addBedsToTree(builtTree);
+
       setTreeData(builtTree);
 
       // Restore selection if possible

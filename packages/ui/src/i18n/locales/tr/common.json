@@ -24,7 +24,13 @@
   "delete_error": "Kullanıcı silinemedi",
   "delete_location_title": "Lokasyonu Sil",
   "delete_location_message": "{{name}} lokasyonunu silmek istediğinize emin misiniz? Alt lokasyonlar da silinecektir.",
+  "delete_confirm_count": "{{count}} öğeyi silmek istiyor musunuz?",
+  "select_all": "Tümünü Seç",
+  "selected": "Seçildi",
+  "duplicate": "Çoğalt",
   "locations": "Lokasyonlar",
+  "locations_management": "Lokasyon Yönetimi",
+  "search_placeholder": "Ara...",
   "semesters": "Dönemler",
   "semesters_page_title": "Dönem Yönetimi",
   "semester_name": "Dönem Adı",
@@ -215,5 +221,25 @@
   "save": "Kaydet",
   "male": "Erkek",
   "female": "Kadın",
-  "students": "Öğrenciler"
+  "students": "Öğrenciler",
+  "create_bed": "Yatak Oluştur",
+  "bed_label": "Yatak Etiketi",
+  "bed_status": {
+    "available": "Müsait",
+    "occupied": "Dolu",
+    "maintenance": "Bakımda"
+  },
+  "ownership": "Mülkiyet",
+  "is_tr_only": "Sadece TC Vatandaşı?",
+  "base_price": "Taban Fiyat",
+  "bulk_create": "Toplu Oluştur",
+  "bulk_edit": "Toplu Düzenle",
+  "single_create": "Tekli Oluştur",
+  "prefix": "Ön Ek",
+  "start_number": "Başlangıç No",
+  "end_number": "Bitiş No",
+  "ownerships": {
+    "dorm": "Yurt",
+    "rectorate": "Rektörlük"
+  }
 }
