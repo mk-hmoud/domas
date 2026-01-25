@@ -1,6 +1,6 @@
 import { apiClient } from "../client";
 import {
-  CreateUser,
+  CreateUserDto,
   User,
   FindAllUsersDto,
   PaginatedResult,
@@ -8,7 +8,7 @@ import {
 } from "@domas/ts-types";
 
 export const users = {
-  create: async (data: CreateUser): Promise<User> => {
+  create: async (data: CreateUserDto): Promise<User> => {
     const response = await apiClient.post<User>("/users", data);
     return response.data;
   },
