@@ -1,14 +1,15 @@
 import { Injectable, ConflictException, Logger, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { UsersRepository } from '../repositories/users.repository';
+import { AccessRepository } from '../repositories/access.repository';
 import { User } from '../entities/user.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { UserRole } from '../../../common/enums/user-role.enum';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { SYSTEM_ROLES } from '../../../common/constants/system-roles';
 
 @Injectable()
 export class UsersService {
@@ -16,12 +17,9 @@ export class UsersService {
 
   constructor(
     private readonly usersRepository: UsersRepository,
+    private readonly accessRepository: AccessRepository,
     private readonly db: DatabaseService,
   ) {}
-
-  async existsByRole(role: UserRole): Promise<boolean> {
-    return this.usersRepository.existsByRole(role);
-  }
 
   async createUser(context: AuditUserContext, data: CreateUserDto): Promise<User> {
     this.logger.log(`Attempting to create user with email: ${data.email}`);
@@ -34,16 +32,44 @@ export class UsersService {
     const passwordHash = await argon2.hash(data.password);
 
     const user = await this.db.transaction(async (client) => {
+      const createdUser = await this.usersRepository.create(
+        {
+          ...data,
+          password: passwordHash,
+          isRecoveryAdmin: false,
+        },
+        client,
+      );
+
+      return createdUser;
+    }, context);
+
+    this.logger.log(`User created successfully with ID: ${user.id}`);
+    return user;
+  }
+
+  async createRecoveryAdmin(context: AuditUserContext, data: CreateUserDto): Promise<User> {
+    this.logger.log(`Attempting to create Recovery Admin with email: ${data.email}`);
+    const existing = await this.usersRepository.findByEmail(data.email);
+    if (existing) {
+      this.logger.warn(`Recovery Admin creation failed: email ${data.email} already exists`);
+      throw new ConflictException(`User with email ${data.email} already exists`);
+    }
+
+    const passwordHash = await argon2.hash(data.password);
+
+    const user = await this.db.transaction(async (client) => {
       return this.usersRepository.create(
         {
           ...data,
-          passwordHash,
+          password: passwordHash,
+          isRecoveryAdmin: true,
         },
         client,
       );
     }, context);
 
-    this.logger.log(`User created successfully with ID: ${user.id}`);
+    this.logger.log(`Recovery Admin created successfully with ID: ${user.id}`);
     return user;
   }
 
@@ -65,7 +91,6 @@ export class UsersService {
         id,
         {
           email: data.email,
-          role: data.role,
           isActive: data.isActive,
           passwordHash,
         },
@@ -81,19 +106,24 @@ export class UsersService {
     }, context);
   }
 
-  async findAll(
-    pagination: PaginationDto,
-    role?: UserRole | UserRole[],
-  ): Promise<PaginatedResult<User>> {
-    return this.usersRepository.findAll(pagination, role);
+  async findAll(pagination: PaginationDto): Promise<PaginatedResult<User>> {
+    return this.usersRepository.findAll(pagination);
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findByEmail(email);
+    const user = await this.usersRepository.findByEmail(email);
+    if (user) {
+      user.roles = await this.accessRepository.getRolesForUser(user.id);
+    }
+    return user;
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.usersRepository.findById(id);
+    const user = await this.usersRepository.findById(id);
+    if (user) {
+      user.roles = await this.accessRepository.getRolesForUser(user.id);
+    }
+    return user;
   }
 
   async delete(id: string, context: AuditUserContext): Promise<void> {

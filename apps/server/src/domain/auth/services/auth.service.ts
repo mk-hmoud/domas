@@ -9,7 +9,7 @@ export class AuthService {
 
   constructor(private readonly usersService: UsersService) {}
 
-  async validateUser(email: string, pass: string): Promise<Omit<User, 'passwordHash'> | null> {
+  async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       this.logger.warn({ email }, 'Login failed: User not found');
@@ -21,11 +21,10 @@ export class AuthService {
       return null;
     }
 
-    const isMatch = await argon2.verify(user.passwordHash, pass);
+    const isMatch = await argon2.verify(user.passwordHash || '', pass);
     if (isMatch) {
-      const { passwordHash, ...result } = user;
       this.logger.log({ userId: user.id, email }, 'Login successful');
-      return result;
+      return user;
     }
 
     this.logger.warn({ userId: user.id, email }, 'Login failed: Invalid password');

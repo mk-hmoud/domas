@@ -98,6 +98,30 @@ CREATE TRIGGER audit_transactions_change
 AFTER INSERT OR UPDATE OR DELETE ON transactions
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
+-- Roles
+DROP TRIGGER IF EXISTS audit_roles_change ON roles;
+CREATE TRIGGER audit_roles_change
+AFTER INSERT OR UPDATE OR DELETE ON roles
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Permissions
+DROP TRIGGER IF EXISTS audit_permissions_change ON permissions;
+CREATE TRIGGER audit_permissions_change
+AFTER INSERT OR UPDATE OR DELETE ON permissions
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- User Roles
+DROP TRIGGER IF EXISTS audit_user_roles_change ON user_roles;
+CREATE TRIGGER audit_user_roles_change
+AFTER INSERT OR UPDATE OR DELETE ON user_roles
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Role Permissions
+DROP TRIGGER IF EXISTS audit_role_permissions_change ON role_permissions;
+CREATE TRIGGER audit_role_permissions_change
+AFTER INSERT OR UPDATE OR DELETE ON role_permissions
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
 -- =============================================
 -- BUSINESS LOGIC TRIGGERS
 -- =============================================

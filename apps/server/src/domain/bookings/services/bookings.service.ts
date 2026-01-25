@@ -18,7 +18,6 @@ import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { UsersService } from '../../users/services/users.service';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
-import { UserRole } from '../../../common/enums/user-role.enum';
 
 @Injectable()
 export class BookingsService {
@@ -61,8 +60,8 @@ export class BookingsService {
     if (isRectorate) {
       // Check if user is Admin
       const user = await this.usersService.findById(context.userId);
-      if (!user || user.role !== UserRole.ADMIN) {
-        throw new ForbiddenException('Only Admins can book Rectorate-owned locations');
+      if (!user || !user.isRecoveryAdmin) {
+        throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
       }
     }
 

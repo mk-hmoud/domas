@@ -31,8 +31,7 @@ export class UsersController {
 
   @Get()
   findAll(@Query() query: FindAllUsersDto) {
-    const { role, ...pagination } = query;
-    return this.usersService.findAll(pagination, role);
+    return this.usersService.findAll(query);
   }
 
   @Patch(':id')

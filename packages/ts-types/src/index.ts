@@ -1,7 +1,6 @@
 export * from "./constants/countries";
 export * from "./constants/departments";
 
-export * from "./enums/user-role.enum";
 export * from "./enums/location-type.enum";
 export * from "./enums/location-ownership.enum";
 export * from "./enums/gender-type.enum";
@@ -13,12 +12,8 @@ export * from "./enums/semester-status.enum";
 export * from "./enums/semester-type.enum";
 
 export * from "./interfaces/user.interface";
-export * from "./interfaces/location.interface";
-export * from "./interfaces/bed.interface";
-export * from "./interfaces/semester.interface";
-export * from "./interfaces/paginated-result.interface";
-export * from "./interfaces/booking.interface";
-export * from "./interfaces/audit.interface";
+export * from "./interfaces/role.interface";
+export * from "./interfaces/permission.interface";
 export * from "./interfaces/student.interface";
 
 export * from "./dtos/login-credentials.dto";

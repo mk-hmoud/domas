@@ -4,11 +4,13 @@ import * as crypto from 'crypto';
 import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/domain/users/services/users.service';
 import { LocationsService } from '../src/domain/locations/services/locations.service';
+import { AccessRepository } from '../src/domain/users/repositories/access.repository';
 import { DatabaseService } from '../src/core/database/database.service';
-import { UserRole } from '../src/common/enums/user-role.enum';
 import { LocationType } from '../src/common/enums/location-type.enum';
 import { AuditUserContext } from '../src/common/interfaces/audit-user-context.interface';
 import { COUNTRIES } from '@domas/ts-types';
+import { PERMISSIONS } from '../src/common/constants/permissions';
+import { SYSTEM_ROLES } from '../src/common/constants/system-roles';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -17,6 +19,7 @@ async function bootstrap() {
 
   const usersService = app.get(UsersService);
   const locationsService = app.get(LocationsService);
+  const accessRepository = app.get(AccessRepository);
   const db = app.get(DatabaseService);
   const logger = new Logger('SystemInit');
 
@@ -42,9 +45,38 @@ async function bootstrap() {
       console.log('\u2705 Countries populated.');
     }
 
+    // 0.1 Handle Permissions & Roles (RBAC Seed)
+    console.log('\ud83d\udee1\ufe0f  Seeding RBAC system...');
+
+    // Seed Permissions
+    const allPermissionIds: number[] = [];
+    for (const slug of Object.values(PERMISSIONS)) {
+      const perm = await accessRepository
+        .createPermission(slug, slug)
+        .catch(() => accessRepository.findPermissionBySlug(slug)); // Handle conflict
+      if (perm) allPermissionIds.push(perm.id);
+    }
+
+    // Seed Roles
+
+    const studentRole = await accessRepository
+      .createRole(SYSTEM_ROLES.STUDENT, 'Student Access', true)
+      .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.STUDENT));
+
+    const dormManagerRole = await accessRepository
+      .createRole(SYSTEM_ROLES.DORM_MANAGER, 'Dorm Management', true)
+      .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.DORM_MANAGER));
+
+    // Assign Permissions
+    // TODO: Define specific permissions for other roles
+
+    console.log('\u2705 RBAC seeded.');
+
     // 1. Handle Admin User
-    const adminExists = await usersService.existsByRole(UserRole.ADMIN);
-    if (!adminExists) {
+    const email = 'recovery_admin@dorm.com';
+    const adminUser = await usersService.findByEmail(email);
+
+    if (!adminUser) {
       // Generates a 24-character random string (e.g. "aF92-kL4m-99xZ...")
       const password =
         crypto
@@ -52,12 +84,11 @@ async function bootstrap() {
           .toString('hex')
           .match(/.{1,4}/g)
           ?.join('-') || 'secure-pass';
-      const email = 'recovery_admin@dorm.com';
 
-      await usersService.createUser(systemContext, {
+      // create recovery admin
+      await usersService.createRecoveryAdmin(systemContext, {
         email,
-        password: password, // Service will hash this!
-        role: UserRole.ADMIN,
+        password: password,
       });
 
       // Print credentials

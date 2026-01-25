@@ -6,7 +6,6 @@
 -- 1. ENUM DEFINITIONS
 -- =============================================
 
-CREATE TYPE user_role AS ENUM ('admin', 'dorm_manager', 'dorm_staff', 'accounting_staff', 'student');
 CREATE TYPE gender_type AS ENUM ('male', 'female');
 CREATE TYPE bed_status AS ENUM ('available', 'occupied', 'maintenance');
 
@@ -84,10 +83,38 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(150) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role user_role NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    is_recovery_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_one_recovery_admin ON users (is_recovery_admin) WHERE is_recovery_admin = TRUE;
+
+-- RBAC Tables
+CREATE TABLE permissions (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE roles (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_system_role BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE role_permissions (
+    role_id INT REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id INT REFERENCES permissions(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id)
+);
+
+CREATE TABLE user_roles (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role_id INT REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
 );
 
 -- =============================================
