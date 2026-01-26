@@ -9,7 +9,7 @@ import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { RolesPage } from './pages/RolesPage';
-import { ProtectedRoute } from '@domas/client-core';
+import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
   return (
@@ -25,13 +25,62 @@ function App() {
           }
         >
           <Route index element={<DashboardHome />} />
-          <Route path="users" element={<UsersListPage />} />
-          <Route path="students" element={<StudentsPage />} />
-          <Route path="bookings" element={<BookingsPage />} />
-          <Route path="locations" element={<LocationsPage />} />
-          <Route path="semesters" element={<SemestersPage />} />
-          <Route path="roles" element={<RolesPage />} />
-          <Route path="logs/audit" element={<AuditLogsPage />} />
+          <Route
+            path="users"
+            element={
+              <PermissionRoute permission="users.view">
+                <UsersListPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="students"
+            element={
+              <PermissionRoute permission="students.view">
+                <StudentsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="bookings"
+            element={
+              <PermissionRoute permission="bookings.view">
+                <BookingsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="locations"
+            element={
+              <PermissionRoute permission="locations.view">
+                <LocationsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="semesters"
+            element={
+              <PermissionRoute permission="semesters.view">
+                <SemestersPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="roles"
+            element={
+              <PermissionRoute permission="roles.view">
+                <RolesPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="logs/audit"
+            element={
+              <PermissionRoute permission="audit.view">
+                <AuditLogsPage />
+              </PermissionRoute>
+            }
+          />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

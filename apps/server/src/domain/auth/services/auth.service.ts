@@ -10,7 +10,7 @@ export class AuthService {
   constructor(private readonly usersService: UsersService) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmail(email, true);
     if (!user) {
       this.logger.warn({ email }, 'Login failed: User not found');
       return null;

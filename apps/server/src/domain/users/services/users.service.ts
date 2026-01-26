@@ -110,8 +110,8 @@ export class UsersService {
     return this.usersRepository.findAll(pagination);
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    const user = await this.usersRepository.findByEmail(email);
+  async findByEmail(email: string, includePassword = false): Promise<User | null> {
+    const user = await this.usersRepository.findByEmail(email, undefined, includePassword);
     if (user) {
       user.roles = await this.accessRepository.getRolesForUser(user.id);
       user.permissions = await this.accessRepository.getPermissionsForUser(user.id);

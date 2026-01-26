@@ -13,6 +13,7 @@ export interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  hasPermission: (permission?: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,8 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const hasPermission = (permission?: string) => {
+    if (!permission) return true;
+    if (!user) return false;
+    if (user.isRecoveryAdmin) return true;
+    return user.permissions?.includes(permission) || false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, logout, hasPermission }}
+    >
       {children}
     </AuthContext.Provider>
   );

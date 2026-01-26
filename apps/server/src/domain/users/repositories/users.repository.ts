@@ -15,16 +15,21 @@ export class UsersRepository {
     return client || this.db.getPool();
   }
 
-  private get selectColumns(): string {
-    return `
-      id, 
-      email, 
-      password_hash as "passwordHash", 
-      is_active as "isActive", 
-      is_recovery_admin as "isRecoveryAdmin",
-      created_at as "createdAt", 
-      updated_at as "updatedAt"
-    `;
+  private getSelectColumns(includePassword = false): string {
+    const columns = [
+      'id',
+      'email',
+      'is_active as "isActive"',
+      'is_recovery_admin as "isRecoveryAdmin"',
+      'created_at as "createdAt"',
+      'updated_at as "updatedAt"',
+    ];
+
+    if (includePassword) {
+      columns.push('password_hash as "passwordHash"');
+    }
+
+    return columns.join(', ');
   }
 
   private mapRowToEntity(row: any): User {
@@ -46,7 +51,7 @@ export class UsersRepository {
     const query = `
       INSERT INTO users (email, password_hash, is_active, is_recovery_admin)
       VALUES ($1, $2, $3, $4)
-      RETURNING ${this.selectColumns}
+      RETURNING ${this.getSelectColumns(false)}
     `;
     const values = [data.email, data.password, true, data.isRecoveryAdmin || false];
 
@@ -59,7 +64,7 @@ export class UsersRepository {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT ${this.selectColumns}
+      SELECT ${this.getSelectColumns(false)}
       FROM users
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2
@@ -80,9 +85,13 @@ export class UsersRepository {
     };
   }
 
-  async findByEmail(email: string, client?: PoolClient): Promise<User | null> {
+  async findByEmail(
+    email: string,
+    client?: PoolClient,
+    includePassword = false,
+  ): Promise<User | null> {
     const query = `
-      SELECT ${this.selectColumns}
+      SELECT ${this.getSelectColumns(includePassword)}
       FROM users
       WHERE email = $1
     `;
@@ -90,9 +99,9 @@ export class UsersRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
-  async findById(id: string, client?: PoolClient): Promise<User | null> {
+  async findById(id: string, client?: PoolClient, includePassword = false): Promise<User | null> {
     const query = `
-      SELECT ${this.selectColumns}
+      SELECT ${this.getSelectColumns(includePassword)}
       FROM users
       WHERE id = $1
     `;
@@ -131,7 +140,7 @@ export class UsersRepository {
       UPDATE users
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE id = $${paramIndex}
-      RETURNING ${this.selectColumns}
+      RETURNING ${this.getSelectColumns(false)}
     `;
 
     const result = await this.getClient(client).query<User>(query, values);
