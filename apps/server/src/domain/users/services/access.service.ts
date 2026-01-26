@@ -102,4 +102,18 @@ export class AccessService {
   async getRolesForUser(userId: string): Promise<Role[]> {
     return this.accessRepository.getRolesForUser(userId);
   }
+
+  async deleteRole(id: number, context: AuditUserContext): Promise<void> {
+    this.logger.log({ roleId: id }, 'Deleting role');
+    await this.db.transaction(async (client) => {
+      const role = await this.accessRepository.findRoleById(id, client);
+      if (!role) throw new NotFoundException(`Role with ID ${id} not found`);
+
+      if (role.isSystemRole) {
+        throw new ForbiddenException('Cannot delete a System Role');
+      }
+
+      await this.accessRepository.deleteRole(id, client);
+    }, context);
+  }
 }

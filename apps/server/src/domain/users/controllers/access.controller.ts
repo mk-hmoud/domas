@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Param, UseGuards, ParseIntPipe, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  ParseIntPipe,
+  Patch,
+  Delete,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AccessService } from '../services/access.service';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
@@ -46,6 +58,13 @@ export class AccessController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.accessService.updateRole(id, dto, context);
+  }
+
+  @Delete('roles/:id')
+  @RequirePermissions(PERMISSIONS.ROLES_MANAGE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteRole(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.accessService.deleteRole(id, context);
   }
 
   @Post('users/:userId/roles/:roleId')

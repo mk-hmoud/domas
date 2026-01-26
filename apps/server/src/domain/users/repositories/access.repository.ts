@@ -78,6 +78,12 @@ export class AccessRepository {
     return result.rows[0] ? new Role(result.rows[0]) : null;
   }
 
+  async deleteRole(id: number, client?: PoolClient): Promise<boolean> {
+    const query = `DELETE FROM roles WHERE id = $1`;
+    const result = await this.getClient(client).query(query, [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async replaceRolePermissions(
     roleId: number,
     permissionIds: number[],

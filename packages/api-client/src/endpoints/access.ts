@@ -32,6 +32,10 @@ export const access = {
     return response.data;
   },
 
+  deleteRole: async (id: number): Promise<void> => {
+    await apiClient.delete(`/access/roles/${id}`);
+  },
+
   assignRole: async (userId: string, roleId: number): Promise<void> => {
     await apiClient.post(`/access/users/${userId}/roles/${roleId}`);
   },
