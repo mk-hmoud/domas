@@ -4,30 +4,37 @@ import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 
 @Controller('students')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedGuard, PermissionsGuard)
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Post()
+  @RequirePermissions(PERMISSIONS.STUDENTS_CREATE)
   create(@Body() createStudentDto: CreateStudentDto, @UserContext() context: AuditUserContext) {
     return this.studentsService.create(createStudentDto, context);
   }
 
   @Get()
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
   findAll(@Query() query: FindAllStudentsDto) {
     return this.studentsService.findAll(query);
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
   findOne(@Param('id') id: string) {
     return this.studentsService.findById(id);
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
   update(
     @Param('id') id: string,
     @Body() updateStudentDto: UpdateStudentDto,

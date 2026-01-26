@@ -26,6 +26,7 @@ export * from "./dtos/login-credentials.dto";
 export * from "./dtos/create-user.dto";
 export * from "./dtos/update-user.dto";
 export * from "./dtos/create-role.dto";
+export * from "./dtos/update-role.dto";
 export * from "./dtos/pagination.dto";
 export * from "./dtos/create-location.dto";
 export * from "./dtos/update-location.dto";

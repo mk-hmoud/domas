@@ -31,6 +31,7 @@ export class UsersRepository {
     return new User({
       id: row.id,
       email: row.email,
+      passwordHash: row.passwordHash,
       isActive: row.isActive,
       isRecoveryAdmin: row.isRecoveryAdmin,
       createdAt: row.createdAt,

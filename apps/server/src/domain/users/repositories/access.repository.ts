@@ -39,6 +39,69 @@ export class AccessRepository {
     return result.rows[0] ? new Role(result.rows[0]) : null;
   }
 
+  async findRoleById(id: number, client?: PoolClient): Promise<Role | null> {
+    const query = `SELECT id, name, description, is_system_role as "isSystemRole" FROM roles WHERE id = $1`;
+    const result = await this.getClient(client).query<Role>(query, [id]);
+    return result.rows[0] ? new Role(result.rows[0]) : null;
+  }
+
+  async updateRole(
+    id: number,
+    data: { name?: string; description?: string },
+    client?: PoolClient,
+  ): Promise<Role | null> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (data.name) {
+      updates.push(`name = $${paramIndex++}`);
+      values.push(data.name);
+    }
+    if (data.description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      values.push(data.description);
+    }
+
+    if (updates.length === 0) {
+      return this.findRoleById(id, client);
+    }
+
+    values.push(id);
+    const query = `
+      UPDATE roles
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, name, description, is_system_role as "isSystemRole"
+    `;
+    const result = await this.getClient(client).query<Role>(query, values);
+    return result.rows[0] ? new Role(result.rows[0]) : null;
+  }
+
+  async replaceRolePermissions(
+    roleId: number,
+    permissionIds: number[],
+    client?: PoolClient,
+  ): Promise<void> {
+    const db = this.getClient(client);
+
+    // 1. Delete existing
+    await db.query(`DELETE FROM role_permissions WHERE role_id = $1`, [roleId]);
+
+    // 2. Insert new
+    if (permissionIds.length > 0) {
+      // Create values string: ($1, $2), ($1, $3), ...
+      // Actually simpler loop is fine for now, or UNNEST.
+      // Let's use loop for simplicity with current setup.
+      for (const permId of permissionIds) {
+        await db.query(
+          `INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [roleId, permId],
+        );
+      }
+    }
+  }
+
   async findAllRoles(client?: PoolClient): Promise<Role[]> {
     const query = `SELECT id, name, description, is_system_role as "isSystemRole" FROM roles`;
     const result = await this.getClient(client).query<Role>(query);

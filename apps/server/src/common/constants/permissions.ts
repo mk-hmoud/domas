@@ -1,22 +1,33 @@
 export const PERMISSIONS = {
-  // Users & Access
+  // Users
   USERS_VIEW: 'users.view',
-  USERS_MANAGE: 'users.manage', // Create/Update/Delete/Assign Roles
-  ROLES_MANAGE: 'roles.manage',
+  USERS_CREATE: 'users.create',
+  USERS_UPDATE: 'users.update',
+  USERS_DELETE: 'users.delete',
 
-  // Locations (Campus, Blocks, Rooms, Beds)
-  LOCATIONS_VIEW: 'locations.view',
-  LOCATIONS_MANAGE: 'locations.manage',
+  // Access Control (Roles & Permissions)
+  ROLES_VIEW: 'roles.view',
+  ROLES_MANAGE: 'roles.manage', // Create/Update role definitions
+  ROLES_ASSIGN: 'roles.assign', // Assign roles to users
+  PERMISSIONS_VIEW: 'permissions.view',
 
   // Students
   STUDENTS_VIEW: 'students.view',
   STUDENTS_CREATE: 'students.create',
   STUDENTS_UPDATE: 'students.update',
+  STUDENTS_DELETE: 'students.delete',
+
+  // Locations
+  LOCATIONS_VIEW: 'locations.view',
+  LOCATIONS_CREATE: 'locations.create',
+  LOCATIONS_UPDATE: 'locations.update',
+  LOCATIONS_DELETE: 'locations.delete',
 
   // Bookings
   BOOKINGS_VIEW: 'bookings.view',
   BOOKINGS_CREATE: 'bookings.create',
-  BOOKINGS_MANAGE: 'bookings.manage', // Cancel, Reject
+  BOOKINGS_UPDATE: 'bookings.update',
+  BOOKINGS_CANCEL: 'bookings.cancel', // Explicit cancellation rights
   BOOKINGS_APPROVE_FINANCIAL: 'bookings.approve_financial',
   BOOKINGS_CHECK_IN: 'bookings.check_in',
 
@@ -24,7 +35,7 @@ export const PERMISSIONS = {
   SEMESTERS_VIEW: 'semesters.view',
   SEMESTERS_MANAGE: 'semesters.manage',
 
-  // Reports / Audit
+  // Audit & Reports
   AUDIT_VIEW: 'audit.view',
   REPORTS_VIEW: 'reports.view',
 } as const;

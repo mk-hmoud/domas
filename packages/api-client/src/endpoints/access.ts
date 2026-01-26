@@ -1,9 +1,19 @@
 import { apiClient } from "../client";
-import { Role, Permission, CreateRoleDto } from "@domas/ts-types";
+import {
+  Role,
+  Permission,
+  CreateRoleDto,
+  UpdateRoleDto,
+} from "@domas/ts-types";
 
 export const access = {
   findAllRoles: async (): Promise<Role[]> => {
     const response = await apiClient.get<Role[]>("/access/roles");
+    return response.data;
+  },
+
+  findRoleById: async (id: number): Promise<Role> => {
+    const response = await apiClient.get<Role>(`/access/roles/${id}`);
     return response.data;
   },
 
@@ -14,6 +24,11 @@ export const access = {
 
   createRole: async (data: CreateRoleDto): Promise<Role> => {
     const response = await apiClient.post<Role>("/access/roles", data);
+    return response.data;
+  },
+
+  updateRole: async (id: number, data: UpdateRoleDto): Promise<Role> => {
+    const response = await apiClient.patch<Role>(`/access/roles/${id}`, data);
     return response.data;
   },
 

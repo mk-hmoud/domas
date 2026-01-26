@@ -114,6 +114,7 @@ export class UsersService {
     const user = await this.usersRepository.findByEmail(email);
     if (user) {
       user.roles = await this.accessRepository.getRolesForUser(user.id);
+      user.permissions = await this.accessRepository.getPermissionsForUser(user.id);
     }
     return user;
   }
@@ -122,6 +123,7 @@ export class UsersService {
     const user = await this.usersRepository.findById(id);
     if (user) {
       user.roles = await this.accessRepository.getRolesForUser(user.id);
+      user.permissions = await this.accessRepository.getPermissionsForUser(user.id);
     }
     return user;
   }
