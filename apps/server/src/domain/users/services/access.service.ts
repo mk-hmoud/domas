@@ -50,6 +50,7 @@ export class AccessService {
         await this.accessRepository.assignPermissionsToRole(role.id, data.permissionIds, client);
       }
 
+      role.permissions = await this.accessRepository.getPermissionsForRole(role.id, client);
       return role;
     }, context);
   }

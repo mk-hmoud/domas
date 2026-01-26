@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 import { Role } from '../entities/role.entity';
@@ -103,9 +103,29 @@ export class AccessRepository {
   }
 
   async findAllRoles(client?: PoolClient): Promise<Role[]> {
-    const query = `SELECT id, name, description, is_system_role as "isSystemRole" FROM roles`;
-    const result = await this.getClient(client).query<Role>(query);
-    return result.rows.map((r) => new Role(r));
+    const query = `
+      SELECT 
+        r.id, 
+        r.name, 
+        r.description, 
+        r.is_system_role as "isSystemRole",
+        COALESCE(
+          json_agg(
+            json_build_object('id', p.id, 'slug', p.slug, 'description', p.description)
+          ) FILTER (WHERE p.id IS NOT NULL), 
+          '[]'
+        ) as permissions
+      FROM roles r
+      LEFT JOIN role_permissions rp ON r.id = rp.role_id
+      LEFT JOIN permissions p ON rp.permission_id = p.id
+      GROUP BY r.id
+    `;
+    const result = await this.getClient(client).query(query);
+    return result.rows.map((r) => {
+      const role = new Role(r);
+      role.permissions = r.permissions.map((p: any) => new Permission(p));
+      return role;
+    });
   }
 
   // --- Permissions ---
