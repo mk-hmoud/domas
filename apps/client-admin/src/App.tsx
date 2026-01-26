@@ -8,6 +8,7 @@ import { LocationsPage } from './pages/LocationsPage';
 import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { StudentsPage } from './pages/StudentsPage';
+import { RolesPage } from './pages/RolesPage';
 import { ProtectedRoute } from '@domas/client-core';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="locations" element={<LocationsPage />} />
           <Route path="semesters" element={<SemestersPage />} />
+          <Route path="roles" element={<RolesPage />} />
           <Route path="logs/audit" element={<AuditLogsPage />} />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />

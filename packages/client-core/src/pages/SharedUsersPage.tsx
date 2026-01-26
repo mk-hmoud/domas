@@ -9,13 +9,13 @@ import {
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { users } from "@domas/api-client";
-import { User, CreateUser, PaginatedResult, UserRole } from "@domas/ts-types";
+import { User, CreateUserDto, PaginatedResult } from "@domas/ts-types";
 import { CreateUserModal, UsersTable, DeleteUserModal } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 
 interface SharedUsersPageProps {
   title?: string;
-  role?: UserRole[];
+  role?: string[];
 }
 
 export function SharedUsersPage({
@@ -32,7 +32,7 @@ export function SharedUsersPage({
 
   const fetchData = async (page: number) => {
     try {
-      const result = await users.findAll({ page, limit: 10, role });
+      const result = await users.findAll({ page, limit: 10, roles: role });
       setPaginatedData(result);
     } catch (error) {
       console.error(error);
@@ -44,7 +44,7 @@ export function SharedUsersPage({
     fetchData(activePage);
   }, [activePage, roleKey]);
 
-  const handleCreateUser = async (values: CreateUser) => {
+  const handleCreateUser = async (values: CreateUserDto) => {
     await users.create(values);
     await fetchData(activePage);
   };
@@ -98,7 +98,6 @@ export function SharedUsersPage({
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
         onSubmit={handleCreateUser}
-        roles={role}
       />
 
       <DeleteUserModal

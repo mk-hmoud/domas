@@ -1,6 +1,6 @@
-import { Table, Group, Badge, ActionIcon } from "@mantine/core";
+import { Table, Group, Badge, ActionIcon, Text } from "@mantine/core";
 import { IconTrash, IconPencil } from "@tabler/icons-react";
-import { User, UserRole } from "@domas/ts-types";
+import { User } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 
 interface UsersTableProps {
@@ -16,20 +16,18 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
     <Table.Tr key={user.id}>
       <Table.Td>{user.email}</Table.Td>
       <Table.Td>
-        <Badge
-          color={
-            user.role === UserRole.ADMIN
-              ? "blue"
-              : user.role === UserRole.DORM_MANAGER ||
-                  user.role === UserRole.DORM_STAFF
-                ? "green"
-                : user.role === UserRole.ACCOUNTING_STAFF
-                  ? "orange"
-                  : "gray"
-          }
-        >
-          {t(`roles.${user.role}`)}
-        </Badge>
+        <Group gap={4}>
+          {user.roles?.map((role) => (
+            <Badge key={role.id} variant="light" color="gray">
+              {role.name}
+            </Badge>
+          ))}
+          {!user.roles?.length && (
+            <Text size="xs" c="dimmed">
+              -
+            </Text>
+          )}
+        </Group>
       </Table.Td>
       <Table.Td>{user.isActive ? t("active") : t("inactive")}</Table.Td>
       <Table.Td>{new Date(user.createdAt).toLocaleDateString()}</Table.Td>

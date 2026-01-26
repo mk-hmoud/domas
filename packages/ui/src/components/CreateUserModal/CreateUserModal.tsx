@@ -4,7 +4,6 @@ import {
   PasswordInput,
   Button,
   Modal,
-  Select,
   ActionIcon,
   Tooltip,
   rem,
@@ -13,39 +12,28 @@ import {
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { useTranslation } from "react-i18next";
-import { UserRole, CreateUser } from "@domas/ts-types";
+import { CreateUserDto } from "@domas/ts-types";
 import { IconRefresh, IconEye, IconEyeOff } from "@tabler/icons-react";
 
 interface CreateUserModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (values: CreateUser) => Promise<void>;
-  roles?: UserRole[];
+  onSubmit: (values: CreateUserDto) => Promise<void>;
 }
 
 export function CreateUserModal({
   opened,
   onClose,
   onSubmit,
-  roles,
 }: CreateUserModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [visible, { toggle }] = useDisclosure(false);
 
-  const availableRoles = roles || [
-    UserRole.ADMIN,
-    UserRole.DORM_MANAGER,
-    UserRole.DORM_STAFF,
-    UserRole.ACCOUNTING_STAFF,
-    UserRole.STUDENT,
-  ];
-
   const form = useForm({
     initialValues: {
       email: "",
       password: "",
-      role: availableRoles[0],
     },
     validate: {
       email: (val) => (/^\S+@\S+$/.test(val) ? null : t("invalid_email")),
@@ -69,11 +57,7 @@ export function CreateUserModal({
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     try {
-      await onSubmit({
-        email: values.email,
-        password: values.password,
-        role: values.role as UserRole,
-      });
+      await onSubmit(values);
       form.reset();
       onClose();
     } catch (error) {
@@ -125,20 +109,6 @@ export function CreateUserModal({
             </Group>
           }
           {...form.getInputProps("password")}
-        />
-        <Select
-          label={t("role")}
-          placeholder={t("pick_one")}
-          mt="md"
-          disabled={availableRoles.length <= 1}
-          data={availableRoles.map((role) => ({
-            value: role,
-            label: t(`roles.${role}`, {
-              defaultValue:
-                role.charAt(0).toUpperCase() + role.slice(1).replace("_", " "),
-            }),
-          }))}
-          {...form.getInputProps("role")}
         />
         <Button fullWidth mt="xl" type="submit" loading={loading}>
           {t("create_user")}
