@@ -47,6 +47,7 @@
   "delete_role_confirmation": "Are you sure you want to delete the role '{{name}}'? This action cannot be undone.",
   "role_updated_successfully": "Role updated successfully",
   "role_created_successfully": "Role created successfully",
+  "role_deleted_successfully": "Role deleted successfully",
   "failed_to_save_role": "Failed to save role",
   "failed_to_delete_role": "Failed to delete role",
   "failed_to_fetch_data": "Failed to fetch data",

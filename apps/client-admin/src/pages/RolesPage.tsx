@@ -83,14 +83,15 @@ export function RolesPage() {
   const handleDelete = async () => {
     if (!roleToDelete) return;
     try {
-      // access.deleteRole(roleToDelete.id); // Assuming deleteRole exists or will be added
+      await access.deleteRole(roleToDelete.id);
       notifications.show({
-        title: t('info'),
-        message: 'Delete role is not yet supported by the API client',
-        color: 'blue',
+        title: t('success'),
+        message: t('role_deleted_successfully'),
+        color: 'green',
       });
       setDeleteModalOpen(false);
       setRoleToDelete(null);
+      fetchData();
     } catch (error) {
       notifications.show({
         title: t('error'),

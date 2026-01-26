@@ -47,6 +47,7 @@
   "delete_role_confirmation": "'{{name}}' rolünü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
   "role_updated_successfully": "Rol başarıyla güncellendi",
   "role_created_successfully": "Rol başarıyla oluşturuldu",
+  "role_deleted_successfully": "Rol başarıyla silindi",
   "failed_to_save_role": "Rol kaydedilemedi",
   "failed_to_delete_role": "Rol silinemedi",
   "failed_to_fetch_data": "Veriler getirilemedi",
