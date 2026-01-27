@@ -1,4 +1,6 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, HttpStatus } from '@nestjs/common';
+import { ApiException } from '../../../common/exceptions/api.exception';
+import { ErrorCodes } from '../../../common/constants/error-codes';
 import { StudentsRepository } from '../repositories/students.repository';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
@@ -22,12 +24,22 @@ export class StudentsService {
       // Turkish TC ID: 11 digits, first digit cannot be 0
       const tcRegex = /^[1-9][0-9]{10}$/;
       if (!tcRegex.test(nationalId)) {
-        throw new BadRequestException('Invalid Turkish ID Number (must be 11 digits)');
+        throw new ApiException(
+          'Invalid Turkish ID Number (must be 11 digits)',
+          ErrorCodes.INVALID_NATIONAL_ID,
+          HttpStatus.BAD_REQUEST,
+          'Please enter a valid 11-digit Turkish ID number.',
+        );
       }
     } else {
       // Generic Passport check: min 5 chars, allowing alphanumeric and common separators
       if (nationalId.length < 5) {
-        throw new BadRequestException('Passport number too short (minimum 5 characters)');
+        throw new ApiException(
+          'Passport number too short',
+          ErrorCodes.INVALID_PASSPORT_ID,
+          HttpStatus.BAD_REQUEST,
+          'Passport number must be at least 5 characters long.',
+        );
       }
     }
   }

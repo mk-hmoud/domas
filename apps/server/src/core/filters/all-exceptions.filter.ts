@@ -7,6 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { ApiErrorResponse } from '../../../common/interfaces/api-error-response.interface';
+import { ErrorCodes } from '../../../common/constants/error-codes';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -18,14 +20,93 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
 
-    const httpStatus =
-      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    let httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
+    let code = ErrorCodes.INTERNAL_ERROR;
+    let message = 'Internal server error';
+    let userMessage = undefined;
 
-    const responseBody = {
-      statusCode: httpStatus,
-      timestamp: new Date().toISOString(),
-      path: httpAdapter.getRequestUrl(ctx.getRequest()),
-      message: exception instanceof HttpException ? exception.message : 'Internal server error',
+    if (exception instanceof HttpException) {
+      httpStatus = exception.getStatus();
+      message = exception.message;
+      const res: any = exception.getResponse();
+
+      // Check if response is object with custom fields
+      if (typeof res === 'object' && res !== null) {
+        if (res.code) code = res.code;
+        if (res.user_message) userMessage = res.user_message;
+
+        // Handle ValidationPipe array of messages
+        if (Array.isArray(res.message)) {
+          message = res.message.join(', ');
+          code = ErrorCodes.VALIDATION_ERROR;
+          userMessage = 'Please check the form for errors.';
+        }
+      }
+
+      // Default codes for standard statuses if not set
+      if (code === ErrorCodes.INTERNAL_ERROR) {
+        switch (httpStatus) {
+          case HttpStatus.BAD_REQUEST:
+            code = ErrorCodes.INVALID_REQUEST;
+            break;
+          case HttpStatus.UNAUTHORIZED:
+            code = ErrorCodes.UNAUTHORIZED;
+            break;
+          case HttpStatus.FORBIDDEN:
+            code = ErrorCodes.FORBIDDEN;
+            break;
+          case HttpStatus.NOT_FOUND:
+            code = ErrorCodes.RESOURCE_NOT_FOUND;
+            break;
+          case HttpStatus.CONFLICT:
+            code = ErrorCodes.CONFLICT;
+            break;
+        }
+      }
+    } else if (exception && typeof exception === 'object' && 'code' in exception) {
+      // Handle Database Errors (Postgres)
+      const dbError = exception as { code: string; message: string; detail?: string };
+
+      switch (dbError.code) {
+        case '23505': // Unique violation
+          httpStatus = HttpStatus.CONFLICT;
+          code = ErrorCodes.DUPLICATE_ENTRY;
+          message = 'Duplicate entry found';
+
+          // Safe extraction logic
+          // Postgres detail often looks like: "Key (email)=(john@example.com) already exists."
+          const match = dbError.detail?.match(/\((.*?)\)=/);
+          const field = match ? match[1] : 'record';
+
+          userMessage = `This ${field} already exists. Please use a different one.`;
+          break;
+        case '23503': // Foreign key violation
+          httpStatus = HttpStatus.BAD_REQUEST;
+          code = ErrorCodes.DB_CONSTRAINT_VIOLATION;
+          message = 'Foreign key constraint violation';
+          userMessage = 'This operation refers to a missing record.';
+          break;
+        case '23502': // Not null violation
+        case '22P02': // Invalid text representation (e.g. UUID format)
+          httpStatus = HttpStatus.BAD_REQUEST;
+          code = ErrorCodes.INVALID_REQUEST;
+          message = 'Database validation error';
+          break;
+        default:
+          // Keep internal server error for unknown DB errors
+          break;
+      }
+    }
+
+    if (!userMessage && httpStatus >= 500) {
+      userMessage = 'An unexpected error occurred. Please try again later.';
+    }
+
+    const responseBody: ApiErrorResponse = {
+      status: httpStatus,
+      code,
+      message,
+      user_message: userMessage,
     };
 
     if (httpStatus >= 500) {
