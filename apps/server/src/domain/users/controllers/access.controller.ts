@@ -28,14 +28,14 @@ export class AccessController {
 
   @Get('roles')
   @RequirePermissions(PERMISSIONS.ROLES_VIEW)
-  findAllRoles() {
-    return this.accessService.findAllRoles();
+  findAllRoles(@UserContext() context: AuditUserContext) {
+    return this.accessService.findAllRoles(context);
   }
 
   @Get('roles/:id')
   @RequirePermissions(PERMISSIONS.ROLES_VIEW)
-  findRoleById(@Param('id', ParseIntPipe) id: number) {
-    return this.accessService.findRoleById(id);
+  findRoleById(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.accessService.findRoleById(id, context);
   }
 
   @Get('permissions')

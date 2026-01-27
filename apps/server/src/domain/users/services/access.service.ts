@@ -17,18 +17,28 @@ export class AccessService {
     private readonly db: DatabaseService,
   ) {}
 
-  async findAllRoles(): Promise<Role[]> {
-    const roles = await this.accessRepository.findAllRoles();
-    // Ideally we should fetch permission count or list, but for list view usually basic info is enough.
-    // If we want permissions, we can fetch them. Let's keep it simple for now.
-    return roles;
+  private canViewRole(role: Role, context: AuditUserContext): boolean {
+    if (context.isRecoveryAdmin) return true;
+    const userPerms = new Set(context.permissions || []);
+    return (role.permissions || []).every((p) => userPerms.has(p.slug));
   }
 
-  async findRoleById(id: number): Promise<Role> {
+  async findAllRoles(context: AuditUserContext): Promise<Role[]> {
+    const roles = await this.accessRepository.findAllRoles();
+    return roles.filter((role) => this.canViewRole(role, context));
+  }
+
+  async findRoleById(id: number, context: AuditUserContext): Promise<Role> {
     const role = await this.accessRepository.findRoleById(id);
     if (!role) throw new NotFoundException(`Role with ID ${id} not found`);
 
     role.permissions = await this.accessRepository.getPermissionsForRole(id);
+
+    if (!this.canViewRole(role, context)) {
+      // Return 404 to prevent enumeration of roles the user cannot see
+      throw new NotFoundException(`Role with ID ${id} not found`);
+    }
+
     return role;
   }
 
@@ -79,12 +89,6 @@ export class AccessService {
         await this.accessRepository.replaceRolePermissions(id, data.permissionIds, client);
       }
 
-      return this.findRoleById(id); // Re-fetch full object with permissions (via service method? No, loop issues. Use repo methods)
-      // Actually inside transaction we should pass client to findRoleById logic if we extracted it.
-      // Or just return updatedRole + fetch permissions.
-      // Let's attach permissions manually to return full object.
-      // But replaceRolePermissions happened.
-
       // Re-fetching inside transaction:
       const finalRole = await this.accessRepository.findRoleById(id, client);
       finalRole!.permissions = await this.accessRepository.getPermissionsForRole(id, client);
@@ -94,6 +98,30 @@ export class AccessService {
 
   async assignRoleToUser(userId: string, roleId: number, context: AuditUserContext): Promise<void> {
     this.logger.log({ userId, roleId }, 'Assigning role to user');
+
+    // Security Check: Subset Permission Logic
+    // A user can only assign a role if they have ALL permissions that the role grants.
+    if (!context.isRecoveryAdmin) {
+      const rolePermissions = await this.accessRepository.getPermissionsForRole(roleId);
+      const userPermissions = new Set(context.permissions || []);
+
+      const missingPermissions = rolePermissions.filter((p) => !userPermissions.has(p.slug));
+
+      if (missingPermissions.length > 0) {
+        this.logger.warn(
+          {
+            userId: context.userId,
+            roleId,
+            missing: missingPermissions.map((p) => p.slug),
+          },
+          'Role assignment denied: User lacks necessary permissions',
+        );
+        throw new ForbiddenException(
+          'You cannot assign a role that grants permissions you do not possess.',
+        );
+      }
+    }
+
     await this.db.transaction(async (client) => {
       await this.accessRepository.assignRoleToUser(userId, roleId, client);
     }, context);

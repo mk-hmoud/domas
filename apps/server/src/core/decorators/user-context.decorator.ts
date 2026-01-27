@@ -20,6 +20,8 @@ export const UserContext = createParamDecorator(
     return {
       userId: user.id,
       username: user.email,
+      isRecoveryAdmin: user.isRecoveryAdmin,
+      permissions: user.permissions,
       ipAddress: request.ip || '127.0.0.1',
       userAgent: request.headers['user-agent'],
     };
