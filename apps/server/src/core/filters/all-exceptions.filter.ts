@@ -7,8 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { ApiErrorResponse } from '../../../common/interfaces/api-error-response.interface';
-import { ErrorCodes } from '../../../common/constants/error-codes';
+import { ApiErrorResponse } from '../../common/interfaces/api-error-response.interface';
+import { ErrorCodes } from '../../common/constants/error-codes';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -21,7 +21,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
 
     let httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
-    let code = ErrorCodes.INTERNAL_ERROR;
+    let code: string = ErrorCodes.INTERNAL_ERROR;
     let message = 'Internal server error';
     let userMessage = undefined;
 
