@@ -1,5 +1,6 @@
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+import { ModalsProvider } from "@mantine/modals";
 import { theme } from "./theme";
 import "./i18n"; // Initialize i18n
 import "@mantine/core/styles.css";
@@ -14,7 +15,7 @@ export function DomMantineProvider({ children }: DomMantineProviderProps) {
   return (
     <MantineProvider theme={theme} defaultColorScheme="auto">
       <Notifications />
-      {children}
+      <ModalsProvider>{children}</ModalsProvider>
     </MantineProvider>
   );
 }

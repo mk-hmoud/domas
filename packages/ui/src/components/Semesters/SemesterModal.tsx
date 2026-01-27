@@ -164,15 +164,15 @@ export function SemesterModal({
     onClose();
   };
 
-  const currentStatus = form.values.status;
+  const initialStatus = initialValues?.status;
   const isIdentityLocked =
-    currentStatus === SemesterStatus.OPEN ||
-    currentStatus === SemesterStatus.ACTIVE;
+    initialStatus === SemesterStatus.OPEN ||
+    initialStatus === SemesterStatus.ACTIVE;
   const isFinancialLocked =
-    currentStatus === SemesterStatus.ACTIVE ||
-    currentStatus === SemesterStatus.CLOSED ||
-    currentStatus === SemesterStatus.ARCHIVED;
-  const isActive = currentStatus === SemesterStatus.ACTIVE;
+    initialStatus === SemesterStatus.ACTIVE ||
+    initialStatus === SemesterStatus.CLOSED ||
+    initialStatus === SemesterStatus.ARCHIVED;
+  const isInitiallyActive = initialStatus === SemesterStatus.ACTIVE;
 
   return (
     <Modal
@@ -183,7 +183,7 @@ export function SemesterModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          {isActive && initialValues && (
+          {isInitiallyActive && initialValues && (
             <Alert
               icon={<IconInfoCircle size={16} />}
               title={t("semester.active_warning_title", {
@@ -240,17 +240,18 @@ export function SemesterModal({
               label={t("start_date")}
               required
               maxDate={
-                isActive && initialValues
+                isInitiallyActive && initialValues
                   ? new Date(initialValues.startDate)
                   : undefined
               }
+              disabled={isInitiallyActive}
               {...form.getInputProps("startDate")}
             />
             <DatePickerInput
               label={t("end_date")}
               required
               minDate={
-                isActive && initialValues
+                isInitiallyActive && initialValues
                   ? new Date(initialValues.endDate)
                   : undefined
               }

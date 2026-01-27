@@ -18,6 +18,7 @@ import {
   DEPARTMENTS,
 } from "@domas/ts-types";
 import { IconPhone } from "@tabler/icons-react";
+import dayjs from "dayjs";
 
 interface StudentModalProps {
   opened: boolean;
@@ -115,7 +116,7 @@ export function StudentModal({
         nationalId: values.nationalId,
         birthDate:
           values.birthDate instanceof Date
-            ? values.birthDate.toISOString()
+            ? dayjs(values.birthDate).format("YYYY-MM-DD")
             : values.birthDate,
         birthPlace: values.birthPlace,
         department: values.department,

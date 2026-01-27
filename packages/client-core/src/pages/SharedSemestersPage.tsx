@@ -12,6 +12,9 @@ import {
   Menu,
   Pagination,
   Container,
+  Drawer,
+  Stack,
+  Box,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -32,6 +35,8 @@ import {
 } from "@domas/ts-types";
 import { ConfirmDeleteModal, SemesterModal } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
+import { handleApiError } from "../utils/api-error-handler";
 
 export function SharedSemestersPage() {
   const { t } = useTranslation();
@@ -48,6 +53,7 @@ export function SharedSemestersPage() {
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(
     null,
   );
+  const [viewSemester, setViewSemester] = useState<Semester | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -56,11 +62,7 @@ export function SharedSemestersPage() {
       setData(result.data);
       setTotal(result.total);
     } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_fetch_data"),
-        color: "red",
-      });
+      handleApiError(error, t("failed_to_fetch_data"));
     } finally {
       setLoading(false);
     }
@@ -82,11 +84,7 @@ export function SharedSemestersPage() {
       fetchData();
       setCreateModalOpened(false);
     } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_save_role"), // Assuming generic error or add semester specific
-        color: "red",
-      });
+      handleApiError(error, t("failed_to_save_role"));
     } finally {
       setModalLoading(false);
     }
@@ -106,11 +104,7 @@ export function SharedSemestersPage() {
       setEditModalOpened(false);
       setSelectedSemester(null);
     } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_save_role"),
-        color: "red",
-      });
+      handleApiError(error, t("failed_to_save_role"));
     } finally {
       setModalLoading(false);
     }
@@ -129,33 +123,47 @@ export function SharedSemestersPage() {
       setSelectedSemester(null);
       fetchData();
     } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_delete_role"),
-        color: "red",
-      });
+      handleApiError(error, t("failed_to_delete_role"));
     }
   };
 
-  const handleUpdateStatus = async (
-    semester: Semester,
-    status: SemesterStatus,
-  ) => {
-    try {
-      await semesters.updateStatus(semester.id, status);
-      notifications.show({
-        title: t("success"),
-        message: t("semester_toggled"),
-        color: "green",
-      });
-      fetchData();
-    } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("error"),
-        color: "red",
-      });
-    }
+  const handleUpdateStatus = (semester: Semester, status: SemesterStatus) => {
+    const getConfirmationMessage = () => {
+      switch (status) {
+        case SemesterStatus.ACTIVE:
+          return t("semester.status_change_active_message");
+        case SemesterStatus.CLOSED:
+          return t("semester.status_change_close_message");
+        case SemesterStatus.ARCHIVED:
+          return t("semester.status_change_archive_message");
+        default:
+          return t("semester.status_change_message", {
+            status: t(`semester.statuses.${status}`),
+          });
+      }
+    };
+
+    modals.openConfirmModal({
+      title: t("semester.confirm_status_change"),
+      children: <Text size="sm">{getConfirmationMessage()}</Text>,
+      labels: { confirm: t("confirm"), cancel: t("cancel") },
+      confirmProps: {
+        color: status === SemesterStatus.ARCHIVED ? "red" : "blue",
+      },
+      onConfirm: async () => {
+        try {
+          await semesters.updateStatus(semester.id, status);
+          notifications.show({
+            title: t("success"),
+            message: t("semester.status_updated_successfully"),
+            color: "green",
+          });
+          fetchData();
+        } catch (error) {
+          handleApiError(error, t("semester.failed_to_update_status"));
+        }
+      },
+    });
   };
 
   const openEditModal = (semester: Semester) => {
@@ -203,7 +211,7 @@ export function SharedSemestersPage() {
       </Group>
 
       <Paper withBorder radius="md">
-        <Table verticalSpacing="sm">
+        <Table verticalSpacing="sm" striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>{t("semester_name")}</Table.Th>
@@ -215,7 +223,11 @@ export function SharedSemestersPage() {
           </Table.Thead>
           <Table.Tbody>
             {data.map((semester) => (
-              <Table.Tr key={semester.id}>
+              <Table.Tr
+                key={semester.id}
+                onClick={() => setViewSemester(semester)}
+                style={{ cursor: "pointer" }}
+              >
                 <Table.Td fw={500}>
                   {semester.displayName ||
                     `${semester.academicYear} ${semester.type}`}
@@ -230,7 +242,7 @@ export function SharedSemestersPage() {
                     {t(`semester.statuses.${semester.status}`)}
                   </Badge>
                 </Table.Td>
-                <Table.Td>
+                <Table.Td onClick={(e) => e.stopPropagation()}>
                   <Menu shadow="md" width={200}>
                     <Menu.Target>
                       <ActionIcon variant="subtle" color="gray">
@@ -336,6 +348,124 @@ export function SharedSemestersPage() {
           name: selectedSemester?.displayName,
         })}
       />
+
+      <Drawer
+        opened={!!viewSemester}
+        onClose={() => setViewSemester(null)}
+        title={
+          <Text fw={700} size="lg">
+            {t("semester_label", { defaultValue: "Semester" })}
+          </Text>
+        }
+        position="right"
+        size="md"
+      >
+        {viewSemester && (
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Text size="xl" fw={700}>
+                {viewSemester.displayName ||
+                  `${viewSemester.academicYear} ${viewSemester.type}`}
+              </Text>
+              <Badge color={getStatusColor(viewSemester.status)}>
+                {t(`semester.statuses.${viewSemester.status}`)}
+              </Badge>
+            </Group>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("start_date")}
+                </Text>
+                <Text>{formatDate(viewSemester.startDate)}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("end_date")}
+                </Text>
+                <Text>{formatDate(viewSemester.endDate)}</Text>
+              </Box>
+            </Group>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.booking_start", {
+                    defaultValue: "Booking Start",
+                  })}
+                </Text>
+                <Text>
+                  {viewSemester.bookingStartDate
+                    ? formatDate(viewSemester.bookingStartDate)
+                    : "-"}
+                </Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.booking_end", { defaultValue: "Booking End" })}
+                </Text>
+                <Text>
+                  {viewSemester.bookingEndDate
+                    ? formatDate(viewSemester.bookingEndDate)
+                    : "-"}
+                </Text>
+              </Box>
+            </Group>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.deposit_try", { defaultValue: "Deposit (TRY)" })}
+                </Text>
+                <Text>{viewSemester.depositAmountTry}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.deposit_foreign", {
+                    defaultValue: "Deposit (Foreign)",
+                  })}
+                </Text>
+                <Text>
+                  {viewSemester.depositAmountForeign}{" "}
+                  {viewSemester.foreignCurrencyCode}
+                </Text>
+              </Box>
+            </Group>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.auto_activate", {
+                    defaultValue: "Auto Activate",
+                  })}
+                </Text>
+                <Badge color={viewSemester.autoActivate ? "blue" : "gray"}>
+                  {viewSemester.autoActivate ? t("active") : t("inactive")}
+                </Badge>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.auto_close", { defaultValue: "Auto Close" })}
+                </Text>
+                <Badge color={viewSemester.autoClose ? "blue" : "gray"}>
+                  {viewSemester.autoClose ? t("active") : t("inactive")}
+                </Badge>
+              </Box>
+            </Group>
+
+            <Button
+              variant="light"
+              leftSection={<IconEdit size={16} />}
+              onClick={() => {
+                openEditModal(viewSemester);
+                setViewSemester(null); // Close drawer when editing
+              }}
+            >
+              {t("edit")}
+            </Button>
+          </Stack>
+        )}
+      </Drawer>
     </Container>
   );
 }

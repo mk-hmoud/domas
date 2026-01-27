@@ -248,6 +248,24 @@
       "set_active": "Aktif Et",
       "close": "Kapat",
       "archive": "Arşivle"
+    },
+    "confirm_status_change": "Durum Değişikliğini Onayla",
+    "status_change_active_message": "Bu dönemi aktif etmek istediğinize emin misiniz? Bu işlem diğer aktif dönemleri otomatik olarak kapatacaktır.",
+    "status_change_close_message": "Bu dönemi kapatmak istediğinize emin misiniz? Bu işlem yeni rezervasyonları engelleyecektir.",
+    "status_change_archive_message": "Bu dönemi arşivlemek istediğinize emin misiniz? Bu işlem genellikle geri alınamaz ve sadece geçmiş kayıtlar içindir.",
+    "status_change_message": "Durumu {{status}} olarak değiştirmek istediğinize emin misiniz?",
+    "status_updated_successfully": "Dönem durumu başarıyla güncellendi",
+    "failed_to_update_status": "Durum güncellenemedi",
+    "error": {
+      "archived_immutable": "Arşivlenmiş dönemler değiştirilemez veya durumları değiştirilemez.",
+      "invalid_transition": "Geçersiz durum değişikliği.",
+      "open_to_planned_bookings": "Rezervasyonlar mevcut olduğu için PLANLANAN durumuna geri dönülemez.",
+      "identity_locked": "Dönem Açık/Aktif olduğunda Tür veya Akademik Yıl değiştirilemez.",
+      "financials_locked": "Aktif/Kapalı dönemler için finansal bilgiler değiştirilemez.",
+      "financials_locked_bookings": "Finansal bilgiler değiştirilemez: bu dönem için rezervasyonlar mevcut.",
+      "start_date_locked": "Aktif bir dönemin Başlangıç Tarihi değiştirilemez.",
+      "delete_planned_only": "Sadece PLANLANAN dönemler silinebilir.",
+      "delete_has_bookings": "Dönem silinemez: buna bağlı rezervasyonlar var."
     }
   },
   "student_number": "Öğrenci Numarası",

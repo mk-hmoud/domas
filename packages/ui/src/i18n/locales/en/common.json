@@ -246,6 +246,24 @@
       "set_active": "Set Active",
       "close": "Close",
       "archive": "Archive"
+    },
+    "confirm_status_change": "Confirm Status Change",
+    "status_change_active_message": "Are you sure you want to activate this semester? This will automatically close any other active semester.",
+    "status_change_close_message": "Are you sure you want to close this semester? This will prevent new bookings.",
+    "status_change_archive_message": "Are you sure you want to archive this semester? This action is generally irreversible and for historical records only.",
+    "status_change_message": "Are you sure you want to change the status to {{status}}?",
+    "status_updated_successfully": "Semester status updated successfully",
+    "failed_to_update_status": "Failed to update status",
+    "error": {
+      "archived_immutable": "Archived semesters cannot be modified or change status.",
+      "invalid_transition": "Invalid status transition.",
+      "open_to_planned_bookings": "Cannot revert to PLANNED because bookings exist.",
+      "identity_locked": "Cannot change Type or Academic Year once semester is Open/Active.",
+      "financials_locked": "Cannot change financials for Active/Closed semesters.",
+      "financials_locked_bookings": "Cannot change financials: bookings already exist for this semester.",
+      "start_date_locked": "Cannot change Start Date of an Active semester.",
+      "delete_planned_only": "Only PLANNED semesters can be deleted.",
+      "delete_has_bookings": "Cannot delete semester: bookings depend on it."
     }
   },
   "student_number": "Student Number",
