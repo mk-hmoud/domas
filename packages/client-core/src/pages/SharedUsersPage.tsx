@@ -10,9 +10,10 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { users } from "@domas/api-client";
 import { User, CreateUserDto, PaginatedResult } from "@domas/ts-types";
-import { CreateUserModal, UsersTable, DeleteUserModal } from "@domas/ui";
+import { CreateUserModal, UsersTable } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 
 interface SharedUsersPageProps {
   title?: string;
@@ -28,8 +29,6 @@ export function SharedUsersPage({
     useState<PaginatedResult<User> | null>(null);
   const [activePage, setPage] = useState(1);
   const [modalOpened, setModalOpened] = useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const fetchData = async (page: number) => {
     try {
@@ -67,11 +66,6 @@ export function SharedUsersPage({
     }
   };
 
-  const confirmDelete = (user: User) => {
-    setSelectedUser(user);
-    setDeleteModalOpened(true);
-  };
-
   const handleDeleteUser = async (user: User) => {
     try {
       await users.delete(user.id);
@@ -88,6 +82,18 @@ export function SharedUsersPage({
         color: "red",
       });
     }
+  };
+
+  const confirmDelete = (user: User) => {
+    modals.openConfirmModal({
+      title: t("delete_user_title"),
+      children: (
+        <Text size="sm">{t("delete_user_message", { email: user.email })}</Text>
+      ),
+      labels: { confirm: t("confirm"), cancel: t("cancel") },
+      confirmProps: { color: "red" },
+      onConfirm: () => handleDeleteUser(user),
+    });
   };
 
   return (
@@ -124,13 +130,6 @@ export function SharedUsersPage({
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
         onSubmit={handleCreateUser}
-      />
-
-      <DeleteUserModal
-        opened={deleteModalOpened}
-        onClose={() => setDeleteModalOpened(false)}
-        onConfirm={handleDeleteUser}
-        user={selectedUser}
       />
     </Container>
   );

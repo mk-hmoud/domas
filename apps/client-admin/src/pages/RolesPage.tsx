@@ -4,8 +4,9 @@ import { IconPlus, IconSearch, IconShield, IconShieldCheck } from '@tabler/icons
 import { useTranslation } from 'react-i18next';
 import { CreateRoleDto, Role, Permission } from '@domas/ts-types';
 import { access } from '@domas/api-client';
-import { RolesTable, CreateRoleModal, ConfirmDeleteModal } from '@domas/ui';
+import { RolesTable, CreateRoleModal } from '@domas/ui';
 import { notifications } from '@mantine/notifications';
+import { modals } from '@mantine/modals';
 
 export function RolesPage() {
   const { t } = useTranslation();
@@ -16,9 +17,7 @@ export function RolesPage() {
 
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
-  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -80,17 +79,14 @@ export function RolesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!roleToDelete) return;
+  const handleDelete = async (role: Role) => {
     try {
-      await access.deleteRole(roleToDelete.id);
+      await access.deleteRole(role.id);
       notifications.show({
         title: t('success'),
         message: t('role_deleted_successfully'),
         color: 'green',
       });
-      setDeleteModalOpen(false);
-      setRoleToDelete(null);
       fetchData();
     } catch (error) {
       notifications.show({
@@ -112,8 +108,13 @@ export function RolesPage() {
   };
 
   const openDeleteModal = (role: Role) => {
-    setRoleToDelete(role);
-    setDeleteModalOpen(true);
+    modals.openConfirmModal({
+      title: t('delete_role'),
+      children: <Text size="sm">{t('delete_role_confirmation', { name: role.name })}</Text>,
+      labels: { confirm: t('confirm'), cancel: t('cancel') },
+      confirmProps: { color: 'red' },
+      onConfirm: () => handleDelete(role),
+    });
   };
 
   // Stats
@@ -200,14 +201,6 @@ export function RolesPage() {
         onSubmit={handleCreateOrUpdate}
         roleToEdit={roleToEdit}
         permissions={permissions}
-      />
-
-      <ConfirmDeleteModal
-        opened={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleDelete}
-        title={t('delete_role')}
-        message={t('delete_role_confirmation', { name: roleToDelete?.name })}
       />
     </Container>
   );

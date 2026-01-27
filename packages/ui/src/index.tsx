@@ -10,8 +10,6 @@ export * from "./components/ThemeToggle";
 export * from "./components/LanguageSwitcher";
 export * from "./components/AuthenticationForm";
 export * from "./components/CreateUserModal";
-export * from "./components/DeleteUserModal";
-export * from "./components/ConfirmDeleteModal";
 export * from "./components/UsersTable";
 export * from "./components/Locations";
 export * from "./components/Semesters";

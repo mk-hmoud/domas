@@ -33,7 +33,6 @@ import {
   LocationDetail,
   CreateLocationModal,
   CreateBedModal,
-  ConfirmDeleteModal,
   LocationNode,
   BulkActionsBar,
   BulkEditLocationModal,
@@ -49,6 +48,7 @@ import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
 import { findLocationPath } from "../utils/location-utils";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 
 function LocationsContent() {
   const { t } = useTranslation();
@@ -64,12 +64,10 @@ function LocationsContent() {
 
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [bulkEditModalOpened, setBulkEditModalOpened] = useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [parentForCreation, setParentForCreation] = useState<{
     id: number | null;
     type?: LocationType;
   }>({ id: null });
-  const [nodeToDelete, setNodeToDelete] = useState<LocationNode | null>(null);
   const [locationToEdit, setLocationToEdit] = useState<LocationNode | null>(
     null,
   );
@@ -105,33 +103,35 @@ function LocationsContent() {
     clearChildSelection();
   }, [selectedNode]);
 
-  const handleBulkDelete = async () => {
-    if (
-      !confirm(
-        t("delete_confirm_count", {
-          count: selectedChildIds.length,
-          defaultValue: `Delete ${selectedChildIds.length} items?`,
-        }),
-      )
-    )
-      return;
-
-    try {
-      await locations.deleteMany({ ids: selectedChildIds });
-      notifications.show({
-        title: t("success"),
-        message: t("delete_success"),
-        color: "green",
-      });
-      await refreshTree();
-      clearChildSelection();
-    } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("delete_error"),
-        color: "red",
-      });
-    }
+  const handleBulkDelete = () => {
+    modals.openConfirmModal({
+      title: t("delete_confirm_count", { count: selectedChildIds.length }),
+      children: (
+        <Text size="sm">
+          {t("delete_confirm_count", { count: selectedChildIds.length })}
+        </Text>
+      ),
+      labels: { confirm: t("confirm"), cancel: t("cancel") },
+      confirmProps: { color: "red" },
+      onConfirm: async () => {
+        try {
+          await locations.deleteMany({ ids: selectedChildIds });
+          notifications.show({
+            title: t("success"),
+            message: t("delete_success"),
+            color: "green",
+          });
+          await refreshTree();
+          clearChildSelection();
+        } catch (error) {
+          notifications.show({
+            title: t("error"),
+            message: t("delete_error"),
+            color: "red",
+          });
+        }
+      },
+    });
   };
 
   const handleBulkEdit = () => {
@@ -175,9 +175,24 @@ function LocationsContent() {
     setCreateModalOpened(true);
   };
 
+  const confirmDeleteLocation = (node: LocationNode) => {
+    modals.openConfirmModal({
+      title: t("delete_location_title"),
+      children: (
+        <Text size="sm">
+          {t("delete_location_message", { name: node.name })}
+        </Text>
+      ),
+      labels: { confirm: t("confirm"), cancel: t("cancel") },
+      confirmProps: { color: "red" },
+      onConfirm: async () => {
+        await deleteLocation(Number(node.id));
+      },
+    });
+  };
+
   const handleDeleteChild = (child: LocationNode) => {
-    setNodeToDelete(child);
-    setDeleteModalOpened(true);
+    confirmDeleteLocation(child);
   };
 
   const handleEditLocation = () => {
@@ -190,16 +205,7 @@ function LocationsContent() {
 
   const handleDeleteSelected = () => {
     if (selectedNode) {
-      setNodeToDelete(selectedNode);
-      setDeleteModalOpened(true);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (nodeToDelete) {
-      await deleteLocation(Number(nodeToDelete.id));
-      setDeleteModalOpened(false);
-      setNodeToDelete(null);
+      confirmDeleteLocation(selectedNode);
     }
   };
 
@@ -485,14 +491,6 @@ function LocationsContent() {
         onClose={() => setCreateBedModalOpened(false)}
         onSubmit={handleCreateBed}
         locationId={Number(selectedNode?.id)}
-      />
-
-      <ConfirmDeleteModal
-        opened={deleteModalOpened}
-        onClose={() => setDeleteModalOpened(false)}
-        onConfirm={handleConfirmDelete}
-        title={t("delete_location_title")}
-        message={t("delete_location_message", { name: nodeToDelete?.name })}
       />
 
       <BulkActionsBar

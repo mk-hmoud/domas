@@ -33,7 +33,7 @@ import {
   UpdateSemesterDto,
   SemesterStatus,
 } from "@domas/ts-types";
-import { ConfirmDeleteModal, SemesterModal } from "@domas/ui";
+import { SemesterModal } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
 import { handleApiError } from "../utils/api-error-handler";
@@ -49,7 +49,6 @@ export function SharedSemestersPage() {
 
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(
     null,
   );
@@ -110,17 +109,14 @@ export function SharedSemestersPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedSemester) return;
+  const handleDelete = async (semester: Semester) => {
     try {
-      await semesters.remove(selectedSemester.id);
+      await semesters.remove(semester.id);
       notifications.show({
         title: t("success"),
         message: t("semester_deleted"),
         color: "green",
       });
-      setDeleteModalOpened(false);
-      setSelectedSemester(null);
       fetchData();
     } catch (error) {
       handleApiError(error, t("failed_to_delete_role"));
@@ -172,8 +168,19 @@ export function SharedSemestersPage() {
   };
 
   const openDeleteModal = (semester: Semester) => {
-    setSelectedSemester(semester);
-    setDeleteModalOpened(true);
+    modals.openConfirmModal({
+      title: t("delete_semester_title"),
+      children: (
+        <Text size="sm">
+          {t("delete_semester_message", {
+            name: semester.displayName,
+          })}
+        </Text>
+      ),
+      labels: { confirm: t("confirm"), cancel: t("cancel") },
+      confirmProps: { color: "red" },
+      onConfirm: () => handleDelete(semester),
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -334,19 +341,6 @@ export function SharedSemestersPage() {
         onSubmit={handleUpdate}
         initialValues={selectedSemester}
         loading={modalLoading}
-      />
-
-      <ConfirmDeleteModal
-        opened={deleteModalOpened}
-        onClose={() => {
-          setDeleteModalOpened(false);
-          setSelectedSemester(null);
-        }}
-        onConfirm={handleDelete}
-        title={t("delete_semester_title")}
-        message={t("delete_semester_message", {
-          name: selectedSemester?.displayName,
-        })}
       />
 
       <Drawer
