@@ -5,6 +5,7 @@ import { LoginCredentials } from "@domas/ts-types";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { notifications } from "@mantine/notifications";
 
 interface SharedLoginPageProps {
   title: string;
@@ -27,7 +28,11 @@ export function SharedLoginPage({
       navigate(redirectPath);
     } catch (error) {
       console.error(error);
-      alert(t("login_failed"));
+      notifications.show({
+        title: t("error"),
+        message: t("login_failed"),
+        color: "red",
+      });
     } finally {
       setLoading(false);
     }

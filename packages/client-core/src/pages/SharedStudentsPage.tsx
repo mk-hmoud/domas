@@ -26,6 +26,7 @@ import {
   COUNTRIES,
 } from "@domas/ts-types";
 import { StudentModal, StudentsTable } from "@domas/ui";
+import { notifications } from "@mantine/notifications";
 
 export function SharedStudentsPage() {
   const { t } = useTranslation();
@@ -71,7 +72,11 @@ export function SharedStudentsPage() {
       });
       setData(result);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     } finally {
       setLoading(false);
     }
@@ -84,10 +89,19 @@ export function SharedStudentsPage() {
   const handleCreate = async (values: CreateStudentDto) => {
     try {
       await students.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("student_created", "Student created successfully"),
+        color: "green",
+      });
       fetchData();
       setCreateModalOpened(false);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
   };
 
@@ -95,11 +109,20 @@ export function SharedStudentsPage() {
     if (!editingStudent) return;
     try {
       await students.update(editingStudent.id, values);
+      notifications.show({
+        title: t("success"),
+        message: t("student_updated", "Student updated successfully"),
+        color: "green",
+      });
       fetchData();
       setEditModalOpened(false);
       setEditingStudent(null);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
   };
 

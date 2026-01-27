@@ -35,6 +35,7 @@ import {
 import { CreateBookingModal, BookingsTable } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 
 export function SharedBookingsPage() {
   const { t } = useTranslation();
@@ -65,7 +66,11 @@ export function SharedBookingsPage() {
       const result = await bookings.findAll();
       setData(result);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     } finally {
       setLoading(false);
     }
@@ -119,7 +124,11 @@ export function SharedBookingsPage() {
       });
       setStudentsMap(sMap);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     }
   };
 
@@ -137,21 +146,39 @@ export function SharedBookingsPage() {
   const handleCreateBooking = async (values: CreateBookingDto) => {
     try {
       await bookings.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("booking_created", "Booking created successfully"),
+        color: "green",
+      });
       await fetchBookings();
       setModalOpened(false);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
   };
 
   const handleCreateStudent = async (values: CreateStudentDto) => {
     try {
       await students.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("student_created", "Student created successfully"),
+        color: "green",
+      });
       // Refresh list
       const studentsRes = await students.findAll({ limit: 1000 });
       setStudentList(studentsRes.data);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
   };
 

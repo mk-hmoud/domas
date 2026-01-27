@@ -48,6 +48,7 @@ import { locations } from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
 import { findLocationPath } from "../utils/location-utils";
+import { notifications } from "@mantine/notifications";
 
 function LocationsContent() {
   const { t } = useTranslation();
@@ -117,10 +118,19 @@ function LocationsContent() {
 
     try {
       await locations.deleteMany({ ids: selectedChildIds });
+      notifications.show({
+        title: t("success"),
+        message: t("delete_success"),
+        color: "green",
+      });
       await refreshTree();
       clearChildSelection();
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("delete_error"),
+        color: "red",
+      });
     }
   };
 
@@ -131,11 +141,20 @@ function LocationsContent() {
   const handleSubmitBulkEdit = async (values: UpdateLocationDto) => {
     try {
       await locations.updateMany({ ids: selectedChildIds, data: values });
+      notifications.show({
+        title: t("success"),
+        message: t("locations_updated", "Locations updated successfully"),
+        color: "green",
+      });
       await refreshTree();
       clearChildSelection();
       setBulkEditModalOpened(false);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
   };
 
@@ -191,18 +210,37 @@ function LocationsContent() {
       if (Array.isArray(values)) {
         // Bulk create mode
         await locations.createMany({ locations: values });
+        notifications.show({
+          title: t("success"),
+          message: t("locations_created", "Locations created successfully"),
+          color: "green",
+        });
       } else if (locationToEdit) {
         // Update mode
         await locations.update(Number(locationToEdit.id), values);
+        notifications.show({
+          title: t("success"),
+          message: t("location_updated", "Location updated successfully"),
+          color: "green",
+        });
       } else {
         // Single create mode: Use direct API or context method
         await locations.create(values as CreateLocationDto);
+        notifications.show({
+          title: t("success"),
+          message: t("location_created", "Location created successfully"),
+          color: "green",
+        });
       }
 
       // Refresh the tree after any modification
       await refreshTree();
     } catch (error) {
-      console.error("Location operation failed:", error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
 
     setCreateModalOpened(false);

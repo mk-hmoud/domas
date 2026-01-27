@@ -42,6 +42,7 @@ import {
   PaginatedResult,
   AuditLogEntry,
 } from "@domas/ts-types";
+import { notifications } from "@mantine/notifications";
 
 export function SharedAuditLogsPage() {
   const { t } = useTranslation();
@@ -109,7 +110,11 @@ export function SharedAuditLogsPage() {
         setBulkOperations(data);
       }
     } catch (error) {
-      console.error("Failed to fetch audit logs:", error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     } finally {
       setLoading(false);
     }

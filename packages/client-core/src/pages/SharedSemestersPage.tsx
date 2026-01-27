@@ -31,6 +31,7 @@ import {
   SemesterStatus,
 } from "@domas/ts-types";
 import { ConfirmDeleteModal, SemesterModal } from "@domas/ui";
+import { notifications } from "@mantine/notifications";
 
 export function SharedSemestersPage() {
   const { t } = useTranslation();
@@ -55,7 +56,11 @@ export function SharedSemestersPage() {
       setData(result.data);
       setTotal(result.total);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     } finally {
       setLoading(false);
     }
@@ -69,10 +74,19 @@ export function SharedSemestersPage() {
     setModalLoading(true);
     try {
       await semesters.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("semester_created"),
+        color: "green",
+      });
       fetchData();
       setCreateModalOpened(false);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"), // Assuming generic error or add semester specific
+        color: "red",
+      });
     } finally {
       setModalLoading(false);
     }
@@ -83,11 +97,20 @@ export function SharedSemestersPage() {
     setModalLoading(true);
     try {
       await semesters.update(selectedSemester.id, values);
+      notifications.show({
+        title: t("success"),
+        message: t("semester_updated"),
+        color: "green",
+      });
       fetchData();
       setEditModalOpened(false);
       setSelectedSemester(null);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     } finally {
       setModalLoading(false);
     }
@@ -97,11 +120,20 @@ export function SharedSemestersPage() {
     if (!selectedSemester) return;
     try {
       await semesters.remove(selectedSemester.id);
+      notifications.show({
+        title: t("success"),
+        message: t("semester_deleted"),
+        color: "green",
+      });
       setDeleteModalOpened(false);
       setSelectedSemester(null);
       fetchData();
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_delete_role"),
+        color: "red",
+      });
     }
   };
 
@@ -111,9 +143,18 @@ export function SharedSemestersPage() {
   ) => {
     try {
       await semesters.updateStatus(semester.id, status);
+      notifications.show({
+        title: t("success"),
+        message: t("semester_toggled"),
+        color: "green",
+      });
       fetchData();
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("error"),
+        color: "red",
+      });
     }
   };
 

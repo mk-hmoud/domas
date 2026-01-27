@@ -12,6 +12,7 @@ import { users } from "@domas/api-client";
 import { User, CreateUserDto, PaginatedResult } from "@domas/ts-types";
 import { CreateUserModal, UsersTable, DeleteUserModal } from "@domas/ui";
 import { useTranslation } from "react-i18next";
+import { notifications } from "@mantine/notifications";
 
 interface SharedUsersPageProps {
   title?: string;
@@ -35,7 +36,11 @@ export function SharedUsersPage({
       const result = await users.findAll({ page, limit: 10, roles: role });
       setPaginatedData(result);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     }
   };
 
@@ -45,8 +50,21 @@ export function SharedUsersPage({
   }, [activePage, roleKey]);
 
   const handleCreateUser = async (values: CreateUserDto) => {
-    await users.create(values);
-    await fetchData(activePage);
+    try {
+      await users.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("user_created_successfully", "User created successfully"),
+        color: "green",
+      });
+      await fetchData(activePage);
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_create_user", "Failed to create user"),
+        color: "red",
+      });
+    }
   };
 
   const confirmDelete = (user: User) => {
@@ -57,10 +75,18 @@ export function SharedUsersPage({
   const handleDeleteUser = async (user: User) => {
     try {
       await users.delete(user.id);
+      notifications.show({
+        title: t("success"),
+        message: t("delete_success", "User deleted successfully"),
+        color: "green",
+      });
       await fetchData(activePage);
     } catch (error) {
-      console.error(error);
-      alert("Failed to delete user");
+      notifications.show({
+        title: t("error"),
+        message: t("delete_error", "Failed to delete user"),
+        color: "red",
+      });
     }
   };
 

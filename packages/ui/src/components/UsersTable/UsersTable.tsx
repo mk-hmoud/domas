@@ -1,4 +1,4 @@
-import { Table, Group, Badge, ActionIcon, Text } from "@mantine/core";
+import { Table, Group, ActionIcon } from "@mantine/core";
 import { IconTrash, IconPencil } from "@tabler/icons-react";
 import { User } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
@@ -15,20 +15,6 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
   const rows = data.map((user) => (
     <Table.Tr key={user.id}>
       <Table.Td>{user.email}</Table.Td>
-      <Table.Td>
-        <Group gap={4}>
-          {user.roles?.map((role) => (
-            <Badge key={role.id} variant="light" color="gray">
-              {role.name}
-            </Badge>
-          ))}
-          {!user.roles?.length && (
-            <Text size="xs" c="dimmed">
-              -
-            </Text>
-          )}
-        </Group>
-      </Table.Td>
       <Table.Td>{user.isActive ? t("active") : t("inactive")}</Table.Td>
       <Table.Td>{new Date(user.createdAt).toLocaleDateString()}</Table.Td>
       <Table.Td>
@@ -57,7 +43,6 @@ export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
       <Table.Thead>
         <Table.Tr>
           <Table.Th>{t("email")}</Table.Th>
-          <Table.Th>{t("role")}</Table.Th>
           <Table.Th>{t("status")}</Table.Th>
           <Table.Th>{t("created_at")}</Table.Th>
           <Table.Th />

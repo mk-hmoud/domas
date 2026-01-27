@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { Bed, CreateBedDto } from "@domas/ts-types";
 import { beds } from "@domas/api-client";
+import { notifications } from "@mantine/notifications";
+import { useTranslation } from "react-i18next";
 
 export function useBedManagement(
   selectedNodeId: number | null,
   isRoom: boolean,
 ) {
+  const { t } = useTranslation();
   const [roomBeds, setRoomBeds] = useState<Bed[]>([]);
   const [createBedModalOpened, setCreateBedModalOpened] = useState(false);
 
@@ -26,7 +29,11 @@ export function useBedManagement(
       });
       setRoomBeds(res.data);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     }
   };
 
@@ -34,20 +41,38 @@ export function useBedManagement(
     if (!selectedNodeId) return;
     try {
       await beds.create({ ...values, locationId: selectedNodeId });
+      notifications.show({
+        title: t("success"),
+        message: t("bed_created", "Bed created successfully"),
+        color: "green",
+      });
       await refreshBeds();
       setCreateBedModalOpened(false);
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
     }
   };
 
   const deleteBed = async (bed: Bed) => {
-    if (!confirm("Are you sure?")) return;
+    if (!confirm(t("confirm"))) return;
     try {
       await beds.remove(bed.id);
+      notifications.show({
+        title: t("success"),
+        message: t("bed_deleted", "Bed deleted successfully"),
+        color: "green",
+      });
       await refreshBeds();
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_delete_role"),
+        color: "red",
+      });
     }
   };
 

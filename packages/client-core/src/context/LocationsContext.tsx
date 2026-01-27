@@ -10,6 +10,8 @@ import { Location, CreateLocationDto } from "@domas/ts-types";
 import { locations, beds } from "@domas/api-client";
 import { LocationNode } from "@domas/ui";
 import { LocationType } from "@domas/ts-types";
+import { notifications } from "@mantine/notifications";
+import { useTranslation } from "react-i18next";
 
 interface LocationsContextType {
   treeData: LocationNode[];
@@ -73,6 +75,7 @@ function findInTree(
 }
 
 export function LocationsProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [treeData, setTreeData] = useState<LocationNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<LocationNode | null>(null);
   const [childNodes, setChildren] = useState<Location[]>([]);
@@ -133,7 +136,11 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
         selectNode(builtTree[0]);
       }
     } catch (error) {
-      console.error(error);
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
     } finally {
       if (!silent) setLoading(false);
     }
@@ -149,8 +156,16 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
   };
 
   const createLocation = async (data: CreateLocationDto) => {
-    await locations.create(data);
-    await refreshTree();
+    try {
+      await locations.create(data);
+      await refreshTree();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"), // Generic error
+        color: "red",
+      });
+    }
   };
 
   // Helper to remove a node immutably from the tree
@@ -173,6 +188,7 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
 
   const deleteLocation = async (id: number) => {
     // 1. Optimistic Update: Remove it from UI immediately
+    const oldTree = [...treeData];
     setTreeData((prev) => removeNodeFromTree([...prev], id));
 
     if (selectedNode && Number(selectedNode.id) === id) {
@@ -180,8 +196,23 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
       setChildren([]);
     }
 
-    // 2. Call API in background
-    await locations.delete(id);
+    try {
+      // 2. Call API in background
+      await locations.delete(id);
+      notifications.show({
+        title: t("success"),
+        message: t("delete_success"),
+        color: "green",
+      });
+    } catch (error) {
+      // Rollback on error
+      setTreeData(oldTree);
+      notifications.show({
+        title: t("error"),
+        message: t("delete_error"),
+        color: "red",
+      });
+    }
 
     // 3. Silent Refresh
     await refreshTree(true);
