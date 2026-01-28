@@ -1,4 +1,10 @@
-import { Injectable, ConflictException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  Logger,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { UsersRepository } from '../repositories/users.repository';
 import { AccessRepository } from '../repositories/access.repository';
@@ -82,6 +88,10 @@ export class UsersService {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
 
+      if (existing.isRecoveryAdmin) {
+        throw new ForbiddenException('Cannot modify the Recovery Admin account');
+      }
+
       let passwordHash: string | undefined;
       if (data.password) {
         passwordHash = await argon2.hash(data.password);
@@ -135,6 +145,11 @@ export class UsersService {
       if (!user) {
         throw new ConflictException(`User with ID ${id} not found`);
       }
+
+      if (user.isRecoveryAdmin) {
+        throw new ForbiddenException('Cannot delete the Recovery Admin account');
+      }
+
       return this.usersRepository.delete(id, client);
     }, context);
 
