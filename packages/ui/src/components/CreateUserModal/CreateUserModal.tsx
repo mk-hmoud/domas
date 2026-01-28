@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TextInput,
   PasswordInput,
@@ -8,23 +8,26 @@ import {
   Tooltip,
   rem,
   Group,
+  Switch,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { useTranslation } from "react-i18next";
-import { CreateUserDto } from "@domas/ts-types";
+import { CreateUserDto, UpdateUserDto, User } from "@domas/ts-types";
 import { IconRefresh, IconEye, IconEyeOff } from "@tabler/icons-react";
 
 interface CreateUserModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (values: CreateUserDto) => Promise<void>;
+  onSubmit: (values: CreateUserDto | UpdateUserDto) => Promise<void>;
+  userToEdit?: User | null;
 }
 
 export function CreateUserModal({
   opened,
   onClose,
   onSubmit,
+  userToEdit,
 }: CreateUserModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -34,12 +37,30 @@ export function CreateUserModal({
     initialValues: {
       email: "",
       password: "",
+      isActive: true,
     },
     validate: {
       email: (val) => (/^\S+@\S+$/.test(val) ? null : t("invalid_email")),
-      password: (val) => (val.length < 6 ? t("password_too_short") : null),
+      password: (val) => {
+        if (userToEdit && !val) return null; // Password optional on edit
+        return val.length < 6 ? t("password_too_short") : null;
+      },
     },
   });
+
+  useEffect(() => {
+    if (opened) {
+      if (userToEdit) {
+        form.setValues({
+          email: userToEdit.email,
+          password: "",
+          isActive: userToEdit.isActive,
+        });
+      } else {
+        form.reset();
+      }
+    }
+  }, [opened, userToEdit]);
 
   const generatePassword = () => {
     const chars =
@@ -57,7 +78,12 @@ export function CreateUserModal({
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     try {
-      await onSubmit(values);
+      const payload = { ...values };
+      // Remove empty password on edit so it doesn't overwrite with empty string
+      if (userToEdit && !payload.password) {
+        delete (payload as any).password;
+      }
+      await onSubmit(payload);
       form.reset();
       onClose();
     } catch (error) {
@@ -68,7 +94,11 @@ export function CreateUserModal({
   };
 
   return (
-    <Modal opened={opened} onClose={onClose} title={t("create_new_user")}>
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={userToEdit ? t("edit_user") : t("create_new_user")}
+    >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <TextInput
           label={t("email")}
@@ -78,8 +108,9 @@ export function CreateUserModal({
         />
         <PasswordInput
           label={t("password")}
+          description={userToEdit ? t("leave_blank_keep_password") : undefined}
           placeholder={t("your_password")}
-          required
+          required={!userToEdit}
           mt="md"
           visible={visible}
           onVisibilityChange={toggle}
@@ -110,8 +141,18 @@ export function CreateUserModal({
           }
           {...form.getInputProps("password")}
         />
+
+        {userToEdit && (
+          <Switch
+            label={t("active")}
+            mt="md"
+            checked={form.values.isActive}
+            {...form.getInputProps("isActive", { type: "checkbox" })}
+          />
+        )}
+
         <Button fullWidth mt="xl" type="submit" loading={loading}>
-          {t("create_user")}
+          {userToEdit ? t("save_changes") : t("create_user")}
         </Button>
       </form>
     </Modal>

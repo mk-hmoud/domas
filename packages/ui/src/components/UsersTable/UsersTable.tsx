@@ -7,17 +7,27 @@ interface UsersTableProps {
   data: User[];
   onEdit?: (user: User) => void;
   onDelete?: (user: User) => void;
+  onRowClick?: (user: User) => void;
 }
 
-export function UsersTable({ data, onEdit, onDelete }: UsersTableProps) {
+export function UsersTable({
+  data,
+  onEdit,
+  onDelete,
+  onRowClick,
+}: UsersTableProps) {
   const { t } = useTranslation();
 
   const rows = data.map((user) => (
-    <Table.Tr key={user.id}>
+    <Table.Tr
+      key={user.id}
+      onClick={() => onRowClick?.(user)}
+      style={{ cursor: onRowClick ? "pointer" : "default" }}
+    >
       <Table.Td>{user.email}</Table.Td>
       <Table.Td>{user.isActive ? t("active") : t("inactive")}</Table.Td>
       <Table.Td>{new Date(user.createdAt).toLocaleDateString()}</Table.Td>
-      <Table.Td>
+      <Table.Td onClick={(e) => e.stopPropagation()}>
         <Group gap={0} justify="flex-end">
           <ActionIcon
             variant="subtle"

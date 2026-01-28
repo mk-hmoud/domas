@@ -15,18 +15,19 @@ export class UsersRepository {
     return client || this.db.getPool();
   }
 
-  private getSelectColumns(includePassword = false): string {
+  private getSelectColumns(includePassword = false, tableAlias?: string): string {
+    const prefix = tableAlias ? `${tableAlias}.` : '';
     const columns = [
-      'id',
-      'email',
-      'is_active as "isActive"',
-      'is_recovery_admin as "isRecoveryAdmin"',
-      'created_at as "createdAt"',
-      'updated_at as "updatedAt"',
+      `${prefix}id`,
+      `${prefix}email`,
+      `${prefix}is_active as "isActive"`,
+      `${prefix}is_recovery_admin as "isRecoveryAdmin"`,
+      `${prefix}created_at as "createdAt"`,
+      `${prefix}updated_at as "updatedAt"`,
     ];
 
     if (includePassword) {
-      columns.push('password_hash as "passwordHash"');
+      columns.push(`${prefix}password_hash as "passwordHash"`);
     }
 
     return columns.join(', ');
@@ -64,21 +65,36 @@ export class UsersRepository {
     const offset = (page - 1) * limit;
 
     const query = `
-      SELECT ${this.getSelectColumns(false)}
-      FROM users
-      ORDER BY created_at DESC
+      SELECT 
+        ${this.getSelectColumns(false, 'u')},
+        COALESCE(
+          json_agg(
+            json_build_object('id', r.id, 'name', r.name, 'description', r.description, 'isSystemRole', r.is_system_role)
+          ) FILTER (WHERE r.id IS NOT NULL), 
+          '[]'
+        ) as roles
+      FROM users u
+      LEFT JOIN user_roles ur ON u.id = ur.user_id
+      LEFT JOIN roles r ON ur.role_id = r.id
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
       LIMIT $1 OFFSET $2
     `;
     const countQuery = `SELECT COUNT(*) FROM users`;
 
     const dbClient = this.getClient(client);
     const [result, countResult] = await Promise.all([
-      dbClient.query<User>(query, [limit, offset]),
+      dbClient.query(query, [limit, offset]),
       dbClient.query<{ count: string }>(countQuery),
     ]);
 
     return {
-      data: result.rows.map((row) => this.mapRowToEntity(row)),
+      data: result.rows.map((row) => {
+        const user = this.mapRowToEntity(row);
+        // Map roles JSON to Role entities (plain objects are fine, or verify Role class)
+        user.roles = row.roles;
+        return user;
+      }),
       total: parseInt(countResult.rows[0].count, 10),
       page,
       limit,

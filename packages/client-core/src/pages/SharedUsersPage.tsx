@@ -6,10 +6,19 @@ import {
   Container,
   Pagination,
   Text,
+  Drawer,
+  Stack,
+  Badge,
+  Box,
 } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconEdit } from "@tabler/icons-react";
 import { users } from "@domas/api-client";
-import { User, CreateUserDto, PaginatedResult } from "@domas/ts-types";
+import {
+  User,
+  CreateUserDto,
+  PaginatedResult,
+  UpdateUserDto,
+} from "@domas/ts-types";
 import { CreateUserModal, UsersTable } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
@@ -29,6 +38,8 @@ export function SharedUsersPage({
     useState<PaginatedResult<User> | null>(null);
   const [activePage, setPage] = useState(1);
   const [modalOpened, setModalOpened] = useState(false);
+  const [viewUser, setViewUser] = useState<User | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
   const fetchData = async (page: number) => {
     try {
@@ -48,19 +59,34 @@ export function SharedUsersPage({
     fetchData(activePage);
   }, [activePage, roleKey]);
 
-  const handleCreateUser = async (values: CreateUserDto) => {
+  const handleCreateOrUpdateUser = async (
+    values: CreateUserDto | UpdateUserDto,
+  ) => {
     try {
-      await users.create(values);
-      notifications.show({
-        title: t("success"),
-        message: t("user_created_successfully", "User created successfully"),
-        color: "green",
-      });
+      if (userToEdit) {
+        await users.update(userToEdit.id, values as UpdateUserDto);
+        notifications.show({
+          title: t("success"),
+          message: t("user_updated_successfully", "User updated successfully"),
+          color: "green",
+        });
+      } else {
+        await users.create(values as CreateUserDto);
+        notifications.show({
+          title: t("success"),
+          message: t("user_created_successfully", "User created successfully"),
+          color: "green",
+        });
+      }
       await fetchData(activePage);
+      setModalOpened(false);
+      setUserToEdit(null);
     } catch (error) {
       notifications.show({
         title: t("error"),
-        message: t("failed_to_create_user", "Failed to create user"),
+        message: t(
+          userToEdit ? "failed_to_update_user" : "failed_to_create_user",
+        ),
         color: "red",
       });
     }
@@ -75,6 +101,7 @@ export function SharedUsersPage({
         color: "green",
       });
       await fetchData(activePage);
+      if (viewUser?.id === user.id) setViewUser(null);
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -96,19 +123,31 @@ export function SharedUsersPage({
     });
   };
 
+  const openCreateModal = () => {
+    setUserToEdit(null);
+    setModalOpened(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setUserToEdit(user);
+    setModalOpened(true);
+  };
+
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
         <Title>{t(title)}</Title>
-        <Button
-          leftSection={<IconPlus size={14} />}
-          onClick={() => setModalOpened(true)}
-        >
+        <Button leftSection={<IconPlus size={14} />} onClick={openCreateModal}>
           {t("create_user")}
         </Button>
       </Group>
 
-      <UsersTable data={paginatedData?.data || []} onDelete={confirmDelete} />
+      <UsersTable
+        data={paginatedData?.data || []}
+        onDelete={confirmDelete}
+        onEdit={openEditModal}
+        onRowClick={setViewUser}
+      />
 
       {paginatedData?.data.length === 0 && (
         <Text ta="center" mt="xl" c="dimmed">
@@ -128,9 +167,99 @@ export function SharedUsersPage({
 
       <CreateUserModal
         opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSubmit={handleCreateUser}
+        onClose={() => {
+          setModalOpened(false);
+          setUserToEdit(null);
+        }}
+        onSubmit={handleCreateOrUpdateUser}
+        userToEdit={userToEdit}
       />
+
+      <Drawer
+        opened={!!viewUser}
+        onClose={() => setViewUser(null)}
+        title={
+          <Text fw={700} size="lg">
+            {t("user_details", { defaultValue: "User Details" })}
+          </Text>
+        }
+        position="right"
+        size="md"
+      >
+        {viewUser && (
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Text size="xl" fw={700}>
+                {viewUser.email}
+              </Text>
+              <Badge color={viewUser.isActive ? "green" : "gray"}>
+                {viewUser.isActive ? t("active") : t("inactive")}
+              </Badge>
+            </Group>
+
+            <Box>
+              <Text size="xs" c="dimmed">
+                {t("user_id", { defaultValue: "User ID" })}
+              </Text>
+              <Text size="sm" style={{ wordBreak: "break-all" }}>
+                {viewUser.id}
+              </Text>
+            </Box>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("created_at")}
+                </Text>
+                <Text>{new Date(viewUser.createdAt).toLocaleDateString()}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("updated_at")}
+                </Text>
+                <Text>{new Date(viewUser.updatedAt).toLocaleDateString()}</Text>
+              </Box>
+            </Group>
+
+            {viewUser.isRecoveryAdmin && (
+              <Badge color="red" variant="filled" fullWidth>
+                Recovery Admin
+              </Badge>
+            )}
+
+            <Box>
+              <Text size="xs" c="dimmed" mb={4}>
+                {t("user_roles")}
+              </Text>
+              <Group gap="xs">
+                {viewUser.roles && viewUser.roles.length > 0 ? (
+                  viewUser.roles.map((role) => (
+                    <Badge key={role.id} variant="outline">
+                      {role.name}
+                    </Badge>
+                  ))
+                ) : (
+                  <Text size="sm" c="dimmed">
+                    -
+                  </Text>
+                )}
+              </Group>
+            </Box>
+
+            <Button
+              variant="light"
+              leftSection={<IconEdit size={16} />}
+              onClick={() => {
+                openEditModal(viewUser);
+                setViewUser(null);
+              }}
+              mt="xl"
+            >
+              {t("edit_user", { defaultValue: "Edit User" })}
+            </Button>
+          </Stack>
+        )}
+      </Drawer>
     </Container>
   );
 }
