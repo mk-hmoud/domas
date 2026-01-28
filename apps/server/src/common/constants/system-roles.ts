@@ -1,4 +1,4 @@
 export const SYSTEM_ROLES = {
+  ADMIN: 'Admin',
   STUDENT: 'Student',
-  DORM_MANAGER: 'Dorm Manager',
 } as const;

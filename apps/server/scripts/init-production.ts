@@ -63,11 +63,14 @@ async function bootstrap() {
       .createRole(SYSTEM_ROLES.STUDENT, 'Student Access', true)
       .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.STUDENT));
 
-    const dormManagerRole = await accessRepository
-      .createRole(SYSTEM_ROLES.DORM_MANAGER, 'Dorm Management', true)
-      .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.DORM_MANAGER));
+    const adminRole = await accessRepository
+      .createRole(SYSTEM_ROLES.ADMIN, 'System Administrator with full access', true)
+      .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.ADMIN));
 
     // Assign Permissions
+    if (adminRole) {
+      await accessRepository.assignPermissionsToRole(adminRole.id, allPermissionIds);
+    }
     // TODO: Define specific permissions for other roles
 
     console.log('\u2705 RBAC seeded.');

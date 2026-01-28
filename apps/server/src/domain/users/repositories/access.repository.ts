@@ -169,6 +169,11 @@ export class AccessRepository {
     await this.getClient(client).query(query, [userId, roleId]);
   }
 
+  async revokeRoleFromUser(userId: string, roleId: number, client?: PoolClient): Promise<void> {
+    const query = `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2`;
+    await this.getClient(client).query(query, [userId, roleId]);
+  }
+
   async assignPermissionsToRole(
     roleId: number,
     permissionIds: number[],

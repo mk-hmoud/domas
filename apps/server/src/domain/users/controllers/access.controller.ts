@@ -76,4 +76,15 @@ export class AccessController {
   ) {
     return this.accessService.assignRoleToUser(userId, roleId, context);
   }
+
+  @Delete('users/:userId/roles/:roleId')
+  @RequirePermissions(PERMISSIONS.ROLES_ASSIGN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  revokeRole(
+    @Param('userId') userId: string,
+    @Param('roleId', ParseIntPipe) roleId: number,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.accessService.revokeRoleFromUser(userId, roleId, context);
+  }
 }

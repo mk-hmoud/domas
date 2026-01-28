@@ -47,6 +47,18 @@ export class UsersService {
         client,
       );
 
+      if (data.roleIds && data.roleIds.length > 0) {
+        for (const roleId of data.roleIds) {
+          await this.accessRepository.assignRoleToUser(createdUser.id, roleId, client);
+        }
+      }
+
+      createdUser.roles = await this.accessRepository.getRolesForUser(createdUser.id, client);
+      createdUser.permissions = await this.accessRepository.getPermissionsForUser(
+        createdUser.id,
+        client,
+      );
+
       return createdUser;
     }, context);
 

@@ -127,6 +127,41 @@ export class AccessService {
     }, context);
   }
 
+  async revokeRoleFromUser(
+    userId: string,
+    roleId: number,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log({ userId, roleId }, 'Revoking role from user');
+
+    // Security Check: Subset Permission Logic
+    // A user can only revoke a role if they have ALL permissions that the role grants.
+    if (!context.isRecoveryAdmin) {
+      const rolePermissions = await this.accessRepository.getPermissionsForRole(roleId);
+      const userPermissions = new Set(context.permissions || []);
+
+      const missingPermissions = rolePermissions.filter((p) => !userPermissions.has(p.slug));
+
+      if (missingPermissions.length > 0) {
+        this.logger.warn(
+          {
+            userId: context.userId,
+            roleId,
+            missing: missingPermissions.map((p) => p.slug),
+          },
+          'Role revocation denied: User lacks necessary permissions',
+        );
+        throw new ForbiddenException(
+          'You cannot revoke a role that grants permissions you do not possess.',
+        );
+      }
+    }
+
+    await this.db.transaction(async (client) => {
+      await this.accessRepository.revokeRoleFromUser(userId, roleId, client);
+    }, context);
+  }
+
   async getRolesForUser(userId: string): Promise<Role[]> {
     return this.accessRepository.getRolesForUser(userId);
   }
@@ -139,6 +174,14 @@ export class AccessService {
 
       if (role.isSystemRole) {
         throw new ForbiddenException('Cannot delete a System Role');
+      }
+
+      // Security Check: Subset Permission Logic
+      role.permissions = await this.accessRepository.getPermissionsForRole(id, client);
+      if (!this.canViewRole(role, context)) {
+        throw new ForbiddenException(
+          'You cannot delete a role that grants permissions you do not possess.',
+        );
       }
 
       await this.accessRepository.deleteRole(id, client);
