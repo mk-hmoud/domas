@@ -12,12 +12,13 @@ import {
   Box,
 } from "@mantine/core";
 import { IconPlus, IconEdit } from "@tabler/icons-react";
-import { users } from "@domas/api-client";
+import { users, access } from "@domas/api-client";
 import {
   User,
   CreateUserDto,
   PaginatedResult,
   UpdateUserDto,
+  Role,
 } from "@domas/ts-types";
 import { CreateUserModal, UsersTable } from "@domas/ui";
 import { useTranslation } from "react-i18next";
@@ -36,6 +37,7 @@ export function SharedUsersPage({
   const { t } = useTranslation();
   const [paginatedData, setPaginatedData] =
     useState<PaginatedResult<User> | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [activePage, setPage] = useState(1);
   const [modalOpened, setModalOpened] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
@@ -43,8 +45,12 @@ export function SharedUsersPage({
 
   const fetchData = async (page: number) => {
     try {
-      const result = await users.findAll({ page, limit: 10, roles: role });
+      const [result, rolesResult] = await Promise.all([
+        users.findAll({ page, limit: 10, roles: role }),
+        access.findAllRoles(),
+      ]);
       setPaginatedData(result);
+      setAvailableRoles(rolesResult);
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -60,11 +66,31 @@ export function SharedUsersPage({
   }, [activePage, roleKey]);
 
   const handleCreateOrUpdateUser = async (
-    values: CreateUserDto | UpdateUserDto,
+    values: CreateUserDto | (UpdateUserDto & { roleIds?: number[] }),
   ) => {
     try {
       if (userToEdit) {
-        await users.update(userToEdit.id, values as UpdateUserDto);
+        const { roleIds, ...updateData } = values as UpdateUserDto & {
+          roleIds?: number[];
+        };
+        await users.update(userToEdit.id, updateData);
+
+        // Sync roles if provided
+        if (roleIds) {
+          const currentRoleIds = userToEdit.roles?.map((r) => r.id) || [];
+          const rolesToAssign = roleIds.filter(
+            (id) => !currentRoleIds.includes(id),
+          );
+          const rolesToRevoke = currentRoleIds.filter(
+            (id) => !roleIds.includes(id),
+          );
+
+          await Promise.all([
+            ...rolesToAssign.map((id) => access.assignRole(userToEdit.id, id)),
+            ...rolesToRevoke.map((id) => access.revokeRole(userToEdit.id, id)),
+          ]);
+        }
+
         notifications.show({
           title: t("success"),
           message: t("user_updated_successfully", "User updated successfully"),
@@ -173,6 +199,7 @@ export function SharedUsersPage({
         }}
         onSubmit={handleCreateOrUpdateUser}
         userToEdit={userToEdit}
+        availableRoles={availableRoles}
       />
 
       <Drawer

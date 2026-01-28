@@ -9,18 +9,24 @@ import {
   rem,
   Group,
   Switch,
+  Checkbox,
+  Stack,
+  Text,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { useTranslation } from "react-i18next";
-import { CreateUserDto, UpdateUserDto, User } from "@domas/ts-types";
+import { CreateUserDto, UpdateUserDto, User, Role } from "@domas/ts-types";
 import { IconRefresh, IconEye, IconEyeOff } from "@tabler/icons-react";
 
 interface CreateUserModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (values: CreateUserDto | UpdateUserDto) => Promise<void>;
+  onSubmit: (
+    values: CreateUserDto | (UpdateUserDto & { roleIds?: number[] }),
+  ) => Promise<void>;
   userToEdit?: User | null;
+  availableRoles?: Role[];
 }
 
 export function CreateUserModal({
@@ -28,6 +34,7 @@ export function CreateUserModal({
   onClose,
   onSubmit,
   userToEdit,
+  availableRoles = [],
 }: CreateUserModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -38,6 +45,7 @@ export function CreateUserModal({
       email: "",
       password: "",
       isActive: true,
+      roleIds: [] as string[],
     },
     validate: {
       email: (val) => (/^\S+@\S+$/.test(val) ? null : t("invalid_email")),
@@ -55,6 +63,7 @@ export function CreateUserModal({
           email: userToEdit.email,
           password: "",
           isActive: userToEdit.isActive,
+          roleIds: userToEdit.roles?.map((r) => r.id.toString()) || [],
         });
       } else {
         form.reset();
@@ -78,12 +87,28 @@ export function CreateUserModal({
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     try {
-      const payload = { ...values };
-      // Remove empty password on edit so it doesn't overwrite with empty string
-      if (userToEdit && !payload.password) {
-        delete (payload as any).password;
+      if (userToEdit) {
+        // Update user: include isActive and convert roleIds
+        const payload: UpdateUserDto & { roleIds: number[] } = {
+          email: values.email,
+          isActive: values.isActive,
+          roleIds: values.roleIds.map((id) => parseInt(id)),
+        };
+        if (values.password) {
+          payload.password = values.password;
+        }
+        await onSubmit(payload);
+      } else {
+        // Create user: only include email, password, and roleIds
+        const payload: CreateUserDto = {
+          email: values.email,
+          roleIds: values.roleIds.map((id) => parseInt(id)),
+        };
+        if (values.password) {
+          payload.password = values.password;
+        }
+        await onSubmit(payload);
       }
-      await onSubmit(payload);
       form.reset();
       onClose();
     } catch (error) {
@@ -106,6 +131,7 @@ export function CreateUserModal({
           required
           {...form.getInputProps("email")}
         />
+
         <PasswordInput
           label={t("password")}
           description={userToEdit ? t("leave_blank_keep_password") : undefined}
@@ -141,6 +167,36 @@ export function CreateUserModal({
           }
           {...form.getInputProps("password")}
         />
+
+        <Checkbox.Group
+          label={t("user_roles")}
+          mt="md"
+          {...form.getInputProps("roleIds")}
+        >
+          <Stack gap="xs" mt="xs">
+            {availableRoles.map((role) => (
+              <Checkbox
+                key={role.id}
+                value={role.id.toString()}
+                label={
+                  <div>
+                    <Text size="sm" fw={500}>
+                      {role.name}
+                    </Text>
+                    {role.description && (
+                      <Text size="xs" c="dimmed">
+                        {role.description}
+                      </Text>
+                    )}
+                  </div>
+                }
+                styles={{
+                  body: { alignItems: "flex-start" },
+                }}
+              />
+            ))}
+          </Stack>
+        </Checkbox.Group>
 
         {userToEdit && (
           <Switch
