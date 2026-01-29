@@ -35,8 +35,8 @@ export class UsersController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.USERS_VIEW)
-  findAll(@Query() query: FindAllUsersDto) {
-    return this.usersService.findAll(query);
+  findAll(@Query() query: FindAllUsersDto, @UserContext() context: AuditUserContext) {
+    return this.usersService.findAll(query, context);
   }
 
   @Patch(':id')

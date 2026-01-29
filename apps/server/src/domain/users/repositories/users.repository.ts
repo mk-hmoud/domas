@@ -6,6 +6,7 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 
 @Injectable()
 export class UsersRepository {
@@ -60,9 +61,27 @@ export class UsersRepository {
     return new User(result.rows[0]);
   }
 
-  async findAll(pagination: PaginationDto, client?: PoolClient): Promise<PaginatedResult<User>> {
+  async findAll(
+    pagination: PaginationDto,
+    client?: PoolClient,
+    context?: AuditUserContext,
+  ): Promise<PaginatedResult<User>> {
     const { page = 1, limit = 10 } = pagination;
     const offset = (page - 1) * limit;
+
+    const isAdmin =
+      !context || context.isRecoveryAdmin || context.roles?.some((r) => r.name === 'Admin');
+
+    const adminFilter = isAdmin
+      ? ''
+      : `
+        AND u.is_recovery_admin = FALSE
+        AND NOT EXISTS (
+          SELECT 1 FROM user_roles ur_check
+          JOIN roles r_check ON ur_check.role_id = r_check.id
+          WHERE ur_check.user_id = u.id AND r_check.name = 'Admin'
+        )
+      `;
 
     const query = `
       SELECT 
@@ -76,11 +95,15 @@ export class UsersRepository {
       FROM users u
       LEFT JOIN user_roles ur ON u.id = ur.user_id
       LEFT JOIN roles r ON ur.role_id = r.id
+      WHERE 1=1 ${adminFilter}
       GROUP BY u.id
       ORDER BY u.created_at DESC
       LIMIT $1 OFFSET $2
     `;
-    const countQuery = `SELECT COUNT(*) FROM users`;
+    const countQuery = `
+      SELECT COUNT(*) FROM users u 
+      WHERE 1=1 ${adminFilter}
+    `;
 
     const dbClient = this.getClient(client);
     const [result, countResult] = await Promise.all([
@@ -91,7 +114,6 @@ export class UsersRepository {
     return {
       data: result.rows.map((row) => {
         const user = this.mapRowToEntity(row);
-        // Map roles JSON to Role entities (plain objects are fine, or verify Role class)
         user.roles = row.roles;
         return user;
       }),
@@ -115,11 +137,31 @@ export class UsersRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
-  async findById(id: string, client?: PoolClient, includePassword = false): Promise<User | null> {
+  async findById(
+    id: string,
+    client?: PoolClient,
+    includePassword = false,
+    context?: AuditUserContext,
+  ): Promise<User | null> {
+    const isAdmin =
+      !context || context.isRecoveryAdmin || context.roles?.some((r) => r.name === 'Admin');
+
+    let adminFilter = '';
+    if (!isAdmin) {
+      adminFilter = `
+        AND is_recovery_admin = FALSE
+        AND NOT EXISTS (
+          SELECT 1 FROM user_roles ur
+          JOIN roles r ON ur.role_id = r.id
+          WHERE ur.user_id = users.id AND r.name = 'Admin'
+        )
+      `;
+    }
+
     const query = `
       SELECT ${this.getSelectColumns(includePassword)}
       FROM users
-      WHERE id = $1
+      WHERE id = $1 ${adminFilter}
     `;
     const result = await this.getClient(client).query<User>(query, [id]);
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;

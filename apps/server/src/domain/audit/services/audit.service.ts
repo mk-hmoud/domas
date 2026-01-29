@@ -4,6 +4,7 @@ import { PoolClient } from 'pg';
 import { AuditInfrastructureRepository } from '../repositories/audit-infrastructure.repository';
 import { AuditLogsRepository } from '../repositories/audit-logs.repository';
 import { SearchAuditDto } from '../dto/search-audit.dto';
+import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 
 @Injectable()
 export class AuditService implements OnModuleInit {
@@ -36,8 +37,8 @@ export class AuditService implements OnModuleInit {
     }
   }
 
-  async search(dto: SearchAuditDto) {
-    return this.auditLogsRepository.search(dto);
+  async search(dto: SearchAuditDto, context: AuditUserContext) {
+    return this.auditLogsRepository.search(dto, context);
   }
 
   async maintainPartitions(client?: PoolClient): Promise<void> {

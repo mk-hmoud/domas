@@ -3,6 +3,7 @@ export interface AuditUserContext {
   username: string;
   isRecoveryAdmin?: boolean;
   permissions?: string[];
+  roles?: { name: string }[];
   ipAddress: string;
   userAgent?: string;
 }

@@ -27,6 +27,16 @@ export class UsersService {
     private readonly db: DatabaseService,
   ) {}
 
+  private isAdmin(userOrContext: {
+    isRecoveryAdmin?: boolean;
+    roles?: { name: string }[];
+  }): boolean {
+    return (
+      userOrContext.isRecoveryAdmin ||
+      (userOrContext.roles?.some((r) => r.name === SYSTEM_ROLES.ADMIN) ?? false)
+    );
+  }
+
   async createUser(context: AuditUserContext, data: CreateUserDto): Promise<User> {
     this.logger.log(`Attempting to create user with email: ${data.email}`);
     const existing = await this.usersRepository.findByEmail(data.email);
@@ -49,6 +59,11 @@ export class UsersService {
 
       if (data.roleIds && data.roleIds.length > 0) {
         for (const roleId of data.roleIds) {
+          // Admin Protection: Only admins can assign the Admin role
+          const role = await this.accessRepository.findRoleById(roleId, client);
+          if (role && role.name === SYSTEM_ROLES.ADMIN && !this.isAdmin(context)) {
+            throw new ForbiddenException('Only Administrators can assign the Admin role.');
+          }
           await this.accessRepository.assignRoleToUser(createdUser.id, roleId, client);
         }
       }
@@ -94,8 +109,17 @@ export class UsersService {
   async updateUser(id: string, context: AuditUserContext, data: UpdateUserDto): Promise<User> {
     this.logger.log({ userId: id, data }, 'Attempting to update user');
 
+    // Admin Visibility/Protection Check (handled by Repository + Service)
+    const targetUser = await this.findById(id, context);
+    if (!targetUser) throw new NotFoundException(`User with ID ${id} not found`);
+
+    // Only Admin can modify another Admin
+    if (this.isAdmin(targetUser) && !this.isAdmin(context)) {
+      throw new ForbiddenException('You cannot modify an Administrator account.');
+    }
+
     return this.db.transaction(async (client) => {
-      const existing = await this.usersRepository.findById(id, client);
+      const existing = await this.usersRepository.findById(id, client, false, context);
       if (!existing) {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
@@ -128,8 +152,11 @@ export class UsersService {
     }, context);
   }
 
-  async findAll(pagination: PaginationDto): Promise<PaginatedResult<User>> {
-    return this.usersRepository.findAll(pagination);
+  async findAll(
+    pagination: PaginationDto,
+    context?: AuditUserContext,
+  ): Promise<PaginatedResult<User>> {
+    return this.usersRepository.findAll(pagination, undefined, context);
   }
 
   async findByEmail(email: string, includePassword = false): Promise<User | null> {
@@ -141,8 +168,8 @@ export class UsersService {
     return user;
   }
 
-  async findById(id: string): Promise<User | null> {
-    const user = await this.usersRepository.findById(id);
+  async findById(id: string, context?: AuditUserContext): Promise<User | null> {
+    const user = await this.usersRepository.findById(id, undefined, false, context);
     if (user) {
       user.roles = await this.accessRepository.getRolesForUser(user.id);
       user.permissions = await this.accessRepository.getPermissionsForUser(user.id);
@@ -152,8 +179,17 @@ export class UsersService {
 
   async delete(id: string, context: AuditUserContext): Promise<void> {
     this.logger.log({ userId: id }, 'Attempting to delete user');
+
+    const targetUser = await this.findById(id, context);
+    if (!targetUser) throw new ConflictException(`User with ID ${id} not found`);
+
+    // Only Admin can delete another Admin
+    if (this.isAdmin(targetUser) && !this.isAdmin(context)) {
+      throw new ForbiddenException('You cannot delete an Administrator account.');
+    }
+
     const result = await this.db.transaction(async (client) => {
-      const user = await this.usersRepository.findById(id, client);
+      const user = await this.usersRepository.findById(id, client, false, context);
       if (!user) {
         throw new ConflictException(`User with ID ${id} not found`);
       }
