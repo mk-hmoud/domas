@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { Center, Group, Box, Container, Title, Stack } from "@mantine/core";
 import { AuthenticationForm, ThemeToggle, LanguageSwitcher } from "@domas/ui";
 import { LoginCredentials } from "@domas/ts-types";
@@ -10,11 +10,13 @@ import { notifications } from "@mantine/notifications";
 interface SharedLoginPageProps {
   title: string;
   redirectPath?: string;
+  logo?: ReactNode;
 }
 
 export function SharedLoginPage({
   title,
   redirectPath = "/dashboard",
+  logo,
 }: SharedLoginPageProps) {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -49,6 +51,7 @@ export function SharedLoginPage({
       <Center h="100vh">
         <Container size={450}>
           <Stack align="center" gap="lg">
+            {logo && <Box mb="md">{logo}</Box>}
             <Title ta="center">{title}</Title>
             <AuthenticationForm onSubmit={handleSubmit} isLoading={loading} />
           </Stack>

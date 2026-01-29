@@ -128,7 +128,7 @@ export function DashboardLayout() {
         <Group gap={8}>
           <IconBuildingSkyscraper size={28} />
           <Text fw={700} size="lg">
-            ADMIN
+            DOMAS
           </Text>
           <Code fw={700} ml="xs">
             v1.0.0
