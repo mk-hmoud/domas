@@ -1,5 +1,5 @@
 ---
-"client-admin": minor
+"client": minor
 "@domas/ui": minor
 ---
 

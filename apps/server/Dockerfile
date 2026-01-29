@@ -13,7 +13,7 @@ COPY apps/server ./apps/server
 
 # 4. Copy other apps' package.json files (Optional but strictly safer for npm ci)
 # If npm ci fails because of missing workspace folders, uncomment these:
-# COPY apps/client-admin/package.json ./apps/client-admin/package.json
+# COPY apps/client/package.json ./apps/client/package.json
 # COPY apps/client-student/package.json ./apps/client-student/package.json
 
 # 5. Install Dependencies (from root, so it links everything)

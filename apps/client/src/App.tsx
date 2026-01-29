@@ -68,7 +68,7 @@ function App() {
           <Route
             path="roles"
             element={
-              <PermissionRoute permission="roles.view">
+              <PermissionRoute permission="roles.manage">
                 <RolesPage />
               </PermissionRoute>
             }

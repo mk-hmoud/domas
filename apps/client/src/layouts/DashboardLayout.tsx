@@ -40,7 +40,7 @@ export function DashboardLayout() {
             link: '/dashboard/bookings',
             requiredPermission: 'bookings.view',
           },
-          { label: t('nav.roles'), link: '/dashboard/roles', requiredPermission: 'roles.view' },
+          { label: t('nav.roles'), link: '/dashboard/roles', requiredPermission: 'roles.manage' },
           {
             label: t('nav.permissions'),
             link: '/dashboard/permissions',

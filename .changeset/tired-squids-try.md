@@ -1,6 +1,6 @@
 ---
 "@domas/client-core": minor
-"client-admin": minor
+"client": minor
 "@domas/ui": minor
 ---
 
@@ -14,4 +14,4 @@ client-core: Location based logic for the UI.
 _ LocationsContext handles the state of the locations tree and the api calls.
 _ SharedLocatoinsPage brings the logic of the LocationsContext and the UI together to function as a global page for locations CRUD manipulations.
 
-client-admin: Added LocationsPage route.
+client: Added LocationsPage route.

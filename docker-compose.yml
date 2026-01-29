@@ -61,42 +61,25 @@ services:
       - domas_net
 
   # ------------------------------------
-  # 4. ADMIN CLIENT
+  # 4. MAIN CLIENT (ADMIN)
   # ------------------------------------
-  client-admin:
-    container_name: domas_admin
+  client:
+    container_name: domas_client
     build:
       context: .
-      dockerfile: apps/client-admin/Dockerfile
+      dockerfile: apps/client/Dockerfile
     ports:
       - "5174:5174"
-    environment:
-      - VITE_API_URL=http://localhost:3000
     volumes:
-      - ./apps/client-admin/src:/app/apps/client-admin/src
+      - ./apps/client/src:/app/apps/client/src
       - ./packages:/app/packages
       - /app/node_modules
-    networks:
-      - domas_net
-
-  # ------------------------------------
-  # 5. DORM CLIENT
-  # ------------------------------------
-  client-admin:
-    container_name: domas_dorm
-    build:
-      context: .
-      dockerfile: apps/client-dorm/Dockerfile
-    ports:
-      - "5175:5175"
     environment:
       - VITE_API_URL=http://localhost:3000
-    volumes:
-      - ./apps/client-dorm/src:/app/apps/client-dorm/src
-      - ./packages:/app/packages
-      - /app/node_modules
     networks:
       - domas_net
+    depends_on:
+      - server
 
 networks:
   domas_net:

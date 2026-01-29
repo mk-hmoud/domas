@@ -1,6 +1,6 @@
 ---
 "@domas/client-core": minor
-"client-admin": minor
+"client": minor
 "@domas/ui": minor
 "@domas/api-client": patch
 ---

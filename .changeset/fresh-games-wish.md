@@ -1,5 +1,5 @@
 ---
-"client-admin": minor
+"client": minor
 ---
 
 - Integrated DashboardLayout from the global ui package.

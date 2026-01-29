@@ -1,6 +1,6 @@
 ---
 "client-student": minor
-"client-admin": minor
+"client": minor
 "client-dorm": minor
 "@domas/ui": minor
 ---

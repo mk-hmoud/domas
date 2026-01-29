@@ -1,6 +1,6 @@
 ---
 "@domas/client-core": patch
-"client-admin": patch
+"client": patch
 "@domas/ui": patch
 ---
 
