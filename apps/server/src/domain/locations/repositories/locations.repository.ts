@@ -66,10 +66,11 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
+      WHERE deleted_at IS NULL
       ORDER BY tree_path ASC
       LIMIT $1 OFFSET $2
     `;
-    const countQuery = `SELECT COUNT(*) FROM locations`;
+    const countQuery = `SELECT COUNT(*) FROM locations WHERE deleted_at IS NULL`;
 
     const dbClient = this.getClient(client);
     const [result, countResult] = await Promise.all([
@@ -89,7 +90,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE id = $1
+      WHERE id = $1 AND deleted_at IS NULL
     `;
     const result = await this.getClient(client).query<Location>(query, [id]);
     return result.rows[0] ? new Location(result.rows[0]) : null;
@@ -99,7 +100,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE tree_path = $1
+      WHERE tree_path = $1 AND deleted_at IS NULL
     `;
     const result = await this.getClient(client).query<Location>(query, [path]);
     return result.rows[0] ? new Location(result.rows[0]) : null;
@@ -109,7 +110,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE type = $1
+      WHERE type = $1 AND deleted_at IS NULL
       ORDER BY tree_path ASC
     `;
     const result = await this.getClient(client).query<Location>(query, [type]);
@@ -124,7 +125,7 @@ export class LocationsRepository implements ILocationsRepository {
     let query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE tree_path <@ $1 AND tree_path != $1
+      WHERE tree_path <@ $1 AND tree_path != $1 AND deleted_at IS NULL
     `;
     const params: any[] = [parentPath];
 
@@ -148,6 +149,7 @@ export class LocationsRepository implements ILocationsRepository {
       FROM locations
       WHERE tree_path <@ $1 
         AND nlevel(tree_path) = nlevel($1) + 1
+        AND deleted_at IS NULL
       ORDER BY tree_path ASC
      `;
     const result = await this.getClient(client).query<Location>(query, [parent.treePath]);
@@ -161,7 +163,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE tree_path @> $1
+      WHERE tree_path @> $1 AND deleted_at IS NULL
       ORDER BY tree_path ASC
       `;
     const result = await this.getClient(client).query<Location>(query, [target.treePath]);
@@ -197,8 +199,8 @@ export class LocationsRepository implements ILocationsRepository {
     values.push(id);
     const query = `
       UPDATE locations
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE id = $${paramIndex} AND deleted_at IS NULL
       RETURNING ${this.selectColumns}
     `;
 
@@ -250,30 +252,30 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       UPDATE locations
       SET ${updates.join(', ')}
-      WHERE id = ANY($${paramIndex})
+      WHERE id = ANY($${paramIndex}) AND deleted_at IS NULL
     `;
 
     await this.getClient(client).query(query, values);
   }
 
   async delete(id: number, client?: PoolClient): Promise<void> {
-    const query = `DELETE FROM locations WHERE id = $1`;
+    const query = `UPDATE locations SET deleted_at = NOW() WHERE id = $1`;
     await this.getClient(client).query(query, [id]);
   }
 
   async deleteMany(ids: number[], client?: PoolClient): Promise<void> {
-    const query = `DELETE FROM locations WHERE id = ANY($1)`;
+    const query = `UPDATE locations SET deleted_at = NOW() WHERE id = ANY($1)`;
     await this.getClient(client).query(query, [ids]);
   }
 
   async exists(id: number, client?: PoolClient): Promise<boolean> {
-    const query = `SELECT 1 FROM locations WHERE id = $1`;
+    const query = `SELECT 1 FROM locations WHERE id = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query(query, [id]);
     return (result.rowCount || 0) > 0;
   }
 
   async countByType(type: LocationType, client?: PoolClient): Promise<number> {
-    const query = `SELECT COUNT(*) FROM locations WHERE type = $1`;
+    const query = `SELECT COUNT(*) FROM locations WHERE type = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query<{ count: string }>(query, [type]);
     return parseInt(result.rows[0].count, 10);
   }
@@ -282,7 +284,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE name ILIKE $1
+      WHERE name ILIKE $1 AND deleted_at IS NULL
       ORDER BY tree_path ASC
       LIMIT 20
     `;

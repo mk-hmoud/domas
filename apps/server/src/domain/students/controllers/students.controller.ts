@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  UseGuards,
+  Delete,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { StudentsService } from '../services/students.service';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
@@ -41,5 +53,12 @@ export class StudentsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.studentsService.update(id, updateStudentDto, context);
+  }
+
+  @Delete(':id')
+  @RequirePermissions(PERMISSIONS.STUDENTS_DELETE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.studentsService.delete(id, context);
   }
 }

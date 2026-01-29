@@ -88,4 +88,20 @@ export class StudentsService {
       return updated!;
     }, context);
   }
+
+  async delete(id: string, context: AuditUserContext): Promise<void> {
+    this.logger.log({ studentId: id }, 'Deleting student profile');
+    const result = await this.db.transaction(async (client) => {
+      const exists = await this.studentsRepository.findById(id, client);
+      if (!exists) {
+        throw new NotFoundException(`Student with ID ${id} not found`);
+      }
+      return this.studentsRepository.delete(id, client);
+    }, context);
+
+    if (!result) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+    this.logger.log({ studentId: id }, 'Student profile deleted');
+  }
 }

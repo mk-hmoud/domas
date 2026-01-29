@@ -70,10 +70,12 @@ CREATE TABLE locations (
     base_price MONEY DEFAULT NULL,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NULL
 );
 
 CREATE INDEX idx_locations_path ON locations USING GIST (tree_path);
+CREATE INDEX idx_locations_deleted_at ON locations(deleted_at) WHERE deleted_at IS NULL;
 
 -- =============================================
 -- 3. ACTORS (Users & Profiles)
@@ -81,15 +83,18 @@ CREATE INDEX idx_locations_path ON locations USING GIST (tree_path);
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(150) UNIQUE NOT NULL,
+    email VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     is_recovery_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NULL
 );
 
+CREATE UNIQUE INDEX idx_users_email_active ON users(email) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX idx_one_recovery_admin ON users (is_recovery_admin) WHERE is_recovery_admin = TRUE;
+CREATE INDEX idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NULL;
 
 -- RBAC Tables
 CREATE TABLE permissions (
@@ -136,7 +141,7 @@ CREATE TABLE students (
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     
     -- 3. Core Info
-    student_number VARCHAR(50) UNIQUE NOT NULL, -- The University ID (e.g. 2024001)
+    student_number VARCHAR(50) NOT NULL, -- The University ID (e.g. 2024001)
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     gender gender_type NOT NULL,
@@ -157,13 +162,16 @@ CREATE TABLE students (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
     
     -- Audit: Who created this profile? (Important for Manual Entry)
     created_by_user_id UUID REFERENCES users(id)
 );
 
 -- Constraint: A User account can only claim ONE Student profile
+CREATE UNIQUE INDEX idx_students_student_number_active ON students(student_number) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX idx_students_user_link ON students(user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX idx_students_deleted_at ON students(deleted_at) WHERE deleted_at IS NULL;
 
 -- Index for searching manual students
 CREATE INDEX idx_students_search ON students(student_number, last_name, email);
@@ -227,9 +235,12 @@ CREATE TABLE beds (
     label VARCHAR(10) NOT NULL, -- "A", "B"
     status bed_status DEFAULT 'available',
     updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
     
     CONSTRAINT fk_bed_room_check CHECK (location_id IS NOT NULL)
 );
+
+CREATE INDEX idx_beds_deleted_at ON beds(deleted_at) WHERE deleted_at IS NULL;
 
 
 -- =============================================

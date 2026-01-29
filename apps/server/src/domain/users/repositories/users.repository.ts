@@ -95,14 +95,14 @@ export class UsersRepository {
       FROM users u
       LEFT JOIN user_roles ur ON u.id = ur.user_id
       LEFT JOIN roles r ON ur.role_id = r.id
-      WHERE 1=1 ${adminFilter}
+      WHERE u.deleted_at IS NULL ${adminFilter}
       GROUP BY u.id
       ORDER BY u.created_at DESC
       LIMIT $1 OFFSET $2
     `;
     const countQuery = `
       SELECT COUNT(*) FROM users u 
-      WHERE 1=1 ${adminFilter}
+      WHERE u.deleted_at IS NULL ${adminFilter}
     `;
 
     const dbClient = this.getClient(client);
@@ -131,7 +131,7 @@ export class UsersRepository {
     const query = `
       SELECT ${this.getSelectColumns(includePassword)}
       FROM users
-      WHERE email = $1
+      WHERE email = $1 AND deleted_at IS NULL
     `;
     const result = await this.getClient(client).query<User>(query, [email]);
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
@@ -161,7 +161,7 @@ export class UsersRepository {
     const query = `
       SELECT ${this.getSelectColumns(includePassword)}
       FROM users
-      WHERE id = $1 ${adminFilter}
+      WHERE id = $1 AND deleted_at IS NULL ${adminFilter}
     `;
     const result = await this.getClient(client).query<User>(query, [id]);
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
@@ -197,7 +197,7 @@ export class UsersRepository {
     const query = `
       UPDATE users
       SET ${updates.join(', ')}, updated_at = NOW()
-      WHERE id = $${paramIndex}
+      WHERE id = $${paramIndex} AND deleted_at IS NULL
       RETURNING ${this.getSelectColumns(false)}
     `;
 
@@ -206,7 +206,7 @@ export class UsersRepository {
   }
 
   async delete(id: string, client?: PoolClient): Promise<boolean> {
-    const query = `DELETE FROM users WHERE id = $1`;
+    const query = `UPDATE users SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query(query, [id]);
     return (result.rowCount || 0) > 0;
   }

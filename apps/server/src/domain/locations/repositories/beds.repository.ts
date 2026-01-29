@@ -49,7 +49,7 @@ export class BedsRepository implements IBedsRepository {
       FROM beds
     `;
     const values: any[] = [];
-    const conditions: string[] = [];
+    const conditions: string[] = ['deleted_at IS NULL'];
 
     if (filters?.locationId) {
       conditions.push(`location_id = $${values.length + 1}`);
@@ -90,7 +90,7 @@ export class BedsRepository implements IBedsRepository {
         status, 
         updated_at as "updatedAt"
       FROM beds
-      WHERE id = $1
+      WHERE id = $1 AND deleted_at IS NULL
     `;
     const result = await this.getClient(client).query<Bed>(query, [id]);
     return result.rows[0] ? new Bed(result.rows[0]) : null;
@@ -105,7 +105,7 @@ export class BedsRepository implements IBedsRepository {
         status, 
         updated_at as "updatedAt"
       FROM beds
-      WHERE location_id = $1
+      WHERE location_id = $1 AND deleted_at IS NULL
       ORDER BY label ASC
     `;
     const result = await this.getClient(client).query<Bed>(query, [locationId]);
@@ -121,7 +121,7 @@ export class BedsRepository implements IBedsRepository {
         status, 
         updated_at as "updatedAt"
       FROM beds
-      WHERE location_id = $1 AND status = $2
+      WHERE location_id = $1 AND status = $2 AND deleted_at IS NULL
       ORDER BY label ASC
     `;
     const result = await this.getClient(client).query<Bed>(query, [
@@ -140,7 +140,7 @@ export class BedsRepository implements IBedsRepository {
         status, 
         updated_at as "updatedAt"
       FROM beds
-      WHERE status = $1
+      WHERE status = $1 AND deleted_at IS NULL
     `;
     const result = await this.getClient(client).query<Bed>(query, [status]);
     return result.rows.map((row) => new Bed(row));
@@ -174,7 +174,7 @@ export class BedsRepository implements IBedsRepository {
     const query = `
       UPDATE beds
       SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
+      WHERE id = $${paramIndex} AND deleted_at IS NULL
       RETURNING 
         id, 
         location_id as "locationId", 
@@ -188,12 +188,12 @@ export class BedsRepository implements IBedsRepository {
   }
 
   async updateStatus(id: number, status: BedStatus, client?: PoolClient): Promise<void> {
-    const query = `UPDATE beds SET status = $1 WHERE id = $2`;
+    const query = `UPDATE beds SET status = $1 WHERE id = $2 AND deleted_at IS NULL`;
     await this.getClient(client).query(query, [status, id]);
   }
 
   async delete(id: number, client?: PoolClient): Promise<void> {
-    const query = `DELETE FROM beds WHERE id = $1`;
+    const query = `UPDATE beds SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`;
     await this.getClient(client).query(query, [id]);
   }
 

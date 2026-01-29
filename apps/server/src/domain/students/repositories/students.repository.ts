@@ -101,7 +101,7 @@ export class StudentsRepository {
     const query = `
       UPDATE students 
       SET ${updates.join(', ')}, updated_at = NOW() 
-      WHERE id = $${paramIndex}
+      WHERE id = $${paramIndex} AND deleted_at IS NULL
       RETURNING *
     `;
     const result = await this.getClient(client).query(query, values);
@@ -109,7 +109,7 @@ export class StudentsRepository {
   }
 
   async findById(id: string, client?: PoolClient): Promise<Student | null> {
-    const query = `SELECT * FROM students WHERE id = $1`;
+    const query = `SELECT * FROM students WHERE id = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query(query, [id]);
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
@@ -122,7 +122,7 @@ export class StudentsRepository {
     let countQuery = `SELECT COUNT(*) FROM students`;
 
     const values: any[] = [];
-    const conditions: string[] = [];
+    const conditions: string[] = ['deleted_at IS NULL'];
 
     if (search) {
       const idx = values.length + 1;
@@ -155,5 +155,11 @@ export class StudentsRepository {
       page,
       limit,
     };
+  }
+
+  async delete(id: string, client?: PoolClient): Promise<boolean> {
+    const query = `UPDATE students SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`;
+    const result = await this.getClient(client).query(query, [id]);
+    return (result.rowCount || 0) > 0;
   }
 }
