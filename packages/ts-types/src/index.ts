@@ -46,3 +46,4 @@ export * from "./dtos/search-audit.dto";
 export * from "./dtos/create-student.dto";
 export * from "./dtos/update-student.dto";
 export * from "./dtos/find-all-students.dto";
+export * from "./dtos/bulk-student.dto";

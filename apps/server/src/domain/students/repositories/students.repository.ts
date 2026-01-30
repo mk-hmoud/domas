@@ -162,4 +162,14 @@ export class StudentsRepository {
     const result = await this.getClient(client).query(query, [id]);
     return (result.rowCount || 0) > 0;
   }
+
+  async deleteMany(ids: string[], client?: PoolClient): Promise<void> {
+    const query = `UPDATE students SET deleted_at = NOW() WHERE id = ANY($1) AND deleted_at IS NULL`;
+    await this.getClient(client).query(query, [ids]);
+  }
+
+  async updateStatusMany(ids: string[], isActive: boolean, client?: PoolClient): Promise<void> {
+    const query = `UPDATE students SET is_active = $1 WHERE id = ANY($2) AND deleted_at IS NULL`;
+    await this.getClient(client).query(query, [isActive, ids]);
+  }
 }

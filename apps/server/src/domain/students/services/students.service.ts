@@ -104,4 +104,22 @@ export class StudentsService {
     }
     this.logger.log({ studentId: id }, 'Student profile deleted');
   }
+
+  async deleteMany(ids: string[], context: AuditUserContext): Promise<void> {
+    this.logger.log({ count: ids.length }, 'Bulk deleting students');
+    await this.db.transaction(async (client) => {
+      await this.studentsRepository.deleteMany(ids, client);
+    }, context);
+  }
+
+  async updateStatusMany(
+    ids: string[],
+    isActive: boolean,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log({ count: ids.length, isActive }, 'Bulk updating student status');
+    await this.db.transaction(async (client) => {
+      await this.studentsRepository.updateStatusMany(ids, isActive, client);
+    }, context);
+  }
 }
