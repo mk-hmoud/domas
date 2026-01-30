@@ -14,6 +14,7 @@ import {
 import { StudentsService } from '../services/students.service';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
+import { UpdateStudentStatusDto } from '../dto/update-student-status.dto';
 import { BulkDeleteStudentsDto, BulkUpdateStudentStatusDto } from '../dto/bulk-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
@@ -49,6 +50,16 @@ export class StudentsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.studentsService.updateStatusMany(dto.ids, dto.isActive, context);
+  }
+
+  @Patch(':id/status')
+  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateStudentStatusDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.studentsService.updateStatus(id, dto.isActive, context);
   }
 
   @Get()

@@ -10,7 +10,14 @@ import {
   Badge,
   rem,
 } from "@mantine/core";
-import { IconTrash, IconEdit, IconCopy, IconX } from "@tabler/icons-react";
+import {
+  IconTrash,
+  IconEdit,
+  IconCopy,
+  IconX,
+  IconCheck,
+  IconUserOff,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
 interface BulkActionsBarProps {
@@ -18,6 +25,8 @@ interface BulkActionsBarProps {
   onDelete: () => void;
   onDuplicate?: () => void;
   onEdit?: () => void;
+  onActivate?: () => void;
+  onDeactivate?: () => void;
   onClear: () => void;
 }
 
@@ -26,6 +35,8 @@ export function BulkActionsBar({
   onDelete,
   onDuplicate,
   onEdit,
+  onActivate,
+  onDeactivate,
   onClear,
 }: BulkActionsBarProps) {
   const { t } = useTranslation();
@@ -38,7 +49,7 @@ export function BulkActionsBar({
             style={{
               ...styles,
               transform: `${styles.transform} translateX(-50%)`,
-              backgroundColor: "#1A1B1E", // Dark background hardcoded for contrast or use variable if reliable
+              backgroundColor: "#1A1B1E",
               color: "white",
               border: "1px solid #373A40",
             }}
@@ -73,6 +84,42 @@ export function BulkActionsBar({
               <Divider orientation="vertical" color="gray.7" />
 
               <Group gap={2}>
+                {onActivate && (
+                  <Button
+                    variant="subtle"
+                    color="green"
+                    size="xs"
+                    onClick={onActivate}
+                    c="green.4"
+                  >
+                    <IconCheck
+                      style={{
+                        width: rem(14),
+                        height: rem(14),
+                        marginRight: 6,
+                      }}
+                    />
+                    {t("active")}
+                  </Button>
+                )}
+                {onDeactivate && (
+                  <Button
+                    variant="subtle"
+                    color="orange"
+                    size="xs"
+                    onClick={onDeactivate}
+                    c="orange.4"
+                  >
+                    <IconUserOff
+                      style={{
+                        width: rem(14),
+                        height: rem(14),
+                        marginRight: 6,
+                      }}
+                    />
+                    {t("inactive")}
+                  </Button>
+                )}
                 {onEdit && (
                   <Button
                     variant="subtle"

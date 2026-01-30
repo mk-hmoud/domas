@@ -23,6 +23,13 @@ export const students = {
     await apiClient.patch("/students/bulk-status", data);
   },
 
+  updateStatus: async (id: string, isActive: boolean): Promise<Student> => {
+    const response = await apiClient.patch<Student>(`/students/${id}/status`, {
+      isActive,
+    });
+    return response.data;
+  },
+
   findAll: async (
     params?: FindAllStudentsDto,
   ): Promise<PaginatedResult<Student>> => {

@@ -122,4 +122,16 @@ export class StudentsService {
       await this.studentsRepository.updateStatusMany(ids, isActive, client);
     }, context);
   }
+
+  async updateStatus(id: string, isActive: boolean, context: AuditUserContext): Promise<Student> {
+    this.logger.log({ studentId: id, isActive }, 'Updating student status');
+    return this.db.transaction(async (client) => {
+      const existing = await this.studentsRepository.findById(id, client);
+      if (!existing) {
+        throw new NotFoundException(`Student with ID ${id} not found`);
+      }
+      const updated = await this.studentsRepository.update(id, { isActive }, client);
+      return updated!;
+    }, context);
+  }
 }
