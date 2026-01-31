@@ -7,7 +7,6 @@ import {
   Group,
   Text,
   Badge,
-  Progress,
 } from "@mantine/core";
 import {
   IconDotsVertical,
@@ -21,7 +20,6 @@ interface RoomCardProps {
   id: number;
   name: string;
   genderLock?: string;
-  capacity: number;
   occupancy?: number;
   selected: boolean;
   onClick: () => void;
@@ -33,7 +31,6 @@ interface RoomCardProps {
 export function RoomCard({
   name,
   genderLock,
-  capacity,
   occupancy = 0,
   selected,
   onClick,
@@ -124,14 +121,8 @@ export function RoomCard({
           )}
         </Group>
         <Text size="xs" c="dimmed" mb={4} ta="center">
-          {t("occupancy_label")}: {occupancy} / {capacity}
+          {t("occupancy_label")}: {occupancy}
         </Text>
-        <Progress
-          value={(occupancy / capacity) * 100}
-          color="blue"
-          size="md"
-          radius="xl"
-        />
       </Box>
     </Card>
   );

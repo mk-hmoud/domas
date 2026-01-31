@@ -380,32 +380,34 @@ function LocationsContent() {
                 </Box>
               </Stack>
             ) : selectedNode.type === LocationType.ROOM ? (
-              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
-                {roomBeds.map((bed) => (
-                  <BedCard
-                    key={bed.id}
-                    id={bed.id}
-                    label={bed.label}
-                    status={bed.status}
-                    onClick={() =>
-                      selectNode({
-                        children: [],
-                        ...bed,
-                        id: `bed-${bed.id}`,
-                        name: bed.label,
-                        type: LocationType.BED,
-                      })
-                    }
-                    onEdit={() => {}}
-                    onDelete={() => handleDeleteBed(bed)}
-                  />
-                ))}
+              <>
+                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
+                  {roomBeds.map((bed) => (
+                    <BedCard
+                      key={bed.id}
+                      id={bed.id}
+                      label={bed.label}
+                      status={bed.status}
+                      onClick={() =>
+                        selectNode({
+                          children: [],
+                          ...bed,
+                          id: `bed-${bed.id}`,
+                          name: bed.label,
+                          type: LocationType.BED,
+                        })
+                      }
+                      onEdit={() => {}}
+                      onDelete={() => handleDeleteBed(bed)}
+                    />
+                  ))}
+                </SimpleGrid>
                 {roomBeds.length === 0 && (
                   <Text c="dimmed" ta="center" py="md">
                     No beds found
                   </Text>
                 )}
-              </SimpleGrid>
+              </>
             ) : (
               <>
                 {children.length > 0 && (
@@ -424,16 +426,15 @@ function LocationsContent() {
                     />
                   </Group>
                 )}
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                  {children.length > 0 ? (
-                    children.map((child) =>
+                {children.length > 0 ? (
+                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+                    {children.map((child) =>
                       selectedNode.type === LocationType.FLOOR ? (
                         <RoomCard
                           key={child.id}
                           id={Number(child.id)}
                           name={child.name}
                           genderLock={child.genderLock || undefined}
-                          capacity={child.capacity}
                           selected={selectedChildIds.includes(Number(child.id))}
                           onClick={() => selectNode(child as any)}
                           onSelect={() =>
@@ -457,13 +458,13 @@ function LocationsContent() {
                           onDelete={() => handleDeleteChild(child as any)}
                         />
                       ),
-                    )
-                  ) : (
-                    <Text c="dimmed" ta="center" py="xl">
-                      {t("no_sub_locations")}
-                    </Text>
-                  )}
-                </SimpleGrid>
+                    )}
+                  </SimpleGrid>
+                ) : (
+                  <Text c="dimmed" ta="center" py="xl">
+                    {t("no_sub_locations")}
+                  </Text>
+                )}
               </>
             )}
           </LocationDetail>

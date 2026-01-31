@@ -9,6 +9,5 @@ export interface UpdateLocationDto {
   isGuestZone?: boolean;
   isTrOnly?: boolean;
   ownership?: LocationOwnership;
-  capacity?: number;
   basePrice?: number;
 }

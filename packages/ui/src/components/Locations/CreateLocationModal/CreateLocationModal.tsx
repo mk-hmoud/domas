@@ -50,7 +50,6 @@ export function CreateLocationModal({
       name: "",
       type: LocationType.CAMPUS,
       parentId: parentId || undefined,
-      capacity: 0,
       genderLock: undefined,
       isGuestZone: false,
       isTrOnly: false,
@@ -73,7 +72,6 @@ export function CreateLocationModal({
         form.setValues({
           name: initialValues.name,
           type: initialValues.type,
-          capacity: initialValues.capacity || 0,
           genderLock: initialValues.genderLock || undefined,
           isGuestZone: initialValues.isGuestZone || false,
           isTrOnly: initialValues.isTrOnly || false,
@@ -213,19 +211,10 @@ export function CreateLocationModal({
 
         <SimpleGrid cols={2} mt="md">
           <NumberInput
-            label={t("capacity_label")}
-            description={t("capacity_description")}
-            min={0}
-            {...form.getInputProps("capacity")}
-          />
-          <NumberInput
             label={t("base_price")}
             min={0}
             {...form.getInputProps("basePrice")}
           />
-        </SimpleGrid>
-
-        <SimpleGrid cols={2} mt="md">
           <Select
             label={t("gender_lock_label")}
             placeholder={t("none")}
@@ -233,17 +222,18 @@ export function CreateLocationModal({
             clearable
             {...form.getInputProps("genderLock")}
           />
-          <Group pt={24}>
-            <Switch
-              label={t("is_guest_zone_label")}
-              {...form.getInputProps("isGuestZone", { type: "checkbox" })}
-            />
-            <Switch
-              label={t("is_tr_only")}
-              {...form.getInputProps("isTrOnly", { type: "checkbox" })}
-            />
-          </Group>
         </SimpleGrid>
+
+        <Group pt={24}>
+          <Switch
+            label={t("is_guest_zone_label")}
+            {...form.getInputProps("isGuestZone", { type: "checkbox" })}
+          />
+          <Switch
+            label={t("is_tr_only")}
+            {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+          />
+        </Group>
 
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onClose}>
