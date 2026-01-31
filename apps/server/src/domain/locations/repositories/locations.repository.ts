@@ -183,11 +183,6 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.name !== undefined) addUpdate('name', data.name);
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
-    if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
-    if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
-    if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
-    if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
-    if (data.capacity !== undefined) addUpdate('capacity', data.capacity);
     if (data.basePrice !== undefined) addUpdate('base_price', data.basePrice);
 
     if (updates.length === 0) {
@@ -290,5 +285,105 @@ export class LocationsRepository implements ILocationsRepository {
     `;
     const result = await this.getClient(client).query<Location>(query, [`%${queryStr}%`]);
     return result.rows.map((row) => new Location(row));
+  }
+
+  async updateGenderLock(
+    id: number,
+    genderLock: any,
+    cascade: boolean,
+    client?: PoolClient,
+  ): Promise<Location> {
+    const target = await this.findById(id, client);
+    if (!target) throw new Error('Location not found');
+
+    let query = '';
+    let params: any[] = [];
+
+    if (cascade) {
+      query = `UPDATE locations SET gender_lock = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
+      params = [genderLock, target.treePath];
+    } else {
+      query = `UPDATE locations SET gender_lock = $1 WHERE id = $2 AND deleted_at IS NULL`;
+      params = [genderLock, id];
+    }
+
+    await this.getClient(client).query(query, params);
+    target.genderLock = genderLock;
+    return target;
+  }
+
+  async updateGuestZone(
+    id: number,
+    isGuestZone: boolean,
+    cascade: boolean,
+    client?: PoolClient,
+  ): Promise<Location> {
+    const target = await this.findById(id, client);
+    if (!target) throw new Error('Location not found');
+
+    let query = '';
+    let params: any[] = [];
+
+    if (cascade) {
+      query = `UPDATE locations SET is_guest_zone = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
+      params = [isGuestZone, target.treePath];
+    } else {
+      query = `UPDATE locations SET is_guest_zone = $1 WHERE id = $2 AND deleted_at IS NULL`;
+      params = [isGuestZone, id];
+    }
+
+    await this.getClient(client).query(query, params);
+    target.isGuestZone = isGuestZone;
+    return target;
+  }
+
+  async updateTrOnly(
+    id: number,
+    isTrOnly: boolean,
+    cascade: boolean,
+    client?: PoolClient,
+  ): Promise<Location> {
+    const target = await this.findById(id, client);
+    if (!target) throw new Error('Location not found');
+
+    let query = '';
+    let params: any[] = [];
+
+    if (cascade) {
+      query = `UPDATE locations SET is_tr_only = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
+      params = [isTrOnly, target.treePath];
+    } else {
+      query = `UPDATE locations SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL`;
+      params = [isTrOnly, id];
+    }
+
+    await this.getClient(client).query(query, params);
+    target.isTrOnly = isTrOnly;
+    return target;
+  }
+
+  async updateOwnership(
+    id: number,
+    ownership: any,
+    cascade: boolean,
+    client?: PoolClient,
+  ): Promise<Location> {
+    const target = await this.findById(id, client);
+    if (!target) throw new Error('Location not found');
+
+    let query = '';
+    let params: any[] = [];
+
+    if (cascade) {
+      query = `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
+      params = [ownership, target.treePath];
+    } else {
+      query = `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`;
+      params = [ownership, id];
+    }
+
+    await this.getClient(client).query(query, params);
+    target.ownership = ownership;
+    return target;
   }
 }

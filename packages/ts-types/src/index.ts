@@ -48,3 +48,5 @@ export * from "./dtos/update-student.dto";
 export * from "./dtos/find-all-students.dto";
 export * from "./dtos/bulk-student.dto";
 export * from "./dtos/update-student-status.dto";
+export * from "./dtos/update-policies.dto";
+export * from "./dtos/bulk-update-policies.dto";

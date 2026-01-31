@@ -8,6 +8,14 @@ import {
   BulkCreateLocationDto,
   BulkUpdateLocationDto,
   BulkDeleteLocationDto,
+  UpdateGenderLockDto,
+  UpdateGuestZoneDto,
+  UpdateTrOnlyDto,
+  UpdateOwnershipDto,
+  BulkUpdateGenderLockDto,
+  BulkUpdateGuestZoneDto,
+  BulkUpdateTrOnlyDto,
+  BulkUpdateOwnershipDto,
 } from "@domas/ts-types";
 
 export const locations = {
@@ -62,8 +70,70 @@ export const locations = {
     return response.data;
   },
 
+  updateGenderLock: async (
+    id: number,
+    data: UpdateGenderLockDto,
+  ): Promise<Location> => {
+    const response = await apiClient.patch<Location>(
+      `/locations/${id}/gender-lock`,
+      data,
+    );
+    return response.data;
+  },
+
+  updateGuestZone: async (
+    id: number,
+    data: UpdateGuestZoneDto,
+  ): Promise<Location> => {
+    const response = await apiClient.patch<Location>(
+      `/locations/${id}/guest-zone`,
+      data,
+    );
+    return response.data;
+  },
+
+  updateTrOnly: async (
+    id: number,
+    data: UpdateTrOnlyDto,
+  ): Promise<Location> => {
+    const response = await apiClient.patch<Location>(
+      `/locations/${id}/tr-only`,
+      data,
+    );
+    return response.data;
+  },
+
+  updateOwnership: async (
+    id: number,
+    data: UpdateOwnershipDto,
+  ): Promise<Location> => {
+    const response = await apiClient.patch<Location>(
+      `/locations/${id}/ownership`,
+      data,
+    );
+    return response.data;
+  },
+
   updateMany: async (data: BulkUpdateLocationDto): Promise<void> => {
     await apiClient.patch("/locations/bulk", data);
+  },
+
+  updateGenderLockMany: async (
+    data: BulkUpdateGenderLockDto,
+  ): Promise<void> => {
+    await apiClient.patch("/locations/bulk-gender-lock", data);
+  },
+
+  updateGuestZoneMany: async (data: BulkUpdateGuestZoneDto): Promise<void> => {
+    await apiClient.patch("/locations/bulk-guest-zone", data);
+  },
+
+  updateTrOnlyMany: async (data: BulkUpdateTrOnlyDto): Promise<void> => {
+    await apiClient.patch("/locations/bulk-tr-only", data);
+  },
+
+  updateOwnershipMany: async (data: BulkUpdateOwnershipDto): Promise<void> => {
+    await apiClient.patch("/locations/bulk-ownership", data);
   },
 
   delete: async (id: number): Promise<void> => {

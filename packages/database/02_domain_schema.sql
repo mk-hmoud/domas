@@ -66,7 +66,6 @@ CREATE TABLE locations (
     ownership location_ownership_type DEFAULT 'dorm',
     
     -- Room Specifics (Only used if type = 'room')
-    capacity INT DEFAULT 0,
     base_price MONEY DEFAULT NULL,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),

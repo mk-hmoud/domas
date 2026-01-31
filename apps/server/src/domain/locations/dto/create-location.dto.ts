@@ -42,10 +42,5 @@ export class CreateLocationDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  capacity?: number;
-
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
   basePrice?: number;
 }

@@ -16,10 +16,22 @@ import { LocationsService } from '../services/locations.service';
 import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
 import {
+  UpdateGenderLockDto,
+  UpdateGuestZoneDto,
+  UpdateTrOnlyDto,
+  UpdateOwnershipDto,
+} from '../dto/update-policies.dto';
+import {
   BulkCreateLocationDto,
   BulkUpdateLocationDto,
   BulkDeleteLocationDto,
 } from '../dto/bulk-location.dto';
+import {
+  BulkUpdateGenderLockDto,
+  BulkUpdateGuestZoneDto,
+  BulkUpdateTrOnlyDto,
+  BulkUpdateOwnershipDto,
+} from '../dto/bulk-update-policies.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
@@ -57,6 +69,43 @@ export class LocationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteMany(@Body() dto: BulkDeleteLocationDto, @UserContext() context: AuditUserContext) {
     return this.locationsService.deleteMany(dto, context);
+  }
+
+  @Patch('bulk-gender-lock')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateGenderLockMany(
+    @Body() dto: BulkUpdateGenderLockDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateGenderLockMany(dto, context);
+  }
+
+  @Patch('bulk-guest-zone')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateGuestZoneMany(
+    @Body() dto: BulkUpdateGuestZoneDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateGuestZoneMany(dto, context);
+  }
+
+  @Patch('bulk-tr-only')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateTrOnlyMany(@Body() dto: BulkUpdateTrOnlyDto, @UserContext() context: AuditUserContext) {
+    return this.locationsService.updateTrOnlyMany(dto, context);
+  }
+
+  @Patch('bulk-ownership')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateOwnershipMany(
+    @Body() dto: BulkUpdateOwnershipDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateOwnershipMany(dto, context);
   }
 
   @Get()
@@ -97,6 +146,46 @@ export class LocationsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.locationsService.update(id, updateLocationDto, context);
+  }
+
+  @Patch(':id/gender-lock')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateGenderLock(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateGenderLockDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateGenderLock(id, dto.genderLock, dto.cascade ?? true, context);
+  }
+
+  @Patch(':id/guest-zone')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateGuestZone(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateGuestZoneDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateGuestZone(id, dto.isGuestZone, dto.cascade ?? true, context);
+  }
+
+  @Patch(':id/tr-only')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateTrOnly(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTrOnlyDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateTrOnly(id, dto.isTrOnly, dto.cascade ?? true, context);
+  }
+
+  @Patch(':id/ownership')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateOwnership(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOwnershipDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateOwnership(id, dto.ownership, dto.cascade ?? true, context);
   }
 
   @Delete(':id')

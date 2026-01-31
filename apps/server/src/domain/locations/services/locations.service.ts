@@ -7,6 +7,12 @@ import {
   BulkUpdateLocationDto,
   BulkDeleteLocationDto,
 } from '../dto/bulk-location.dto';
+import {
+  BulkUpdateGenderLockDto,
+  BulkUpdateGuestZoneDto,
+  BulkUpdateTrOnlyDto,
+  BulkUpdateOwnershipDto,
+} from '../dto/bulk-update-policies.dto';
 import { Location } from '../entities/location.entity';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
@@ -144,5 +150,126 @@ export class LocationsService {
       await this.locationsRepository.delete(id, client);
     }, context);
     this.logger.log({ locationId: id }, 'Location deleted successfully');
+  }
+
+  async updateGenderLock(
+    id: number,
+    genderLock: any,
+    cascade: boolean,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      return this.locationsRepository.updateGenderLock(id, genderLock, cascade, client);
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ locationId: id, genderLock, cascade }, 'Updating gender lock');
+    return this.db.transaction(operation, context);
+  }
+
+  async updateGuestZone(
+    id: number,
+    isGuestZone: boolean,
+    cascade: boolean,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      return this.locationsRepository.updateGuestZone(id, isGuestZone, cascade, client);
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ locationId: id, isGuestZone, cascade }, 'Updating guest zone');
+    return this.db.transaction(operation, context);
+  }
+
+  async updateTrOnly(
+    id: number,
+    isTrOnly: boolean,
+    cascade: boolean,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      return this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ locationId: id, isTrOnly, cascade }, 'Updating TR Only status');
+    return this.db.transaction(operation, context);
+  }
+
+  async updateOwnership(
+    id: number,
+    ownership: any,
+    cascade: boolean,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      return this.locationsRepository.updateOwnership(id, ownership, cascade, client);
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ locationId: id, ownership, cascade }, 'Updating ownership');
+    return this.db.transaction(operation, context);
+  }
+
+  async updateGenderLockMany(
+    dto: BulkUpdateGenderLockDto,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log(
+      { count: dto.ids.length, genderLock: dto.genderLock },
+      'Bulk updating gender lock',
+    );
+    await this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.updateGenderLock(id, dto.genderLock, dto.cascade ?? true, context, client);
+      }
+    }, context);
+  }
+
+  async updateGuestZoneMany(dto: BulkUpdateGuestZoneDto, context: AuditUserContext): Promise<void> {
+    this.logger.log(
+      { count: dto.ids.length, isGuestZone: dto.isGuestZone },
+      'Bulk updating guest zone',
+    );
+    await this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.updateGuestZone(id, dto.isGuestZone, dto.cascade ?? true, context, client);
+      }
+    }, context);
+  }
+
+  async updateTrOnlyMany(dto: BulkUpdateTrOnlyDto, context: AuditUserContext): Promise<void> {
+    this.logger.log({ count: dto.ids.length, isTrOnly: dto.isTrOnly }, 'Bulk updating TR only');
+    await this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.updateTrOnly(id, dto.isTrOnly, dto.cascade ?? true, context, client);
+      }
+    }, context);
+  }
+
+  async updateOwnershipMany(dto: BulkUpdateOwnershipDto, context: AuditUserContext): Promise<void> {
+    this.logger.log({ count: dto.ids.length, ownership: dto.ownership }, 'Bulk updating ownership');
+    await this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.updateOwnership(id, dto.ownership, dto.cascade ?? true, context, client);
+      }
+    }, context);
   }
 }
