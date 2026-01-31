@@ -149,14 +149,14 @@ export function SharedStudentsPage() {
           await students.delete(student.id);
           notifications.show({
             title: t("success"),
-            message: t("delete_success"),
+            message: t("student_delete_success"),
             color: "green",
           });
           fetchData();
         } catch (error) {
           notifications.show({
             title: t("error"),
-            message: t("delete_error"),
+            message: t("student_delete_error"),
             color: "red",
           });
         }
@@ -198,14 +198,14 @@ export function SharedStudentsPage() {
           await students.deleteMany({ ids: selectedIds });
           notifications.show({
             title: t("success"),
-            message: t("delete_success"),
+            message: t("student_delete_success"),
             color: "green",
           });
           fetchData();
         } catch (error) {
           notifications.show({
             title: t("error"),
-            message: t("delete_error"),
+            message: t("student_delete_error"),
             color: "red",
           });
         }

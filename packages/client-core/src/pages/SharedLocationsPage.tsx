@@ -84,12 +84,9 @@ function LocationsContent() {
     selectedNode?.type === LocationType.ROOM,
   );
 
-  const {
-    selectedIds: selectedChildIds,
-    toggleSelection: toggleChildSelection,
-    toggleSelectAll,
-    clearSelection: clearChildSelection,
-  } = useLocationSelection(children.map((c) => Number(c.id)));
+  // Shared Selection State (Tree + Children)
+  const { selectedIds, toggleSelection, setSelectedIds, clearSelection } =
+    useLocationSelection([]);
 
   // Calculate breadcrumbs
   const breadcrumbs = selectedNode
@@ -100,33 +97,44 @@ function LocationsContent() {
     : [];
 
   useEffect(() => {
-    clearChildSelection();
+    // We clear child selection contextually when navigating,
+    // but maybe user wants to keep global selection?
+    // Based on requirements, they work together.
   }, [selectedNode]);
+
+  const handleToggleSelection = (id: number | string) => {
+    toggleSelection(Number(id));
+  };
+
+  const handleSelectBranch = (ids: (number | string)[]) => {
+    const numericIds = ids.map(Number);
+    setSelectedIds((prev) => Array.from(new Set([...prev, ...numericIds])));
+  };
 
   const handleBulkDelete = () => {
     modals.openConfirmModal({
-      title: t("delete_confirm_count", { count: selectedChildIds.length }),
+      title: t("delete_confirm_count", { count: selectedIds.length }),
       children: (
         <Text size="sm">
-          {t("delete_confirm_count", { count: selectedChildIds.length })}
+          {t("delete_confirm_count", { count: selectedIds.length })}
         </Text>
       ),
       labels: { confirm: t("confirm"), cancel: t("cancel") },
       confirmProps: { color: "red" },
       onConfirm: async () => {
         try {
-          await locations.deleteMany({ ids: selectedChildIds });
+          await locations.deleteMany({ ids: selectedIds });
           notifications.show({
             title: t("success"),
-            message: t("delete_success"),
+            message: t("location_delete_success"),
             color: "green",
           });
           await refreshTree();
-          clearChildSelection();
+          clearSelection();
         } catch (error) {
           notifications.show({
             title: t("error"),
-            message: t("delete_error"),
+            message: t("location_delete_error"),
             color: "red",
           });
         }
@@ -140,14 +148,14 @@ function LocationsContent() {
 
   const handleSubmitBulkEdit = async (values: UpdateLocationDto) => {
     try {
-      await locations.updateMany({ ids: selectedChildIds, data: values });
+      await locations.updateMany({ ids: selectedIds, data: values });
       notifications.show({
         title: t("success"),
         message: t("locations_updated", "Locations updated successfully"),
         color: "green",
       });
       await refreshTree();
-      clearChildSelection();
+      clearSelection();
       setBulkEditModalOpened(false);
     } catch (error) {
       notifications.show({
@@ -198,7 +206,7 @@ function LocationsContent() {
   const handleEditLocation = () => {
     if (selectedNode) {
       setLocationToEdit(selectedNode);
-      setParentForCreation({ id: null }); // Not creating child
+      setParentForCreation({ id: null });
       setCreateModalOpened(true);
     }
   };
@@ -209,12 +217,22 @@ function LocationsContent() {
     }
   };
 
+  const handleToggleSelectAllChildren = () => {
+    const childIds = children.map((c) => Number(c.id));
+    const allSelected = childIds.every((id) => selectedIds.includes(id));
+
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !childIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...childIds])));
+    }
+  };
+
   const handleSubmitLocation = async (
     values: CreateLocationDto | UpdateLocationDto | CreateLocationDto[],
   ) => {
     try {
       if (Array.isArray(values)) {
-        // Bulk create mode
         await locations.createMany({ locations: values });
         notifications.show({
           title: t("success"),
@@ -222,7 +240,6 @@ function LocationsContent() {
           color: "green",
         });
       } else if (locationToEdit) {
-        // Update mode
         await locations.update(Number(locationToEdit.id), values);
         notifications.show({
           title: t("success"),
@@ -230,7 +247,6 @@ function LocationsContent() {
           color: "green",
         });
       } else {
-        // Single create mode: Use direct API or context method
         await locations.create(values as CreateLocationDto);
         notifications.show({
           title: t("success"),
@@ -238,8 +254,6 @@ function LocationsContent() {
           color: "green",
         });
       }
-
-      // Refresh the tree after any modification
       await refreshTree();
     } catch (error) {
       notifications.show({
@@ -272,6 +286,9 @@ function LocationsContent() {
             data={treeData}
             selectedId={selectedNode?.id}
             onSelect={selectNode}
+            selectedIds={selectedIds}
+            onToggleSelection={handleToggleSelection}
+            onSelectBranch={handleSelectBranch}
           />
         }
       >
@@ -414,14 +431,20 @@ function LocationsContent() {
                   <Group mb="md">
                     <Checkbox
                       checked={
-                        selectedChildIds.length > 0 &&
-                        selectedChildIds.length === children.length
+                        children.length > 0 &&
+                        children.every((c) =>
+                          selectedIds.includes(Number(c.id)),
+                        )
                       }
                       indeterminate={
-                        selectedChildIds.length > 0 &&
-                        selectedChildIds.length < children.length
+                        children.some((c) =>
+                          selectedIds.includes(Number(c.id)),
+                        ) &&
+                        !children.every((c) =>
+                          selectedIds.includes(Number(c.id)),
+                        )
                       }
-                      onChange={toggleSelectAll}
+                      onChange={handleToggleSelectAllChildren}
                       label={t("select_all", { defaultValue: "Select All" })}
                     />
                   </Group>
@@ -435,10 +458,10 @@ function LocationsContent() {
                           id={Number(child.id)}
                           name={child.name}
                           genderLock={child.genderLock || undefined}
-                          selected={selectedChildIds.includes(Number(child.id))}
+                          selected={selectedIds.includes(Number(child.id))}
                           onClick={() => selectNode(child as any)}
                           onSelect={() =>
-                            toggleChildSelection(Number(child.id))
+                            handleToggleSelection(Number(child.id))
                           }
                           onEdit={() => handleEditChild(child as any)}
                           onDelete={() => handleDeleteChild(child as any)}
@@ -449,10 +472,10 @@ function LocationsContent() {
                           id={Number(child.id)}
                           name={child.name}
                           icon={<LocationIcon type={child.type} />}
-                          selected={selectedChildIds.includes(Number(child.id))}
+                          selected={selectedIds.includes(Number(child.id))}
                           onClick={() => selectNode(child as any)}
                           onSelect={() =>
-                            toggleChildSelection(Number(child.id))
+                            handleToggleSelection(Number(child.id))
                           }
                           onEdit={() => handleEditChild(child as any)}
                           onDelete={() => handleDeleteChild(child as any)}
@@ -495,17 +518,17 @@ function LocationsContent() {
       />
 
       <BulkActionsBar
-        selectedCount={selectedChildIds.length}
+        selectedCount={selectedIds.length}
         onDelete={handleBulkDelete}
         onEdit={handleBulkEdit}
-        onClear={clearChildSelection}
+        onClear={clearSelection}
       />
 
       <BulkEditLocationModal
         opened={bulkEditModalOpened}
         onClose={() => setBulkEditModalOpened(false)}
         onSubmit={handleSubmitBulkEdit}
-        count={selectedChildIds.length}
+        count={selectedIds.length}
       />
     </Container>
   );

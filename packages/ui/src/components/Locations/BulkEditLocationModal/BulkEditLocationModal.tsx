@@ -5,13 +5,16 @@ import {
   Group,
   Switch,
   Select,
-  NumberInput,
   Checkbox,
   SimpleGrid,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { UpdateLocationDto, LocationOwnership } from "@domas/ts-types";
+import {
+  UpdateLocationDto,
+  LocationOwnership,
+  GenderType,
+} from "@domas/ts-types";
 
 interface BulkEditLocationModalProps {
   opened: boolean;
@@ -33,14 +36,14 @@ export function BulkEditLocationModal({
   const [updateOwnership, setUpdateOwnership] = useState(false);
   const [updateTrOnly, setUpdateTrOnly] = useState(false);
   const [updateGuestZone, setUpdateGuestZone] = useState(false);
-  const [updateBasePrice, setUpdateBasePrice] = useState(false);
+  const [updateGenderLock, setUpdateGenderLock] = useState(false);
 
   const form = useForm<UpdateLocationDto>({
     initialValues: {
       ownership: LocationOwnership.DORM,
       isTrOnly: false,
       isGuestZone: false,
-      basePrice: 0,
+      genderLock: undefined,
     },
   });
 
@@ -51,7 +54,7 @@ export function BulkEditLocationModal({
       if (updateOwnership) payload.ownership = values.ownership;
       if (updateTrOnly) payload.isTrOnly = values.isTrOnly;
       if (updateGuestZone) payload.isGuestZone = values.isGuestZone;
-      if (updateBasePrice) payload.basePrice = values.basePrice;
+      if (updateGenderLock) payload.genderLock = values.genderLock;
 
       if (Object.keys(payload).length > 0) {
         await onSubmit(payload);
@@ -61,7 +64,7 @@ export function BulkEditLocationModal({
       setUpdateOwnership(false);
       setUpdateTrOnly(false);
       setUpdateGuestZone(false);
-      setUpdateBasePrice(false);
+      setUpdateGenderLock(false);
       onClose();
     } catch (error) {
       console.error(error);
@@ -73,6 +76,11 @@ export function BulkEditLocationModal({
   const ownershipOptions = Object.values(LocationOwnership).map((o) => ({
     value: o,
     label: t(`ownerships.${o}`),
+  }));
+
+  const genderOptions = Object.values(GenderType).map((g) => ({
+    value: g,
+    label: t(g),
   }));
 
   return (
@@ -126,16 +134,18 @@ export function BulkEditLocationModal({
 
           <Group align="flex-end">
             <Checkbox
-              checked={updateBasePrice}
-              onChange={(e) => setUpdateBasePrice(e.currentTarget.checked)}
-              label={t("base_price")}
+              checked={updateGenderLock}
+              onChange={(e) => setUpdateGenderLock(e.currentTarget.checked)}
+              label={t("gender_lock_label")}
               style={{ width: 150 }}
             />
-            <NumberInput
-              min={0}
-              disabled={!updateBasePrice}
+            <Select
+              placeholder={t("none")}
+              data={genderOptions}
+              disabled={!updateGenderLock}
+              clearable
               style={{ flex: 1 }}
-              {...form.getInputProps("basePrice")}
+              {...form.getInputProps("genderLock")}
             />
           </Group>
         </SimpleGrid>
@@ -151,7 +161,7 @@ export function BulkEditLocationModal({
               !updateOwnership &&
               !updateTrOnly &&
               !updateGuestZone &&
-              !updateBasePrice
+              !updateGenderLock
             }
           >
             {t("save")}

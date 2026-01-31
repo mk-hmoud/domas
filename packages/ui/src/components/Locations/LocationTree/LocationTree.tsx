@@ -11,6 +11,9 @@ import {
   UnstyledButton,
   Group,
   Box,
+  Checkbox,
+  ActionIcon,
+  Tooltip,
 } from "@mantine/core";
 import { LocationType } from "@domas/ts-types";
 import { LocationIcon } from "../LocationIcon";
@@ -18,6 +21,7 @@ import {
   IconSearch,
   IconChevronRight,
   IconChevronDown,
+  IconListCheck,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
@@ -33,6 +37,10 @@ export interface LocationTreeProps {
   data: LocationNode[];
   selectedId?: number | string;
   onSelect: (node: LocationNode) => void;
+  // Bulk selection props
+  selectedIds?: (number | string)[];
+  onToggleSelection?: (id: number | string) => void;
+  onSelectBranch?: (ids: (number | string)[]) => void;
 }
 
 interface TreeItemProps {
@@ -41,6 +49,19 @@ interface TreeItemProps {
   onSelect: (n: LocationNode) => void;
   level: number;
   forceExpand?: boolean;
+  selectedIds?: (number | string)[];
+  onToggleSelection?: (id: number | string) => void;
+  onSelectBranch?: (ids: (number | string)[]) => void;
+}
+
+function getAllDescendantIds(node: LocationNode): (number | string)[] {
+  let ids = [node.id];
+  if (node.children) {
+    for (const child of node.children) {
+      ids = [...ids, ...getAllDescendantIds(child)];
+    }
+  }
+  return ids;
 }
 
 function TreeItem({
@@ -49,12 +70,18 @@ function TreeItem({
   onSelect,
   level,
   forceExpand,
+  selectedIds,
+  onToggleSelection,
+  onSelectBranch,
 }: TreeItemProps) {
+  const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const childCount = node.children ? node.children.length : 0;
   const hasChildren = childCount > 0;
   // Handle string vs number ID comparison safely
   const isSelected = String(node.id) === String(selectedId);
+  const isChecked = selectedIds?.some((id) => String(id) === String(node.id));
 
   useEffect(() => {
     if (forceExpand) {
@@ -69,6 +96,20 @@ function TreeItem({
 
   const handleSelect = () => {
     onSelect(node);
+  };
+
+  const handleCheckboxChange = () => {
+    if (onToggleSelection) {
+      onToggleSelection(node.id);
+    }
+  };
+
+  const handleBranchSelection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelectBranch) {
+      const ids = getAllDescendantIds(node);
+      onSelectBranch(ids);
+    }
   };
 
   const getStatusColor = (status?: string) => {
@@ -96,13 +137,16 @@ function TreeItem({
           borderRadius: rem(4),
           marginBottom: rem(2),
           transition: "background-color 0.1s ease",
+          position: "relative",
         }}
         onMouseEnter={(e) => {
+          setHovered(true);
           if (!isSelected)
             e.currentTarget.style.backgroundColor =
               "var(--mantine-color-default-hover)";
         }}
         onMouseLeave={(e) => {
+          setHovered(false);
           if (!isSelected)
             e.currentTarget.style.backgroundColor = "transparent";
         }}
@@ -137,6 +181,31 @@ function TreeItem({
                 <IconChevronRight style={{ width: rem(14) }} />
               ))}
           </Box>
+
+          {onToggleSelection && (
+            <Group gap={4}>
+              <Checkbox
+                checked={isChecked}
+                onChange={handleCheckboxChange}
+                onClick={(e) => e.stopPropagation()}
+              />
+              {/* Hover Action: Select Branch */}
+              {hovered && onSelectBranch && hasChildren && (
+                <Tooltip
+                  label={t("select_branch", { defaultValue: "Select Branch" })}
+                >
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="blue"
+                    onClick={handleBranchSelection}
+                  >
+                    <IconListCheck size={12} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </Group>
+          )}
 
           <LocationIcon type={node.type} />
 
@@ -181,6 +250,9 @@ function TreeItem({
               onSelect={onSelect}
               level={level + 1}
               forceExpand={forceExpand}
+              selectedIds={selectedIds}
+              onToggleSelection={onToggleSelection}
+              onSelectBranch={onSelectBranch}
             />
           ))}
         </Collapse>
@@ -214,6 +286,9 @@ export function LocationTree({
   data,
   selectedId,
   onSelect,
+  selectedIds,
+  onToggleSelection,
+  onSelectBranch,
 }: LocationTreeProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -257,6 +332,9 @@ export function LocationTree({
               onSelect={onSelect}
               level={0}
               forceExpand={isFiltering}
+              selectedIds={selectedIds}
+              onToggleSelection={onToggleSelection}
+              onSelectBranch={onSelectBranch}
             />
           ))}
           {filteredData.length === 0 && (

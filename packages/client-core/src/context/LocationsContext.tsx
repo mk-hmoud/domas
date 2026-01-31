@@ -201,7 +201,7 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
       await locations.delete(id);
       notifications.show({
         title: t("success"),
-        message: t("delete_success"),
+        message: t("location_delete_success"),
         color: "green",
       });
     } catch (error) {
@@ -209,7 +209,7 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
       setTreeData(oldTree);
       notifications.show({
         title: t("error"),
-        message: t("delete_error"),
+        message: t("location_delete_error"),
         color: "red",
       });
     }
