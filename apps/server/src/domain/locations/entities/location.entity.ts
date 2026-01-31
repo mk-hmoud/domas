@@ -11,7 +11,6 @@ export class Location {
   isGuestZone!: boolean;
   isTrOnly!: boolean;
   ownership!: LocationOwnership;
-  capacity!: number;
   basePrice!: number | null;
   createdAt!: Date;
   updatedAt!: Date;

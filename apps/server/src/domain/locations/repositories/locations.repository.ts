@@ -26,7 +26,6 @@ export class LocationsRepository implements ILocationsRepository {
       is_guest_zone as "isGuestZone", 
       is_tr_only as "isTrOnly",
       ownership,
-      capacity, 
       base_price as "basePrice", 
       created_at as "createdAt", 
       updated_at as "updatedAt"
@@ -36,9 +35,9 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, ownership, capacity, base_price
+        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, ownership, base_price
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -49,7 +48,6 @@ export class LocationsRepository implements ILocationsRepository {
       data.isGuestZone || false,
       data.isTrOnly || false,
       data.ownership || LocationOwnership.DORM,
-      data.capacity || 0,
       data.basePrice || null,
     ];
     const result = await this.getClient(client).query<Location>(query, values);
@@ -215,26 +213,6 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.type !== undefined) {
       updates.push(`type = $${paramIndex++}`);
       values.push(data.type);
-    }
-    if (data.genderLock !== undefined) {
-      updates.push(`gender_lock = $${paramIndex++}`);
-      values.push(data.genderLock);
-    }
-    if (data.isGuestZone !== undefined) {
-      updates.push(`is_guest_zone = $${paramIndex++}`);
-      values.push(data.isGuestZone);
-    }
-    if (data.isTrOnly !== undefined) {
-      updates.push(`is_tr_only = $${paramIndex++}`);
-      values.push(data.isTrOnly);
-    }
-    if (data.ownership !== undefined) {
-      updates.push(`ownership = $${paramIndex++}`);
-      values.push(data.ownership);
-    }
-    if (data.capacity !== undefined) {
-      updates.push(`capacity = $${paramIndex++}`);
-      values.push(data.capacity);
     }
     if (data.basePrice !== undefined) {
       updates.push(`base_price = $${paramIndex++}`);
