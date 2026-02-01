@@ -6,6 +6,7 @@ import { IBedsRepository } from '../interfaces/beds-repository.interface';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 @Injectable()
 export class BedsRepository implements IBedsRepository {
@@ -15,18 +16,33 @@ export class BedsRepository implements IBedsRepository {
     return client || this.db.getPool();
   }
 
+  private get selectColumns(): string {
+    return `
+      id, 
+      location_id as "locationId", 
+      label, 
+      status, 
+      is_tr_only as "isTrOnly",
+      is_guest_zone as "isGuestZone",
+      ownership,
+      updated_at as "updatedAt"
+    `;
+  }
+
   async create(data: Partial<Bed>, client?: PoolClient): Promise<Bed> {
     const query = `
-      INSERT INTO beds (location_id, label, status)
-      VALUES ($1, $2, $3)
-      RETURNING 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      INSERT INTO beds (location_id, label, status, is_tr_only, is_guest_zone, ownership)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING ${this.selectColumns}
     `;
-    const values = [data.locationId, data.label, data.status || BedStatus.AVAILABLE];
+    const values = [
+      data.locationId,
+      data.label,
+      data.status || BedStatus.AVAILABLE,
+      data.isTrOnly || false,
+      data.isGuestZone || false,
+      data.ownership || LocationOwnership.DORM,
+    ];
     const result = await this.getClient(client).query<Bed>(query, values);
     return new Bed(result.rows[0]);
   }
@@ -40,12 +56,7 @@ export class BedsRepository implements IBedsRepository {
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM beds
     `;
     const values: any[] = [];
@@ -83,12 +94,7 @@ export class BedsRepository implements IBedsRepository {
 
   async findById(id: number, client?: PoolClient): Promise<Bed | null> {
     const query = `
-      SELECT 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM beds
       WHERE id = $1 AND deleted_at IS NULL
     `;
@@ -98,12 +104,7 @@ export class BedsRepository implements IBedsRepository {
 
   async findByLocation(locationId: number, client?: PoolClient): Promise<Bed[]> {
     const query = `
-      SELECT 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM beds
       WHERE location_id = $1 AND deleted_at IS NULL
       ORDER BY label ASC
@@ -114,12 +115,7 @@ export class BedsRepository implements IBedsRepository {
 
   async findAvailableBeds(locationId: number, client?: PoolClient): Promise<Bed[]> {
     const query = `
-      SELECT 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM beds
       WHERE location_id = $1 AND status = $2 AND deleted_at IS NULL
       ORDER BY label ASC
@@ -133,12 +129,7 @@ export class BedsRepository implements IBedsRepository {
 
   async findByStatus(status: BedStatus, client?: PoolClient): Promise<Bed[]> {
     const query = `
-      SELECT 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      SELECT ${this.selectColumns}
       FROM beds
       WHERE status = $1 AND deleted_at IS NULL
     `;
@@ -175,12 +166,7 @@ export class BedsRepository implements IBedsRepository {
       UPDATE beds
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex} AND deleted_at IS NULL
-      RETURNING 
-        id, 
-        location_id as "locationId", 
-        label, 
-        status, 
-        updated_at as "updatedAt"
+      RETURNING ${this.selectColumns}
     `;
 
     const result = await this.getClient(client).query<Bed>(query, values);
@@ -197,18 +183,41 @@ export class BedsRepository implements IBedsRepository {
     await this.getClient(client).query(query, [id]);
   }
 
+  async deleteMany(ids: number[], client?: PoolClient): Promise<void> {
+    const query = `UPDATE beds SET deleted_at = NOW() WHERE id = ANY($1) AND deleted_at IS NULL`;
+    await this.getClient(client).query(query, [ids]);
+  }
+
   async countByLocation(locationId: number, client?: PoolClient): Promise<number> {
-    const query = `SELECT COUNT(*) FROM beds WHERE location_id = $1`;
+    const query = `SELECT COUNT(*) FROM beds WHERE location_id = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query<{ count: string }>(query, [locationId]);
     return parseInt(result.rows[0].count, 10);
   }
 
   async countAvailableByLocation(locationId: number, client?: PoolClient): Promise<number> {
-    const query = `SELECT COUNT(*) FROM beds WHERE location_id = $1 AND status = $2`;
+    const query = `SELECT COUNT(*) FROM beds WHERE location_id = $1 AND status = $2 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query<{ count: string }>(query, [
       locationId,
       BedStatus.AVAILABLE,
     ]);
     return parseInt(result.rows[0].count, 10);
+  }
+
+  async updateTrOnly(id: number, isTrOnly: boolean, client?: PoolClient): Promise<Bed> {
+    const query = `UPDATE beds SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
+    const result = await this.getClient(client).query<Bed>(query, [isTrOnly, id]);
+    return new Bed(result.rows[0]);
+  }
+
+  async updateOwnership(id: number, ownership: any, client?: PoolClient): Promise<Bed> {
+    const query = `UPDATE beds SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
+    const result = await this.getClient(client).query<Bed>(query, [ownership, id]);
+    return new Bed(result.rows[0]);
+  }
+
+  async updateGuestZone(id: number, isGuestZone: boolean, client?: PoolClient): Promise<Bed> {
+    const query = `UPDATE beds SET is_guest_zone = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
+    const result = await this.getClient(client).query<Bed>(query, [isGuestZone, id]);
+    return new Bed(result.rows[0]);
   }
 }

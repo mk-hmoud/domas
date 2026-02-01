@@ -233,6 +233,12 @@ CREATE TABLE beds (
     location_id INT REFERENCES locations(id) ON DELETE CASCADE,
     label VARCHAR(10) NOT NULL, -- "A", "B"
     status bed_status DEFAULT 'available',
+    
+    -- constraints
+    is_tr_only BOOLEAN DEFAULT FALSE,
+    is_guest_zone BOOLEAN DEFAULT FALSE,
+    ownership location_ownership_type DEFAULT 'dorm',
+    
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     
