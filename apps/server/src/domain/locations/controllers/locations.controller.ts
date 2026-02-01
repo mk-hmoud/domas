@@ -32,6 +32,7 @@ import {
   BulkUpdateTrOnlyDto,
   BulkUpdateOwnershipDto,
 } from '../dto/bulk-update-policies.dto';
+import { CreateRoomWithBedsDto, BulkCreateRoomWithBedsDto } from '../dto/create-room-with-beds.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
@@ -49,6 +50,21 @@ export class LocationsController {
   @RequirePermissions(PERMISSIONS.LOCATIONS_CREATE)
   create(@Body() createLocationDto: CreateLocationDto, @UserContext() context: AuditUserContext) {
     return this.locationsService.create(createLocationDto, context);
+  }
+
+  @Post('room-with-beds')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_CREATE)
+  createRoomWithBeds(@Body() dto: CreateRoomWithBedsDto, @UserContext() context: AuditUserContext) {
+    return this.locationsService.createRoomWithBeds(dto, context);
+  }
+
+  @Post('bulk-room-with-beds')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_CREATE)
+  createRoomsWithBedsMany(
+    @Body() dto: BulkCreateRoomWithBedsDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.createRoomsWithBedsMany(dto, context);
   }
 
   @Post('bulk')

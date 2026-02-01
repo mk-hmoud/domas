@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { LocationsRepository } from '../repositories/locations.repository';
+import { BedsRepository } from '../repositories/beds.repository';
 import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
 import {
@@ -7,6 +8,7 @@ import {
   BulkUpdateLocationDto,
   BulkDeleteLocationDto,
 } from '../dto/bulk-location.dto';
+import { CreateRoomWithBedsDto, BulkCreateRoomWithBedsDto } from '../dto/create-room-with-beds.dto';
 import {
   BulkUpdateGenderLockDto,
   BulkUpdateGuestZoneDto,
@@ -20,6 +22,7 @@ import { LocationType } from '../../../common/enums/location-type.enum';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PoolClient } from 'pg';
+import { BedStatus } from '../../../common/enums/bed-status.enum';
 
 @Injectable()
 export class LocationsService {
@@ -27,8 +30,63 @@ export class LocationsService {
 
   constructor(
     private readonly locationsRepository: LocationsRepository,
+    private readonly bedsRepository: BedsRepository,
     private readonly db: DatabaseService,
   ) {}
+
+  // ... (existing create helper)
+
+  // ... (existing methods)
+
+  async createRoomWithBeds(
+    dto: CreateRoomWithBedsDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      // 1. Create Room (Location)
+      const room = await this.create(dto, context, client);
+
+      // 2. Create Beds
+      const bedPromises = [];
+      for (let i = 1; i <= dto.bedCount; i++) {
+        // Generate label: "A", "B", "C"... or "1", "2", "3"
+        // Using Letters A-Z for now
+        const label = String.fromCharCode(64 + i);
+        bedPromises.push(
+          this.bedsRepository.create(
+            {
+              locationId: room.id,
+              label: label,
+              status: BedStatus.AVAILABLE,
+            },
+            client,
+          ),
+        );
+      }
+      await Promise.all(bedPromises);
+      return room;
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ room: dto.name, bedCount: dto.bedCount }, 'Creating room with beds');
+    return this.db.transaction(operation, context);
+  }
+
+  async createRoomsWithBedsMany(
+    dto: BulkCreateRoomWithBedsDto,
+    context: AuditUserContext,
+  ): Promise<Location[]> {
+    this.logger.log({ count: dto.rooms.length }, 'Bulk creating rooms with beds');
+    return this.db.transaction(async (client) => {
+      const results: Location[] = [];
+      for (const roomDto of dto.rooms) {
+        results.push(await this.createRoomWithBeds(roomDto, context, client));
+      }
+      return results;
+    }, context);
+  }
 
   // Internal helper to avoid nested transactions overhead if needed,
   // but for now reusing create is safer logic-wise.

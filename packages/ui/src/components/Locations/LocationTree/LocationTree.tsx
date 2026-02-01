@@ -81,7 +81,13 @@ function TreeItem({
   const hasChildren = childCount > 0;
   // Handle string vs number ID comparison safely
   const isSelected = String(node.id) === String(selectedId);
-  const isChecked = selectedIds?.some((id) => String(id) === String(node.id));
+
+  const normalizedNodeId =
+    typeof node.id === "string" && node.id.startsWith("bed-")
+      ? Number(node.id.replace("bed-", ""))
+      : Number(node.id);
+
+  const isChecked = selectedIds?.some((id) => Number(id) === normalizedNodeId);
 
   useEffect(() => {
     if (forceExpand) {
@@ -182,7 +188,7 @@ function TreeItem({
               ))}
           </Box>
 
-          {onToggleSelection && (
+          {onToggleSelection && node.type !== LocationType.UNIVERSITY && (
             <Group gap={4}>
               <Checkbox
                 checked={isChecked}

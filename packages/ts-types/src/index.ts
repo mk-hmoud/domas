@@ -50,3 +50,4 @@ export * from "./dtos/bulk-student.dto";
 export * from "./dtos/update-student-status.dto";
 export * from "./dtos/update-policies.dto";
 export * from "./dtos/bulk-update-policies.dto";
+export * from "./dtos/create-room-with-beds.dto";

@@ -16,11 +16,33 @@ import {
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
   BulkUpdateOwnershipDto,
+  CreateRoomWithBedsDto,
+  BulkCreateRoomWithBedsDto,
 } from "@domas/ts-types";
 
 export const locations = {
   create: async (data: CreateLocationDto): Promise<Location> => {
     const response = await apiClient.post<Location>("/locations", data);
+    return response.data;
+  },
+
+  createRoomWithBeds: async (
+    data: CreateRoomWithBedsDto,
+  ): Promise<Location> => {
+    const response = await apiClient.post<Location>(
+      "/locations/room-with-beds",
+      data,
+    );
+    return response.data;
+  },
+
+  createRoomsWithBedsMany: async (
+    data: BulkCreateRoomWithBedsDto,
+  ): Promise<Location[]> => {
+    const response = await apiClient.post<Location[]>(
+      "/locations/bulk-room-with-beds",
+      data,
+    );
     return response.data;
   },
 

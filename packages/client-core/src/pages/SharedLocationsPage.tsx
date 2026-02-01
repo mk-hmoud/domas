@@ -13,6 +13,8 @@ import {
   Checkbox,
   Box,
   Stack,
+  Drawer,
+  ActionIcon,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -21,6 +23,7 @@ import {
   IconBuildingBank,
   IconCurrencyDollar,
   IconUser,
+  IconX,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -64,6 +67,8 @@ function LocationsContent() {
 
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [bulkEditModalOpened, setBulkEditModalOpened] = useState(false);
+  const [viewSelectionDrawerOpened, setViewSelectionDrawerOpened] =
+    useState(false);
   const [parentForCreation, setParentForCreation] = useState<{
     id: number | null;
     type?: LocationType;
@@ -103,11 +108,41 @@ function LocationsContent() {
   }, [selectedNode]);
 
   const handleToggleSelection = (id: number | string) => {
-    toggleSelection(Number(id));
+    // Find the node to check its type
+    const findNode = (nodes: LocationNode[]): LocationNode | undefined => {
+      for (const node of nodes) {
+        if (String(node.id) === String(id)) return node;
+        if (node.children) {
+          const found = findNode(node.children);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+
+    const node = findNode(treeData);
+    if (node?.type === LocationType.UNIVERSITY) return;
+
+    // Handle prefixed IDs from tree (e.g. "bed-123")
+    const numericId =
+      typeof id === "string" && id.startsWith("bed-")
+        ? Number(id.replace("bed-", ""))
+        : Number(id);
+
+    if (!isNaN(numericId)) {
+      toggleSelection(numericId);
+    }
   };
 
   const handleSelectBranch = (ids: (number | string)[]) => {
-    const numericIds = ids.map(Number);
+    const numericIds = ids
+      .map((id) =>
+        typeof id === "string" && id.startsWith("bed-")
+          ? Number(id.replace("bed-", ""))
+          : Number(id),
+      )
+      .filter((id) => !isNaN(id));
+
     setSelectedIds((prev) => Array.from(new Set([...prev, ...numericIds])));
   };
 
@@ -230,16 +265,31 @@ function LocationsContent() {
 
   const handleSubmitLocation = async (
     values: CreateLocationDto | UpdateLocationDto | CreateLocationDto[],
+    createBedsCount?: number,
   ) => {
     try {
       if (Array.isArray(values)) {
-        await locations.createMany({ locations: values });
+        // Bulk create mode
+        if (createBedsCount && createBedsCount > 0) {
+          // Use specialized bulk endpoint for rooms with beds
+          const roomsWithBeds = values.map((v) => ({
+            ...v,
+            bedCount: createBedsCount,
+          }));
+          await locations.createRoomsWithBedsMany({
+            rooms: roomsWithBeds as any,
+          });
+        } else {
+          await locations.createMany({ locations: values });
+        }
+
         notifications.show({
           title: t("success"),
           message: t("locations_created", "Locations created successfully"),
           color: "green",
         });
       } else if (locationToEdit) {
+        // Update mode
         await locations.update(Number(locationToEdit.id), values);
         notifications.show({
           title: t("success"),
@@ -247,13 +297,25 @@ function LocationsContent() {
           color: "green",
         });
       } else {
-        await locations.create(values as CreateLocationDto);
+        // Single create mode
+        if (createBedsCount && createBedsCount > 0) {
+          // Use specialized endpoint for single room with beds
+          await locations.createRoomWithBeds({
+            ...(values as CreateLocationDto),
+            bedCount: createBedsCount,
+          });
+        } else {
+          await locations.create(values as CreateLocationDto);
+        }
+
         notifications.show({
           title: t("success"),
           message: t("location_created", "Location created successfully"),
           color: "green",
         });
       }
+
+      // Refresh the tree after any modification
       await refreshTree();
     } catch (error) {
       notifications.show({
@@ -266,6 +328,34 @@ function LocationsContent() {
     setCreateModalOpened(false);
     setLocationToEdit(null);
   };
+
+  const handleShowSelection = () => {
+    setViewSelectionDrawerOpened(true);
+  };
+
+  // Helper to find selected nodes for display
+  const getSelectedNodes = () => {
+    const found: LocationNode[] = [];
+    const findRecursively = (nodes: LocationNode[]) => {
+      for (const node of nodes) {
+        const numericId =
+          typeof node.id === "string" && node.id.startsWith("bed-")
+            ? Number(node.id.replace("bed-", ""))
+            : Number(node.id);
+
+        if (selectedIds.includes(numericId)) {
+          found.push(node);
+        }
+        if (node.children) {
+          findRecursively(node.children);
+        }
+      }
+    };
+    findRecursively(treeData);
+    return found;
+  };
+
+  const selectedNodesList = viewSelectionDrawerOpened ? getSelectedNodes() : [];
 
   if (loading && treeData.length === 0) {
     return (
@@ -299,17 +389,21 @@ function LocationsContent() {
             breadcrumbs={breadcrumbs}
             actions={
               <>
-                <Button variant="default" onClick={handleEditLocation}>
-                  {t("edit")}
-                </Button>
-                <Button
-                  variant="default"
-                  color="red"
-                  leftSection={<IconTrash size={16} />}
-                  onClick={handleDeleteSelected}
-                >
-                  {t("delete")}
-                </Button>
+                {selectedNode.type !== LocationType.UNIVERSITY && (
+                  <>
+                    <Button variant="default" onClick={handleEditLocation}>
+                      {t("edit")}
+                    </Button>
+                    <Button
+                      variant="default"
+                      color="red"
+                      leftSection={<IconTrash size={16} />}
+                      onClick={handleDeleteSelected}
+                    >
+                      {t("delete")}
+                    </Button>
+                  </>
+                )}
                 {selectedNode.type === LocationType.ROOM ? (
                   <Button
                     leftSection={<IconPlus size={16} />}
@@ -522,6 +616,7 @@ function LocationsContent() {
         onDelete={handleBulkDelete}
         onEdit={handleBulkEdit}
         onClear={clearSelection}
+        onShowSelection={handleShowSelection}
       />
 
       <BulkEditLocationModal
@@ -530,6 +625,40 @@ function LocationsContent() {
         onSubmit={handleSubmitBulkEdit}
         count={selectedIds.length}
       />
+
+      <Drawer
+        opened={viewSelectionDrawerOpened}
+        onClose={() => setViewSelectionDrawerOpened(false)}
+        title={`${t("selected_items", { defaultValue: "Selected Items" })} (${selectedIds.length})`}
+        position="right"
+      >
+        <Stack gap="xs">
+          {selectedNodesList.map((node) => (
+            <Paper key={node.id} withBorder p="xs">
+              <Group justify="space-between">
+                <Group gap="xs">
+                  <LocationIcon type={node.type} />
+                  <Text size="sm" fw={500}>
+                    {node.name}
+                  </Text>
+                </Group>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => handleToggleSelection(node.id)}
+                >
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
+            </Paper>
+          ))}
+          {selectedNodesList.length === 0 && (
+            <Text c="dimmed" ta="center">
+              {t("no_selection", { defaultValue: "No items selected" })}
+            </Text>
+          )}
+        </Stack>
+      </Drawer>
     </Container>
   );
 }

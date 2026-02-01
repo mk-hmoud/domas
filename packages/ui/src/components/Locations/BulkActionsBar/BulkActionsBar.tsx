@@ -9,6 +9,7 @@ import {
   Divider,
   Badge,
   rem,
+  Tooltip,
 } from "@mantine/core";
 import {
   IconTrash,
@@ -17,6 +18,7 @@ import {
   IconX,
   IconCheck,
   IconUserOff,
+  IconEye,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
@@ -28,6 +30,7 @@ interface BulkActionsBarProps {
   onActivate?: () => void;
   onDeactivate?: () => void;
   onClear: () => void;
+  onShowSelection?: () => void;
 }
 
 export function BulkActionsBar({
@@ -38,6 +41,7 @@ export function BulkActionsBar({
   onActivate,
   onDeactivate,
   onClear,
+  onShowSelection,
 }: BulkActionsBarProps) {
   const { t } = useTranslation();
 
@@ -79,6 +83,23 @@ export function BulkActionsBar({
                 <Text size="sm" fw={500}>
                   {t("selected", { defaultValue: "Selected" })}
                 </Text>
+                {onShowSelection && (
+                  <Tooltip
+                    label={t("view_selection", {
+                      defaultValue: "View Selection",
+                    })}
+                  >
+                    <ActionIcon
+                      variant="transparent"
+                      color="gray"
+                      size="sm"
+                      onClick={onShowSelection}
+                      c="gray.5"
+                    >
+                      <IconEye style={{ width: rem(16), height: rem(16) }} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
               </Group>
 
               <Divider orientation="vertical" color="gray.7" />
