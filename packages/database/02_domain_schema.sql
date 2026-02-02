@@ -84,6 +84,12 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    
+    -- Profile
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone_number VARCHAR(50),
+    
     is_active BOOLEAN DEFAULT TRUE,
     is_recovery_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),

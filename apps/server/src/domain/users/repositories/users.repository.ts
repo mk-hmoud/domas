@@ -21,6 +21,9 @@ export class UsersRepository {
     const columns = [
       `${prefix}id`,
       `${prefix}email`,
+      `${prefix}first_name as "firstName"`,
+      `${prefix}last_name as "lastName"`,
+      `${prefix}phone_number as "phoneNumber"`,
       `${prefix}is_active as "isActive"`,
       `${prefix}is_recovery_admin as "isRecoveryAdmin"`,
       `${prefix}created_at as "createdAt"`,
@@ -38,6 +41,9 @@ export class UsersRepository {
     return new User({
       id: row.id,
       email: row.email,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      phoneNumber: row.phoneNumber,
       passwordHash: row.passwordHash,
       isActive: row.isActive,
       isRecoveryAdmin: row.isRecoveryAdmin,
@@ -51,11 +57,19 @@ export class UsersRepository {
     client?: PoolClient,
   ): Promise<User> {
     const query = `
-      INSERT INTO users (email, password_hash, is_active, is_recovery_admin)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO users (email, password_hash, first_name, last_name, phone_number, is_active, is_recovery_admin)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING ${this.getSelectColumns(false)}
     `;
-    const values = [data.email, data.password, true, data.isRecoveryAdmin || false];
+    const values = [
+      data.email,
+      data.password,
+      data.firstName || null,
+      data.lastName || null,
+      data.phoneNumber || null,
+      true,
+      data.isRecoveryAdmin || false,
+    ];
 
     const result = await this.getClient(client).query<User>(query, values);
     return new User(result.rows[0]);
@@ -169,7 +183,14 @@ export class UsersRepository {
 
   async update(
     id: string,
-    data: { email?: string; isActive?: boolean; passwordHash?: string },
+    data: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      phoneNumber?: string;
+      isActive?: boolean;
+      passwordHash?: string;
+    },
     client?: PoolClient,
   ): Promise<User | null> {
     const updates: string[] = [];
@@ -179,6 +200,18 @@ export class UsersRepository {
     if (data.email) {
       updates.push(`email = $${paramIndex++}`);
       values.push(data.email);
+    }
+    if (data.firstName !== undefined) {
+      updates.push(`first_name = $${paramIndex++}`);
+      values.push(data.firstName);
+    }
+    if (data.lastName !== undefined) {
+      updates.push(`last_name = $${paramIndex++}`);
+      values.push(data.lastName);
+    }
+    if (data.phoneNumber !== undefined) {
+      updates.push(`phone_number = $${paramIndex++}`);
+      values.push(data.phoneNumber);
     }
     if (data.isActive !== undefined) {
       updates.push(`is_active = $${paramIndex++}`);

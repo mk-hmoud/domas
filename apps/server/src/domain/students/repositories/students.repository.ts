@@ -157,6 +157,12 @@ export class StudentsRepository {
     };
   }
 
+  async findByUserId(userId: string, client?: PoolClient): Promise<Student | null> {
+    const query = `SELECT * FROM students WHERE user_id = $1 AND deleted_at IS NULL`;
+    const result = await this.getClient(client).query(query, [userId]);
+    return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
+  }
+
   async delete(id: string, client?: PoolClient): Promise<boolean> {
     const query = `UPDATE students SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query(query, [id]);

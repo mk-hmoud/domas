@@ -3,6 +3,9 @@ import { Role } from './role.entity';
 export class User {
   id!: string;
   email!: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
   passwordHash?: string;
   isActive!: boolean;
   isRecoveryAdmin!: boolean;

@@ -54,3 +54,4 @@ export * from "./dtos/create-room-with-beds.dto";
 export * from "./dtos/bulk-bed.dto";
 export * from "./dtos/update-bed-policies.dto";
 export * from "./dtos/bulk-update-bed-policies.dto";
+export * from "./dtos/account.dto";
