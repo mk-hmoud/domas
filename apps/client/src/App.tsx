@@ -10,6 +10,7 @@ import { AuditLogsPage } from './pages/AuditLogsPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { RolesPage } from './pages/RolesPage';
 import { AccountingPage } from './pages/AccountingPage';
+import { AccountPage } from './pages/AccountPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
               </PermissionRoute>
             }
           />
+          <Route path="account" element={<AccountPage />} />
           <Route
             path="locations"
             element={

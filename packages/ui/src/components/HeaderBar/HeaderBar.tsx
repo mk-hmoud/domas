@@ -88,7 +88,7 @@ export function HeaderBar({
                 leftSection={
                   <IconSettings style={{ width: rem(14), height: rem(14) }} />
                 }
-                onClick={() => onNavigate?.("/dashboard/settings")}
+                onClick={() => onNavigate?.("/dashboard/account")}
               >
                 {t("account_settings")}
               </Menu.Item>
