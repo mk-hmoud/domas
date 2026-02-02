@@ -40,6 +40,11 @@ export function DashboardLayout() {
             link: '/dashboard/bookings',
             requiredPermission: 'bookings.view',
           },
+          {
+            label: t('nav.accounting'),
+            link: '/dashboard/accounting',
+            requiredPermission: 'bookings.approve_financial',
+          },
           { label: t('nav.roles'), link: '/dashboard/roles', requiredPermission: 'roles.manage' },
           {
             label: t('nav.permissions'),

@@ -9,6 +9,7 @@ import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { RolesPage } from './pages/RolesPage';
+import { AccountingPage } from './pages/AccountingPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -46,6 +47,14 @@ function App() {
             element={
               <PermissionRoute permission="bookings.view">
                 <BookingsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="accounting"
+            element={
+              <PermissionRoute permission="bookings.approve_financial">
+                <AccountingPage />
               </PermissionRoute>
             }
           />
