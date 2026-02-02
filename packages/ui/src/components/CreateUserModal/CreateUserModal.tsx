@@ -43,6 +43,9 @@ export function CreateUserModal({
   const form = useForm({
     initialValues: {
       email: "",
+      firstName: "",
+      lastName: "",
+      phoneNumber: "",
       password: "",
       isActive: true,
       roleIds: [] as string[],
@@ -61,6 +64,9 @@ export function CreateUserModal({
       if (userToEdit) {
         form.setValues({
           email: userToEdit.email,
+          firstName: userToEdit.firstName || "",
+          lastName: userToEdit.lastName || "",
+          phoneNumber: userToEdit.phoneNumber || "",
           password: "",
           isActive: userToEdit.isActive,
           roleIds: userToEdit.roles?.map((r) => r.id.toString()) || [],
@@ -88,9 +94,12 @@ export function CreateUserModal({
     setLoading(true);
     try {
       if (userToEdit) {
-        // Update user: include isActive and convert roleIds
+        // Update user
         const payload: UpdateUserDto & { roleIds: number[] } = {
           email: values.email,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          phoneNumber: values.phoneNumber,
           isActive: values.isActive,
           roleIds: values.roleIds.map((id) => parseInt(id)),
         };
@@ -99,9 +108,12 @@ export function CreateUserModal({
         }
         await onSubmit(payload);
       } else {
-        // Create user: only include email, password, and roleIds
+        // Create user
         const payload: CreateUserDto = {
           email: values.email,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          phoneNumber: values.phoneNumber,
           roleIds: values.roleIds.map((id) => parseInt(id)),
         };
         if (values.password) {
@@ -125,6 +137,26 @@ export function CreateUserModal({
       title={userToEdit ? t("edit_user") : t("create_new_user")}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
+        <Group grow mb="md">
+          <TextInput
+            label={t("first_name", { defaultValue: "First Name" })}
+            placeholder="John"
+            {...form.getInputProps("firstName")}
+          />
+          <TextInput
+            label={t("last_name", { defaultValue: "Last Name" })}
+            placeholder="Doe"
+            {...form.getInputProps("lastName")}
+          />
+        </Group>
+
+        <TextInput
+          label={t("phone_number", { defaultValue: "Phone Number" })}
+          placeholder="+90 123 456 7890"
+          mb="md"
+          {...form.getInputProps("phoneNumber")}
+        />
+
         <TextInput
           label={t("email")}
           placeholder="user@example.com"

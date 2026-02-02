@@ -216,9 +216,18 @@ export function SharedUsersPage({
         {viewUser && (
           <Stack gap="md">
             <Group justify="space-between">
-              <Text size="xl" fw={700}>
-                {viewUser.email}
-              </Text>
+              <Stack gap={0}>
+                <Text size="xl" fw={700}>
+                  {viewUser.firstName || viewUser.lastName
+                    ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim()
+                    : viewUser.email}
+                </Text>
+                {(viewUser.firstName || viewUser.lastName) && (
+                  <Text size="sm" c="dimmed">
+                    {viewUser.email}
+                  </Text>
+                )}
+              </Stack>
               <Badge color={viewUser.isActive ? "green" : "gray"}>
                 {viewUser.isActive ? t("active") : t("inactive")}
               </Badge>
@@ -232,6 +241,15 @@ export function SharedUsersPage({
                 {viewUser.id}
               </Text>
             </Box>
+
+            {viewUser.phoneNumber && (
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("phone_number", { defaultValue: "Phone Number" })}
+                </Text>
+                <Text size="sm">{viewUser.phoneNumber}</Text>
+              </Box>
+            )}
 
             <Group grow>
               <Box>
