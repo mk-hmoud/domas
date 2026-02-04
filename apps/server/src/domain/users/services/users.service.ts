@@ -144,6 +144,9 @@ export class UsersService {
         id,
         {
           email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phoneNumber,
           isActive: data.isActive,
           passwordHash,
         },

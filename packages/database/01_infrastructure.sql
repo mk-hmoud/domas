@@ -175,7 +175,7 @@ CREATE TABLE audit.undo_log (
 CREATE TABLE audit.undo_log_default PARTITION OF audit.undo_log DEFAULT;
 
 CREATE INDEX idx_undo_log_user_recent ON audit.undo_log(user_id, event_timestamp DESC) 
-  WHERE undone_at IS NULL AND deleted_at IS NULL AND expires_at > NOW();
+  WHERE undone_at IS NULL AND deleted_at IS NULL;
 
 CREATE INDEX idx_undo_log_session ON audit.undo_log(session_id, event_timestamp DESC) 
   WHERE session_id IS NOT NULL AND deleted_at IS NULL;
