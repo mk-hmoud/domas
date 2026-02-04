@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuditService } from './services/audit.service';
 import { UndoService } from './services/undo.service';
 import { AuditInfrastructureRepository } from './repositories/audit-infrastructure.repository';
@@ -9,7 +9,7 @@ import { UndoController } from './controllers/undo.controller';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [UsersModule],
+  imports: [forwardRef(() => UsersModule)],
   controllers: [AuditController, UndoController],
   providers: [
     AuditService,

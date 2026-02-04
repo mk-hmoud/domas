@@ -1,4 +1,11 @@
-import { Injectable, Logger, NotFoundException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  HttpStatus,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ApiException } from '../../../common/exceptions/api.exception';
 import { ErrorCodes } from '../../../common/constants/error-codes';
 import { StudentsRepository } from '../repositories/students.repository';
@@ -19,6 +26,7 @@ export class StudentsService {
 
   constructor(
     private readonly studentsRepository: StudentsRepository,
+    @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}

@@ -4,6 +4,8 @@ import {
   Logger,
   NotFoundException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { UsersRepository } from '../repositories/users.repository';
@@ -11,14 +13,14 @@ import { AccessRepository } from '../repositories/access.repository';
 import { User } from '../entities/user.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
-import { UndoService } from '../../audit/services/undo.service';
-import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { PoolClient } from 'pg';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { SYSTEM_ROLES } from '../../../common/constants/system-roles';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import { PoolClient } from 'pg';
 
 @Injectable()
 export class UsersService {
@@ -27,6 +29,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly accessRepository: AccessRepository,
+    @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
