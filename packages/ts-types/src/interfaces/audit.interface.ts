@@ -51,6 +51,8 @@ export interface UndoLog {
   id: string;
   eventTimestamp: string;
   userId: string;
+  performedByEmail?: string;
+  performedByName?: string;
   sessionId?: string;
   actionType: string;
   entityType: string;

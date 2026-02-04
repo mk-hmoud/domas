@@ -2,6 +2,8 @@ export class UndoLog {
   id!: string;
   eventTimestamp!: Date;
   userId!: string;
+  performedByEmail?: string;
+  performedByName?: string;
   sessionId?: string;
   actionType!: string;
   entityType!: string;

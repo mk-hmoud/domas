@@ -11,6 +11,27 @@ export class UndoRepository {
     return client || this.db.getPool();
   }
 
+  private getSelectColumns(alias = 'l'): string {
+    return `
+      ${alias}.id, 
+      ${alias}.event_timestamp as "eventTimestamp", 
+      ${alias}.user_id as "userId", 
+      u.email as "performedByEmail",
+      TRIM(CONCAT(u.first_name, ' ', u.last_name)) as "performedByName",
+      ${alias}.session_id as "sessionId", 
+      ${alias}.action_type as "actionType", 
+      ${alias}.entity_type as "entityType", 
+      ${alias}.entity_id as "entityId", 
+      ${alias}.undo_data as "undoData", 
+      ${alias}.redo_data as "redoData", 
+      ${alias}.description, 
+      ${alias}.undone_at as "undoneAt", 
+      ${alias}.undone_by as "undoneBy", 
+      ${alias}.expires_at as "expiresAt", 
+      ${alias}.deleted_at as "deletedAt"
+    `;
+  }
+
   async create(data: Partial<UndoLog>, client?: PoolClient): Promise<UndoLog> {
     const query = `
       INSERT INTO audit.undo_log (
@@ -50,23 +71,10 @@ export class UndoRepository {
 
   async findById(id: string, client?: PoolClient): Promise<UndoLog | null> {
     const query = `
-      SELECT 
-        id, 
-        event_timestamp as "eventTimestamp", 
-        user_id as "userId", 
-        session_id as "sessionId", 
-        action_type as "actionType", 
-        entity_type as "entityType", 
-        entity_id as "entityId", 
-        undo_data as "undoData", 
-        redo_data as "redoData", 
-        description, 
-        undone_at as "undoneAt", 
-        undone_by as "undoneBy", 
-        expires_at as "expiresAt", 
-        deleted_at as "deletedAt"
-      FROM audit.undo_log
-      WHERE id = $1 AND deleted_at IS NULL
+      SELECT ${this.getSelectColumns()}
+      FROM audit.undo_log l
+      LEFT JOIN users u ON l.user_id = u.id
+      WHERE l.id = $1 AND l.deleted_at IS NULL
     `;
     const result = await this.getClient(client).query(query, [id]);
     return result.rows[0] ? new UndoLog(result.rows[0]) : null;
@@ -83,24 +91,11 @@ export class UndoRepository {
 
   async findLatestForUser(userId: string, limit = 10): Promise<UndoLog[]> {
     const query = `
-      SELECT 
-        id, 
-        event_timestamp as "eventTimestamp", 
-        user_id as "userId", 
-        session_id as "sessionId", 
-        action_type as "actionType", 
-        entity_type as "entityType", 
-        entity_id as "entityId", 
-        undo_data as "undoData", 
-        redo_data as "redoData", 
-        description, 
-        undone_at as "undoneAt", 
-        undone_by as "undoneBy", 
-        expires_at as "expiresAt", 
-        deleted_at as "deletedAt"
-      FROM audit.undo_log
-      WHERE user_id = $1 AND undone_at IS NULL AND deleted_at IS NULL AND expires_at > NOW()
-      ORDER BY event_timestamp DESC
+      SELECT ${this.getSelectColumns()}
+      FROM audit.undo_log l
+      LEFT JOIN users u ON l.user_id = u.id
+      WHERE l.user_id = $1 AND l.undone_at IS NULL AND l.deleted_at IS NULL AND l.expires_at > NOW()
+      ORDER BY l.event_timestamp DESC
       LIMIT $2
     `;
     const result = await this.db.query(query, [userId, limit]);
@@ -133,22 +128,9 @@ export class UndoRepository {
     }
 
     const query = `
-      SELECT 
-        l.id, 
-        l.event_timestamp as "eventTimestamp", 
-        l.user_id as "userId", 
-        l.session_id as "sessionId", 
-        l.action_type as "actionType", 
-        l.entity_type as "entityType", 
-        l.entity_id as "entityId", 
-        l.undo_data as "undoData", 
-        l.redo_data as "redoData", 
-        l.description, 
-        l.undone_at as "undoneAt", 
-        l.undone_by as "undoneBy", 
-        l.expires_at as "expiresAt", 
-        l.deleted_at as "deletedAt"
+      SELECT ${this.getSelectColumns()}
       FROM audit.undo_log l
+      LEFT JOIN users u ON l.user_id = u.id
       WHERE l.undone_at IS NULL AND l.deleted_at IS NULL AND l.expires_at > NOW()
       ${filters.join(' ')}
       ORDER BY l.event_timestamp DESC
