@@ -106,4 +106,55 @@ export class UndoRepository {
     const result = await this.db.query(query, [userId, limit]);
     return result.rows.map((r) => new UndoLog(r));
   }
+
+  async findAllRecent(
+    limit = 10,
+    options: { excludeRecovery?: boolean; excludeAdmins?: boolean } = {},
+  ): Promise<UndoLog[]> {
+    const filters: string[] = [];
+
+    if (options.excludeRecovery) {
+      filters.push(`
+        AND NOT EXISTS (
+          SELECT 1 FROM users u_check 
+          WHERE u_check.id = l.user_id AND u_check.is_recovery_admin = TRUE
+        )
+      `);
+    }
+
+    if (options.excludeAdmins) {
+      filters.push(`
+        AND NOT EXISTS (
+          SELECT 1 FROM user_roles ur_check
+          JOIN roles r_check ON ur_check.role_id = r_check.id
+          WHERE ur_check.user_id = l.user_id AND r_check.name = 'Admin'
+        )
+      `);
+    }
+
+    const query = `
+      SELECT 
+        l.id, 
+        l.event_timestamp as "eventTimestamp", 
+        l.user_id as "userId", 
+        l.session_id as "sessionId", 
+        l.action_type as "actionType", 
+        l.entity_type as "entityType", 
+        l.entity_id as "entityId", 
+        l.undo_data as "undoData", 
+        l.redo_data as "redoData", 
+        l.description, 
+        l.undone_at as "undoneAt", 
+        l.undone_by as "undoneBy", 
+        l.expires_at as "expiresAt", 
+        l.deleted_at as "deletedAt"
+      FROM audit.undo_log l
+      WHERE l.undone_at IS NULL AND l.deleted_at IS NULL AND l.expires_at > NOW()
+      ${filters.join(' ')}
+      ORDER BY l.event_timestamp DESC
+      LIMIT $1
+    `;
+    const result = await this.db.query(query, [limit]);
+    return result.rows.map((r) => new UndoLog(r));
+  }
 }

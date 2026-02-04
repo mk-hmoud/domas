@@ -33,8 +33,36 @@ export class UndoService {
     return this.undoRepository.create(data, client);
   }
 
-  async findLatestForUser(userId: string): Promise<UndoLog[]> {
-    return this.undoRepository.findLatestForUser(userId);
+  async findLatest(context: AuditUserContext): Promise<UndoLog[]> {
+    const isAdminRole = context.roles?.some((r) => r.name === SYSTEM_ROLES.ADMIN);
+    const hasUndoAllPerm = context.permissions?.includes(PERMISSIONS.UNDO_ALL);
+
+    // 1. Recovery Admin: Sees everything
+    if (context.isRecoveryAdmin) {
+      return this.undoRepository.findAllRecent(10, {
+        excludeRecovery: false,
+        excludeAdmins: false,
+      });
+    }
+
+    // 2. Admin Role: Sees everything except Recovery Admin logs
+    if (isAdminRole) {
+      return this.undoRepository.findAllRecent(10, {
+        excludeRecovery: true,
+        excludeAdmins: false,
+      });
+    }
+
+    // 3. User with undo.all (but no Admin role): Sees everything except Recovery Admin and Admin role logs
+    if (hasUndoAllPerm) {
+      return this.undoRepository.findAllRecent(10, {
+        excludeRecovery: true,
+        excludeAdmins: true,
+      });
+    }
+
+    // 4. Regular Users: See only their own logs
+    return this.undoRepository.findLatestForUser(context.userId);
   }
 
   async undo(id: string, context: AuditUserContext): Promise<void> {

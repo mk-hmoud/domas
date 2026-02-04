@@ -11,7 +11,7 @@ export class UndoController {
 
   @Get('recent')
   getRecent(@UserContext() context: AuditUserContext) {
-    return this.undoService.findLatestForUser(context.userId);
+    return this.undoService.findLatest(context);
   }
 
   @Post(':id')
