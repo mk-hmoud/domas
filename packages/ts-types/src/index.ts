@@ -55,3 +55,4 @@ export * from "./dtos/bulk-bed.dto";
 export * from "./dtos/update-bed-policies.dto";
 export * from "./dtos/bulk-update-bed-policies.dto";
 export * from "./dtos/account.dto";
+export * from "./enums/undo-action-type.enum";

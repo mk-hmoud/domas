@@ -5,6 +5,8 @@ import { Permission } from '../entities/permission.entity';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { DatabaseService } from '../../../core/database/database.service';
 
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 
@@ -14,6 +16,7 @@ export class AccessService {
 
   constructor(
     private readonly accessRepository: AccessRepository,
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -124,6 +127,17 @@ export class AccessService {
 
     await this.db.transaction(async (client) => {
       await this.accessRepository.assignRoleToUser(userId, roleId, client);
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.ASSIGN_ROLE,
+          entityType: 'user_role',
+          entityId: userId,
+          undoData: { roleId },
+          description: `Assigned role ${roleId} to user ${userId}`,
+        },
+        client,
+      );
     }, context);
   }
 
@@ -159,6 +173,17 @@ export class AccessService {
 
     await this.db.transaction(async (client) => {
       await this.accessRepository.revokeRoleFromUser(userId, roleId, client);
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.REVOKE_ROLE,
+          entityType: 'user_role',
+          entityId: userId,
+          undoData: { roleId },
+          description: `Revoked role ${roleId} from user ${userId}`,
+        },
+        client,
+      );
     }, context);
   }
 

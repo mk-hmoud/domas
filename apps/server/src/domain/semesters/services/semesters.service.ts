@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SemestersRepository } from '../repositories/semesters.repository';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
 import { UpdateSemesterDto } from '../dto/update-semester.dto';
 import { Semester } from '../entities/semester.entity';
@@ -15,6 +17,7 @@ export class SemestersService {
   constructor(
     private readonly semestersRepository: SemestersRepository,
     private readonly bookingsRepository: BookingsRepository,
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -104,7 +107,19 @@ export class SemestersService {
       if (data.status === SemesterStatus.ACTIVE) {
         await this.semestersRepository.deactivateAll(client);
       }
-      return this.semestersRepository.create(data, client);
+      const semester = await this.semestersRepository.create(data, client);
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_SEMESTER,
+          entityType: 'semester',
+          entityId: semester.id.toString(),
+          undoData: {},
+          description: `Created semester ${semester.displayName}`,
+        },
+        client,
+      );
+      return semester;
     }, context);
   }
 
@@ -134,6 +149,19 @@ export class SemestersService {
       if (!updated) {
         throw new NotFoundException(`Semester with ID ${id} not found`);
       }
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_SEMESTER,
+          entityType: 'semester',
+          entityId: id.toString(),
+          undoData: current,
+          description: `Updated semester ${current.displayName}`,
+        },
+        client,
+      );
+
       return updated;
     }, context);
   }
@@ -151,10 +179,26 @@ export class SemestersService {
         await this.semestersRepository.deactivateAll(client);
       }
 
-      const updated = await this.semestersRepository.update(id, { status }, client);
-      if (!updated) {
+      const existing = await this.semestersRepository.findById(id, client);
+      if (!existing) {
         throw new NotFoundException(`Semester with ID ${id} not found`);
       }
+
+      const updated = await this.semestersRepository.update(id, { status }, client);
+      if (!updated) throw new NotFoundException(`Semester with ID ${id} not found`);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_SEMESTER_STATUS,
+          entityType: 'semester',
+          entityId: id.toString(),
+          undoData: { previousStatus: existing.status },
+          description: `Updated semester status to ${status}`,
+        },
+        client,
+      );
+
       return updated;
     }, context);
   }
@@ -173,10 +217,27 @@ export class SemestersService {
     }
 
     return this.db.transaction(async (client) => {
+      const existing = await this.semestersRepository.findById(id, client);
+      if (!existing) {
+        throw new NotFoundException(`Semester with ID ${id} not found`);
+      }
+
       const deleted = await this.semestersRepository.delete(id, client);
       if (!deleted) {
         throw new NotFoundException(`Semester with ID ${id} not found`);
       }
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_SEMESTER,
+          entityType: 'semester',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Deleted semester ${existing.displayName}`,
+        },
+        client,
+      );
     }, context);
   }
 }

@@ -11,7 +11,10 @@ import { AccessRepository } from '../repositories/access.repository';
 import { User } from '../entities/user.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateUserDto } from '../dto/create-user.dto';
+import { PoolClient } from 'pg';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
@@ -24,6 +27,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly accessRepository: AccessRepository,
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -147,6 +151,18 @@ export class UsersService {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
 
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_USER,
+          entityType: 'user',
+          entityId: id,
+          undoData: existing,
+          description: `Updated user ${existing.email}`,
+        },
+        client,
+      );
+
       this.logger.log({ userId: id }, 'User updated successfully');
       return updated;
     }, context);
@@ -177,7 +193,7 @@ export class UsersService {
     return user;
   }
 
-  async delete(id: string, context: AuditUserContext): Promise<void> {
+  async delete(id: string, context: AuditUserContext, externalClient?: PoolClient): Promise<void> {
     this.logger.log({ userId: id }, 'Attempting to delete user');
 
     const targetUser = await this.findById(id, context);
@@ -188,7 +204,7 @@ export class UsersService {
       throw new ForbiddenException('You cannot delete an Administrator account.');
     }
 
-    const result = await this.db.transaction(async (client) => {
+    const operation = async (client: PoolClient) => {
       const user = await this.usersRepository.findById(id, client, false, context);
       if (!user) {
         throw new ConflictException(`User with ID ${id} not found`);
@@ -198,12 +214,27 @@ export class UsersService {
         throw new ForbiddenException('Cannot delete the Recovery Admin account');
       }
 
-      return this.usersRepository.delete(id, client);
-    }, context);
+      const result = await this.usersRepository.delete(id, client);
+      if (!result) {
+        throw new ConflictException(`User with ID ${id} not found`);
+      }
 
-    if (!result) {
-      throw new ConflictException(`User with ID ${id} not found`);
-    }
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_USER,
+          entityType: 'user',
+          entityId: id,
+          undoData: user,
+          description: `Deleted user ${user.email}`,
+        },
+        client,
+      );
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    await this.db.transaction(operation, context);
     this.logger.log({ userId: id }, 'User deleted successfully');
   }
 }

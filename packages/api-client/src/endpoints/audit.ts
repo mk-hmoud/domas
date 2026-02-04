@@ -6,6 +6,7 @@ import {
   SearchAuditDto,
   PaginatedResult,
   AuditLogEntry,
+  UndoLog,
 } from "@domas/ts-types";
 
 export const audit = {
@@ -17,6 +18,15 @@ export const audit = {
       data,
     );
     return response.data;
+  },
+
+  getRecentUndos: async (): Promise<UndoLog[]> => {
+    const response = await apiClient.get<UndoLog[]>("/audit/undo/recent");
+    return response.data;
+  },
+
+  undo: async (id: string): Promise<void> => {
+    await apiClient.post(`/audit/undo/${id}`);
   },
 
   getRecentChanges: async (limit?: number): Promise<RecentChange[]> => {

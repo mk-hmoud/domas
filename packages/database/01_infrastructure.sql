@@ -134,3 +134,48 @@ CREATE TABLE audit.sensitive_operations (
 ) PARTITION BY RANGE (event_timestamp);
 
 CREATE TABLE audit.sensitive_operations_default PARTITION OF audit.sensitive_operations DEFAULT;
+
+-- =============================================
+-- UNDO SYSTEM
+-- =============================================
+
+CREATE TABLE audit.undo_log (
+  id BIGINT GENERATED ALWAYS AS IDENTITY,
+  event_timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  
+  -- Who and when
+  user_id UUID NOT NULL, -- References users(id) in domain schema
+  session_id UUID, 
+  
+  -- What action
+  action_type VARCHAR(50) NOT NULL, -- 'create_location', 'update_assignment', 'delete_user', etc.
+  entity_type VARCHAR(50) NOT NULL, -- 'location', 'assignment', 'user', etc.
+  entity_id TEXT, -- UUID or Int ID stored as text for flexibility
+  
+  -- How to undo
+  undo_data JSONB NOT NULL, -- Snapshot of old state OR instructions to undo
+  redo_data JSONB, -- Optional: snapshot of new state for redo
+  
+  -- Metadata
+  description TEXT, -- Human-readable: "Updated gender lock on Campus A"
+  
+  -- Undo state
+  undone_at TIMESTAMPTZ,
+  undone_by UUID, -- References users(id)
+  
+  -- Prevent undo after certain time
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
+  
+  deleted_at TIMESTAMPTZ,
+
+  PRIMARY KEY (id, event_timestamp)
+) PARTITION BY RANGE (event_timestamp);
+
+-- Default partition
+CREATE TABLE audit.undo_log_default PARTITION OF audit.undo_log DEFAULT;
+
+CREATE INDEX idx_undo_log_user_recent ON audit.undo_log(user_id, event_timestamp DESC) 
+  WHERE undone_at IS NULL AND deleted_at IS NULL AND expires_at > NOW();
+
+CREATE INDEX idx_undo_log_session ON audit.undo_log(session_id, event_timestamp DESC) 
+  WHERE session_id IS NOT NULL AND deleted_at IS NULL;

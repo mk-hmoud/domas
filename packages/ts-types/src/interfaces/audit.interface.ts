@@ -46,3 +46,20 @@ export interface BulkOperation {
   affected_count: number;
   resource_type: string;
 }
+
+export interface UndoLog {
+  id: string;
+  eventTimestamp: string;
+  userId: string;
+  sessionId?: string;
+  actionType: string;
+  entityType: string;
+  entityId: string;
+  undoData: any;
+  redoData?: any;
+  description?: string;
+  undoneAt?: string;
+  undoneBy?: string;
+  expiresAt: string;
+  deletedAt?: string;
+}

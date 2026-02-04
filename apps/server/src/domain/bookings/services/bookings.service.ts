@@ -5,6 +5,8 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { BookingsRepository } from '../repositories/bookings.repository';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingDto } from '../dto/update-booking.dto';
@@ -29,6 +31,7 @@ export class BookingsService {
     private readonly bedsRepository: BedsRepository,
     private readonly studentsRepository: StudentsRepository,
     private readonly usersService: UsersService,
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -67,6 +70,17 @@ export class BookingsService {
 
     return this.db.transaction(async (client) => {
       const booking = await this.bookingsRepository.create(data, client);
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_BOOKING,
+          entityType: 'booking',
+          entityId: booking.id,
+          undoData: {},
+          description: `Created booking for student ${student.studentNumber}`,
+        },
+        client,
+      );
       this.logger.log({ bookingId: booking.id }, 'Booking created successfully');
       return booking;
     }, context);
@@ -110,6 +124,17 @@ export class BookingsService {
           { status: BookingOpsStatus.REJECTED },
           client,
         );
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: UndoActionType.REJECT_BOOKING,
+            entityType: 'booking',
+            entityId: id,
+            undoData: { previousStatus: booking.status },
+            description: `Rejected booking ${id} (Financials)`,
+          },
+          client,
+        );
         this.logger.warn({ bookingId: id }, 'Booking rejected by accounting');
         return updated!;
       }
@@ -118,6 +143,22 @@ export class BookingsService {
         id,
         context.userId,
         data.paymentStatus,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.APPROVE_BOOKING_FINANCIALS,
+          entityType: 'booking',
+          entityId: id,
+          undoData: {
+            previousStatus: booking.status,
+            previousPaymentStatus: booking.paymentStatus,
+            previousIsAccountingApproved: booking.isAccountingApproved,
+          },
+          description: `Approved financials for booking ${id}`,
+        },
         client,
       );
 
@@ -145,6 +186,21 @@ export class BookingsService {
 
       const updated = await this.bookingsRepository.checkIn(id, client);
 
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CHECK_IN_BOOKING,
+          entityType: 'booking',
+          entityId: id,
+          undoData: {
+            previousStatus: booking.status,
+            previousCheckInDate: booking.checkedInAt,
+          },
+          description: `Checked in booking ${id}`,
+        },
+        client,
+      );
+
       this.logger.log({ bookingId: id }, 'Check-in completed');
       return updated!;
     }, context);
@@ -156,6 +212,19 @@ export class BookingsService {
       if (!booking) throw new NotFoundException(`Booking with ID ${id} not found`);
 
       const updated = await this.bookingsRepository.update(id, data, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_BOOKING,
+          entityType: 'booking',
+          entityId: id,
+          undoData: booking,
+          description: `Updated booking ${id}`,
+        },
+        client,
+      );
+
       return updated!;
     }, context);
   }

@@ -38,6 +38,10 @@ export const PERMISSIONS = {
   // Audit & Reports
   AUDIT_VIEW: 'audit.view',
   REPORTS_VIEW: 'reports.view',
+
+  // Undo
+  UNDO_ALL: 'undo.all',
+  UNDO_OWN: 'undo.own',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

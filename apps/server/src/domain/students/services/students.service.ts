@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException, HttpStatus } from '@nestjs/commo
 import { ApiException } from '../../../common/exceptions/api.exception';
 import { ErrorCodes } from '../../../common/constants/error-codes';
 import { StudentsRepository } from '../repositories/students.repository';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
@@ -9,6 +11,7 @@ import { Student } from '../entities/student.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { PoolClient } from 'pg';
 
 @Injectable()
 export class StudentsService {
@@ -16,6 +19,7 @@ export class StudentsService {
 
   constructor(
     private readonly studentsRepository: StudentsRepository,
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -85,30 +89,58 @@ export class StudentsService {
       }
 
       const updated = await this.studentsRepository.update(id, data, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_STUDENT,
+          entityType: 'student',
+          entityId: id,
+          undoData: existing,
+          description: `Updated student ${existing.firstName} ${existing.lastName}`,
+        },
+        client,
+      );
+
       return updated!;
     }, context);
   }
 
-  async delete(id: string, context: AuditUserContext): Promise<void> {
-    this.logger.log({ studentId: id }, 'Deleting student profile');
-    const result = await this.db.transaction(async (client) => {
-      const exists = await this.studentsRepository.findById(id, client);
-      if (!exists) {
+  async delete(id: string, context: AuditUserContext, externalClient?: PoolClient): Promise<void> {
+    const operation = async (client: PoolClient) => {
+      const existing = await this.studentsRepository.findById(id, client);
+      if (!existing) {
         throw new NotFoundException(`Student with ID ${id} not found`);
       }
-      return this.studentsRepository.delete(id, client);
-    }, context);
 
-    if (!result) {
-      throw new NotFoundException(`Student with ID ${id} not found`);
-    }
+      await this.studentsRepository.delete(id, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_STUDENT,
+          entityType: 'student',
+          entityId: id,
+          undoData: existing,
+          description: `Deleted student ${existing.firstName} ${existing.lastName}`,
+        },
+        client,
+      );
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ studentId: id }, 'Deleting student profile');
+    await this.db.transaction(operation, context);
     this.logger.log({ studentId: id }, 'Student profile deleted');
   }
 
   async deleteMany(ids: string[], context: AuditUserContext): Promise<void> {
     this.logger.log({ count: ids.length }, 'Bulk deleting students');
     await this.db.transaction(async (client) => {
-      await this.studentsRepository.deleteMany(ids, client);
+      for (const id of ids) {
+        await this.delete(id, context, client);
+      }
     }, context);
   }
 
