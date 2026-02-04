@@ -6,8 +6,15 @@ import {
   rem,
   Menu,
   Box,
+  ActionIcon,
+  Tooltip,
 } from "@mantine/core";
-import { IconLogout, IconSettings, IconChevronDown } from "@tabler/icons-react";
+import {
+  IconLogout,
+  IconSettings,
+  IconChevronDown,
+  IconHistory,
+} from "@tabler/icons-react";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
 import { ReactNode, forwardRef } from "react";
@@ -20,6 +27,7 @@ export interface HeaderBarProps {
   user?: User;
   onLogout?: () => void;
   onNavigate?: (link: string) => void;
+  onShowHistory?: () => void;
 }
 
 interface UserButtonProps extends React.ComponentPropsWithoutRef<"button"> {
@@ -60,6 +68,7 @@ export function HeaderBar({
   user,
   onLogout,
   onNavigate,
+  onShowHistory,
 }: HeaderBarProps) {
   const { t } = useTranslation();
 
@@ -69,6 +78,13 @@ export function HeaderBar({
 
       <Group>
         <Group gap="xs">
+          {onShowHistory && (
+            <Tooltip label={t("history")}>
+              <ActionIcon variant="default" size="xl" onClick={onShowHistory}>
+                <IconHistory stroke={1.5} />
+              </ActionIcon>
+            </Tooltip>
+          )}
           <LanguageSwitcher />
           <ThemeToggle />
         </Group>

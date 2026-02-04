@@ -229,6 +229,19 @@
     "settings": "Settings",
     "backups": "Backups"
   },
+  "recent_history": "Recent History",
+  "no_recent_history": "No recent actions found",
+  "undo": "Undo",
+  "undo_confirm": "Are you sure you want to undo this action?",
+  "undo_success": "Action undone successfully",
+  "failed_to_undo": "Failed to undo action",
+  "action_already_undone": "This action has already been undone",
+  "entity_id": "Entity ID",
+  "expires_at": "Expires at",
+  "undone_at": "Undone at",
+  "performed_by": "Performed by",
+  "you": "You",
+  "show_only_my_actions": "Show only my actions",
   "dashboard": {
     "welcome_user": "Welcome, {{email}}!",
     "staff_portal_intro": "Welcome to the staff portal. Manage students, staff and rooms here.",
@@ -364,6 +377,14 @@
   "prefix": "Prefix",
   "start_number": "Start Number",
   "end_number": "End Number",
+  "undo_history": "Recent Actions",
+  "no_recent_actions": "No recent actions found",
+  "action_undone_successfully": "Action undone successfully",
+  "action": "Action",
+  "entity": "Entity",
+  "time": "Time",
+  "undone": "Undone",
+
   "ownerships": {
     "dorm": "Dorm",
     "rectorate": "Rectorate"

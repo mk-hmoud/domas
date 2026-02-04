@@ -11,6 +11,7 @@ export interface DashboardLayoutProps {
   children: ReactNode;
   user?: User;
   onLogout?: () => void;
+  onShowHistory?: () => void;
 }
 
 export function DashboardLayout({
@@ -20,6 +21,7 @@ export function DashboardLayout({
   children,
   user,
   onLogout,
+  onShowHistory,
 }: DashboardLayoutProps) {
   return (
     <Flex direction="column" h="100vh">
@@ -28,6 +30,7 @@ export function DashboardLayout({
         user={user}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onShowHistory={onShowHistory}
       />
       <Flex style={{ flex: 1, overflow: "hidden" }}>
         <NavbarNested data={navData} onLinkClick={onNavigate} />

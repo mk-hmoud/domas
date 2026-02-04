@@ -19,6 +19,7 @@ export * from "./components/Students";
 export * from "./components/Roles";
 export * from "./components/Accounting/PaymentsTable";
 export { BulkActionsBar as AccountingBulkActionsBar } from "./components/Accounting/BulkActionsBar";
+export * from "./components/UndoHistory/UndoHistoryDrawer";
 
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";

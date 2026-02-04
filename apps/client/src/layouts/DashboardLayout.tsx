@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Group, Text, Code } from '@mantine/core';
-import { DashboardLayout as SharedDashboardLayout } from '@domas/ui';
+import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
   IconUsers,
   IconChartBar,
@@ -11,11 +11,56 @@ import {
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
 import { useTranslation } from 'react-i18next';
+import { audit } from '@domas/api-client';
+import { UndoLog } from '@domas/ts-types';
+import { notifications } from '@mantine/notifications';
 
 export function DashboardLayout() {
   const navigate = useNavigate();
   const { user, logout, hasPermission } = useAuth();
   const { t } = useTranslation();
+
+  // Undo History State
+  const [historyOpened, setHistoryOpened] = useState(false);
+  const [historyData, setHistoryData] = useState<UndoLog[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await audit.getRecentUndos();
+      setHistoryData(data);
+    } catch (error) {
+      console.error('Failed to fetch history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (historyOpened) {
+      fetchHistory();
+    }
+  }, [historyOpened]);
+
+  const handleUndo = async (id: string) => {
+    try {
+      await audit.undo(id);
+      notifications.show({
+        title: t('success'),
+        message: t('undo_success'),
+        color: 'green',
+      });
+      fetchHistory();
+      window.dispatchEvent(new CustomEvent('domas:data-changed'));
+    } catch (error) {
+      notifications.show({
+        title: t('error'),
+        message: t('failed_to_undo'),
+        color: 'red',
+      });
+    }
+  };
 
   const navData = useMemo(() => {
     const rawData = [
@@ -124,24 +169,37 @@ export function DashboardLayout() {
   }, [t, user]);
 
   return (
-    <SharedDashboardLayout
-      navData={navData}
-      onNavigate={(link) => navigate(link)}
-      user={user || undefined}
-      onLogout={logout}
-      headerLogo={
-        <Group gap={8}>
-          <IconBuildingSkyscraper size={28} />
-          <Text fw={700} size="lg">
-            DOMAS
-          </Text>
-          <Code fw={700} ml="xs">
-            v1.0.0
-          </Code>
-        </Group>
-      }
-    >
-      <Outlet />
-    </SharedDashboardLayout>
+    <>
+      <SharedDashboardLayout
+        navData={navData}
+        onNavigate={(link) => navigate(link)}
+        user={user || undefined}
+        onLogout={logout}
+        onShowHistory={() => setHistoryOpened(true)}
+        headerLogo={
+          <Group gap={8}>
+            <IconBuildingSkyscraper size={28} />
+            <Text fw={700} size="lg">
+              DOMAS
+            </Text>
+            <Code fw={700} ml="xs">
+              v1.0.0
+            </Code>
+          </Group>
+        }
+      >
+        <Outlet />
+      </SharedDashboardLayout>
+
+      <UndoHistoryDrawer
+        opened={historyOpened}
+        onClose={() => setHistoryOpened(false)}
+        data={historyData}
+        loading={historyLoading}
+        onUndo={handleUndo}
+        currentUserId={user?.id}
+        canSeeAll={hasPermission('undo.all')}
+      />
+    </>
   );
 }
