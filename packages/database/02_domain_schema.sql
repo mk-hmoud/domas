@@ -347,6 +347,117 @@ CREATE INDEX idx_bookings_active ON bookings(status, start_date, end_date)
     WHERE status IN ('active', 'ready_for_checkin');
 CREATE INDEX idx_transactions_pending ON transactions(is_approved, created_at) 
     WHERE is_approved = FALSE;
+CREATE INDEX idx_transactions_booking ON transactions(booking_id);
 CREATE INDEX idx_locations_gender_lock ON locations(gender_lock) 
     WHERE gender_lock IS NOT NULL;
 
+-- =============================================
+-- INVENTORY SYSTEM
+-- =============================================
+
+-- Inventory scope
+CREATE TYPE inventory_scope AS ENUM ('bed', 'room', 'shared');
+
+-- 1. Inventory Catalog (Templates)
+CREATE TABLE inventory_catalog (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    -- Names
+    name_tr TEXT NOT NULL,
+    name_en TEXT NOT NULL,
+    
+    -- Descriptions
+    description_tr TEXT,
+    description_en TEXT,
+    
+    -- Scope
+    scope inventory_scope NOT NULL,
+    
+    -- Pricing
+    base_price_try NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    base_price_foreign NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    foreign_currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    
+    -- Visibility
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_inventory_catalog_active ON inventory_catalog(is_active) 
+    WHERE deleted_at IS NULL;
+CREATE INDEX idx_inventory_catalog_scope ON inventory_catalog(scope) 
+    WHERE deleted_at IS NULL AND is_active = TRUE;
+
+-- 2. Inventory Assignments (What items exist where)
+CREATE TABLE inventory_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    catalog_id INT NOT NULL REFERENCES inventory_catalog(id) ON DELETE CASCADE,
+    
+    -- Targets (exactly one must be set)
+    location_id INT REFERENCES locations(id) ON DELETE CASCADE,
+    bed_id INT REFERENCES beds(id) ON DELETE CASCADE,
+    
+    quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    notes TEXT,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Ensure exactly one target AND respect scope rules
+    CONSTRAINT check_inventory_target CHECK (
+        (location_id IS NOT NULL AND bed_id IS NULL) OR
+        (location_id IS NULL AND bed_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_inventory_assignment_location ON inventory_assignments(location_id) 
+    WHERE location_id IS NOT NULL;
+CREATE INDEX idx_inventory_assignment_bed ON inventory_assignments(bed_id) 
+    WHERE bed_id IS NOT NULL;
+
+-- Prevent duplicate assignments (e.g. assigning "Desk" to "Bed A" twice)
+CREATE UNIQUE INDEX uq_bed_catalog ON inventory_assignments(bed_id, catalog_id) 
+    WHERE bed_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_location_catalog ON inventory_assignments(location_id, catalog_id) 
+    WHERE location_id IS NOT NULL;
+
+-- 3. Contract Snapshots (Frozen inventory list)
+CREATE TABLE booking_inventory_snapshots (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    
+    -- Snapshot of catalog item
+    catalog_id INT NOT NULL REFERENCES inventory_catalog(id),
+    name_tr TEXT NOT NULL,
+    name_en TEXT NOT NULL,
+    description_tr TEXT,
+    description_en TEXT,
+    scope inventory_scope NOT NULL,
+    
+    -- Pricing at time of contract
+    price_try NUMERIC(12, 2) NOT NULL,
+    price_foreign NUMERIC(12, 2) NOT NULL,
+    foreign_currency_code CHAR(3) NOT NULL,
+    
+    quantity INT NOT NULL DEFAULT 1,
+    
+    -- Assignment context (e.g. "Room 301", "Block A Kitchen")
+    location_name TEXT, 
+    
+    -- LEAN CHECK-OUT LOGIC
+    checkin_recorded_at TIMESTAMPTZ,
+    checkin_recorded_by UUID REFERENCES users(id),
+    
+    checkout_recorded_at TIMESTAMPTZ,
+    checkout_recorded_by UUID REFERENCES users(id),
+    
+    -- Minimal Damage Flag
+    is_damaged BOOLEAN DEFAULT FALSE,
+    damage_note TEXT,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(booking_id);

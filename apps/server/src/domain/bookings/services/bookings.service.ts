@@ -20,6 +20,7 @@ import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { UsersService } from '../../users/services/users.service';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { InventoryService } from '../../inventory/services/inventory.service';
 
 @Injectable()
 export class BookingsService {
@@ -32,6 +33,7 @@ export class BookingsService {
     private readonly studentsRepository: StudentsRepository,
     private readonly usersService: UsersService,
     private readonly undoService: UndoService,
+    private readonly inventoryService: InventoryService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -185,6 +187,9 @@ export class BookingsService {
       }
 
       const updated = await this.bookingsRepository.checkIn(id, client);
+
+      // Generate inventory snapshot for the contract
+      await this.inventoryService.generateSnapshotForBooking(id, booking.bedId, context, client);
 
       await this.undoService.registerUndo(
         {

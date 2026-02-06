@@ -12,6 +12,7 @@ import { SemestersModule } from './domain/semesters/semesters.module';
 import { LocationsModule } from './domain/locations/locations.module';
 import { BookingsModule } from './domain/bookings/bookings.module';
 import { StudentsModule } from './domain/students/students.module';
+import { InventoryModule } from './domain/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { StudentsModule } from './domain/students/students.module';
     LocationsModule,
     BookingsModule,
     StudentsModule,
+    InventoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

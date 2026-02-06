@@ -9,3 +9,4 @@ export * from "./endpoints/audit";
 export * from "./endpoints/students";
 export * from "./endpoints/access";
 export * from "./endpoints/account";
+export * from "./endpoints/inventory";

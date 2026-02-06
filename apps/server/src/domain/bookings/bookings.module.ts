@@ -6,9 +6,10 @@ import { LocationsModule } from '../locations/locations.module';
 import { StudentsModule } from '../students/students.module';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
+import { InventoryModule } from '../inventory/inventory.module';
 
 @Module({
-  imports: [LocationsModule, StudentsModule, UsersModule, AuditModule],
+  imports: [LocationsModule, StudentsModule, UsersModule, AuditModule, InventoryModule],
   controllers: [BookingsController],
   providers: [BookingsService, BookingsRepository],
   exports: [BookingsService, BookingsRepository],
