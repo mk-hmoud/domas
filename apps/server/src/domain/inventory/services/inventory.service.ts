@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InventoryRepository } from '../repositories/inventory.repository';
 import { InventoryCatalog } from '../entities/inventory-catalog.entity';
 import { InventoryAssignment } from '../entities/inventory-assignment.entity';
@@ -11,6 +18,8 @@ import type { AuditUserContext } from '../../../common/interfaces/audit-user-con
 import { PoolClient } from 'pg';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { BedsRepository } from '../../locations/repositories/beds.repository';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 
 @Injectable()
 export class InventoryService {
@@ -20,6 +29,8 @@ export class InventoryService {
     private readonly inventoryRepository: InventoryRepository,
     private readonly locationsRepository: LocationsRepository,
     private readonly bedsRepository: BedsRepository,
+    @Inject(forwardRef(() => UndoService))
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -30,7 +41,18 @@ export class InventoryService {
     context: AuditUserContext,
   ): Promise<InventoryCatalog> {
     this.logger.log({ nameEn: data.nameEn }, 'Creating inventory catalog item');
-    return this.inventoryRepository.createCatalog(data);
+    const item = await this.inventoryRepository.createCatalog(data);
+
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.CREATE_INVENTORY_CATALOG,
+      entityType: 'inventory_catalog',
+      entityId: item.id.toString(),
+      undoData: {},
+      description: `Created inventory item ${item.nameEn}`,
+    });
+
+    return item;
   }
 
   async findAllCatalog(
@@ -51,14 +73,35 @@ export class InventoryService {
     context: AuditUserContext,
   ): Promise<InventoryCatalog> {
     this.logger.log({ itemId: id }, 'Updating inventory catalog item');
+    const existing = await this.findCatalogById(id);
     const updated = await this.inventoryRepository.updateCatalog(id, data);
     if (!updated) throw new NotFoundException(`Catalog item with ID ${id} not found`);
+
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.UPDATE_INVENTORY_CATALOG,
+      entityType: 'inventory_catalog',
+      entityId: id.toString(),
+      undoData: existing,
+      description: `Updated inventory item ${existing.nameEn}`,
+    });
+
     return updated;
   }
 
   async deleteCatalog(id: number, context: AuditUserContext): Promise<void> {
     this.logger.log({ itemId: id }, 'Deleting inventory catalog item');
+    const existing = await this.findCatalogById(id);
     await this.inventoryRepository.deleteCatalog(id);
+
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.DELETE_INVENTORY_CATALOG,
+      entityType: 'inventory_catalog',
+      entityId: id.toString(),
+      undoData: existing,
+      description: `Deleted inventory item ${existing.nameEn}`,
+    });
   }
 
   // --- Assignments ---
@@ -88,7 +131,18 @@ export class InventoryService {
       throw new BadRequestException('Cannot assign bed scope item to a location');
     }
 
-    return this.inventoryRepository.createAssignment(data);
+    const assignment = await this.inventoryRepository.createAssignment(data);
+
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.CREATE_INVENTORY_ASSIGNMENT,
+      entityType: 'inventory_assignment',
+      entityId: assignment.id,
+      undoData: {},
+      description: `Assigned ${catalog.nameEn} to ${data.bedId ? 'bed' : 'location'}`,
+    });
+
+    return assignment;
   }
 
   async findAssignmentsByLocation(locationId: number): Promise<InventoryAssignment[]> {
@@ -104,13 +158,53 @@ export class InventoryService {
     data: UpdateInventoryAssignmentDto,
     context: AuditUserContext,
   ): Promise<InventoryAssignment> {
+    // Note: Inventory assignments are UUID based
+    const query = `
+      SELECT a.*, row_to_json(c.*) as item 
+      FROM inventory_assignments a 
+      JOIN inventory_catalog c ON a.catalog_id = c.id 
+      WHERE a.id = $1
+    `;
+    const res = await this.db.query(query, [id]);
+    if (res.rowCount === 0) throw new NotFoundException(`Assignment with ID ${id} not found`);
+    const existing = res.rows[0];
+
     const updated = await this.inventoryRepository.updateAssignment(id, data);
     if (!updated) throw new NotFoundException(`Assignment with ID ${id} not found`);
+
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.UPDATE_INVENTORY_ASSIGNMENT,
+      entityType: 'inventory_assignment',
+      entityId: id,
+      undoData: existing,
+      description: `Updated assignment of ${existing.item.name_en}`,
+    });
+
     return updated;
   }
 
   async deleteAssignment(id: string, context: AuditUserContext): Promise<void> {
+    const query = `
+      SELECT a.*, row_to_json(c.*) as item 
+      FROM inventory_assignments a 
+      JOIN inventory_catalog c ON a.catalog_id = c.id 
+      WHERE a.id = $1
+    `;
+    const res = await this.db.query(query, [id]);
+    if (res.rowCount === 0) throw new NotFoundException(`Assignment with ID ${id} not found`);
+    const existing = res.rows[0];
+
     await this.inventoryRepository.deleteAssignment(id);
+
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.DELETE_INVENTORY_ASSIGNMENT,
+      entityType: 'inventory_assignment',
+      entityId: id,
+      undoData: existing,
+      description: `Removed assignment of ${existing.item.name_en}`,
+    });
   }
 
   // --- Snapshot Logic ---

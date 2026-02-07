@@ -29,4 +29,10 @@ export enum UndoActionType {
   REVOKE_ROLE = 'revoke_role',
   UPDATE_SEMESTER = 'update_semester',
   UPDATE_BOOKING = 'update_booking',
+  CREATE_INVENTORY_CATALOG = 'create_inventory_catalog',
+  UPDATE_INVENTORY_CATALOG = 'update_inventory_catalog',
+  DELETE_INVENTORY_CATALOG = 'delete_inventory_catalog',
+  CREATE_INVENTORY_ASSIGNMENT = 'create_inventory_assignment',
+  UPDATE_INVENTORY_ASSIGNMENT = 'update_inventory_assignment',
+  DELETE_INVENTORY_ASSIGNMENT = 'delete_inventory_assignment',
 }

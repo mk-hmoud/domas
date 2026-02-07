@@ -203,6 +203,22 @@ export class UndoService {
       case UndoActionType.REJECT_BOOKING:
         return this.undoRejectBooking(log, client);
 
+      // Inventory Catalog
+      case UndoActionType.CREATE_INVENTORY_CATALOG:
+        return this.undoCreateInventoryCatalog(log, client);
+      case UndoActionType.UPDATE_INVENTORY_CATALOG:
+        return this.undoUpdateInventoryCatalog(log, client);
+      case UndoActionType.DELETE_INVENTORY_CATALOG:
+        return this.undoDeleteInventoryCatalog(log, client);
+
+      // Inventory Assignments
+      case UndoActionType.CREATE_INVENTORY_ASSIGNMENT:
+        return this.undoCreateInventoryAssignment(log, client);
+      case UndoActionType.UPDATE_INVENTORY_ASSIGNMENT:
+        return this.undoUpdateInventoryAssignment(log, client);
+      case UndoActionType.DELETE_INVENTORY_ASSIGNMENT:
+        return this.undoDeleteInventoryAssignment(log, client);
+
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
     }
@@ -659,9 +675,16 @@ export class UndoService {
   private async undoCheckInBooking(log: UndoLog, client: PoolClient): Promise<void> {
     const { previousStatus, previousCheckInDate } = log.undoData;
     const bookingId = log.entityId;
+
+    // 1. Revert Booking Status
     await client.query('UPDATE bookings SET status = $1, checked_in_at = $2 WHERE id = $3', [
       previousStatus,
       previousCheckInDate,
+      bookingId,
+    ]);
+
+    // 2. CLEANUP: Delete the inventory snapshots generated during check-in
+    await client.query('DELETE FROM booking_inventory_snapshots WHERE booking_id = $1', [
       bookingId,
     ]);
   }
@@ -681,6 +704,82 @@ export class UndoService {
     await client.query('UPDATE bookings SET status = $1 WHERE id = $2', [
       previousStatus,
       bookingId,
+    ]);
+  }
+
+  // ===========================================================================
+  // Inventory Handlers
+  // ===========================================================================
+
+  private async undoCreateInventoryCatalog(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = parseInt(log.entityId, 10);
+    await client.query('UPDATE inventory_catalog SET deleted_at = NOW() WHERE id = $1', [id]);
+  }
+
+  private async undoDeleteInventoryCatalog(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = parseInt(log.entityId, 10);
+    await client.query('UPDATE inventory_catalog SET deleted_at = NULL WHERE id = $1', [id]);
+  }
+
+  private async undoUpdateInventoryCatalog(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = parseInt(log.entityId, 10);
+    const data = log.undoData;
+
+    const allowedFields = {
+      nameTr: 'name_tr',
+      nameEn: 'name_en',
+      descriptionTr: 'description_tr',
+      descriptionEn: 'description_en',
+      scope: 'scope',
+      basePriceTry: 'base_price_try',
+      basePriceForeign: 'base_price_foreign',
+      foreignCurrencyCode: 'foreign_currency_code',
+      isActive: 'is_active',
+    };
+
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    for (const [camelKey, snakeKey] of Object.entries(allowedFields)) {
+      if (data[camelKey] !== undefined) {
+        updates.push(`${snakeKey} = $${paramIndex++}`);
+        values.push(data[camelKey]);
+      }
+    }
+
+    if (updates.length === 0) return;
+
+    values.push(id);
+    const res = await client.query(
+      `UPDATE inventory_catalog SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex}`,
+      values,
+    );
+    if (res.rowCount === 0) throw new BadRequestException('Catalog item not found');
+  }
+
+  private async undoCreateInventoryAssignment(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = log.entityId;
+    await client.query('DELETE FROM inventory_assignments WHERE id = $1', [id]);
+  }
+
+  private async undoDeleteInventoryAssignment(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = log.entityId;
+    const { catalog_id, location_id, bed_id, quantity, notes } = log.undoData;
+    await client.query(
+      `INSERT INTO inventory_assignments (id, catalog_id, location_id, bed_id, quantity, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, catalog_id, location_id, bed_id, quantity, notes],
+    );
+  }
+
+  private async undoUpdateInventoryAssignment(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = log.entityId;
+    const { quantity, notes } = log.undoData;
+    await client.query('UPDATE inventory_assignments SET quantity = $1, notes = $2 WHERE id = $3', [
+      quantity,
+      notes,
+      id,
     ]);
   }
 }
