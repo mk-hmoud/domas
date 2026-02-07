@@ -140,6 +140,12 @@ CREATE TRIGGER audit_role_permissions_change
 AFTER INSERT OR UPDATE OR DELETE ON role_permissions
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
+-- Undo Log
+DROP TRIGGER IF EXISTS audit_undo_log_change ON audit.undo_log;
+CREATE TRIGGER audit_undo_log_change
+AFTER INSERT OR UPDATE OR DELETE ON audit.undo_log
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
 -- Inventory Catalog
 DROP TRIGGER IF EXISTS audit_inventory_catalog_change ON inventory_catalog;
 CREATE TRIGGER audit_inventory_catalog_change
