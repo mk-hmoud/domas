@@ -7,6 +7,7 @@ import {
   IconSettings,
   IconBuildingSkyscraper,
   IconLayoutDashboard,
+  IconArchive,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
@@ -95,6 +96,17 @@ export function DashboardLayout() {
             label: t('nav.permissions'),
             link: '/dashboard/permissions',
             requiredPermission: 'permissions.view',
+          },
+        ],
+      },
+      {
+        label: t('nav.inventory'),
+        icon: IconArchive,
+        links: [
+          {
+            label: t('nav.inventory_catalog'),
+            link: '/dashboard/inventory/catalog',
+            requiredPermission: 'inventory.manage',
           },
         ],
       },

@@ -11,6 +11,7 @@ import { StudentsPage } from './pages/StudentsPage';
 import { RolesPage } from './pages/RolesPage';
 import { AccountingPage } from './pages/AccountingPage';
 import { AccountPage } from './pages/AccountPage';
+import { InventoryCatalogPage } from './pages/InventoryCatalogPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -60,6 +61,14 @@ function App() {
             }
           />
           <Route path="account" element={<AccountPage />} />
+          <Route
+            path="inventory/catalog"
+            element={
+              <PermissionRoute permission="inventory.manage">
+                <InventoryCatalogPage />
+              </PermissionRoute>
+            }
+          />
           <Route
             path="locations"
             element={

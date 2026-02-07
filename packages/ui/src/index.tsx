@@ -20,6 +20,11 @@ export * from "./components/Roles";
 export * from "./components/Accounting/PaymentsTable";
 export { BulkActionsBar as AccountingBulkActionsBar } from "./components/Accounting/BulkActionsBar";
 export * from "./components/UndoHistory/UndoHistoryDrawer";
+export * from "./components/Inventory/InventoryCatalogTable";
+export * from "./components/Inventory/InventoryCatalogModal";
+export * from "./components/Inventory/InventoryCatalogDrawer";
+export * from "./components/Inventory/InventoryAssignmentList";
+export * from "./components/Inventory/AssignInventoryModal";
 
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";

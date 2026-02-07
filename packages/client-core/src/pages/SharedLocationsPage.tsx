@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Button,
   SimpleGrid,
@@ -15,6 +15,7 @@ import {
   Stack,
   Drawer,
   ActionIcon,
+  Divider,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -29,6 +30,10 @@ import {
   LocationType,
   UpdateLocationDto,
   CreateLocationDto,
+  InventoryAssignment,
+  InventoryCatalogItem,
+  CreateInventoryAssignmentDto,
+  InventoryScope,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -43,10 +48,12 @@ import {
   RoomCard,
   BedCard,
   LocationIcon,
+  InventoryAssignmentList,
+  AssignInventoryModal,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
-import { locations } from "@domas/api-client";
+import { locations, inventory } from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
 import { findLocationPath } from "../utils/location-utils";
@@ -65,6 +72,14 @@ function LocationsContent() {
     refreshTree,
   } = useLocations();
 
+  const showInventory = useMemo(() => {
+    return (
+      selectedNode &&
+      selectedNode.type !== LocationType.UNIVERSITY &&
+      selectedNode.type !== LocationType.CAMPUS
+    );
+  }, [selectedNode]);
+
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [bulkEditModalOpened, setBulkEditModalOpened] = useState(false);
   const [viewSelectionDrawerOpened, setViewSelectionDrawerOpened] =
@@ -76,6 +91,16 @@ function LocationsContent() {
   const [locationToEdit, setLocationToEdit] = useState<LocationNode | null>(
     null,
   );
+
+  // Inventory State
+  const [inventoryAssignments, setInventoryAssignments] = useState<
+    InventoryAssignment[]
+  >([]);
+  const [inventoryCatalog, setInventoryCatalog] = useState<
+    InventoryCatalogItem[]
+  >([]);
+  const [assignModalOpened, setAssignModalOpened] = useState(false);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
 
   // Bed Management
   const {
@@ -92,6 +117,61 @@ function LocationsContent() {
   // Shared Selection State (Tree + Children)
   const { selectedIds, toggleSelection, setSelectedIds, clearSelection } =
     useLocationSelection([]);
+
+  // Fetch Inventory for selected node
+  const fetchInventory = async () => {
+    if (!selectedNode) return;
+    setInventoryLoading(true);
+    try {
+      let result: InventoryAssignment[] = [];
+      if (selectedNode.type === LocationType.BED) {
+        const bedId =
+          typeof selectedNode.id === "string"
+            ? Number(selectedNode.id.replace("bed-", ""))
+            : Number(selectedNode.id);
+        result = await inventory.findByBed(bedId);
+      } else {
+        result = await inventory.findByLocation(Number(selectedNode.id));
+      }
+      setInventoryAssignments(result);
+    } catch (error) {
+      console.error("Failed to fetch inventory:", error);
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
+  const fetchCatalog = async () => {
+    try {
+      const result = await inventory.findAllCatalog({ isActive: true });
+      setInventoryCatalog(result);
+    } catch (error) {
+      console.error("Failed to fetch catalog:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedNode && showInventory) {
+      fetchInventory();
+      fetchCatalog();
+    }
+  }, [selectedNode, showInventory]);
+
+  const filteredCatalog = useMemo(() => {
+    if (!selectedNode) return [];
+    const isBed = selectedNode.type === LocationType.BED;
+    return inventoryCatalog.filter((item) => {
+      if (isBed)
+        return (
+          item.scope === InventoryScope.BED ||
+          item.scope === InventoryScope.SHARED
+        );
+      return (
+        item.scope === InventoryScope.ROOM ||
+        item.scope === InventoryScope.SHARED
+      );
+    });
+  }, [inventoryCatalog, selectedNode]);
 
   // Calculate breadcrumbs
   const breadcrumbs = selectedNode
@@ -333,6 +413,67 @@ function LocationsContent() {
     setViewSelectionDrawerOpened(true);
   };
 
+  const handleAssignItem = async (values: CreateInventoryAssignmentDto) => {
+    setInventoryLoading(true);
+    try {
+      await inventory.createAssignment(values);
+      notifications.show({
+        title: t("success"),
+        message: t("assignment_created"),
+        color: "green",
+      });
+      fetchInventory();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
+  const handleUpdateAssignmentQuantity = async (
+    id: string,
+    quantity: number,
+  ) => {
+    setInventoryLoading(true);
+    try {
+      await inventory.updateAssignment(id, { quantity });
+      fetchInventory();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (id: string) => {
+    setInventoryLoading(true);
+    try {
+      await inventory.deleteAssignment(id);
+      notifications.show({
+        title: t("success"),
+        message: t("assignment_deleted"),
+        color: "green",
+      });
+      fetchInventory();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_delete"),
+        color: "red",
+      });
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
   // Helper to find selected nodes for display
   const getSelectedNodes = () => {
     const found: LocationNode[] = [];
@@ -489,6 +630,19 @@ function LocationsContent() {
                     {t(`bed_status.${selectedNode.status}`)}
                   </Badge>
                 </Box>
+
+                {showInventory && (
+                  <>
+                    <Divider />
+                    <InventoryAssignmentList
+                      data={inventoryAssignments}
+                      loading={inventoryLoading}
+                      onAddClick={() => setAssignModalOpened(true)}
+                      onRemove={handleDeleteAssignment}
+                      onUpdateQuantity={handleUpdateAssignmentQuantity}
+                    />
+                  </>
+                )}
               </Stack>
             ) : selectedNode.type === LocationType.ROOM ? (
               <>
@@ -517,6 +671,19 @@ function LocationsContent() {
                   <Text c="dimmed" ta="center" py="md">
                     No beds found
                   </Text>
+                )}
+
+                {showInventory && (
+                  <>
+                    <Divider my="md" />
+                    <InventoryAssignmentList
+                      data={inventoryAssignments}
+                      loading={inventoryLoading}
+                      onAddClick={() => setAssignModalOpened(true)}
+                      onRemove={handleDeleteAssignment}
+                      onUpdateQuantity={handleUpdateAssignmentQuantity}
+                    />
+                  </>
                 )}
               </>
             ) : (
@@ -582,6 +749,19 @@ function LocationsContent() {
                     {t("no_sub_locations")}
                   </Text>
                 )}
+
+                {showInventory && (
+                  <>
+                    <Divider my="md" />
+                    <InventoryAssignmentList
+                      data={inventoryAssignments}
+                      loading={inventoryLoading}
+                      onAddClick={() => setAssignModalOpened(true)}
+                      onRemove={handleDeleteAssignment}
+                      onUpdateQuantity={handleUpdateAssignmentQuantity}
+                    />
+                  </>
+                )}
               </>
             )}
           </LocationDetail>
@@ -609,6 +789,26 @@ function LocationsContent() {
         onClose={() => setCreateBedModalOpened(false)}
         onSubmit={handleCreateBed}
         locationId={Number(selectedNode?.id)}
+      />
+
+      <AssignInventoryModal
+        opened={assignModalOpened}
+        onClose={() => setAssignModalOpened(false)}
+        onSubmit={handleAssignItem}
+        catalog={filteredCatalog}
+        locationId={
+          selectedNode?.type !== LocationType.BED
+            ? Number(selectedNode?.id)
+            : undefined
+        }
+        bedId={
+          selectedNode?.type === LocationType.BED
+            ? typeof selectedNode.id === "string"
+              ? Number(selectedNode.id.replace("bed-", ""))
+              : Number(selectedNode.id)
+            : undefined
+        }
+        loading={inventoryLoading}
       />
 
       <BulkActionsBar
