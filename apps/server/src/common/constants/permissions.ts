@@ -35,6 +35,11 @@ export const PERMISSIONS = {
   SEMESTERS_VIEW: 'semesters.view',
   SEMESTERS_MANAGE: 'semesters.manage',
 
+  // Inventory
+  INVENTORY_VIEW: 'inventory.view',
+  INVENTORY_MANAGE: 'inventory.manage',
+  INVENTORY_ASSIGN: 'inventory.assign',
+
   // Audit & Reports
   AUDIT_VIEW: 'audit.view',
   REPORTS_VIEW: 'reports.view',
