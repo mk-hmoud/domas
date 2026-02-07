@@ -17,6 +17,63 @@ export class InventoryRepository {
     return client || this.db.getPool();
   }
 
+  private getCatalogSelectColumns(alias = 'c'): string {
+    const prefix = alias ? `${alias}.` : '';
+    return `
+      ${prefix}id,
+      ${prefix}name_tr as "nameTr",
+      ${prefix}name_en as "nameEn",
+      ${prefix}description_tr as "descriptionTr",
+      ${prefix}description_en as "descriptionEn",
+      ${prefix}scope,
+      ${prefix}base_price_try as "basePriceTry",
+      ${prefix}base_price_foreign as "basePriceForeign",
+      ${prefix}foreign_currency_code as "foreignCurrencyCode",
+      ${prefix}is_active as "isActive",
+      ${prefix}created_at as "createdAt",
+      ${prefix}updated_at as "updatedAt"
+    `;
+  }
+
+  private getAssignmentSelectColumns(alias = 'a'): string {
+    const prefix = alias ? `${alias}.` : '';
+    return `
+      ${prefix}id,
+      ${prefix}catalog_id as "catalogId",
+      ${prefix}location_id as "locationId",
+      ${prefix}bed_id as "bedId",
+      ${prefix}quantity,
+      ${prefix}notes,
+      ${prefix}created_at as "createdAt"
+    `;
+  }
+
+  private getSnapshotSelectColumns(alias = 's'): string {
+    const prefix = alias ? `${alias}.` : '';
+    return `
+      ${prefix}id,
+      ${prefix}booking_id as "bookingId",
+      ${prefix}catalog_id as "catalogId",
+      ${prefix}name_tr as "nameTr",
+      ${prefix}name_en as "nameEn",
+      ${prefix}description_tr as "descriptionTr",
+      ${prefix}description_en as "descriptionEn",
+      ${prefix}scope,
+      ${prefix}price_try as "priceTry",
+      ${prefix}price_foreign as "priceForeign",
+      ${prefix}foreign_currency_code as "foreignCurrencyCode",
+      ${prefix}quantity,
+      ${prefix}location_name as "locationName",
+      ${prefix}checkin_recorded_at as "checkinRecordedAt",
+      ${prefix}checkin_recorded_by as "checkinRecordedBy",
+      ${prefix}checkout_recorded_at as "checkoutRecordedAt",
+      ${prefix}checkout_recorded_by as "checkoutRecordedBy",
+      ${prefix}is_damaged as "isDamaged",
+      ${prefix}damage_note as "damageNote",
+      ${prefix}created_at as "createdAt"
+    `;
+  }
+
   // --- Catalog ---
 
   async createCatalog(
@@ -29,7 +86,7 @@ export class InventoryRepository {
         base_price_try, base_price_foreign, foreign_currency_code, is_active
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
+      RETURNING ${this.getCatalogSelectColumns(null as any)}
     `;
     const values = [
       data.nameTr,
@@ -39,7 +96,7 @@ export class InventoryRepository {
       data.scope,
       data.basePriceTry,
       data.basePriceForeign,
-      data.foreignCurrencyCode || 'EUR',
+      data.foreignCurrencyCode,
       data.isActive !== undefined ? data.isActive : true,
     ];
 
@@ -64,7 +121,8 @@ export class InventoryRepository {
     }
 
     const query = `
-      SELECT * FROM inventory_catalog
+      SELECT ${this.getCatalogSelectColumns('c')}
+      FROM inventory_catalog c
       WHERE ${conditions.join(' AND ')}
       ORDER BY name_en ASC
     `;
@@ -74,7 +132,11 @@ export class InventoryRepository {
   }
 
   async findCatalogById(id: number, client?: PoolClient): Promise<InventoryCatalog | null> {
-    const query = `SELECT * FROM inventory_catalog WHERE id = $1 AND deleted_at IS NULL`;
+    const query = `
+      SELECT ${this.getCatalogSelectColumns('c')}
+      FROM inventory_catalog c 
+      WHERE id = $1 AND deleted_at IS NULL
+    `;
     const result = await this.getClient(client).query(query, [id]);
     return result.rows[0] ? new InventoryCatalog(result.rows[0]) : null;
   }
@@ -114,7 +176,7 @@ export class InventoryRepository {
       UPDATE inventory_catalog
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE id = $${paramIndex} AND deleted_at IS NULL
-      RETURNING *
+      RETURNING ${this.getCatalogSelectColumns(null as any)}
     `;
 
     const result = await this.getClient(client).query(query, values);
@@ -135,7 +197,7 @@ export class InventoryRepository {
     const query = `
       INSERT INTO inventory_assignments (catalog_id, location_id, bed_id, quantity, notes)
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
+      RETURNING ${this.getAssignmentSelectColumns(null as any)}
     `;
     const values = [
       data.catalogId,
@@ -151,8 +213,8 @@ export class InventoryRepository {
 
   async findAssignmentsByLocation(locationId: number): Promise<InventoryAssignment[]> {
     const query = `
-      SELECT a.*, 
-             row_to_json(c.*) as item
+      SELECT ${this.getAssignmentSelectColumns('a')}, 
+             row_to_json(c.*) as item_raw
       FROM inventory_assignments a
       JOIN inventory_catalog c ON a.catalog_id = c.id
       WHERE a.location_id = $1
@@ -160,15 +222,30 @@ export class InventoryRepository {
     const result = await this.db.query(query, [locationId]);
     return result.rows.map((r) => {
       const assignment = new InventoryAssignment(r);
-      if (r.item) assignment.item = new InventoryCatalog(r.item);
+      if (r.item_raw) {
+        assignment.item = new InventoryCatalog({
+          id: r.item_raw.id,
+          nameTr: r.item_raw.name_tr,
+          nameEn: r.item_raw.name_en,
+          descriptionTr: r.item_raw.description_tr,
+          descriptionEn: r.item_raw.description_en,
+          scope: r.item_raw.scope,
+          basePriceTry: r.item_raw.base_price_try,
+          basePriceForeign: r.item_raw.base_price_foreign,
+          foreignCurrencyCode: r.item_raw.foreign_currency_code,
+          isActive: r.item_raw.is_active,
+          createdAt: r.item_raw.created_at,
+          updatedAt: r.item_raw.updated_at,
+        });
+      }
       return assignment;
     });
   }
 
   async findAssignmentsByBed(bedId: number): Promise<InventoryAssignment[]> {
     const query = `
-      SELECT a.*, 
-             row_to_json(c.*) as item
+      SELECT ${this.getAssignmentSelectColumns('a')}, 
+             row_to_json(c.*) as item_raw
       FROM inventory_assignments a
       JOIN inventory_catalog c ON a.catalog_id = c.id
       WHERE a.bed_id = $1
@@ -176,7 +253,22 @@ export class InventoryRepository {
     const result = await this.db.query(query, [bedId]);
     return result.rows.map((r) => {
       const assignment = new InventoryAssignment(r);
-      if (r.item) assignment.item = new InventoryCatalog(r.item);
+      if (r.item_raw) {
+        assignment.item = new InventoryCatalog({
+          id: r.item_raw.id,
+          nameTr: r.item_raw.name_tr,
+          nameEn: r.item_raw.name_en,
+          descriptionTr: r.item_raw.description_tr,
+          descriptionEn: r.item_raw.description_en,
+          scope: r.item_raw.scope,
+          basePriceTry: r.item_raw.base_price_try,
+          basePriceForeign: r.item_raw.base_price_foreign,
+          foreignCurrencyCode: r.item_raw.foreign_currency_code,
+          isActive: r.item_raw.is_active,
+          createdAt: r.item_raw.created_at,
+          updatedAt: r.item_raw.updated_at,
+        });
+      }
       return assignment;
     });
   }
@@ -190,7 +282,7 @@ export class InventoryRepository {
       UPDATE inventory_assignments
       SET quantity = $1, notes = $2
       WHERE id = $3
-      RETURNING *
+      RETURNING ${this.getAssignmentSelectColumns(null as any)}
     `;
     const result = await this.getClient(client).query(query, [
       data.quantity,
@@ -247,9 +339,14 @@ export class InventoryRepository {
     await this.getClient(client).query(query, values);
   }
 
-  async findSnapshotsByBooking(bookingId: string): Promise<any[]> {
-    const query = `SELECT * FROM booking_inventory_snapshots WHERE booking_id = $1 ORDER BY scope, name_en`;
+  async findSnapshotsByBooking(bookingId: string): Promise<BookingInventorySnapshot[]> {
+    const query = `
+      SELECT ${this.getSnapshotSelectColumns('s')}
+      FROM booking_inventory_snapshots s
+      WHERE booking_id = $1 
+      ORDER BY scope DESC, name_en ASC
+    `;
     const result = await this.db.query(query, [bookingId]);
-    return result.rows;
+    return result.rows.map((r) => new BookingInventorySnapshot(r));
   }
 }
