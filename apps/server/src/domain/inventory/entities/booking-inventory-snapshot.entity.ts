@@ -21,6 +21,7 @@ export class BookingInventorySnapshot {
   isDamaged!: boolean;
   damageNote?: string;
   createdAt!: Date;
+  updatedAt!: Date;
 
   constructor(partial: Partial<BookingInventorySnapshot>) {
     Object.assign(this, partial);

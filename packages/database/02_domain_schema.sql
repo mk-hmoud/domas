@@ -404,6 +404,7 @@ CREATE TABLE inventory_assignments (
     notes TEXT,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Ensure exactly one target AND respect scope rules
     CONSTRAINT check_inventory_target CHECK (
@@ -457,7 +458,8 @@ CREATE TABLE booking_inventory_snapshots (
     is_damaged BOOLEAN DEFAULT FALSE,
     damage_note TEXT,
     
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(booking_id);

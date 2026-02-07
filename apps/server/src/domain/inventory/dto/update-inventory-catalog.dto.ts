@@ -1,4 +1,5 @@
 import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { InventoryScope } from '../../../common/enums/inventory-scope.enum';
 
 export class UpdateInventoryCatalogDto {
@@ -23,10 +24,12 @@ export class UpdateInventoryCatalogDto {
   scope?: InventoryScope;
 
   @IsNumber()
+  @Type(() => Number)
   @IsOptional()
   basePriceTry?: number;
 
   @IsNumber()
+  @Type(() => Number)
   @IsOptional()
   basePriceForeign?: number;
 

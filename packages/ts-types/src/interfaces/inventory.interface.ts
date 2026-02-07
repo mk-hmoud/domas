@@ -24,6 +24,7 @@ export interface InventoryAssignment {
   quantity: number;
   notes?: string;
   createdAt: string;
+  updatedAt: string;
   item?: InventoryCatalogItem;
 }
 
@@ -48,4 +49,5 @@ export interface BookingInventorySnapshot {
   isDamaged: boolean;
   damageNote?: string;
   createdAt: string;
+  updatedAt: string;
 }

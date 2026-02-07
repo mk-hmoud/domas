@@ -776,10 +776,9 @@ export class UndoService {
   private async undoUpdateInventoryAssignment(log: UndoLog, client: PoolClient): Promise<void> {
     const id = log.entityId;
     const { quantity, notes } = log.undoData;
-    await client.query('UPDATE inventory_assignments SET quantity = $1, notes = $2 WHERE id = $3', [
-      quantity,
-      notes,
-      id,
-    ]);
+    await client.query(
+      'UPDATE inventory_assignments SET quantity = $1, notes = $2, updated_at = NOW() WHERE id = $3',
+      [quantity, notes, id],
+    );
   }
 }

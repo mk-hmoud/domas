@@ -41,18 +41,24 @@ export class InventoryService {
     context: AuditUserContext,
   ): Promise<InventoryCatalog> {
     this.logger.log({ nameEn: data.nameEn }, 'Creating inventory catalog item');
-    const item = await this.inventoryRepository.createCatalog(data);
 
-    await this.undoService.registerUndo({
-      userId: context.userId,
-      actionType: UndoActionType.CREATE_INVENTORY_CATALOG,
-      entityType: 'inventory_catalog',
-      entityId: item.id.toString(),
-      undoData: {},
-      description: `Created inventory item ${item.nameEn}`,
-    });
+    return this.db.transaction(async (client) => {
+      const item = await this.inventoryRepository.createCatalog(data, client);
 
-    return item;
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_INVENTORY_CATALOG,
+          entityType: 'inventory_catalog',
+          entityId: item.id.toString(),
+          undoData: {},
+          description: `Created inventory item ${item.nameEn}`,
+        },
+        client,
+      );
+
+      return item;
+    }, context);
   }
 
   async findAllCatalog(
@@ -74,34 +80,46 @@ export class InventoryService {
   ): Promise<InventoryCatalog> {
     this.logger.log({ itemId: id }, 'Updating inventory catalog item');
     const existing = await this.findCatalogById(id);
-    const updated = await this.inventoryRepository.updateCatalog(id, data);
-    if (!updated) throw new NotFoundException(`Catalog item with ID ${id} not found`);
 
-    await this.undoService.registerUndo({
-      userId: context.userId,
-      actionType: UndoActionType.UPDATE_INVENTORY_CATALOG,
-      entityType: 'inventory_catalog',
-      entityId: id.toString(),
-      undoData: existing,
-      description: `Updated inventory item ${existing.nameEn}`,
-    });
+    return this.db.transaction(async (client) => {
+      const updated = await this.inventoryRepository.updateCatalog(id, data, client);
+      if (!updated) throw new NotFoundException(`Catalog item with ID ${id} not found`);
 
-    return updated;
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_INVENTORY_CATALOG,
+          entityType: 'inventory_catalog',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Updated inventory item ${existing.nameEn}`,
+        },
+        client,
+      );
+
+      return updated;
+    }, context);
   }
 
   async deleteCatalog(id: number, context: AuditUserContext): Promise<void> {
     this.logger.log({ itemId: id }, 'Deleting inventory catalog item');
     const existing = await this.findCatalogById(id);
-    await this.inventoryRepository.deleteCatalog(id);
 
-    await this.undoService.registerUndo({
-      userId: context.userId,
-      actionType: UndoActionType.DELETE_INVENTORY_CATALOG,
-      entityType: 'inventory_catalog',
-      entityId: id.toString(),
-      undoData: existing,
-      description: `Deleted inventory item ${existing.nameEn}`,
-    });
+    await this.db.transaction(async (client) => {
+      await this.inventoryRepository.deleteCatalog(id, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_INVENTORY_CATALOG,
+          entityType: 'inventory_catalog',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Deleted inventory item ${existing.nameEn}`,
+        },
+        client,
+      );
+    }, context);
   }
 
   // --- Assignments ---
@@ -131,18 +149,23 @@ export class InventoryService {
       throw new BadRequestException('Cannot assign bed scope item to a location');
     }
 
-    const assignment = await this.inventoryRepository.createAssignment(data);
+    return this.db.transaction(async (client) => {
+      const assignment = await this.inventoryRepository.createAssignment(data, client);
 
-    await this.undoService.registerUndo({
-      userId: context.userId,
-      actionType: UndoActionType.CREATE_INVENTORY_ASSIGNMENT,
-      entityType: 'inventory_assignment',
-      entityId: assignment.id,
-      undoData: {},
-      description: `Assigned ${catalog.nameEn} to ${data.bedId ? 'bed' : 'location'}`,
-    });
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_INVENTORY_ASSIGNMENT,
+          entityType: 'inventory_assignment',
+          entityId: assignment.id,
+          undoData: {},
+          description: `Assigned ${catalog.nameEn} to ${data.bedId ? 'bed' : 'location'}`,
+        },
+        client,
+      );
 
-    return assignment;
+      return assignment;
+    }, context);
   }
 
   async findAssignmentsByLocation(locationId: number): Promise<InventoryAssignment[]> {
@@ -169,19 +192,24 @@ export class InventoryService {
     if (res.rowCount === 0) throw new NotFoundException(`Assignment with ID ${id} not found`);
     const existing = res.rows[0];
 
-    const updated = await this.inventoryRepository.updateAssignment(id, data);
-    if (!updated) throw new NotFoundException(`Assignment with ID ${id} not found`);
+    return this.db.transaction(async (client) => {
+      const updated = await this.inventoryRepository.updateAssignment(id, data, client);
+      if (!updated) throw new NotFoundException(`Assignment with ID ${id} not found`);
 
-    await this.undoService.registerUndo({
-      userId: context.userId,
-      actionType: UndoActionType.UPDATE_INVENTORY_ASSIGNMENT,
-      entityType: 'inventory_assignment',
-      entityId: id,
-      undoData: existing,
-      description: `Updated assignment of ${existing.item.name_en}`,
-    });
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_INVENTORY_ASSIGNMENT,
+          entityType: 'inventory_assignment',
+          entityId: id,
+          undoData: existing,
+          description: `Updated assignment of ${existing.item.name_en}`,
+        },
+        client,
+      );
 
-    return updated;
+      return updated;
+    }, context);
   }
 
   async deleteAssignment(id: string, context: AuditUserContext): Promise<void> {
@@ -195,16 +223,21 @@ export class InventoryService {
     if (res.rowCount === 0) throw new NotFoundException(`Assignment with ID ${id} not found`);
     const existing = res.rows[0];
 
-    await this.inventoryRepository.deleteAssignment(id);
+    await this.db.transaction(async (client) => {
+      await this.inventoryRepository.deleteAssignment(id, client);
 
-    await this.undoService.registerUndo({
-      userId: context.userId,
-      actionType: UndoActionType.DELETE_INVENTORY_ASSIGNMENT,
-      entityType: 'inventory_assignment',
-      entityId: id,
-      undoData: existing,
-      description: `Removed assignment of ${existing.item.name_en}`,
-    });
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_INVENTORY_ASSIGNMENT,
+          entityType: 'inventory_assignment',
+          entityId: id,
+          undoData: existing,
+          description: `Removed assignment of ${existing.item.name_en}`,
+        },
+        client,
+      );
+    }, context);
   }
 
   // --- Snapshot Logic ---

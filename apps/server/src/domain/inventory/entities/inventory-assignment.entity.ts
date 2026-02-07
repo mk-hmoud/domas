@@ -8,6 +8,7 @@ export class InventoryAssignment {
   quantity!: number;
   notes?: string;
   createdAt!: Date;
+  updatedAt!: Date;
   item?: InventoryCatalog;
 
   constructor(partial: Partial<InventoryAssignment>) {

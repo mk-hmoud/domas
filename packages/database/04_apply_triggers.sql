@@ -48,6 +48,24 @@ CREATE TRIGGER update_transactions_modtime
 BEFORE UPDATE ON transactions
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Inventory Catalog
+DROP TRIGGER IF EXISTS update_inventory_catalog_modtime ON inventory_catalog;
+CREATE TRIGGER update_inventory_catalog_modtime
+BEFORE UPDATE ON inventory_catalog
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Inventory Assignments
+DROP TRIGGER IF EXISTS update_inventory_assignments_modtime ON inventory_assignments;
+CREATE TRIGGER update_inventory_assignments_modtime
+BEFORE UPDATE ON inventory_assignments
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Booking Inventory Snapshots
+DROP TRIGGER IF EXISTS update_booking_inventory_snapshots_modtime ON booking_inventory_snapshots;
+CREATE TRIGGER update_booking_inventory_snapshots_modtime
+BEFORE UPDATE ON booking_inventory_snapshots
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -120,6 +138,24 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_role_permissions_change ON role_permissions;
 CREATE TRIGGER audit_role_permissions_change
 AFTER INSERT OR UPDATE OR DELETE ON role_permissions
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Inventory Catalog
+DROP TRIGGER IF EXISTS audit_inventory_catalog_change ON inventory_catalog;
+CREATE TRIGGER audit_inventory_catalog_change
+AFTER INSERT OR UPDATE OR DELETE ON inventory_catalog
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Inventory Assignments
+DROP TRIGGER IF EXISTS audit_inventory_assignments_change ON inventory_assignments;
+CREATE TRIGGER audit_inventory_assignments_change
+AFTER INSERT OR UPDATE OR DELETE ON inventory_assignments
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Booking Inventory Snapshots
+DROP TRIGGER IF EXISTS audit_booking_inventory_snapshots_change ON booking_inventory_snapshots;
+CREATE TRIGGER audit_booking_inventory_snapshots_change
+AFTER INSERT OR UPDATE OR DELETE ON booking_inventory_snapshots
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

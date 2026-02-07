@@ -44,7 +44,8 @@ export class InventoryRepository {
       ${prefix}bed_id as "bedId",
       ${prefix}quantity,
       ${prefix}notes,
-      ${prefix}created_at as "createdAt"
+      ${prefix}created_at as "createdAt",
+      ${prefix}updated_at as "updatedAt"
     `;
   }
 
@@ -70,7 +71,8 @@ export class InventoryRepository {
       ${prefix}checkout_recorded_by as "checkoutRecordedBy",
       ${prefix}is_damaged as "isDamaged",
       ${prefix}damage_note as "damageNote",
-      ${prefix}created_at as "createdAt"
+      ${prefix}created_at as "createdAt",
+      ${prefix}updated_at as "updatedAt"
     `;
   }
 
@@ -280,7 +282,7 @@ export class InventoryRepository {
   ): Promise<InventoryAssignment | null> {
     const query = `
       UPDATE inventory_assignments
-      SET quantity = $1, notes = $2
+      SET quantity = $1, notes = $2, updated_at = NOW()
       WHERE id = $3
       RETURNING ${this.getAssignmentSelectColumns(null as any)}
     `;
