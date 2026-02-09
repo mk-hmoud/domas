@@ -86,11 +86,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
           message = 'Foreign key constraint violation';
           userMessage = 'This operation refers to a missing record.';
           break;
+        case '23514': // Check violation
+          httpStatus = HttpStatus.BAD_REQUEST;
+          code = ErrorCodes.INVALID_REQUEST;
+          message = dbError.message;
+          // Extract constraint name if possible, or provide generic message
+          userMessage = 'Operation violates a business rule constraint.';
+          if (dbError.message.includes('chk_booking_dates')) {
+            userMessage = 'End date must be after the start date.';
+          }
+          break;
         case '23502': // Not null violation
         case '22P02': // Invalid text representation (e.g. UUID format)
           httpStatus = HttpStatus.BAD_REQUEST;
           code = ErrorCodes.INVALID_REQUEST;
           message = 'Database validation error';
+          break;
+        case 'P0001': // Raise Exception from PL/pgSQL
+          httpStatus = HttpStatus.BAD_REQUEST;
+          code = ErrorCodes.INVALID_REQUEST;
+          message = dbError.message;
+          userMessage = dbError.message;
           break;
         default:
           // Keep internal server error for unknown DB errors

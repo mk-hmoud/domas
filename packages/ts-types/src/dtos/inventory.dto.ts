@@ -10,6 +10,8 @@ export interface CreateInventoryCatalogDto {
   basePriceForeign: number;
   foreignCurrencyCode: string;
   isActive?: boolean;
+  isExtra?: boolean;
+  isOptional?: boolean;
 }
 
 export interface UpdateInventoryCatalogDto extends Partial<CreateInventoryCatalogDto> {}

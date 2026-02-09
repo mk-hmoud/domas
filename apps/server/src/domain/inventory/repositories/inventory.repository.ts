@@ -30,6 +30,8 @@ export class InventoryRepository {
       ${prefix}base_price_foreign as "basePriceForeign",
       ${prefix}foreign_currency_code as "foreignCurrencyCode",
       ${prefix}is_active as "isActive",
+      ${prefix}is_extra as "isExtra",
+      ${prefix}is_optional as "isOptional",
       ${prefix}created_at as "createdAt",
       ${prefix}updated_at as "updatedAt"
     `;
@@ -85,9 +87,10 @@ export class InventoryRepository {
     const query = `
       INSERT INTO inventory_catalog (
         name_tr, name_en, description_tr, description_en, scope, 
-        base_price_try, base_price_foreign, foreign_currency_code, is_active
+        base_price_try, base_price_foreign, foreign_currency_code, 
+        is_active, is_extra, is_optional
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING ${this.getCatalogSelectColumns(null as any)}
     `;
     const values = [
@@ -100,6 +103,8 @@ export class InventoryRepository {
       data.basePriceForeign,
       data.foreignCurrencyCode,
       data.isActive !== undefined ? data.isActive : true,
+      data.isExtra !== undefined ? data.isExtra : false,
+      data.isOptional !== undefined ? data.isOptional : false,
     ];
 
     const result = await this.getClient(client).query(query, values);
@@ -162,6 +167,8 @@ export class InventoryRepository {
       basePriceForeign: 'base_price_foreign',
       foreignCurrencyCode: 'foreign_currency_code',
       isActive: 'is_active',
+      isExtra: 'is_extra',
+      isOptional: 'is_optional',
     };
 
     for (const [key, column] of Object.entries(mapping)) {

@@ -381,6 +381,9 @@ CREATE TABLE inventory_catalog (
     -- Visibility
     is_active BOOLEAN DEFAULT TRUE,
     
+    is_extra BOOLEAN DEFAULT FALSE,
+    is_optional BOOLEAN DEFAULT FALSE,
+    
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ

@@ -11,6 +11,8 @@ export interface InventoryCatalogItem {
   basePriceForeign: number;
   foreignCurrencyCode: string;
   isActive: boolean;
+  isExtra: boolean;
+  isOptional: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
