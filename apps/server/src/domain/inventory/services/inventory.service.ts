@@ -182,15 +182,8 @@ export class InventoryService {
     context: AuditUserContext,
   ): Promise<InventoryAssignment> {
     // Note: Inventory assignments are UUID based
-    const query = `
-      SELECT a.*, row_to_json(c.*) as item 
-      FROM inventory_assignments a 
-      JOIN inventory_catalog c ON a.catalog_id = c.id 
-      WHERE a.id = $1
-    `;
-    const res = await this.db.query(query, [id]);
-    if (res.rowCount === 0) throw new NotFoundException(`Assignment with ID ${id} not found`);
-    const existing = res.rows[0];
+    const existing = await this.inventoryRepository.findAssignmentWithItem(id);
+    if (!existing) throw new NotFoundException(`Assignment with ID ${id} not found`);
 
     return this.db.transaction(async (client) => {
       const updated = await this.inventoryRepository.updateAssignment(id, data, client);
@@ -213,15 +206,8 @@ export class InventoryService {
   }
 
   async deleteAssignment(id: string, context: AuditUserContext): Promise<void> {
-    const query = `
-      SELECT a.*, row_to_json(c.*) as item 
-      FROM inventory_assignments a 
-      JOIN inventory_catalog c ON a.catalog_id = c.id 
-      WHERE a.id = $1
-    `;
-    const res = await this.db.query(query, [id]);
-    if (res.rowCount === 0) throw new NotFoundException(`Assignment with ID ${id} not found`);
-    const existing = res.rows[0];
+    const existing = await this.inventoryRepository.findAssignmentWithItem(id);
+    if (!existing) throw new NotFoundException(`Assignment with ID ${id} not found`);
 
     await this.db.transaction(async (client) => {
       await this.inventoryRepository.deleteAssignment(id, client);
@@ -242,13 +228,27 @@ export class InventoryService {
 
   // --- Snapshot Logic ---
 
+  async getAvailableExtras(bookingId: string, bedId: number): Promise<any[]> {
+    const bed = await this.bedsRepository.findById(bedId);
+    if (!bed) throw new NotFoundException('Bed not found');
+
+    const ancestors = await this.locationsRepository.findWithAncestors(bed.locationId);
+    const locationIds = ancestors.map((a) => a.id);
+
+    return this.inventoryRepository.findAvailableExtras(bedId, locationIds);
+  }
+
   async generateSnapshotForBooking(
     bookingId: string,
     bedId: number,
+    selectedExtraIds: string[] = [],
     context: AuditUserContext,
     client: PoolClient,
   ): Promise<void> {
-    this.logger.log({ bookingId, bedId }, 'Generating inventory snapshot for booking');
+    this.logger.log(
+      { bookingId, bedId, extrasCount: selectedExtraIds.length },
+      'Generating inventory snapshot for booking',
+    );
 
     const bed = await this.bedsRepository.findById(bedId, client);
     if (!bed) throw new Error('Bed not found');
@@ -256,22 +256,14 @@ export class InventoryService {
     const ancestors = await this.locationsRepository.findWithAncestors(bed.locationId, client);
     const locationIds = ancestors.map((a) => a.id);
 
-    const query = `
-      SELECT a.*, 
-             row_to_json(c.*) as item,
-             COALESCE(l.name, 'Bed ' || b.label) as target_name
-      FROM inventory_assignments a
-      JOIN inventory_catalog c ON a.catalog_id = c.id
-      LEFT JOIN locations l ON a.location_id = l.id
-      LEFT JOIN beds b ON a.bed_id = b.id
-      WHERE (a.bed_id = $1 OR a.location_id = ANY($2))
-        AND c.is_active = TRUE 
-        AND c.deleted_at IS NULL
-      ORDER BY c.scope DESC, c.name_en ASC
-    `;
-    const result = await client.query(query, [bedId, locationIds]);
+    const rows = await this.inventoryRepository.findAssignmentsForSnapshot(
+      bedId,
+      locationIds,
+      selectedExtraIds,
+      client,
+    );
 
-    const snapshots = result.rows.map((r) => ({
+    const snapshots = rows.map((r) => ({
       bookingId,
       catalogId: r.catalog_id,
       nameTr: r.item.name_tr,

@@ -25,6 +25,7 @@ export interface InventoryAssignment {
   bedId?: number;
   quantity: number;
   notes?: string;
+  isOptional: boolean;
   createdAt: string;
   updatedAt: string;
   item?: InventoryCatalogItem;

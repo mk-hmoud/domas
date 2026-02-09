@@ -103,4 +103,12 @@ export class InventoryController {
   deleteAssignment(@Param('id') id: string, @UserContext() context: AuditUserContext) {
     return this.inventoryService.deleteAssignment(id, context);
   }
+
+  // --- Extras ---
+
+  @Get('available-extras/:bookingId/:bedId')
+  @RequirePermissions(PERMISSIONS.BOOKINGS_VIEW)
+  getAvailableExtras(@Param('bookingId') bookingId: string, @Param('bedId') bedId: string) {
+    return this.inventoryService.getAvailableExtras(bookingId, parseInt(bedId, 10));
+  }
 }

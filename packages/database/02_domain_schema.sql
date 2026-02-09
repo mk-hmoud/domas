@@ -380,7 +380,7 @@ CREATE TABLE inventory_catalog (
     
     -- Visibility
     is_active BOOLEAN DEFAULT TRUE,
-    
+
     is_extra BOOLEAN DEFAULT FALSE,
     is_optional BOOLEAN DEFAULT FALSE,
     
@@ -405,6 +405,7 @@ CREATE TABLE inventory_assignments (
     
     quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
     notes TEXT,
+    is_optional BOOLEAN DEFAULT FALSE,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),

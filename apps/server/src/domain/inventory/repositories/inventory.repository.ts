@@ -46,6 +46,7 @@ export class InventoryRepository {
       ${prefix}bed_id as "bedId",
       ${prefix}quantity,
       ${prefix}notes,
+      ${prefix}is_optional as "isOptional",
       ${prefix}created_at as "createdAt",
       ${prefix}updated_at as "updatedAt"
     `;
@@ -204,8 +205,8 @@ export class InventoryRepository {
     client?: PoolClient,
   ): Promise<InventoryAssignment> {
     const query = `
-      INSERT INTO inventory_assignments (catalog_id, location_id, bed_id, quantity, notes)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO inventory_assignments (catalog_id, location_id, bed_id, quantity, notes, is_optional)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING ${this.getAssignmentSelectColumns(null as any)}
     `;
     const values = [
@@ -214,6 +215,7 @@ export class InventoryRepository {
       data.bedId || null,
       data.quantity,
       data.notes || null,
+      data.isOptional !== undefined ? data.isOptional : false,
     ];
 
     const result = await this.getClient(client).query(query, values);
@@ -282,22 +284,53 @@ export class InventoryRepository {
     });
   }
 
+  async findAssignmentWithItem(id: string, client?: PoolClient): Promise<any | null> {
+    const query = `
+      SELECT a.*, row_to_json(c.*) as item 
+      FROM inventory_assignments a 
+      JOIN inventory_catalog c ON a.catalog_id = c.id 
+      WHERE a.id = $1
+    `;
+    const res = await this.getClient(client).query(query, [id]);
+    return res.rows[0] || null;
+  }
+
   async updateAssignment(
     id: string,
     data: UpdateInventoryAssignmentDto,
     client?: PoolClient,
   ): Promise<InventoryAssignment | null> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (data.quantity !== undefined) {
+      updates.push(`quantity = $${paramIndex++}`);
+      values.push(data.quantity);
+    }
+    if (data.notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      values.push(data.notes);
+    }
+    if (data.isOptional !== undefined) {
+      updates.push(`is_optional = $${paramIndex++}`);
+      values.push(data.isOptional);
+    }
+
+    if (updates.length === 0) {
+      const query = `SELECT ${this.getAssignmentSelectColumns(null as any)} FROM inventory_assignments WHERE id = $1`;
+      const res = await this.getClient(client).query(query, [id]);
+      return res.rows[0] ? new InventoryAssignment(res.rows[0]) : null;
+    }
+
+    values.push(id);
     const query = `
       UPDATE inventory_assignments
-      SET quantity = $1, notes = $2, updated_at = NOW()
-      WHERE id = $3
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE id = $${paramIndex}
       RETURNING ${this.getAssignmentSelectColumns(null as any)}
     `;
-    const result = await this.getClient(client).query(query, [
-      data.quantity,
-      data.notes || null,
-      id,
-    ]);
+    const result = await this.getClient(client).query(query, values);
     return result.rows[0] ? new InventoryAssignment(result.rows[0]) : null;
   }
 
@@ -357,5 +390,57 @@ export class InventoryRepository {
     `;
     const result = await this.db.query(query, [bookingId]);
     return result.rows.map((r) => new BookingInventorySnapshot(r));
+  }
+
+  async findAvailableExtras(bedId: number, locationIds: number[]): Promise<any[]> {
+    const query = `
+      SELECT a.id, 
+             a.quantity,
+             c.name_tr as "nameTr",
+             c.name_en as "nameEn",
+             c.base_price_try as "damagePrice",
+             'optional' as type
+      FROM inventory_assignments a
+      JOIN inventory_catalog c ON a.catalog_id = c.id
+      WHERE (a.bed_id = $1 OR a.location_id = ANY($2))
+        AND a.is_optional = TRUE
+        AND c.is_active = TRUE
+        AND c.deleted_at IS NULL
+    `;
+
+    const result = await this.db.query(query, [bedId, locationIds]);
+    return result.rows;
+  }
+
+  async findAssignmentsForSnapshot(
+    bedId: number,
+    locationIds: number[],
+    selectedExtraIds: string[],
+    client?: PoolClient,
+  ): Promise<any[]> {
+    const query = `
+      SELECT a.*, 
+             row_to_json(c.*) as item,
+             COALESCE(l.name, 'Bed ' || b.label) as target_name
+      FROM inventory_assignments a
+      JOIN inventory_catalog c ON a.catalog_id = c.id
+      LEFT JOIN locations l ON a.location_id = l.id
+      LEFT JOIN beds b ON a.bed_id = b.id
+      WHERE (a.bed_id = $1 OR a.location_id = ANY($2))
+        AND c.is_active = TRUE 
+        AND c.deleted_at IS NULL
+        AND (
+          a.is_optional = FALSE 
+          OR 
+          (a.is_optional = TRUE AND a.id = ANY($3))
+        )
+      ORDER BY c.scope DESC, c.name_en ASC
+    `;
+    const result = await this.getClient(client).query(query, [
+      bedId,
+      locationIds,
+      selectedExtraIds,
+    ]);
+    return result.rows;
   }
 }

@@ -21,6 +21,7 @@ import { StudentsRepository } from '../../students/repositories/students.reposit
 import { UsersService } from '../../users/services/users.service';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { InventoryService } from '../../inventory/services/inventory.service';
+import { CheckInBookingDto } from '../dto/check-in-booking.dto';
 
 @Injectable()
 export class BookingsService {
@@ -169,7 +170,7 @@ export class BookingsService {
     }, context);
   }
 
-  async checkIn(id: string, context: AuditUserContext): Promise<Booking> {
+  async checkIn(id: string, data: CheckInBookingDto, context: AuditUserContext): Promise<Booking> {
     this.logger.log({ bookingId: id }, 'Processing check-in');
 
     return this.db.transaction(async (client) => {
@@ -189,7 +190,13 @@ export class BookingsService {
       const updated = await this.bookingsRepository.checkIn(id, client);
 
       // Generate inventory snapshot for the contract
-      await this.inventoryService.generateSnapshotForBooking(id, booking.bedId, context, client);
+      await this.inventoryService.generateSnapshotForBooking(
+        id,
+        booking.bedId,
+        data.selectedExtraIds || [],
+        context,
+        client,
+      );
 
       await this.undoService.registerUndo(
         {

@@ -9,4 +9,7 @@ export class UpdateInventoryAssignmentDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsOptional()
+  isOptional?: boolean;
 }

@@ -10,3 +10,7 @@ export interface CreateBookingDto {
   status?: BookingOpsStatus;
   paymentStatus?: PaymentStatus;
 }
+
+export interface CheckInBookingDto {
+  selectedExtraIds?: string[];
+}

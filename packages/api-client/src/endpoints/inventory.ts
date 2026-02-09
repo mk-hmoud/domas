@@ -93,4 +93,15 @@ export const inventory = {
   deleteAssignment: async (id: string): Promise<void> => {
     await apiClient.delete(`/inventory/assignments/${id}`);
   },
+
+  // --- Extras ---
+  getAvailableExtras: async (
+    bookingId: string,
+    bedId: number,
+  ): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(
+      `/inventory/available-extras/${bookingId}/${bedId}`,
+    );
+    return response.data;
+  },
 };
