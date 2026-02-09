@@ -1,4 +1,7 @@
 {
+  "is_extra": "Extra",
+  "is_optional": "Optional",
+  "flags": "Flags",
   "welcome_back": "Welcome back!",
   "no_account": "Do not have an account yet?",
   "create_account": "Create account",

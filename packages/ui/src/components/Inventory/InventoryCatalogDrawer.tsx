@@ -64,9 +64,21 @@ export function InventoryCatalogDrawer({
             <Text size="xs" c="dimmed" mb={4}>
               {t("scope")}
             </Text>
-            <Badge variant="light" color="blue" size="lg">
-              {t(`inventory_scope.${item.scope}`)}
-            </Badge>
+            <Group gap="xs">
+              <Badge variant="light" color="blue" size="lg">
+                {t(`inventory_scope.${item.scope}`)}
+              </Badge>
+              {item.isExtra && (
+                <Badge variant="dot" color="orange" size="lg">
+                  {t("is_extra")}
+                </Badge>
+              )}
+              {item.isOptional && (
+                <Badge variant="dot" color="cyan" size="lg">
+                  {t("is_optional")}
+                </Badge>
+              )}
+            </Group>
           </Box>
 
           <Group grow>

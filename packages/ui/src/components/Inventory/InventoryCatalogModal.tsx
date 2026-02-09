@@ -47,6 +47,8 @@ export function InventoryCatalogModal({
       basePriceForeign: 0,
       foreignCurrencyCode: "USD",
       isActive: true,
+      isExtra: false,
+      isOptional: false,
     },
     validate: {
       nameTr: (val) => (val ? null : t("field_required")),
@@ -67,6 +69,8 @@ export function InventoryCatalogModal({
           basePriceForeign: initialValues.basePriceForeign,
           foreignCurrencyCode: initialValues.foreignCurrencyCode,
           isActive: initialValues.isActive,
+          isExtra: initialValues.isExtra,
+          isOptional: initialValues.isOptional,
         });
       } else {
         form.reset();
@@ -148,12 +152,25 @@ export function InventoryCatalogModal({
             />
           </SimpleGrid>
 
-          <Switch
-            label={t("active")}
-            {...form.getInputProps("isActive", { type: "checkbox" })}
-          />
+          <Group>
+            <Switch
+              label={t("active")}
+              {...form.getInputProps("isActive", { type: "checkbox" })}
+            />
+
+            <Switch
+              label={t("is_extra")}
+              {...form.getInputProps("isExtra", { type: "checkbox" })}
+            />
+
+            <Switch
+              label={t("is_optional")}
+              {...form.getInputProps("isOptional", { type: "checkbox" })}
+            />
+          </Group>
 
           <Group justify="flex-end" mt="xl">
+            {" "}
             <Button variant="default" onClick={onClose}>
               {t("cancel")}
             </Button>

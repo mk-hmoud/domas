@@ -41,6 +41,20 @@ export function InventoryCatalogTable({
         </Badge>
       </Table.Td>
       <Table.Td>
+        <Group gap={4}>
+          {item.isExtra && (
+            <Badge variant="dot" color="orange">
+              {t("is_extra")}
+            </Badge>
+          )}
+          {item.isOptional && (
+            <Badge variant="dot" color="cyan">
+              {t("is_optional")}
+            </Badge>
+          )}
+        </Group>
+      </Table.Td>
+      <Table.Td>
         <Group gap={4} justify="flex-end">
           <ActionIcon
             variant="subtle"
@@ -75,6 +89,7 @@ export function InventoryCatalogTable({
           <Table.Th>{t("scope")}</Table.Th>
           <Table.Th>{t("price")}</Table.Th>
           <Table.Th>{t("status")}</Table.Th>
+          <Table.Th>{t("flags", "Flags")}</Table.Th>
           <Table.Th />
         </Table.Tr>
       </Table.Thead>
@@ -82,7 +97,7 @@ export function InventoryCatalogTable({
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={5}>
+            <Table.Td colSpan={6}>
               <Text ta="center" c="dimmed" py="xl">
                 {t("no_inventory_items")}
               </Text>

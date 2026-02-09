@@ -1,4 +1,7 @@
 {
+  "is_extra": "Ekstra",
+  "is_optional": "Opsiyonel",
+  "flags": "Özellikler",
   "welcome_back": "Tekrar hoş geldiniz!",
   "no_account": "Henüz bir hesabınız yok mu?",
   "create_account": "Hesap oluştur",
@@ -230,9 +233,6 @@
   "select_student": "Öğrenci Seç",
   "select_semester": "Dönem Seç",
   "select_bed": "Yatak Seç",
-  "start_date": "Başlangıç Tarihi",
-  "end_date": "Bitiş Tarihi",
-  "student": "Öğrenci",
   "bed": "Yatak",
   "semester": "Dönem",
   "nav": {
