@@ -43,9 +43,5 @@ export class CreateInventoryCatalogDto {
 
   @IsBoolean()
   @IsOptional()
-  isExtra?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
   isOptional?: boolean;
 }

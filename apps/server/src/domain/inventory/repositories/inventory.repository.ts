@@ -30,7 +30,6 @@ export class InventoryRepository {
       ${prefix}base_price_foreign as "basePriceForeign",
       ${prefix}foreign_currency_code as "foreignCurrencyCode",
       ${prefix}is_active as "isActive",
-      ${prefix}is_extra as "isExtra",
       ${prefix}is_optional as "isOptional",
       ${prefix}created_at as "createdAt",
       ${prefix}updated_at as "updatedAt"
@@ -46,7 +45,6 @@ export class InventoryRepository {
       ${prefix}bed_id as "bedId",
       ${prefix}quantity,
       ${prefix}notes,
-      ${prefix}is_optional as "isOptional",
       ${prefix}created_at as "createdAt",
       ${prefix}updated_at as "updatedAt"
     `;
@@ -89,9 +87,9 @@ export class InventoryRepository {
       INSERT INTO inventory_catalog (
         name_tr, name_en, description_tr, description_en, scope, 
         base_price_try, base_price_foreign, foreign_currency_code, 
-        is_active, is_extra, is_optional
+        is_active, is_optional
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING ${this.getCatalogSelectColumns(null as any)}
     `;
     const values = [
@@ -104,7 +102,6 @@ export class InventoryRepository {
       data.basePriceForeign,
       data.foreignCurrencyCode,
       data.isActive !== undefined ? data.isActive : true,
-      data.isExtra !== undefined ? data.isExtra : false,
       data.isOptional !== undefined ? data.isOptional : false,
     ];
 
@@ -168,7 +165,6 @@ export class InventoryRepository {
       basePriceForeign: 'base_price_foreign',
       foreignCurrencyCode: 'foreign_currency_code',
       isActive: 'is_active',
-      isExtra: 'is_extra',
       isOptional: 'is_optional',
     };
 
@@ -205,8 +201,8 @@ export class InventoryRepository {
     client?: PoolClient,
   ): Promise<InventoryAssignment> {
     const query = `
-      INSERT INTO inventory_assignments (catalog_id, location_id, bed_id, quantity, notes, is_optional)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO inventory_assignments (catalog_id, location_id, bed_id, quantity, notes)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING ${this.getAssignmentSelectColumns(null as any)}
     `;
     const values = [
@@ -215,7 +211,6 @@ export class InventoryRepository {
       data.bedId || null,
       data.quantity,
       data.notes || null,
-      data.isOptional !== undefined ? data.isOptional : false,
     ];
 
     const result = await this.getClient(client).query(query, values);
@@ -312,10 +307,6 @@ export class InventoryRepository {
       updates.push(`notes = $${paramIndex++}`);
       values.push(data.notes);
     }
-    if (data.isOptional !== undefined) {
-      updates.push(`is_optional = $${paramIndex++}`);
-      values.push(data.isOptional);
-    }
 
     if (updates.length === 0) {
       const query = `SELECT ${this.getAssignmentSelectColumns(null as any)} FROM inventory_assignments WHERE id = $1`;
@@ -392,35 +383,33 @@ export class InventoryRepository {
     return result.rows.map((r) => new BookingInventorySnapshot(r));
   }
 
-  async findAvailableExtras(bedId: number, locationIds: number[]): Promise<any[]> {
+  async findAvailableExtras(): Promise<any[]> {
     const query = `
-      SELECT a.id, 
-             a.quantity,
-             c.name_tr as "nameTr",
-             c.name_en as "nameEn",
-             c.base_price_try as "damagePrice",
-             'optional' as type
-      FROM inventory_assignments a
-      JOIN inventory_catalog c ON a.catalog_id = c.id
-      WHERE (a.bed_id = $1 OR a.location_id = ANY($2))
-        AND a.is_optional = TRUE
-        AND c.is_active = TRUE
-        AND c.deleted_at IS NULL
+      SELECT id, 
+             name_tr as "nameTr",
+             name_en as "nameEn",
+             base_price_try as "damagePrice",
+             'global_optional' as type
+      FROM inventory_catalog
+      WHERE is_optional = TRUE
+        AND is_active = TRUE
+        AND deleted_at IS NULL
+      ORDER BY name_en ASC
     `;
 
-    const result = await this.db.query(query, [bedId, locationIds]);
+    const result = await this.db.query(query);
     return result.rows;
   }
 
-  async findAssignmentsForSnapshot(
+  async findMandatoryAssignmentsForSnapshot(
     bedId: number,
     locationIds: number[],
-    selectedExtraIds: string[],
     client?: PoolClient,
   ): Promise<any[]> {
     const query = `
-      SELECT a.*, 
-             row_to_json(c.*) as item,
+      SELECT a.catalog_id, a.quantity, 
+             c.name_tr, c.name_en, c.description_tr, c.description_en,
+             c.base_price_try, c.base_price_foreign, c.foreign_currency_code, c.scope,
              COALESCE(l.name, 'Bed ' || b.label) as target_name
       FROM inventory_assignments a
       JOIN inventory_catalog c ON a.catalog_id = c.id
@@ -429,18 +418,26 @@ export class InventoryRepository {
       WHERE (a.bed_id = $1 OR a.location_id = ANY($2))
         AND c.is_active = TRUE 
         AND c.deleted_at IS NULL
-        AND (
-          a.is_optional = FALSE 
-          OR 
-          (a.is_optional = TRUE AND a.id = ANY($3))
-        )
-      ORDER BY c.scope DESC, c.name_en ASC
     `;
-    const result = await this.getClient(client).query(query, [
-      bedId,
-      locationIds,
-      selectedExtraIds,
-    ]);
+    const result = await this.getClient(client).query(query, [bedId, locationIds]);
     return result.rows;
+  }
+
+  async findOptionalCatalogItems(catalogIds: number[], client?: PoolClient): Promise<any[]> {
+    if (catalogIds.length === 0) return [];
+    const query = `
+      SELECT id as catalog_id, 
+             1 as quantity,
+             name_tr, name_en, description_tr, description_en,
+             base_price_try, base_price_foreign, foreign_currency_code, scope,
+             'Personal Rental' as target_name
+      FROM inventory_catalog
+      WHERE id = ANY($1) 
+        AND is_optional = TRUE
+        AND is_active = TRUE
+        AND deleted_at IS NULL
+    `;
+    const res = await this.getClient(client).query(query, [catalogIds]);
+    return res.rows;
   }
 }

@@ -11,7 +11,6 @@ export interface InventoryCatalogItem {
   basePriceForeign: number;
   foreignCurrencyCode: string;
   isActive: boolean;
-  isExtra: boolean;
   isOptional: boolean;
   createdAt: string;
   updatedAt: string;
@@ -25,7 +24,6 @@ export interface InventoryAssignment {
   bedId?: number;
   quantity: number;
   notes?: string;
-  isOptional: boolean;
   createdAt: string;
   updatedAt: string;
   item?: InventoryCatalogItem;

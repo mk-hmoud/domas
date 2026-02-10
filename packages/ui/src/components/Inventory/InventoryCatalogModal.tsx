@@ -47,7 +47,6 @@ export function InventoryCatalogModal({
       basePriceForeign: 0,
       foreignCurrencyCode: "USD",
       isActive: true,
-      isExtra: false,
       isOptional: false,
     },
     validate: {
@@ -69,7 +68,6 @@ export function InventoryCatalogModal({
           basePriceForeign: initialValues.basePriceForeign,
           foreignCurrencyCode: initialValues.foreignCurrencyCode,
           isActive: initialValues.isActive,
-          isExtra: initialValues.isExtra,
           isOptional: initialValues.isOptional,
         });
       } else {
@@ -156,11 +154,6 @@ export function InventoryCatalogModal({
             <Switch
               label={t("active")}
               {...form.getInputProps("isActive", { type: "checkbox" })}
-            />
-
-            <Switch
-              label={t("is_extra")}
-              {...form.getInputProps("isExtra", { type: "checkbox" })}
             />
 
             <Switch

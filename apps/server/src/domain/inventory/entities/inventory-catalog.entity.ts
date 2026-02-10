@@ -11,7 +11,6 @@ export class InventoryCatalog {
   basePriceForeign!: number;
   foreignCurrencyCode!: string;
   isActive!: boolean;
-  isExtra!: boolean;
   isOptional!: boolean;
   createdAt!: Date;
   updatedAt!: Date;

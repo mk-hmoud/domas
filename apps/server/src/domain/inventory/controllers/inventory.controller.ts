@@ -106,9 +106,9 @@ export class InventoryController {
 
   // --- Extras ---
 
-  @Get('available-extras/:bookingId/:bedId')
+  @Get('available-extras')
   @RequirePermissions(PERMISSIONS.BOOKINGS_VIEW)
-  getAvailableExtras(@Param('bookingId') bookingId: string, @Param('bedId') bedId: string) {
-    return this.inventoryService.getAvailableExtras(bookingId, parseInt(bedId, 10));
+  getAvailableExtras() {
+    return this.inventoryService.getAvailableExtras();
   }
 }

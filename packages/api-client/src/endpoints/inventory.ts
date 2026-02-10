@@ -95,13 +95,8 @@ export const inventory = {
   },
 
   // --- Extras ---
-  getAvailableExtras: async (
-    bookingId: string,
-    bedId: number,
-  ): Promise<any[]> => {
-    const response = await apiClient.get<any[]>(
-      `/inventory/available-extras/${bookingId}/${bedId}`,
-    );
+  getAvailableExtras: async (): Promise<any[]> => {
+    const response = await apiClient.get<any[]>("/inventory/available-extras");
     return response.data;
   },
 };

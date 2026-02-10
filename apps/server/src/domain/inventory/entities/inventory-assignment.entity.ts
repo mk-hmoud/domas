@@ -7,7 +7,6 @@ export class InventoryAssignment {
   bedId?: number;
   quantity!: number;
   notes?: string;
-  isOptional!: boolean;
   createdAt!: Date;
   updatedAt!: Date;
   item?: InventoryCatalog;

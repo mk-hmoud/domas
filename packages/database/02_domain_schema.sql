@@ -381,9 +381,8 @@ CREATE TABLE inventory_catalog (
     -- Visibility
     is_active BOOLEAN DEFAULT TRUE,
 
-    is_extra BOOLEAN DEFAULT FALSE,
     is_optional BOOLEAN DEFAULT FALSE,
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -405,11 +404,10 @@ CREATE TABLE inventory_assignments (
     
     quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
     notes TEXT,
-    is_optional BOOLEAN DEFAULT FALSE,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
+
     -- Ensure exactly one target AND respect scope rules
     CONSTRAINT check_inventory_target CHECK (
         (location_id IS NOT NULL AND bed_id IS NULL) OR

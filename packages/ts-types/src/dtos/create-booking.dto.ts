@@ -12,5 +12,5 @@ export interface CreateBookingDto {
 }
 
 export interface CheckInBookingDto {
-  selectedExtraIds?: string[];
+  selectedExtraCatalogIds?: number[];
 }

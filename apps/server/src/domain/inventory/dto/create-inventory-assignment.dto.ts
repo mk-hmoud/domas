@@ -21,8 +21,4 @@ export class CreateInventoryAssignmentDto {
   @IsString()
   @IsOptional()
   notes?: string;
-
-  @IsNotEmpty()
-  @IsOptional()
-  isOptional?: boolean;
 }

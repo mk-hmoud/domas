@@ -193,7 +193,7 @@ export class BookingsService {
       await this.inventoryService.generateSnapshotForBooking(
         id,
         booking.bedId,
-        data.selectedExtraIds || [],
+        data.selectedExtraCatalogIds || [],
         context,
         client,
       );

@@ -735,7 +735,6 @@ export class UndoService {
       basePriceForeign: 'base_price_foreign',
       foreignCurrencyCode: 'foreign_currency_code',
       isActive: 'is_active',
-      isExtra: 'is_extra',
       isOptional: 'is_optional',
     };
 

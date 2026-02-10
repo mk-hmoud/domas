@@ -228,25 +228,19 @@ export class InventoryService {
 
   // --- Snapshot Logic ---
 
-  async getAvailableExtras(bookingId: string, bedId: number): Promise<any[]> {
-    const bed = await this.bedsRepository.findById(bedId);
-    if (!bed) throw new NotFoundException('Bed not found');
-
-    const ancestors = await this.locationsRepository.findWithAncestors(bed.locationId);
-    const locationIds = ancestors.map((a) => a.id);
-
-    return this.inventoryRepository.findAvailableExtras(bedId, locationIds);
+  async getAvailableExtras(): Promise<any[]> {
+    return this.inventoryRepository.findAvailableExtras();
   }
 
   async generateSnapshotForBooking(
     bookingId: string,
     bedId: number,
-    selectedExtraIds: string[] = [],
+    selectedExtraCatalogIds: number[] = [],
     context: AuditUserContext,
     client: PoolClient,
   ): Promise<void> {
     this.logger.log(
-      { bookingId, bedId, extrasCount: selectedExtraIds.length },
+      { bookingId, bedId, extrasCount: selectedExtraCatalogIds.length },
       'Generating inventory snapshot for booking',
     );
 
@@ -256,24 +250,30 @@ export class InventoryService {
     const ancestors = await this.locationsRepository.findWithAncestors(bed.locationId, client);
     const locationIds = ancestors.map((a) => a.id);
 
-    const rows = await this.inventoryRepository.findAssignmentsForSnapshot(
+    const mandatoryItems = await this.inventoryRepository.findMandatoryAssignmentsForSnapshot(
       bedId,
       locationIds,
-      selectedExtraIds,
       client,
     );
 
-    const snapshots = rows.map((r) => ({
+    const optionalItems = await this.inventoryRepository.findOptionalCatalogItems(
+      selectedExtraCatalogIds,
+      client,
+    );
+
+    const allItems = [...mandatoryItems, ...optionalItems];
+
+    const snapshots = allItems.map((r) => ({
       bookingId,
       catalogId: r.catalog_id,
-      nameTr: r.item.name_tr,
-      nameEn: r.item.name_en,
-      descriptionTr: r.item.description_tr,
-      descriptionEn: r.item.description_en,
-      scope: r.item.scope,
-      priceTry: r.item.base_price_try,
-      priceForeign: r.item.base_price_foreign,
-      foreignCurrencyCode: r.item.foreign_currency_code,
+      nameTr: r.name_tr,
+      nameEn: r.name_en,
+      descriptionTr: r.description_tr,
+      descriptionEn: r.description_en,
+      scope: r.scope,
+      priceTry: r.base_price_try,
+      priceForeign: r.base_price_foreign,
+      foreignCurrencyCode: r.foreign_currency_code,
       quantity: r.quantity,
       locationName: r.target_name,
     }));

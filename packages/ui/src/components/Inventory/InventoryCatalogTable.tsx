@@ -42,11 +42,6 @@ export function InventoryCatalogTable({
       </Table.Td>
       <Table.Td>
         <Group gap={4}>
-          {item.isExtra && (
-            <Badge variant="dot" color="orange">
-              {t("is_extra")}
-            </Badge>
-          )}
           {item.isOptional && (
             <Badge variant="dot" color="cyan">
               {t("is_optional")}

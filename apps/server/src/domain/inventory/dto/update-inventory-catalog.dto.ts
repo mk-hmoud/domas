@@ -43,9 +43,5 @@ export class UpdateInventoryCatalogDto {
 
   @IsBoolean()
   @IsOptional()
-  isExtra?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
   isOptional?: boolean;
 }
