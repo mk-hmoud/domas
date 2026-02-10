@@ -388,7 +388,9 @@ export class InventoryRepository {
       SELECT id, 
              name_tr as "nameTr",
              name_en as "nameEn",
-             base_price_try as "damagePrice",
+             base_price_try as "basePriceTry",
+             base_price_foreign as "basePriceForeign",
+             foreign_currency_code as "foreignCurrencyCode",
              'global_optional' as type
       FROM inventory_catalog
       WHERE is_optional = TRUE

@@ -404,7 +404,7 @@ CREATE TABLE inventory_assignments (
     
     quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
     notes TEXT,
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
@@ -465,3 +465,68 @@ CREATE TABLE booking_inventory_snapshots (
 );
 
 CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(booking_id);
+
+-- =============================================
+-- TURNSTILE CARD SYSTEM
+-- =============================================
+
+-- 1. Configuration (Metadata for ranges)
+CREATE TABLE card_batches (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    location_id INT REFERENCES locations(id), -- Optional: Link batch to a building
+    name VARCHAR(100) NOT NULL, -- e.g. "2024 Fall - Block A"
+    range_start INT NOT NULL,
+    range_end INT NOT NULL,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    
+    CONSTRAINT chk_batch_range CHECK (range_end >= range_start)
+);
+
+-- 2. Physical Inventory (Every card exists as a row here)
+CREATE TABLE access_cards (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    batch_id INT REFERENCES card_batches(id) ON DELETE CASCADE,
+    
+    -- Identity
+    card_number INT NOT NULL,
+    
+    -- State
+    status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'active', 'lost', 'void')),
+    
+    -- Current Assignment (Who has it right now?)
+    current_holder_id UUID REFERENCES students(id),
+    current_booking_id UUID REFERENCES bookings(id),
+    
+    -- Tracking (Requested Columns)
+    issued_at TIMESTAMPTZ,
+    issued_by UUID REFERENCES users(id),
+    returned_at TIMESTAMPTZ, -- Usually NULL while active, populated upon return
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Constraint: Global Uniqueness across all batches
+    CONSTRAINT uq_card_number UNIQUE (card_number)
+);
+
+-- 3. Optimization: Instant "Random Pick" Index
+CREATE INDEX idx_cards_available ON access_cards(status) 
+    WHERE status = 'available';
+
+-- 4. History Log
+CREATE TABLE access_card_logs (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    card_id INT NOT NULL REFERENCES access_cards(id),
+    student_id UUID REFERENCES students(id),
+    booking_id UUID REFERENCES bookings(id),
+    
+    action_type VARCHAR(20) CHECK (action_type IN ('issued', 'returned', 'lost', 'void')),
+    
+    performed_by UUID REFERENCES users(id),
+    performed_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    notes TEXT
+);

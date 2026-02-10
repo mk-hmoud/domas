@@ -66,6 +66,18 @@ CREATE TRIGGER update_booking_inventory_snapshots_modtime
 BEFORE UPDATE ON booking_inventory_snapshots
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Card Batches
+DROP TRIGGER IF EXISTS update_card_batches_modtime ON card_batches;
+CREATE TRIGGER update_card_batches_modtime
+BEFORE UPDATE ON card_batches
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Access Cards
+DROP TRIGGER IF EXISTS update_access_cards_modtime ON access_cards;
+CREATE TRIGGER update_access_cards_modtime
+BEFORE UPDATE ON access_cards
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -162,6 +174,24 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_booking_inventory_snapshots_change ON booking_inventory_snapshots;
 CREATE TRIGGER audit_booking_inventory_snapshots_change
 AFTER INSERT OR UPDATE OR DELETE ON booking_inventory_snapshots
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Card Batches
+DROP TRIGGER IF EXISTS audit_card_batches_change ON card_batches;
+CREATE TRIGGER audit_card_batches_change
+AFTER INSERT OR UPDATE OR DELETE ON card_batches
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Access Cards
+DROP TRIGGER IF EXISTS audit_access_cards_change ON access_cards;
+CREATE TRIGGER audit_access_cards_change
+AFTER INSERT OR UPDATE OR DELETE ON access_cards
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Access Card Logs
+DROP TRIGGER IF EXISTS audit_access_card_logs_change ON access_card_logs;
+CREATE TRIGGER audit_access_card_logs_change
+AFTER INSERT OR UPDATE OR DELETE ON access_card_logs
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

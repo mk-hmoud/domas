@@ -1,0 +1,82 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
+import { AccessCardsService } from '../services/access-cards.service';
+import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
+import { PERMISSIONS } from '../../../common/constants/permissions';
+import { UserContext } from '../../../core/decorators/user-context.decorator';
+import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { CreateCardBatchDto } from '../dto/create-card-batch.dto';
+import { IssueCardDto } from '../dto/issue-card.dto';
+import { ReturnCardDto } from '../dto/return-card.dto';
+import { UpdateCardStatusDto } from '../dto/update-card-status.dto';
+import { CardStatus } from '@domas/ts-types';
+
+@Controller('access-cards')
+@UseGuards(AuthenticatedGuard, PermissionsGuard)
+export class AccessCardsController {
+  constructor(private readonly service: AccessCardsService) {}
+
+  @Post('batches')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  createBatch(@Body() data: CreateCardBatchDto, @UserContext() context: AuditUserContext) {
+    return this.service.createBatch(data, context);
+  }
+
+  @Get('batches')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  findAllBatches() {
+    return this.service.findAllBatches();
+  }
+
+  @Get('cards')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  findAllCards(@Query('batchId') batchId?: string, @Query('status') status?: CardStatus) {
+    return this.service.findAllCards({
+      batchId: batchId ? parseInt(batchId, 10) : undefined,
+      status,
+    });
+  }
+
+  @Post('issue')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  issueCard(@Body() data: IssueCardDto, @UserContext() context: AuditUserContext) {
+    return this.service.issueCard(data, context);
+  }
+
+  @Post('cards/:id/return')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  returnCard(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: ReturnCardDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.returnCard(id, data, context);
+  }
+
+  @Patch('cards/:id/status')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateCardStatusDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.updateStatus(id, data, context);
+  }
+
+  @Get('cards/:id/logs')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  getLogs(@Param('id', ParseIntPipe) id: number) {
+    return this.service.getLogs(id);
+  }
+}

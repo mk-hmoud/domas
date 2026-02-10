@@ -11,6 +11,8 @@ export * from "./enums/payment-status.enum";
 export * from "./enums/semester-status.enum";
 export * from "./enums/semester-type.enum";
 export * from "./enums/inventory-scope.enum";
+export * from "./enums/card-status.enum";
+export * from "./enums/card-action-type.enum";
 
 export * from "./interfaces/user.interface";
 export * from "./interfaces/role.interface";
@@ -23,6 +25,7 @@ export * from "./interfaces/semester.interface";
 export * from "./interfaces/audit.interface";
 export * from "./interfaces/paginated-result.interface";
 export * from "./interfaces/inventory.interface";
+export * from "./interfaces/access-card.interface";
 
 export * from "./dtos/login-credentials.dto";
 export * from "./dtos/create-user.dto";
@@ -58,4 +61,5 @@ export * from "./dtos/update-bed-policies.dto";
 export * from "./dtos/bulk-update-bed-policies.dto";
 export * from "./dtos/account.dto";
 export * from "./dtos/inventory.dto";
+export * from "./dtos/access-card.dto";
 export * from "./enums/undo-action-type.enum";
