@@ -13,6 +13,7 @@ import {
 import { IconPlus, IconCards } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { accessCards, locations } from "@domas/api-client";
+import { useAuth } from "../context/AuthContext";
 import {
   CardBatch,
   AccessCard,
@@ -24,6 +25,7 @@ import { notifications } from "@mantine/notifications";
 
 export function SharedAccessCardsPage() {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
   const [batches, setBatches] = useState<CardBatch[]>([]);
   const [cards, setCards] = useState<AccessCard[]>([]);
   const [locationList, setLocationList] = useState<Location[]>([]);
@@ -85,12 +87,14 @@ export function SharedAccessCardsPage() {
               {t("card_batches_description")}
             </Text>
           </div>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setModalOpened(true)}
-          >
-            {t("create_batch")}
-          </Button>
+          {hasPermission("access_cards.manage") && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setModalOpened(true)}
+            >
+              {t("create_batch")}
+            </Button>
+          )}
         </Group>
 
         <Tabs value={activeTab} onChange={setActiveTab}>

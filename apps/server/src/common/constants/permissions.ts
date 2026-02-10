@@ -40,6 +40,10 @@ export const PERMISSIONS = {
   INVENTORY_MANAGE: 'inventory.manage',
   INVENTORY_ASSIGN: 'inventory.assign',
 
+  // Access Cards
+  ACCESS_CARDS_VIEW: 'access_cards.view',
+  ACCESS_CARDS_MANAGE: 'access_cards.manage',
+
   // Audit & Reports
   AUDIT_VIEW: 'audit.view',
   REPORTS_VIEW: 'reports.view',

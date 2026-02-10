@@ -28,19 +28,19 @@ export class AccessCardsController {
   constructor(private readonly service: AccessCardsService) {}
 
   @Post('batches')
-  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_MANAGE)
   createBatch(@Body() data: CreateCardBatchDto, @UserContext() context: AuditUserContext) {
     return this.service.createBatch(data, context);
   }
 
   @Get('batches')
-  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
   findAllBatches() {
     return this.service.findAllBatches();
   }
 
   @Get('cards')
-  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
   findAllCards(@Query('batchId') batchId?: string, @Query('status') status?: CardStatus) {
     return this.service.findAllCards({
       batchId: batchId ? parseInt(batchId, 10) : undefined,
@@ -49,13 +49,13 @@ export class AccessCardsController {
   }
 
   @Post('issue')
-  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_MANAGE)
   issueCard(@Body() data: IssueCardDto, @UserContext() context: AuditUserContext) {
     return this.service.issueCard(data, context);
   }
 
   @Post('cards/:id/return')
-  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_MANAGE)
   returnCard(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: ReturnCardDto,
@@ -65,7 +65,7 @@ export class AccessCardsController {
   }
 
   @Patch('cards/:id/status')
-  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_MANAGE)
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: UpdateCardStatusDto,
@@ -75,7 +75,7 @@ export class AccessCardsController {
   }
 
   @Get('cards/:id/logs')
-  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
   getLogs(@Param('id', ParseIntPipe) id: number) {
     return this.service.getLogs(id);
   }

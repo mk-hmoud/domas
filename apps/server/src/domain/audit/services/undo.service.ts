@@ -687,6 +687,19 @@ export class UndoService {
     await client.query('DELETE FROM booking_inventory_snapshots WHERE booking_id = $1', [
       bookingId,
     ]);
+
+    // 3. CARD REVERSION: If a card was issued during this check-in, return it to the pool
+    // We look for any active card assigned to this booking and return it.
+    await client.query(
+      `UPDATE access_cards 
+       SET status = 'available', 
+           current_holder_id = NULL, 
+           current_booking_id = NULL, 
+           returned_at = NOW(),
+           updated_at = NOW()
+       WHERE current_booking_id = $1 AND status = 'active'`,
+      [bookingId],
+    );
   }
 
   private async undoApproveBookingFinancials(log: UndoLog, client: PoolClient): Promise<void> {
