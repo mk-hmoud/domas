@@ -87,6 +87,11 @@ export function DashboardLayout() {
             requiredPermission: 'bookings.view',
           },
           {
+            label: t('nav.check_in'),
+            link: '/dashboard/check-in',
+            requiredPermission: 'bookings.check_in',
+          },
+          {
             label: t('nav.accounting'),
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',
@@ -96,6 +101,11 @@ export function DashboardLayout() {
             label: t('nav.permissions'),
             link: '/dashboard/permissions',
             requiredPermission: 'permissions.view',
+          },
+          {
+            label: t('nav.access_cards'),
+            link: '/dashboard/access-cards',
+            requiredPermission: 'access_cards.view',
           },
         ],
       },

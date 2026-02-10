@@ -5,9 +5,9 @@ import {
   Select,
   Group,
   SimpleGrid,
-  TextInput,
   ActionIcon,
 } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
 import { CreateBookingDto, CreateStudentDto } from "@domas/ts-types";
@@ -37,35 +37,43 @@ export function CreateBookingModal({
   const [loading, setLoading] = useState(false);
   const [studentModalOpened, setStudentModalOpened] = useState(false);
 
-  const form = useForm<CreateBookingDto>({
+  const form = useForm<any>({
     initialValues: {
       studentId: "",
       bedId: 0,
       semesterId: 0,
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-        .toISOString()
-        .split("T")[0],
+      startDate: new Date(),
+      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
     },
     validate: {
       studentId: (val) => (val ? null : t("field_required")),
       bedId: (val) => (Number(val) > 0 ? null : t("field_required")),
       semesterId: (val) => (Number(val) > 0 ? null : t("field_required")),
+      startDate: (val) => (val ? null : t("field_required")),
+      endDate: (val) => (val ? null : t("field_required")),
     },
   });
 
-  const handleSubmit = async (values: CreateBookingDto) => {
+  const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      const toIso = (date: any) => {
+        if (!date) return null;
+        if (date instanceof Date) return date.toISOString();
+        return new Date(date).toISOString();
+      };
+
       await onSubmit({
         ...values,
         bedId: Number(values.bedId),
         semesterId: Number(values.semesterId),
+        startDate: toIso(values.startDate) as string,
+        endDate: toIso(values.endDate) as string,
       });
       form.reset();
       onClose();
     } catch (error) {
-      // Error handling is up to parent
+      console.error("Booking creation error:", error);
     } finally {
       setLoading(false);
     }
@@ -130,16 +138,16 @@ export function CreateBookingModal({
           </SimpleGrid>
 
           <SimpleGrid cols={2} mt="md">
-            <TextInput
-              type="date"
+            <DatePickerInput
               label={t("start_date")}
               required
+              valueFormat="DD/MM/YYYY"
               {...form.getInputProps("startDate")}
             />
-            <TextInput
-              type="date"
+            <DatePickerInput
               label={t("end_date")}
               required
+              valueFormat="DD/MM/YYYY"
               {...form.getInputProps("endDate")}
             />
           </SimpleGrid>

@@ -239,6 +239,7 @@ export function SemesterModal({
             <DatePickerInput
               label={t("start_date")}
               required
+              valueFormat="DD/MM/YYYY"
               maxDate={
                 isInitiallyActive && initialValues
                   ? new Date(initialValues.startDate)
@@ -250,6 +251,7 @@ export function SemesterModal({
             <DatePickerInput
               label={t("end_date")}
               required
+              valueFormat="DD/MM/YYYY"
               minDate={
                 isInitiallyActive && initialValues
                   ? new Date(initialValues.endDate)
@@ -265,11 +267,13 @@ export function SemesterModal({
                 defaultValue: "Booking Start",
               })}
               required
+              valueFormat="DD/MM/YYYY"
               {...form.getInputProps("bookingStartDate")}
             />
             <DatePickerInput
               label={t("semester.booking_end", { defaultValue: "Booking End" })}
               required
+              valueFormat="DD/MM/YYYY"
               {...form.getInputProps("bookingEndDate")}
             />
           </SimpleGrid>

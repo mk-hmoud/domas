@@ -45,11 +45,13 @@ export const bookings = {
     return response.data;
   },
 
-  checkIn: async (id: string, data: CheckInBookingDto): Promise<Booking> => {
-    const response = await apiClient.post<Booking>(
-      `/bookings/${id}/check-in`,
-      data,
-    );
+  checkIn: async (
+    id: string,
+    data: CheckInBookingDto,
+  ): Promise<Booking & { assignedCardNumber?: number }> => {
+    const response = await apiClient.post<
+      Booking & { assignedCardNumber?: number }
+    >(`/bookings/${id}/check-in`, data);
     return response.data;
   },
 };

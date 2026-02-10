@@ -1,5 +1,4 @@
 import { CardStatus } from "../enums/card-status.enum";
-import { CardActionType } from "../enums/card-action-type.enum";
 
 export interface CreateCardBatchDto {
   locationId?: number;

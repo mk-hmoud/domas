@@ -12,6 +12,8 @@ import { RolesPage } from './pages/RolesPage';
 import { AccountingPage } from './pages/AccountingPage';
 import { AccountPage } from './pages/AccountPage';
 import { InventoryCatalogPage } from './pages/InventoryCatalogPage';
+import { CheckInPage } from './pages/CheckInPage';
+import { AccessCardsPage } from './pages/AccessCardsPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -53,6 +55,14 @@ function App() {
             }
           />
           <Route
+            path="check-in"
+            element={
+              <PermissionRoute permission="bookings.check_in">
+                <CheckInPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
             path="accounting"
             element={
               <PermissionRoute permission="bookings.approve_financial">
@@ -66,6 +76,14 @@ function App() {
             element={
               <PermissionRoute permission="inventory.manage">
                 <InventoryCatalogPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="access-cards"
+            element={
+              <PermissionRoute permission="access_cards.view">
+                <AccessCardsPage />
               </PermissionRoute>
             }
           />
