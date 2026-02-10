@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { AccessCardsRepository } from '../repositories/access-cards.repository';
+import { AccessCard } from '../entities/access-card.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { CreateCardBatchDto } from '../dto/create-card-batch.dto';
 import { IssueCardDto } from '../dto/issue-card.dto';
 import { ReturnCardDto } from '../dto/return-card.dto';
 import { UpdateCardStatusDto } from '../dto/update-card-status.dto';
-import { CardStatus, CardActionType } from '@domas/ts-types';
+import { CardStatus } from '../../../common/enums/card-status.enum';
+import { CardActionType } from '../../../common/enums/card-action-type.enum';
 
 @Injectable()
 export class AccessCardsService {

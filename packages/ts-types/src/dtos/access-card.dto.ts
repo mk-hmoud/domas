@@ -11,6 +11,7 @@ export interface CreateCardBatchDto {
 export interface IssueCardDto {
   studentId: string;
   bookingId: string;
+  batchId?: number;
   cardNumber?: number; // Optional: specific card or auto-pick
 }
 

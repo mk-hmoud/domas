@@ -20,7 +20,7 @@ import { CreateCardBatchDto } from '../dto/create-card-batch.dto';
 import { IssueCardDto } from '../dto/issue-card.dto';
 import { ReturnCardDto } from '../dto/return-card.dto';
 import { UpdateCardStatusDto } from '../dto/update-card-status.dto';
-import { CardStatus } from '@domas/ts-types';
+import { CardStatus } from '../../../common/enums/card-status.enum';
 
 @Controller('access-cards')
 @UseGuards(AuthenticatedGuard, PermissionsGuard)

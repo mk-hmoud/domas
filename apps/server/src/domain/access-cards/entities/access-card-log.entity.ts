@@ -1,4 +1,4 @@
-import { CardActionType } from '@domas/ts-types';
+import { CardActionType } from '../../../common/enums/card-action-type.enum';
 
 export class AccessCardLog {
   id!: string;

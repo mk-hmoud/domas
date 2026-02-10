@@ -5,7 +5,8 @@ import { CardBatch } from '../entities/card-batch.entity';
 import { AccessCard } from '../entities/access-card.entity';
 import { AccessCardLog } from '../entities/access-card-log.entity';
 import { CreateCardBatchDto } from '../dto/create-card-batch.dto';
-import { CardStatus, CardActionType } from '@domas/ts-types';
+import { CardStatus } from '../../../common/enums/card-status.enum';
+import { CardActionType } from '../../../common/enums/card-action-type.enum';
 
 @Injectable()
 export class AccessCardsRepository {
@@ -62,7 +63,7 @@ export class AccessCardsRepository {
   ): Promise<void> {
     const query = `
       INSERT INTO access_cards (batch_id, card_number, status)
-      SELECT $1, generate_series($2, $3), 'available'
+      SELECT $1, generate_series($2::INTEGER, $3::INTEGER), 'available'
       ON CONFLICT (card_number) DO NOTHING
     `;
     await this.getClient(client).query(query, [batchId, start, end]);
