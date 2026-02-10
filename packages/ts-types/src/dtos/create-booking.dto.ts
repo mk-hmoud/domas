@@ -13,4 +13,6 @@ export interface CreateBookingDto {
 
 export interface CheckInBookingDto {
   selectedExtraCatalogIds?: number[];
+  autoAssignCard?: boolean;
+  specificCardNumber?: number;
 }

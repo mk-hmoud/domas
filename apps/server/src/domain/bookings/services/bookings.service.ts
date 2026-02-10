@@ -21,6 +21,7 @@ import { StudentsRepository } from '../../students/repositories/students.reposit
 import { UsersService } from '../../users/services/users.service';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { InventoryService } from '../../inventory/services/inventory.service';
+import { AccessCardsService } from '../../access-cards/services/access-cards.service';
 import { CheckInBookingDto } from '../dto/check-in-booking.dto';
 
 @Injectable()
@@ -35,6 +36,7 @@ export class BookingsService {
     private readonly usersService: UsersService,
     private readonly undoService: UndoService,
     private readonly inventoryService: InventoryService,
+    private readonly accessCardsService: AccessCardsService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -170,7 +172,11 @@ export class BookingsService {
     }, context);
   }
 
-  async checkIn(id: string, data: CheckInBookingDto, context: AuditUserContext): Promise<Booking> {
+  async checkIn(
+    id: string,
+    data: CheckInBookingDto,
+    context: AuditUserContext,
+  ): Promise<Booking & { assignedCardNumber?: number }> {
     this.logger.log({ bookingId: id }, 'Processing check-in');
 
     return this.db.transaction(async (client) => {
@@ -189,7 +195,7 @@ export class BookingsService {
 
       const updated = await this.bookingsRepository.checkIn(id, client);
 
-      // Generate inventory snapshot for the contract
+      // 1. Generate inventory snapshot for the contract
       await this.inventoryService.generateSnapshotForBooking(
         id,
         booking.bedId,
@@ -197,6 +203,20 @@ export class BookingsService {
         context,
         client,
       );
+
+      // 2. Handle Card Assignment
+      let assignedCardNumber: number | undefined;
+      if (data.autoAssignCard || data.specificCardNumber) {
+        const card = await this.accessCardsService.issueCard(
+          {
+            studentId: booking.studentId,
+            bookingId: booking.id,
+            cardNumber: data.specificCardNumber,
+          },
+          context,
+        );
+        assignedCardNumber = card.cardNumber;
+      }
 
       await this.undoService.registerUndo(
         {
@@ -213,8 +233,11 @@ export class BookingsService {
         client,
       );
 
-      this.logger.log({ bookingId: id }, 'Check-in completed');
-      return updated!;
+      this.logger.log({ bookingId: id, assignedCardNumber }, 'Check-in completed');
+      return {
+        ...updated!,
+        assignedCardNumber,
+      };
     }, context);
   }
 
