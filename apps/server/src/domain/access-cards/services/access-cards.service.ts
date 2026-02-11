@@ -9,6 +9,8 @@ import { ReturnCardDto } from '../dto/return-card.dto';
 import { UpdateCardStatusDto } from '../dto/update-card-status.dto';
 import { CardStatus } from '../../../common/enums/card-status.enum';
 import { CardActionType } from '../../../common/enums/card-action-type.enum';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 
 @Injectable()
 export class AccessCardsService {
@@ -16,6 +18,7 @@ export class AccessCardsService {
 
   constructor(
     private readonly repository: AccessCardsRepository,
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -26,6 +29,19 @@ export class AccessCardsService {
         client,
       );
       await this.repository.createCardsInBatch(batch.id, data.rangeStart, data.rangeEnd, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_CARD_BATCH,
+          entityType: 'card_batch',
+          entityId: batch.id.toString(),
+          undoData: {},
+          description: `Created card batch ${batch.name} (${data.rangeStart}-${data.rangeEnd})`,
+        },
+        client,
+      );
+
       return batch;
     }, context);
   }
@@ -82,6 +98,22 @@ export class AccessCardsService {
         client,
       );
 
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.ISSUE_CARD,
+          entityType: 'access_card',
+          entityId: card.id.toString(),
+          undoData: {
+            previousStatus: CardStatus.AVAILABLE,
+            studentId: data.studentId,
+            bookingId: data.bookingId,
+          },
+          description: `Issued card #${card.cardNumber} to student ${data.studentId}`,
+        },
+        client,
+      );
+
       return card;
     }, context);
   }
@@ -113,6 +145,22 @@ export class AccessCardsService {
           actionType: CardActionType.RETURNED,
           performedBy: context.userId,
           notes: data.notes,
+        },
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.RETURN_CARD,
+          entityType: 'access_card',
+          entityId: id.toString(),
+          undoData: {
+            previousStatus: card.status,
+            previousHolderId: card.currentHolderId,
+            previousBookingId: card.currentBookingId,
+          },
+          description: `Returned card #${card.cardNumber}`,
         },
         client,
       );
@@ -163,6 +211,9 @@ export class AccessCardsService {
         },
         client,
       );
+
+      // Status updates are generally not undone via a specific undo action in this repo's pattern
+      // but we could register it if needed. For now, following existing pattern.
 
       return updatedCard;
     }, context);

@@ -85,7 +85,7 @@ export class UndoService {
 
     await this.db.transaction(async (client) => {
       // 1. Perform Reversion
-      await this.executeReversion(log, client);
+      await this.executeReversion(log, context.userId, client);
 
       // 2. Mark as Undone
       await this.undoRepository.markAsUndone(id, context.userId, client);
@@ -133,7 +133,11 @@ export class UndoService {
     return { allowed: false, reason: 'Permission denied.' };
   }
 
-  private async executeReversion(log: UndoLog, client: PoolClient): Promise<void> {
+  private async executeReversion(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
     switch (log.actionType) {
       // Locations
       case UndoActionType.CREATE_LOCATION:
@@ -197,7 +201,7 @@ export class UndoService {
       case UndoActionType.CANCEL_BOOKING:
         return this.undoCancelBooking(log, client);
       case UndoActionType.CHECK_IN_BOOKING:
-        return this.undoCheckInBooking(log, client);
+        return this.undoCheckInBooking(log, undoUserId, client);
       case UndoActionType.APPROVE_BOOKING_FINANCIALS:
         return this.undoApproveBookingFinancials(log, client);
       case UndoActionType.REJECT_BOOKING:
@@ -218,6 +222,14 @@ export class UndoService {
         return this.undoUpdateInventoryAssignment(log, client);
       case UndoActionType.DELETE_INVENTORY_ASSIGNMENT:
         return this.undoDeleteInventoryAssignment(log, client);
+
+      // Access Cards
+      case UndoActionType.CREATE_CARD_BATCH:
+        return this.undoCreateCardBatch(log, client);
+      case UndoActionType.ISSUE_CARD:
+        return this.undoIssueCard(log, undoUserId, client);
+      case UndoActionType.RETURN_CARD:
+        return this.undoReturnCard(log, undoUserId, client);
 
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
@@ -672,7 +684,11 @@ export class UndoService {
     ]);
   }
 
-  private async undoCheckInBooking(log: UndoLog, client: PoolClient): Promise<void> {
+  private async undoCheckInBooking(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
     const { previousStatus, previousCheckInDate } = log.undoData;
     const bookingId = log.entityId;
 
@@ -690,16 +706,33 @@ export class UndoService {
 
     // 3. CARD REVERSION: If a card was issued during this check-in, return it to the pool
     // We look for any active card assigned to this booking and return it.
-    await client.query(
+    const cardRes = await client.query(
       `UPDATE access_cards 
        SET status = 'available', 
            current_holder_id = NULL, 
            current_booking_id = NULL, 
            returned_at = NOW(),
            updated_at = NOW()
-       WHERE current_booking_id = $1 AND status = 'active'`,
+       WHERE current_booking_id = $1 AND status = 'active'
+       RETURNING id, current_holder_id`,
       [bookingId],
     );
+
+    if (cardRes.rows.length > 0) {
+      for (const card of cardRes.rows) {
+        await client.query(
+          `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
+           VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+          [
+            card.id,
+            card.current_holder_id,
+            bookingId,
+            undoUserId,
+            'Undo: Check-in reversed, card auto-returned',
+          ],
+        );
+      }
+    }
   }
 
   private async undoApproveBookingFinancials(log: UndoLog, client: PoolClient): Promise<void> {
@@ -793,6 +826,69 @@ export class UndoService {
     await client.query(
       'UPDATE inventory_assignments SET quantity = $1, notes = $2, updated_at = NOW() WHERE id = $3',
       [quantity, notes, id],
+    );
+  }
+
+  // ===========================================================================
+  // Access Card Handlers
+  // ===========================================================================
+
+  private async undoCreateCardBatch(log: UndoLog, client: PoolClient): Promise<void> {
+    const batchId = parseInt(log.entityId, 10);
+    // Deleting a batch also deletes its cards due to ON DELETE CASCADE
+    await client.query('DELETE FROM card_batches WHERE id = $1', [batchId]);
+  }
+
+  private async undoIssueCard(log: UndoLog, undoUserId: string, client: PoolClient): Promise<void> {
+    const cardId = parseInt(log.entityId, 10);
+    const { studentId, bookingId } = log.undoData;
+
+    // 1. Revert card to available
+    await client.query(
+      `UPDATE access_cards 
+       SET status = 'available', 
+           current_holder_id = NULL, 
+           current_booking_id = NULL, 
+           issued_at = NULL,
+           issued_by = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [cardId],
+    );
+
+    // 2. Add history log for reversal
+    await client.query(
+      `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
+       VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+      [cardId, studentId, bookingId, undoUserId, 'Undo: Card issuance reversed'],
+    );
+  }
+
+  private async undoReturnCard(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
+    const cardId = parseInt(log.entityId, 10);
+    const { previousStatus, previousHolderId, previousBookingId } = log.undoData;
+
+    // 1. Restore previous issued state
+    await client.query(
+      `UPDATE access_cards 
+       SET status = $1, 
+           current_holder_id = $2, 
+           current_booking_id = $3, 
+           returned_at = NULL,
+           updated_at = NOW()
+       WHERE id = $4`,
+      [previousStatus, previousHolderId, previousBookingId, cardId],
+    );
+
+    // 2. Add history log for reversal
+    await client.query(
+      `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
+       VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+      [cardId, previousHolderId, previousBookingId, undoUserId, 'Undo: Card return reversed'],
     );
   }
 }

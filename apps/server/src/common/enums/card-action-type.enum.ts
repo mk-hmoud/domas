@@ -3,4 +3,5 @@ export enum CardActionType {
   RETURNED = 'returned',
   LOST = 'lost',
   VOID = 'void',
+  REVERSED = 'reversed',
 }
