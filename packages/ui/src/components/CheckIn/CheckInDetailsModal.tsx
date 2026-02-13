@@ -24,6 +24,7 @@ import {
   IconArchive,
   IconCreditCard,
   IconCheck,
+  IconDownload,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
@@ -42,6 +43,7 @@ import {
   locations,
   inventory,
   accessCards,
+  contracts,
 } from "@domas/api-client";
 
 interface CheckInDetailsModalProps {
@@ -173,6 +175,12 @@ export function CheckInDetailsModal({
     }
   };
 
+  const handleDownloadContract = async () => {
+    if (booking) {
+      await contracts.downloadContract(booking.id);
+    }
+  };
+
   return (
     <Modal
       opened={opened}
@@ -279,7 +287,7 @@ export function CheckInDetailsModal({
                     p={0}
                     style={{ overflow: "hidden" }}
                   >
-                    <Table size="xs" striped>
+                    <Table striped>
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th>{t("item")}</Table.Th>
@@ -391,6 +399,10 @@ export function CheckInDetailsModal({
                 {t("card_instruction")}
               </Alert>
 
+              {/* 
+                Auto-assign logic: When checked, the backend will automatically 
+                find the first available card in the pool for this booking's location.
+              */}
               <Box>
                 <Checkbox
                   label={t("auto_assign_card")}
@@ -402,10 +414,7 @@ export function CheckInDetailsModal({
                   }}
                 />
                 <Text size="xs" c="dimmed" ml="xl">
-                  {t(
-                    "auto_assign_description",
-                    "The system will automatically find the first available card from the pool.",
-                  )}
+                  {t("auto_assign_description")}
                 </Text>
               </Box>
 
@@ -434,13 +443,10 @@ export function CheckInDetailsModal({
                   color="var(--mantine-color-green-filled)"
                 />
                 <Title order={3} mt="md">
-                  {t("checkin_completed_title", "Check-in Successful!")}
+                  {t("checkin_completed_title")}
                 </Title>
                 <Text c="dimmed" mt="xs">
-                  {t(
-                    "checkin_completed_message",
-                    "The student has been checked in and all records have been updated.",
-                  )}
+                  {t("checkin_completed_message")}
                 </Text>
               </Box>
 
@@ -453,7 +459,7 @@ export function CheckInDetailsModal({
                 >
                   <Stack gap={0} align="center">
                     <Text size="xs" fw={700} c="blue" tt="uppercase">
-                      {t("assigned_card_number", "Assigned Card Number")}
+                      {t("assigned_card_number")}
                     </Text>
                     <Text size="xl" fw={900}>
                       #{assignedCardNumber}
@@ -461,20 +467,23 @@ export function CheckInDetailsModal({
                   </Stack>
                 </Paper>
               ) : (
-                <Alert
-                  color="orange"
-                  title={t("no_card_assigned", "No card assigned")}
-                >
-                  {t(
-                    "no_card_assigned_message",
-                    "No access card was assigned during this check-in.",
-                  )}
+                <Alert color="orange" title={t("no_card_assigned")}>
+                  {t("no_card_assigned_message")}
                 </Alert>
               )}
 
-              <Button onClick={onClose} size="md">
-                {t("finish", "Finish")}
-              </Button>
+              <Group gap="sm">
+                <Button
+                  variant="light"
+                  leftSection={<IconDownload size={16} />}
+                  onClick={handleDownloadContract}
+                >
+                  {t("download_contract", "Download Contract")}
+                </Button>
+                <Button onClick={onClose} size="md">
+                  {t("finish", "Finish")}
+                </Button>
+              </Group>
             </Stack>
           </Stepper.Completed>
         </Stepper>

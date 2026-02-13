@@ -49,13 +49,18 @@ export function AccountingPage() {
         const student = studentMap.get(booking.studentId);
         const semester = semesterMap.get(booking.semesterId);
 
+        const isTR = student?.nationalityCode === 'TR';
+        const amount = isTR ? semester?.depositAmountTry || 0 : semester?.depositAmountForeign || 0;
+        const currency = isTR ? 'TRY' : semester?.foreignCurrencyCode || 'EUR';
+
         return {
           id: booking.id,
           studentNumber: student?.studentNumber || 'N/A',
           studentName: student ? `${student.firstName} ${student.lastName}` : 'Unknown Student',
           studentEmail: student?.email || 'N/A',
           bookingType: semester?.displayName || 'Unknown Semester',
-          amount: semester?.depositAmountTry || 0,
+          amount,
+          currency,
           status: booking.status,
           date: booking.createdAt,
           processedAt: booking.accountingApprovedAt,
@@ -269,10 +274,10 @@ export function AccountingPage() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency = 'TRY') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'TRY',
+      currency: currency,
     }).format(amount);
   };
 
@@ -404,7 +409,7 @@ export function AccountingPage() {
                 {t('amount')}
               </Text>
               <Text size="xl" fw={700} c="blue">
-                {formatCurrency(selectedPayment.amount)}
+                {formatCurrency(selectedPayment.amount, selectedPayment.currency)}
               </Text>
             </Box>
 

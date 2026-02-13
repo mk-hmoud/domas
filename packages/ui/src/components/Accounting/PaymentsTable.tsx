@@ -23,6 +23,7 @@ export interface StudentPayment {
   studentEmail: string;
   bookingType: string;
   amount: number;
+  currency?: string;
   status: BookingOpsStatus;
   date: string;
   processedAt?: string;
@@ -49,10 +50,10 @@ export function PaymentsTable({
 }: PaymentsTableProps) {
   const { t } = useTranslation();
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency = "TRY") => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "TRY",
+      currency: currency,
     }).format(amount);
   };
 
@@ -106,7 +107,9 @@ export function PaymentsTable({
           </Text>
         </Table.Td>
         <Table.Td>{payment.bookingType}</Table.Td>
-        <Table.Td fw={700}>{formatCurrency(payment.amount)}</Table.Td>
+        <Table.Td fw={700}>
+          {formatCurrency(payment.amount, payment.currency)}
+        </Table.Td>
         <Table.Td>{new Date(payment.date).toLocaleDateString()}</Table.Td>
         <Table.Td>
           <Badge color={getStatusColor(payment.status)} variant="light">
