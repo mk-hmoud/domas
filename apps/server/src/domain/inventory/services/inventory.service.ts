@@ -18,6 +18,8 @@ import type { AuditUserContext } from '../../../common/interfaces/audit-user-con
 import { PoolClient } from 'pg';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { BedsRepository } from '../../locations/repositories/beds.repository';
+import { StudentsRepository } from '../../students/repositories/students.repository';
+import { BookingsRepository } from '../../bookings/repositories/bookings.repository';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 
@@ -29,6 +31,8 @@ export class InventoryService {
     private readonly inventoryRepository: InventoryRepository,
     private readonly locationsRepository: LocationsRepository,
     private readonly bedsRepository: BedsRepository,
+    private readonly studentsRepository: StudentsRepository,
+    private readonly bookingsRepository: BookingsRepository,
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
@@ -247,6 +251,14 @@ export class InventoryService {
     const bed = await this.bedsRepository.findById(bedId, client);
     if (!bed) throw new Error('Bed not found');
 
+    const booking = await this.bookingsRepository.findById(bookingId, client);
+    if (!booking) throw new Error('Booking not found');
+
+    const student = await this.studentsRepository.findById(booking.studentId, client);
+    if (!student) throw new Error('Student not found');
+
+    const isTR = student.nationalityCode === 'TR';
+
     const ancestors = await this.locationsRepository.findWithAncestors(bed.locationId, client);
     const locationIds = ancestors.map((a) => a.id);
 
@@ -263,20 +275,25 @@ export class InventoryService {
 
     const allItems = [...mandatoryItems, ...optionalItems];
 
-    const snapshots = allItems.map((r) => ({
-      bookingId,
-      catalogId: r.catalog_id,
-      nameTr: r.name_tr,
-      nameEn: r.name_en,
-      descriptionTr: r.description_tr,
-      descriptionEn: r.description_en,
-      scope: r.scope,
-      priceTry: r.base_price_try,
-      priceForeign: r.base_price_foreign,
-      foreignCurrencyCode: r.foreign_currency_code,
-      quantity: r.quantity,
-      locationName: r.target_name,
-    }));
+    const snapshots = allItems.map((r) => {
+      const price = isTR ? r.base_price_try : r.base_price_foreign;
+      const currency = isTR ? 'TRY' : r.foreign_currency_code;
+
+      return {
+        bookingId,
+        catalogId: r.catalog_id,
+        nameTr: r.name_tr,
+        nameEn: r.name_en,
+        descriptionTr: r.description_tr,
+        descriptionEn: r.description_en,
+        scope: r.scope,
+        priceTry: price,
+        priceForeign: price,
+        foreignCurrencyCode: currency,
+        quantity: r.quantity,
+        locationName: r.target_name,
+      };
+    });
 
     if (snapshots.length > 0) {
       await this.inventoryRepository.createSnapshots(snapshots, client);
