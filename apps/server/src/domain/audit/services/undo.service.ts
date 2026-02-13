@@ -692,20 +692,21 @@ export class UndoService {
     const { previousStatus, previousCheckInDate } = log.undoData;
     const bookingId = log.entityId;
 
-    // 1. Revert Booking Status
-    await client.query('UPDATE bookings SET status = $1, checked_in_at = $2 WHERE id = $3', [
-      previousStatus,
-      previousCheckInDate,
-      bookingId,
-    ]);
+    // 1. Revert Booking Status & Reset Contract Flag
+    await client.query(
+      'UPDATE bookings SET status = $1, checked_in_at = $2, contract_signed = FALSE WHERE id = $3',
+      [previousStatus, previousCheckInDate, bookingId],
+    );
 
     // 2. CLEANUP: Delete the inventory snapshots generated during check-in
     await client.query('DELETE FROM booking_inventory_snapshots WHERE booking_id = $1', [
       bookingId,
     ]);
 
-    // 3. CARD REVERSION: If a card was issued during this check-in, return it to the pool
-    // We look for any active card assigned to this booking and return it.
+    // 3. CONTRACT CLEANUP: Delete the generated contract
+    await client.query('DELETE FROM booking_contracts WHERE booking_id = $1', [bookingId]);
+
+    // 4. CARD REVERSION: If a card was issued during this check-in, return it to the pool
     const cardRes = await client.query(
       `UPDATE access_cards 
        SET status = 'available', 
@@ -722,7 +723,7 @@ export class UndoService {
       for (const card of cardRes.rows) {
         await client.query(
           `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
-           VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+           VALUES ($1, $2, $3, 'returned', $4, $5)`,
           [
             card.id,
             card.current_holder_id,

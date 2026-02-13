@@ -14,6 +14,7 @@ import { BookingsModule } from './domain/bookings/bookings.module';
 import { StudentsModule } from './domain/students/students.module';
 import { InventoryModule } from './domain/inventory/inventory.module';
 import { AccessCardsModule } from './domain/access-cards/access-cards.module';
+import { ContractsModule } from './domain/contracts/contracts.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AccessCardsModule } from './domain/access-cards/access-cards.module';
     StudentsModule,
     InventoryModule,
     AccessCardsModule,
+    ContractsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

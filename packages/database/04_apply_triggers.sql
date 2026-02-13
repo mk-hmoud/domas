@@ -78,6 +78,12 @@ CREATE TRIGGER update_access_cards_modtime
 BEFORE UPDATE ON access_cards
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Booking Contracts
+DROP TRIGGER IF EXISTS update_booking_contracts_modtime ON booking_contracts;
+CREATE TRIGGER update_booking_contracts_modtime
+BEFORE UPDATE ON booking_contracts
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -192,6 +198,12 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_access_card_logs_change ON access_card_logs;
 CREATE TRIGGER audit_access_card_logs_change
 AFTER INSERT OR UPDATE OR DELETE ON access_card_logs
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Booking Contracts
+DROP TRIGGER IF EXISTS audit_booking_contracts_change ON booking_contracts;
+CREATE TRIGGER audit_booking_contracts_change
+AFTER INSERT OR UPDATE OR DELETE ON booking_contracts
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

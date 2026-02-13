@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BookingsService } from './services/bookings.service';
 import { BookingsController } from './controllers/bookings.controller';
 import { BookingsRepository } from './repositories/bookings.repository';
@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { AccessCardsModule } from '../access-cards/access-cards.module';
+import { ContractsModule } from '../contracts/contracts.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AccessCardsModule } from '../access-cards/access-cards.module';
     AuditModule,
     InventoryModule,
     AccessCardsModule,
+    forwardRef(() => ContractsModule),
   ],
   controllers: [BookingsController],
   providers: [BookingsService, BookingsRepository],

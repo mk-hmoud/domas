@@ -467,6 +467,18 @@ CREATE TABLE booking_inventory_snapshots (
 CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(booking_id);
 
 -- =============================================
+-- CONTRACTS SYSTEM
+-- =============================================
+
+CREATE TABLE booking_contracts (
+    booking_id UUID PRIMARY KEY REFERENCES bookings(id) ON DELETE CASCADE,
+    pdf_data BYTEA NOT NULL,
+    file_size INT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
 -- TURNSTILE CARD SYSTEM
 -- =============================================
 

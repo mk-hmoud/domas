@@ -372,14 +372,17 @@ export class InventoryRepository {
     await this.getClient(client).query(query, values);
   }
 
-  async findSnapshotsByBooking(bookingId: string): Promise<BookingInventorySnapshot[]> {
+  async findSnapshotsByBooking(
+    bookingId: string,
+    client?: PoolClient,
+  ): Promise<BookingInventorySnapshot[]> {
     const query = `
       SELECT ${this.getSnapshotSelectColumns('s')}
       FROM booking_inventory_snapshots s
       WHERE booking_id = $1 
       ORDER BY scope DESC, name_en ASC
     `;
-    const result = await this.db.query(query, [bookingId]);
+    const result = await this.getClient(client).query(query, [bookingId]);
     return result.rows.map((r) => new BookingInventorySnapshot(r));
   }
 

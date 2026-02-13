@@ -22,7 +22,9 @@ import { UsersService } from '../../users/services/users.service';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { AccessCardsService } from '../../access-cards/services/access-cards.service';
+import { ContractsService } from '../../contracts/services/contracts.service';
 import { CheckInBookingDto } from '../dto/check-in-booking.dto';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class BookingsService {
@@ -37,6 +39,8 @@ export class BookingsService {
     private readonly undoService: UndoService,
     private readonly inventoryService: InventoryService,
     private readonly accessCardsService: AccessCardsService,
+    @Inject(forwardRef(() => ContractsService))
+    private readonly contractsService: ContractsService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -216,6 +220,16 @@ export class BookingsService {
           context,
         );
         assignedCardNumber = card.cardNumber;
+      }
+
+      // 3. Generate Contract PDF
+      try {
+        await this.contractsService.generateCheckInContract(id, client);
+      } catch (contractError: any) {
+        this.logger.error(
+          { bookingId: id, error: contractError.message },
+          'Failed to generate contract',
+        );
       }
 
       await this.undoService.registerUndo(
