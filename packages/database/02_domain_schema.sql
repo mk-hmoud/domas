@@ -492,9 +492,12 @@ CREATE TABLE damage_reports (
     
     -- Manual Pricing (Used ONLY if snapshot_id is NULL)
     manual_cost_try NUMERIC(12, 2), 
+    manual_cost_foreign NUMERIC(12, 2),
+    manual_currency_code CHAR(3) DEFAULT 'EUR',
     
     -- Details
     description TEXT NOT NULL,
+    culprit_ids UUID[], -- Specific students to charge
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
     
     -- Audit
