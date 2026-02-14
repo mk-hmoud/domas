@@ -84,6 +84,18 @@ CREATE TRIGGER update_booking_contracts_modtime
 BEFORE UPDATE ON booking_contracts
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Damage Reports
+DROP TRIGGER IF EXISTS update_damage_reports_modtime ON damage_reports;
+CREATE TRIGGER update_damage_reports_modtime
+BEFORE UPDATE ON damage_reports
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Damage Liabilities
+DROP TRIGGER IF EXISTS update_damage_liabilities_modtime ON damage_liabilities;
+CREATE TRIGGER update_damage_liabilities_modtime
+BEFORE UPDATE ON damage_liabilities
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -204,6 +216,18 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_booking_contracts_change ON booking_contracts;
 CREATE TRIGGER audit_booking_contracts_change
 AFTER INSERT OR UPDATE OR DELETE ON booking_contracts
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Damage Reports
+DROP TRIGGER IF EXISTS audit_damage_reports_change ON damage_reports;
+CREATE TRIGGER audit_damage_reports_change
+AFTER INSERT OR UPDATE OR DELETE ON damage_reports
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Damage Liabilities
+DROP TRIGGER IF EXISTS audit_damage_liabilities_change ON damage_liabilities;
+CREATE TRIGGER audit_damage_liabilities_change
+AFTER INSERT OR UPDATE OR DELETE ON damage_liabilities
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

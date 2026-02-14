@@ -479,6 +479,55 @@ CREATE TABLE booking_contracts (
 );
 
 -- =============================================
+-- DAMAGES SYSTEM
+-- =============================================
+
+-- 1. THE INCIDENT (What happened?)
+CREATE TABLE damage_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Context
+    location_id INT NOT NULL REFERENCES locations(id),
+    snapshot_id BIGINT REFERENCES booking_inventory_snapshots(id), -- The Link to Prices
+    
+    -- Manual Pricing (Used ONLY if snapshot_id is NULL)
+    manual_cost_try NUMERIC(12, 2), 
+    
+    -- Details
+    description TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    
+    -- Audit
+    reported_by UUID NOT NULL REFERENCES users(id),
+    reported_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    reviewed_by UUID REFERENCES users(id),
+    reviewed_at TIMESTAMPTZ,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. THE DEBT (Per Student)
+CREATE TABLE damage_liabilities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    damage_report_id UUID REFERENCES damage_reports(id) ON DELETE CASCADE,
+    
+    student_id UUID REFERENCES students(id),
+    
+    -- The Calculated Cost for THIS student
+    amount NUMERIC(12, 2) NOT NULL,
+    currency CHAR(3) NOT NULL, -- 'TRY', 'USD', 'EUR'
+    
+    transaction_id UUID REFERENCES transactions(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_liabilities_student ON damage_liabilities(student_id);
+CREATE INDEX idx_liabilities_report ON damage_liabilities(damage_report_id);
+
+-- =============================================
 -- TURNSTILE CARD SYSTEM
 -- =============================================
 
