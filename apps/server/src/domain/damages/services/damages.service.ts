@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { DamagesRepository } from '../repositories/damages.repository';
 import { InventoryRepository } from '../../inventory/repositories/inventory.repository';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
@@ -6,6 +13,8 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { CreateDamageReportDto } from '../dto/create-damage-report.dto';
 import { DamageStatus } from '../../../common/enums/damage-status.enum';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import { UndoService } from '../../audit/services/undo.service';
 
 @Injectable()
 export class DamagesService {
@@ -15,6 +24,8 @@ export class DamagesService {
     private readonly repository: DamagesRepository,
     private readonly inventoryRepository: InventoryRepository,
     private readonly locationsRepository: LocationsRepository,
+    @Inject(forwardRef(() => UndoService))
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -67,7 +78,24 @@ export class DamagesService {
         }
       }
 
-      return this.repository.createReport({ ...data, reportedBy: context.userId }, client);
+      const report = await this.repository.createReport(
+        { ...data, reportedBy: context.userId },
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_DAMAGE_REPORT,
+          entityType: 'damage_report',
+          entityId: report.id,
+          undoData: {},
+          description: `Created damage report for location ${data.locationId}`,
+        },
+        client,
+      );
+
+      return report;
     }, context);
   }
 
@@ -222,6 +250,18 @@ export class DamagesService {
         );
       }
 
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.APPROVE_DAMAGE_REPORT,
+          entityType: 'damage_report',
+          entityId: id,
+          undoData: { previousStatus: report.status },
+          description: `Approved damage report ${id}`,
+        },
+        client,
+      );
+
       this.logger.log(
         { reportId: id, studentCount: targetBookings.length },
         'Damage report approved and liabilities created',
@@ -237,6 +277,18 @@ export class DamagesService {
         throw new BadRequestException('Report is already processed');
 
       await this.repository.updateReportStatus(id, DamageStatus.REJECTED, context.userId, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.REJECT_DAMAGE_REPORT,
+          entityType: 'damage_report',
+          entityId: id,
+          undoData: { previousStatus: report.status },
+          description: `Rejected damage report ${id}`,
+        },
+        client,
+      );
     }, context);
   }
 }

@@ -231,6 +231,14 @@ export class UndoService {
       case UndoActionType.RETURN_CARD:
         return this.undoReturnCard(log, undoUserId, client);
 
+      // Damages
+      case UndoActionType.CREATE_DAMAGE_REPORT:
+        return this.undoCreateDamageReport(log, client);
+      case UndoActionType.APPROVE_DAMAGE_REPORT:
+        return this.undoApproveDamageReport(log, client);
+      case UndoActionType.REJECT_DAMAGE_REPORT:
+        return this.undoRejectDamageReport(log, client);
+
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
     }
@@ -888,8 +896,42 @@ export class UndoService {
     // 2. Add history log for reversal
     await client.query(
       `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
-       VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+       VALUES ($1, $2, $3, 'returned', $4, $5)`,
       [cardId, previousHolderId, previousBookingId, undoUserId, 'Undo: Card return reversed'],
+    );
+  }
+
+  // ===========================================================================
+  // Damage Handlers
+  // ===========================================================================
+
+  private async undoCreateDamageReport(log: UndoLog, client: PoolClient): Promise<void> {
+    const reportId = log.entityId;
+    // Deleting a report also deletes its liabilities due to ON DELETE CASCADE
+    await client.query('DELETE FROM damage_reports WHERE id = $1', [reportId]);
+  }
+
+  private async undoApproveDamageReport(log: UndoLog, client: PoolClient): Promise<void> {
+    const reportId = log.entityId;
+    const { previousStatus } = log.undoData;
+
+    // 1. Revert report status
+    await client.query(
+      'UPDATE damage_reports SET status = $1, reviewed_by = NULL, reviewed_at = NULL WHERE id = $2',
+      [previousStatus, reportId],
+    );
+
+    // 2. Delete the created liabilities
+    await client.query('DELETE FROM damage_liabilities WHERE damage_report_id = $1', [reportId]);
+  }
+
+  private async undoRejectDamageReport(log: UndoLog, client: PoolClient): Promise<void> {
+    const reportId = log.entityId;
+    const { previousStatus } = log.undoData;
+
+    await client.query(
+      'UPDATE damage_reports SET status = $1, reviewed_by = NULL, reviewed_at = NULL WHERE id = $2',
+      [previousStatus, reportId],
     );
   }
 }

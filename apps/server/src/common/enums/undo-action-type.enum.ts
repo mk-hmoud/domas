@@ -40,4 +40,9 @@ export enum UndoActionType {
   CREATE_CARD_BATCH = 'create_card_batch',
   ISSUE_CARD = 'issue_card',
   RETURN_CARD = 'return_card',
+
+  // Damages
+  CREATE_DAMAGE_REPORT = 'create_damage_report',
+  APPROVE_DAMAGE_REPORT = 'approve_damage_report',
+  REJECT_DAMAGE_REPORT = 'reject_damage_report',
 }

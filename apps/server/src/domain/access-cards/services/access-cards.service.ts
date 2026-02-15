@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { AccessCardsRepository } from '../repositories/access-cards.repository';
 import { AccessCard } from '../entities/access-card.entity';
 import { DatabaseService } from '../../../core/database/database.service';
@@ -18,6 +25,7 @@ export class AccessCardsService {
 
   constructor(
     private readonly repository: AccessCardsRepository,
+    @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
