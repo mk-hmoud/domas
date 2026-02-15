@@ -35,4 +35,14 @@ export enum UndoActionType {
   CREATE_INVENTORY_ASSIGNMENT = "create_inventory_assignment",
   UPDATE_INVENTORY_ASSIGNMENT = "update_inventory_assignment",
   DELETE_INVENTORY_ASSIGNMENT = "delete_inventory_assignment",
+
+  // Access Cards
+  CREATE_CARD_BATCH = "create_card_batch",
+  ISSUE_CARD = "issue_card",
+  RETURN_CARD = "return_card",
+
+  // Damages
+  CREATE_DAMAGE_REPORT = "create_damage_report",
+  APPROVE_DAMAGE_REPORT = "approve_damage_report",
+  REJECT_DAMAGE_REPORT = "reject_damage_report",
 }

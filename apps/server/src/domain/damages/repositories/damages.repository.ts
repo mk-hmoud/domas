@@ -92,24 +92,30 @@ export class DamagesRepository {
     return result.rows;
   }
 
-  async findReportById(id: string, client?: PoolClient): Promise<DamageReport | null> {
+  async findReportById(id: string, client?: PoolClient): Promise<any | null> {
     const query = `
       SELECT dr.id, dr.location_id as "locationId", dr.snapshot_id as "snapshotId",
              dr.catalog_id as "catalogId",
-             dr.manual_cost_try as "manualCostTry", dr.manual_cost_foreign as "manualCostForeign",
-             dr.manual_currency_code as "manualCurrencyCode",
+             COALESCE(dr.manual_cost_try, cat.base_price_try) as "costTry",
+             COALESCE(dr.manual_cost_foreign, cat.base_price_foreign) as "costForeign",
+             COALESCE(dr.manual_currency_code, cat.foreign_currency_code) as "currencyCode",
              dr.description, dr.status,
              dr.reported_by as "reportedBy", dr.reported_at as "reportedAt",
              dr.reviewed_by as "reviewedBy", dr.reviewed_at as "reviewedAt",
              dr.culprit_ids as "culpritIds",
              dr.created_at as "createdAt", dr.updated_at as "updatedAt",
-             l.name as "locationName"
+             l.name as "locationName",
+             u.first_name || ' ' || u.last_name as "reportedByName",
+             rev.first_name || ' ' || rev.last_name as "reviewedByName"
       FROM damage_reports dr
       JOIN locations l ON dr.location_id = l.id
+      JOIN users u ON dr.reported_by = u.id
+      LEFT JOIN users rev ON dr.reviewed_by = rev.id
+      LEFT JOIN inventory_catalog cat ON dr.catalog_id = cat.id
       WHERE dr.id = $1
     `;
     const result = await this.getClient(client).query(query, [id]);
-    return result.rows[0] ? new DamageReport(result.rows[0]) : null;
+    return result.rows[0] || null;
   }
 
   async findAllReports(
@@ -117,18 +123,23 @@ export class DamagesRepository {
   ): Promise<any[]> {
     let query = `
       SELECT dr.id, dr.location_id as "locationId", dr.snapshot_id as "snapshotId",
-             dr.manual_cost_try as "manualCostTry", dr.manual_cost_foreign as "manualCostForeign",
-             dr.manual_currency_code as "manualCurrencyCode",
+             dr.catalog_id as "catalogId",
+             COALESCE(dr.manual_cost_try, cat.base_price_try) as "costTry",
+             COALESCE(dr.manual_cost_foreign, cat.base_price_foreign) as "costForeign",
+             COALESCE(dr.manual_currency_code, cat.foreign_currency_code) as "currencyCode",
              dr.description, dr.status,
              dr.reported_by as "reportedBy", dr.reported_at as "reportedAt",
              dr.reviewed_by as "reviewedBy", dr.reviewed_at as "reviewedAt",
              dr.culprit_ids as "culpritIds",
              dr.created_at as "createdAt", dr.updated_at as "updatedAt",
              l.name as "locationName",
-             u.first_name || ' ' || u.last_name as "reportedByName"
+             u.first_name || ' ' || u.last_name as "reportedByName",
+             rev.first_name || ' ' || rev.last_name as "reviewedByName"
       FROM damage_reports dr
       JOIN locations l ON dr.location_id = l.id
       JOIN users u ON dr.reported_by = u.id
+      LEFT JOIN users rev ON dr.reviewed_by = rev.id
+      LEFT JOIN inventory_catalog cat ON dr.catalog_id = cat.id
       WHERE 1=1
     `;
     const values: any[] = [];

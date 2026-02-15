@@ -46,7 +46,8 @@ export const PERMISSIONS = {
 
   // Damages
   DAMAGES_VIEW: 'damages.view',
-  DAMAGES_MANAGE: 'damages.manage',
+  DAMAGES_REPORT: 'damages.report', // Creating reports
+  DAMAGES_MANAGE: 'damages.manage', // Approving/Rejecting reports
 
   // Audit & Reports
   AUDIT_VIEW: 'audit.view',

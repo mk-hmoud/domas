@@ -15,19 +15,19 @@ export class DamagesController {
   constructor(private readonly service: DamagesService) {}
 
   @Post('reports')
-  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  @RequirePermissions(PERMISSIONS.DAMAGES_REPORT)
   createReport(@Body() data: CreateDamageReportDto, @UserContext() context: AuditUserContext) {
     return this.service.createReport(data, context);
   }
 
   @Get('reports/:id')
-  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  @RequirePermissions(PERMISSIONS.DAMAGES_VIEW)
   findReportById(@Param('id') id: string) {
     return this.service.findReportById(id);
   }
 
   @Get('reports')
-  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  @RequirePermissions(PERMISSIONS.DAMAGES_VIEW)
   findAllReports(@Query('status') status?: DamageStatus, @Query('locationId') locationId?: string) {
     return this.service.findAllReports({
       status,
@@ -36,13 +36,13 @@ export class DamagesController {
   }
 
   @Post('reports/:id/approve')
-  @RequirePermissions(PERMISSIONS.BOOKINGS_APPROVE_FINANCIAL)
+  @RequirePermissions(PERMISSIONS.DAMAGES_MANAGE)
   approveReport(@Param('id') id: string, @UserContext() context: AuditUserContext) {
     return this.service.approveReport(id, context);
   }
 
   @Post('reports/:id/reject')
-  @RequirePermissions(PERMISSIONS.BOOKINGS_APPROVE_FINANCIAL)
+  @RequirePermissions(PERMISSIONS.DAMAGES_MANAGE)
   rejectReport(@Param('id') id: string, @UserContext() context: AuditUserContext) {
     return this.service.rejectReport(id, context);
   }
