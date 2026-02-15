@@ -4,6 +4,7 @@ export interface DamageReport {
   id: string;
   locationId: number;
   snapshotId?: number;
+  catalogId?: number;
   manualCostTry?: number;
   manualCostForeign?: number;
   manualCurrencyCode?: string;

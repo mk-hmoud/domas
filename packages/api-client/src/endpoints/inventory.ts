@@ -99,4 +99,11 @@ export const inventory = {
     const response = await apiClient.get<any[]>("/inventory/available-extras");
     return response.data;
   },
+
+  findActiveSnapshotsByLocation: async (locationId: number): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(
+      `/inventory/active-snapshots/${locationId}`,
+    );
+    return response.data;
+  },
 };

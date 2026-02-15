@@ -5,7 +5,7 @@ import { LocationsRepository } from '../../locations/repositories/locations.repo
 import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { CreateDamageReportDto } from '../dto/create-damage-report.dto';
-import { DamageStatus } from '@domas/ts-types';
+import { DamageStatus } from '../../../common/enums/damage-status.enum';
 
 @Injectable()
 export class DamagesService {
@@ -37,8 +37,16 @@ export class DamagesService {
         if (snapshot.rowCount === 0) throw new NotFoundException('Inventory snapshot not found');
       }
 
-      if (!data.snapshotId && !data.manualCostTry) {
-        throw new BadRequestException('Either snapshotId or manualCostTry must be provided');
+      // If catalogId is provided, validate it exists
+      if (data.catalogId) {
+        const catalogItem = await this.inventoryRepository.findCatalogById(data.catalogId);
+        if (!catalogItem) throw new NotFoundException('Catalog item not found');
+      }
+
+      if (!data.snapshotId && !data.catalogId && !data.manualCostTry) {
+        throw new BadRequestException(
+          'Either snapshotId, catalogId or manualCostTry must be provided',
+        );
       }
 
       // Validate Culprits
@@ -101,7 +109,7 @@ export class DamagesService {
       } else if (report.snapshotId) {
         // Fallback to the student specifically linked to that snapshot
         const query = `
-          SELECT b.id, b.student_id, s.nationality_code, bis.price_try, bis.price_foreign, bis.foreign_currency_code
+          SELECT b.id, b.student_id, s.nationality_code
           FROM booking_inventory_snapshots bis
           JOIN bookings b ON bis.booking_id = b.id
           JOIN students s ON b.student_id = s.id
@@ -133,23 +141,36 @@ export class DamagesService {
         );
       }
 
-      // 2. Fetch Pricing Template
-      let totalTry = 0;
-      let totalForeign = 0;
+      // 2. Fetch LIVE Pricing from Catalog or Report
+      let currentPriceTry = 0;
+      let currentPriceForeign = 0;
       let foreignCurrency = 'EUR';
 
       if (report.snapshotId) {
-        const sRes = await client.query(
-          'SELECT price_try, price_foreign, foreign_currency_code FROM booking_inventory_snapshots WHERE id = $1',
-          [report.snapshotId],
+        // Fetch current live price from catalog via snapshot
+        const catalogItem = await this.inventoryRepository.findCatalogItemBySnapshot(
+          Number(report.snapshotId),
+          client,
         );
-        const s = sRes.rows[0];
-        totalTry = parseFloat(s.price_try);
-        totalForeign = parseFloat(s.price_foreign);
-        foreignCurrency = s.foreign_currency_code;
+        if (!catalogItem) throw new NotFoundException('Catalog item not found for snapshot');
+
+        currentPriceTry = Number(catalogItem.current_price_try);
+        currentPriceForeign = Number(catalogItem.current_price_foreign);
+        foreignCurrency = catalogItem.foreign_currency_code;
+      } else if (report.catalogId) {
+        // Fetch current live price directly from catalog
+        const catalogItem = await this.inventoryRepository.findCatalogById(
+          report.catalogId,
+          client,
+        );
+        if (!catalogItem) throw new NotFoundException('Catalog item not found');
+
+        currentPriceTry = Number(catalogItem.basePriceTry);
+        currentPriceForeign = Number(catalogItem.basePriceForeign);
+        foreignCurrency = catalogItem.foreignCurrencyCode;
       } else {
-        totalTry = report.manualCostTry || 0;
-        totalForeign = report.manualCostForeign || 0;
+        currentPriceTry = Number(report.manualCostTry || 0);
+        currentPriceForeign = Number(report.manualCostForeign || 0);
         foreignCurrency = report.manualCurrencyCode || 'EUR';
       }
 
@@ -160,9 +181,11 @@ export class DamagesService {
       const splitDivisor = targetBookings.length;
 
       for (const b of targetBookings) {
-        // DUAL CURRENCY LOGIC: Apply correct price per student nationality
+        // DUAL CURRENCY LOGIC: Apply correct LIVE price per student nationality
         const isTR = b.nationality_code === 'TR';
-        const studentAmount = isTR ? totalTry / splitDivisor : totalForeign / splitDivisor;
+        const studentAmount = isTR
+          ? currentPriceTry / splitDivisor
+          : currentPriceForeign / splitDivisor;
         const studentCurrency = isTR ? 'TRY' : foreignCurrency;
 
         // A. Record Liability

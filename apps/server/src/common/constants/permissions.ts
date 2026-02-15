@@ -44,6 +44,10 @@ export const PERMISSIONS = {
   ACCESS_CARDS_VIEW: 'access_cards.view',
   ACCESS_CARDS_MANAGE: 'access_cards.manage',
 
+  // Damages
+  DAMAGES_VIEW: 'damages.view',
+  DAMAGES_MANAGE: 'damages.manage',
+
   // Audit & Reports
   AUDIT_VIEW: 'audit.view',
   REPORTS_VIEW: 'reports.view',

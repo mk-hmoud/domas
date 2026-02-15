@@ -84,8 +84,8 @@ export class ContractsService {
         `who stays at EUL signed this contract with the supervision of the Dormitory Administrator, ` +
         `while taking over the dormitory room ${room.name}. ` +
         `The above mentioned student has to hand over that contract and the room to the dormitory administrator ` +
-        `while leaving the dormitory. The cost of damages is cut from the deposit of the student ` +
-        `according to the amounts specified below.`;
+        `while leaving the dormitory. The student agrees to reimburse the University ` +
+        `based on the current replacement value listed in the Residence Handbook at the time of any damage or loss incident.`;
 
       doc.text(preamble, { align: 'justify' });
       doc.moveDown();

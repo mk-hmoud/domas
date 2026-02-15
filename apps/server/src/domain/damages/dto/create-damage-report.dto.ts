@@ -8,6 +8,7 @@ import {
   IsUUID,
   Min,
   Length,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateDamageReportDto {
@@ -19,14 +20,20 @@ export class CreateDamageReportDto {
   @IsOptional()
   snapshotId?: number;
 
-  @IsNumber()
-  @Min(0)
+  @IsInt()
   @IsOptional()
+  catalogId?: number;
+
+  @ValidateIf((o) => !o.snapshotId && !o.catalogId)
+  @IsNumber()
+  @Min(0.01)
+  @IsNotEmpty()
   manualCostTry?: number;
 
+  @ValidateIf((o) => !o.snapshotId && !o.catalogId)
   @IsNumber()
-  @Min(0)
-  @IsOptional()
+  @Min(0.01)
+  @IsNotEmpty()
   manualCostForeign?: number;
 
   @IsString()

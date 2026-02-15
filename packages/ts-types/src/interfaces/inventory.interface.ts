@@ -38,9 +38,6 @@ export interface BookingInventorySnapshot {
   descriptionTr?: string;
   descriptionEn?: string;
   scope: InventoryScope;
-  priceTry: number;
-  priceForeign: number;
-  foreignCurrencyCode: string;
   quantity: number;
   locationName?: string;
   checkinRecordedAt?: string;

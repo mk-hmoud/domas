@@ -111,4 +111,10 @@ export class InventoryController {
   getAvailableExtras() {
     return this.inventoryService.getAvailableExtras();
   }
+
+  @Get('active-snapshots/:locationId')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  findActiveSnapshotsByLocation(@Param('locationId') locationId: string) {
+    return this.inventoryService.findActiveSnapshotsByLocation(parseInt(locationId, 10));
+  }
 }

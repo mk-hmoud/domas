@@ -4,7 +4,7 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { DamageReport } from '../entities/damage-report.entity';
 import { DamageLiability } from '../entities/damage-liability.entity';
 import { CreateDamageReportDto } from '../dto/create-damage-report.dto';
-import { DamageStatus } from '@domas/ts-types';
+import { DamageStatus } from '../../../common/enums/damage-status.enum';
 
 @Injectable()
 export class DamagesRepository {
@@ -20,10 +20,10 @@ export class DamagesRepository {
   ): Promise<DamageReport> {
     const query = `
       INSERT INTO damage_reports (
-        location_id, snapshot_id, manual_cost_try, manual_cost_foreign, manual_currency_code, description, reported_by, culprit_ids, status
+        location_id, snapshot_id, catalog_id, manual_cost_try, manual_cost_foreign, manual_currency_code, description, reported_by, culprit_ids, status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
-      RETURNING id, location_id as "locationId", snapshot_id as "snapshotId",
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      RETURNING id, location_id as "locationId", snapshot_id as "snapshotId", catalog_id as "catalogId",
                 manual_cost_try as "manualCostTry", manual_cost_foreign as "manualCostForeign",
                 manual_currency_code as "manualCurrencyCode",
                 description, status, reported_by as "reportedBy", reported_at as "reportedAt",
@@ -32,6 +32,7 @@ export class DamagesRepository {
     const values = [
       data.locationId,
       data.snapshotId || null,
+      data.catalogId || null,
       data.manualCostTry || null,
       data.manualCostForeign || null,
       data.manualCurrencyCode || 'EUR',
@@ -94,6 +95,7 @@ export class DamagesRepository {
   async findReportById(id: string, client?: PoolClient): Promise<DamageReport | null> {
     const query = `
       SELECT dr.id, dr.location_id as "locationId", dr.snapshot_id as "snapshotId",
+             dr.catalog_id as "catalogId",
              dr.manual_cost_try as "manualCostTry", dr.manual_cost_foreign as "manualCostForeign",
              dr.manual_currency_code as "manualCurrencyCode",
              dr.description, dr.status,

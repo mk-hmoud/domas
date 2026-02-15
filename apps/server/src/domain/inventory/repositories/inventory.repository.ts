@@ -61,9 +61,6 @@ export class InventoryRepository {
       ${prefix}description_tr as "descriptionTr",
       ${prefix}description_en as "descriptionEn",
       ${prefix}scope,
-      ${prefix}price_try as "priceTry",
-      ${prefix}price_foreign as "priceForeign",
-      ${prefix}foreign_currency_code as "foreignCurrencyCode",
       ${prefix}quantity,
       ${prefix}location_name as "locationName",
       ${prefix}checkin_recorded_at as "checkinRecordedAt",
@@ -343,7 +340,7 @@ export class InventoryRepository {
 
     for (const s of snapshots) {
       rows.push(
-        `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`,
+        `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`,
       );
       values.push(
         s.bookingId,
@@ -353,9 +350,6 @@ export class InventoryRepository {
         s.descriptionTr || null,
         s.descriptionEn || null,
         s.scope,
-        s.priceTry,
-        s.priceForeign,
-        s.foreignCurrencyCode,
         s.quantity,
         s.locationName || null,
       );
@@ -364,7 +358,7 @@ export class InventoryRepository {
     const query = `
       INSERT INTO booking_inventory_snapshots (
         booking_id, catalog_id, name_tr, name_en, description_tr, description_en, 
-        scope, price_try, price_foreign, foreign_currency_code, quantity, location_name
+        scope, quantity, location_name
       )
       VALUES ${rows.join(', ')}
     `;
@@ -384,6 +378,35 @@ export class InventoryRepository {
     `;
     const result = await this.getClient(client).query(query, [bookingId]);
     return result.rows.map((r) => new BookingInventorySnapshot(r));
+  }
+
+  async findActiveSnapshotsByLocation(locationId: number): Promise<any[]> {
+    const query = `
+      SELECT 
+        bis.id, 
+        bis.name_en as "nameEn", 
+        bis.name_tr as "nameTr", 
+        cat.base_price_try as "priceTry", 
+        cat.base_price_foreign as "priceForeign", 
+        cat.foreign_currency_code as "foreignCurrencyCode",
+        bis.scope,
+        bis.quantity,
+        s.first_name || ' ' || s.last_name as "studentName",
+        bed.label as "bedLabel",
+        l_bed.name as "roomName"
+      FROM booking_inventory_snapshots bis
+      JOIN inventory_catalog cat ON bis.catalog_id = cat.id
+      JOIN bookings b ON bis.booking_id = b.id
+      JOIN beds bed ON b.bed_id = bed.id
+      JOIN students s ON b.student_id = s.id
+      JOIN locations l_bed ON bed.location_id = l_bed.id
+      WHERE b.status = 'active'
+        AND l_bed.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+      ORDER BY l_bed.tree_path, bed.label, bis.name_en
+    `;
+
+    const result = await this.db.query(query, [locationId]);
+    return result.rows;
   }
 
   async findAvailableExtras(): Promise<any[]> {
@@ -414,7 +437,7 @@ export class InventoryRepository {
     const query = `
       SELECT a.catalog_id, a.quantity, 
              c.name_tr, c.name_en, c.description_tr, c.description_en,
-             c.base_price_try, c.base_price_foreign, c.foreign_currency_code, c.scope,
+             c.scope,
              COALESCE(l.name, 'Bed ' || b.label) as target_name
       FROM inventory_assignments a
       JOIN inventory_catalog c ON a.catalog_id = c.id
@@ -434,7 +457,7 @@ export class InventoryRepository {
       SELECT id as catalog_id, 
              1 as quantity,
              name_tr, name_en, description_tr, description_en,
-             base_price_try, base_price_foreign, foreign_currency_code, scope,
+             scope,
              'Personal Rental' as target_name
       FROM inventory_catalog
       WHERE id = ANY($1) 
@@ -444,5 +467,20 @@ export class InventoryRepository {
     `;
     const res = await this.getClient(client).query(query, [catalogIds]);
     return res.rows;
+  }
+
+  async findCatalogItemBySnapshot(snapshotId: number, client?: PoolClient): Promise<any | null> {
+    const query = `
+      SELECT 
+        cat.id as catalog_id,
+        cat.base_price_try as "current_price_try",
+        cat.base_price_foreign as "current_price_foreign",
+        cat.foreign_currency_code
+      FROM booking_inventory_snapshots bis
+      JOIN inventory_catalog cat ON bis.catalog_id = cat.id 
+      WHERE bis.id = $1
+    `;
+    const res = await this.getClient(client).query(query, [snapshotId]);
+    return res.rows[0] || null;
   }
 }

@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { DamageStatus } from '@domas/ts-types';
+import { DamageStatus } from '../../../common/enums/damage-status.enum';
 
 export class ReviewDamageReportDto {
   @IsEnum(DamageStatus)

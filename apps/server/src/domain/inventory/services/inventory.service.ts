@@ -275,25 +275,17 @@ export class InventoryService {
 
     const allItems = [...mandatoryItems, ...optionalItems];
 
-    const snapshots = allItems.map((r) => {
-      const price = isTR ? r.base_price_try : r.base_price_foreign;
-      const currency = isTR ? 'TRY' : r.foreign_currency_code;
-
-      return {
-        bookingId,
-        catalogId: r.catalog_id,
-        nameTr: r.name_tr,
-        nameEn: r.name_en,
-        descriptionTr: r.description_tr,
-        descriptionEn: r.description_en,
-        scope: r.scope,
-        priceTry: price,
-        priceForeign: price,
-        foreignCurrencyCode: currency,
-        quantity: r.quantity,
-        locationName: r.target_name,
-      };
-    });
+    const snapshots = allItems.map((r) => ({
+      bookingId,
+      catalogId: r.catalog_id,
+      nameTr: r.name_tr,
+      nameEn: r.name_en,
+      descriptionTr: r.description_tr,
+      descriptionEn: r.description_en,
+      scope: r.scope,
+      quantity: r.quantity,
+      locationName: r.target_name,
+    }));
 
     if (snapshots.length > 0) {
       await this.inventoryRepository.createSnapshots(snapshots, client);
@@ -302,5 +294,9 @@ export class InventoryService {
 
   async findSnapshotsByBooking(bookingId: string): Promise<any[]> {
     return this.inventoryRepository.findSnapshotsByBooking(bookingId);
+  }
+
+  async findActiveSnapshotsByLocation(locationId: number): Promise<any[]> {
+    return this.inventoryRepository.findActiveSnapshotsByLocation(locationId);
   }
 }

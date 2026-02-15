@@ -439,11 +439,6 @@ CREATE TABLE booking_inventory_snapshots (
     description_en TEXT,
     scope inventory_scope NOT NULL,
     
-    -- Pricing at time of contract
-    price_try NUMERIC(12, 2) NOT NULL,
-    price_foreign NUMERIC(12, 2) NOT NULL,
-    foreign_currency_code CHAR(3) NOT NULL,
-    
     quantity INT NOT NULL DEFAULT 1,
     
     -- Assignment context (e.g. "Room 301", "Block A Kitchen")
@@ -488,9 +483,10 @@ CREATE TABLE damage_reports (
     
     -- Context
     location_id INT NOT NULL REFERENCES locations(id),
-    snapshot_id BIGINT REFERENCES booking_inventory_snapshots(id), -- The Link to Prices
+    snapshot_id BIGINT REFERENCES booking_inventory_snapshots(id), -- The Link to Prices via Snapshot
+    catalog_id INT REFERENCES inventory_catalog(id), -- Direct link to Catalog item
     
-    -- Manual Pricing (Used ONLY if snapshot_id is NULL)
+    -- Manual Pricing (Used ONLY if snapshot_id and catalog_id are NULL)
     manual_cost_try NUMERIC(12, 2), 
     manual_cost_foreign NUMERIC(12, 2),
     manual_currency_code CHAR(3) DEFAULT 'EUR',
@@ -508,7 +504,15 @@ CREATE TABLE damage_reports (
     reviewed_at TIMESTAMPTZ,
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Ensure valid pricing method
+    CONSTRAINT chk_damage_pricing CHECK (
+        (snapshot_id IS NOT NULL) OR 
+        (catalog_id IS NOT NULL) OR 
+        (manual_cost_try IS NOT NULL AND manual_cost_try > 0 AND 
+         manual_cost_foreign IS NOT NULL AND manual_cost_foreign > 0)
+    )
 );
 
 -- 2. THE DEBT (Per Student)

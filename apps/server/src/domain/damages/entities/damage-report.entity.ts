@@ -1,9 +1,10 @@
-import { DamageStatus } from '@domas/ts-types';
+import { DamageStatus } from '../../../common/enums/damage-status.enum';
 
 export class DamageReport {
   id!: string;
   locationId!: number;
   snapshotId?: number;
+  catalogId?: number;
   manualCostTry?: number;
   manualCostForeign?: number;
   manualCurrencyCode?: string;
