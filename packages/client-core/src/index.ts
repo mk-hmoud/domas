@@ -14,3 +14,4 @@ export * from "./pages/SharedAccountPage";
 export * from "./pages/SharedInventoryCatalogPage";
 export * from "./pages/SharedCheckInPage";
 export * from "./pages/SharedAccessCardsPage";
+export * from "./pages/SharedDamagesPage";

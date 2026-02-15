@@ -118,6 +118,11 @@ export function DashboardLayout() {
             link: '/dashboard/inventory/catalog',
             requiredPermission: 'inventory.manage',
           },
+          {
+            label: t('nav.damages'),
+            link: '/dashboard/damages',
+            requiredPermission: 'damages.view',
+          },
         ],
       },
       {

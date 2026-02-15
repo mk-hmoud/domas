@@ -12,6 +12,7 @@ export * from "./components/AuthenticationForm";
 export * from "./components/CreateUserModal";
 export * from "./components/UsersTable";
 export * from "./components/Locations";
+export * from "./components/Locations/SmartLocationSelector";
 export * from "./components/Semesters";
 export * from "./components/CreateBookingModal";
 export * from "./components/Bookings";
@@ -29,6 +30,9 @@ export * from "./components/CheckIn/CheckInDetailsModal";
 export * from "./components/AccessCards/CardBatchModal";
 export * from "./components/AccessCards/CardBatchTable";
 export * from "./components/AccessCards/AccessCardTable";
+export * from "./components/Damages/DamageReportTable";
+export * from "./components/Damages/CreateDamageModal";
+export * from "./components/Damages/DamageDetailsDrawer";
 
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";

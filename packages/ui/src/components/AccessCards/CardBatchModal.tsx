@@ -75,10 +75,13 @@ export function CardBatchModal({
             }))}
             searchable
             clearable
-            {...form.getInputProps("locationId")}
+            value={
+              form.values.locationId ? form.values.locationId.toString() : null
+            }
             onChange={(val) =>
               form.setFieldValue("locationId", val ? parseInt(val) : undefined)
             }
+            error={form.errors.locationId}
           />
 
           <Group grow>

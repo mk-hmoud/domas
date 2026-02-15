@@ -14,6 +14,7 @@ import { AccountPage } from './pages/AccountPage';
 import { InventoryCatalogPage } from './pages/InventoryCatalogPage';
 import { CheckInPage } from './pages/CheckInPage';
 import { AccessCardsPage } from './pages/AccessCardsPage';
+import { DamagesPage } from './pages/DamagesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -84,6 +85,14 @@ function App() {
             element={
               <PermissionRoute permission="access_cards.view">
                 <AccessCardsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="damages"
+            element={
+              <PermissionRoute permission="damages.view">
+                <DamagesPage />
               </PermissionRoute>
             }
           />
