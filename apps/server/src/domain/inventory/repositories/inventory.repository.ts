@@ -429,6 +429,59 @@ export class InventoryRepository {
     return result.rows;
   }
 
+  async findMixedInventoryByLocation(locationId: number): Promise<any[]> {
+    const query = `
+      -- 1. Mandatory Items (Assigned to location or its ancestors)
+      SELECT 
+        ia.id as "assignmentId",
+        cat.id as "catalogId",
+        NULL as "snapshotId",
+        cat.name_en as "nameEn",
+        cat.name_tr as "nameTr",
+        cat.base_price_try as "damagePriceTry",
+        cat.base_price_foreign as "damagePriceForeign",
+        cat.foreign_currency_code as "currency",
+        ia.quantity,
+        ia.notes,
+        'mandatory' as type,
+        'Common Area' as owner
+      FROM inventory_assignments ia
+      JOIN inventory_catalog cat ON ia.catalog_id = cat.id
+      JOIN locations l_item ON ia.location_id = l_item.id
+      WHERE l_item.tree_path @> (SELECT tree_path FROM locations WHERE id = $1)
+        AND cat.is_active = TRUE
+        AND cat.deleted_at IS NULL
+
+      UNION ALL
+
+      -- 2. Snapshot Items (Personal items for active bookings in this location hierarchy)
+      SELECT 
+        NULL as "assignmentId",
+        bis.catalog_id as "catalogId",
+        bis.id::text as "snapshotId",
+        bis.name_en as "nameEn",
+        bis.name_tr as "nameTr",
+        cat.base_price_try as "damagePriceTry",
+        cat.base_price_foreign as "damagePriceForeign",
+        cat.foreign_currency_code as "currency",
+        bis.quantity,
+        '' as notes,
+        'snapshot' as type,
+        s.first_name || ' ' || s.last_name || ' (Bed ' || bed.label || ')' as owner
+      FROM booking_inventory_snapshots bis
+      JOIN bookings b ON bis.booking_id = b.id
+      JOIN beds bed ON b.bed_id = bed.id
+      JOIN students s ON b.student_id = s.id
+      JOIN locations l_bed ON bed.location_id = l_bed.id
+      JOIN inventory_catalog cat ON bis.catalog_id = cat.id
+      WHERE b.status = 'active'
+        AND l_bed.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+    `;
+
+    const result = await this.db.query(query, [locationId]);
+    return result.rows;
+  }
+
   async findMandatoryAssignmentsForSnapshot(
     bedId: number,
     locationIds: number[],

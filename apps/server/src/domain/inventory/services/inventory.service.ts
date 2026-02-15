@@ -299,4 +299,8 @@ export class InventoryService {
   async findActiveSnapshotsByLocation(locationId: number): Promise<any[]> {
     return this.inventoryRepository.findActiveSnapshotsByLocation(locationId);
   }
+
+  async getMixedInventory(locationId: number) {
+    return this.inventoryRepository.findMixedInventoryByLocation(locationId);
+  }
 }

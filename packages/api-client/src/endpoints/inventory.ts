@@ -106,4 +106,11 @@ export const inventory = {
     );
     return response.data;
   },
+
+  getMixedInventory: async (locationId: number): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(
+      `/inventory/active-mixed/${locationId}`,
+    );
+    return response.data;
+  },
 };

@@ -253,7 +253,11 @@ export class LocationsRepository implements ILocationsRepository {
     return parseInt(result.rows[0].count, 10);
   }
 
-  async searchByName(queryStr: string, client?: PoolClient): Promise<Location[]> {
+  async searchByName(
+    queryStr: string,
+    options: { includePath?: boolean } = {},
+    client?: PoolClient,
+  ): Promise<Location[]> {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
@@ -262,7 +266,25 @@ export class LocationsRepository implements ILocationsRepository {
       LIMIT 20
     `;
     const result = await this.getClient(client).query<Location>(query, [`%${queryStr}%`]);
-    return result.rows.map((row) => new Location(row));
+    const locations = result.rows.map((row) => new Location(row));
+
+    if (options.includePath && locations.length > 0) {
+      for (const loc of locations) {
+        loc.locationPath = await this.getPathDisplayName(loc.treePath, client);
+      }
+    }
+
+    return locations;
+  }
+
+  async getPathDisplayName(path: string, client?: PoolClient): Promise<string> {
+    const query = `
+      SELECT string_agg(name, ' > ' ORDER BY tree_path) as path
+      FROM locations
+      WHERE tree_path @> $1 AND deleted_at IS NULL
+    `;
+    const result = await this.getClient(client).query(query, [path]);
+    return result.rows[0]?.path || '';
   }
 
   async updateGenderLock(

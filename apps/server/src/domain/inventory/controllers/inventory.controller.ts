@@ -117,4 +117,10 @@ export class InventoryController {
   findActiveSnapshotsByLocation(@Param('locationId') locationId: string) {
     return this.inventoryService.findActiveSnapshotsByLocation(parseInt(locationId, 10));
   }
+
+  @Get('active-mixed/:locationId')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  getMixedInventory(@Param('locationId') locationId: string) {
+    return this.inventoryService.getMixedInventory(parseInt(locationId, 10));
+  }
 }

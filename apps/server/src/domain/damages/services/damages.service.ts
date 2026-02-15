@@ -90,14 +90,22 @@ export class DamagesService {
     return this.db.transaction(async (client) => {
       const report = await this.repository.findReportById(id, client);
       if (!report) throw new NotFoundException('Damage report not found');
-      if (report.status !== DamageStatus.PENDING)
+      if (report.status !== DamageStatus.PENDING) {
+        this.logger.warn(
+          { reportId: id, status: report.status },
+          'Attempted to approve a non-pending report',
+        );
         throw new BadRequestException('Report is already processed');
+      }
 
       // 1. Find Liable Students (Dynamic list at time of approval)
       let targetBookings: any[] = [];
 
       if (report.culpritIds && report.culpritIds.length > 0) {
-        // Specifically targeted culprits
+        this.logger.log(
+          { reportId: id, culprits: report.culpritIds },
+          'Searching for specific culprits',
+        );
         const query = `
           SELECT b.id, b.student_id, s.nationality_code 
           FROM bookings b 
@@ -107,7 +115,10 @@ export class DamagesService {
         const res = await client.query(query, [report.culpritIds]);
         targetBookings = res.rows;
       } else if (report.snapshotId) {
-        // Fallback to the student specifically linked to that snapshot
+        this.logger.log(
+          { reportId: id, snapshotId: report.snapshotId },
+          'Searching for student via snapshot',
+        );
         const query = `
           SELECT b.id, b.student_id, s.nationality_code
           FROM booking_inventory_snapshots bis
@@ -121,19 +132,30 @@ export class DamagesService {
 
       // If no culprits and no specific snapshot student found, fallback to location-based group liability
       if (targetBookings.length === 0) {
+        this.logger.log(
+          { reportId: id, locationId: report.locationId },
+          'No specific targets found, falling back to location residents',
+        );
         const location = await this.locationsRepository.findById(report.locationId, client);
+        if (!location) throw new NotFoundException('Location not found');
+
         const query = `
           SELECT b.id, b.student_id, s.nationality_code
           FROM bookings b
           JOIN beds bd ON b.bed_id = bd.id
           JOIN students s ON b.student_id = s.id
           JOIN locations l ON bd.location_id = l.id
-          WHERE l.tree_path <@ $1
+          WHERE l.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
             AND b.status = 'active'
         `;
-        const res = await client.query(query, [location!.treePath]);
+        const res = await client.query(query, [report.locationId]);
         targetBookings = res.rows;
       }
+
+      this.logger.log(
+        { reportId: id, studentCount: targetBookings.length },
+        'Target students identified',
+      );
 
       if (targetBookings.length === 0) {
         throw new BadRequestException(
@@ -189,7 +211,7 @@ export class DamagesService {
         const studentCurrency = isTR ? 'TRY' : foreignCurrency;
 
         // A. Record Liability
-        const liability = await this.repository.createLiability(
+        await this.repository.createLiability(
           {
             damageReportId: report.id,
             studentId: b.student_id,
@@ -198,30 +220,11 @@ export class DamagesService {
           },
           client,
         );
-
-        // B. Issue Fine (Transaction) - SET TO TRUE
-        const tQuery = `
-          INSERT INTO transactions (booking_id, payer_id, amount, transaction_type, is_approved, approved_by, approved_at)
-          VALUES ($1, $2, $3, 'damage', TRUE, $4, NOW())
-          RETURNING id
-        `;
-        const tRes = await client.query(tQuery, [
-          b.id,
-          b.student_id,
-          studentAmount,
-          context.userId,
-        ]);
-
-        // Link them
-        await client.query('UPDATE damage_liabilities SET transaction_id = $1 WHERE id = $2', [
-          tRes.rows[0].id,
-          liability.id,
-        ]);
       }
 
       this.logger.log(
         { reportId: id, studentCount: targetBookings.length },
-        'Damage report approved and fines issued',
+        'Damage report approved and liabilities created',
       );
     }, context);
   }

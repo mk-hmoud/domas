@@ -178,4 +178,26 @@ export class StudentsRepository {
     const query = `UPDATE students SET is_active = $1 WHERE id = ANY($2) AND deleted_at IS NULL`;
     await this.getClient(client).query(query, [isActive, ids]);
   }
+
+  async findActiveResidentsByLocation(locationId: number, client?: PoolClient): Promise<any[]> {
+    const query = `
+      SELECT 
+        s.id,
+        s.first_name as "firstName",
+        s.last_name as "lastName",
+        s.student_number as "studentNumber",
+        b.id as "bookingId",
+        bd.label as "bedLabel",
+        l.name as "roomName"
+      FROM students s
+      JOIN bookings b ON s.id = b.student_id
+      JOIN beds bd ON b.bed_id = bd.id
+      JOIN locations l ON bd.location_id = l.id
+      WHERE b.status = 'active'
+        AND l.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+      ORDER BY l.tree_path, bd.label
+    `;
+    const result = await this.getClient(client).query(query, [locationId]);
+    return result.rows;
+  }
 }

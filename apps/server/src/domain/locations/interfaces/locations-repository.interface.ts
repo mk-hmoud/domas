@@ -21,5 +21,9 @@ export interface ILocationsRepository {
   delete(id: number, client?: PoolClient): Promise<void>;
   exists(id: number, client?: PoolClient): Promise<boolean>;
   countByType(type: LocationType, client?: PoolClient): Promise<number>;
-  searchByName(query: string, client?: PoolClient): Promise<Location[]>;
+  searchByName(
+    query: string,
+    options?: { includePath?: boolean },
+    client?: PoolClient,
+  ): Promise<Location[]>;
 }

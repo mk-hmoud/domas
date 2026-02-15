@@ -66,6 +66,18 @@ export const locations = {
     return response.data;
   },
 
+  getResidents: async (id: number): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(`/locations/${id}/residents`);
+    return response.data;
+  },
+
+  getInventoryMixed: async (id: number): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(
+      `/locations/${id}/inventory-mixed`,
+    );
+    return response.data;
+  },
+
   findChildren: async (id: number): Promise<Location[]> => {
     const response = await apiClient.get<Location[]>(
       `/locations/${id}/children`,
@@ -80,9 +92,9 @@ export const locations = {
     return response.data;
   },
 
-  search: async (query: string): Promise<Location[]> => {
+  search: async (query: string, includePath?: boolean): Promise<Location[]> => {
     const response = await apiClient.get<Location[]>("/locations/search", {
-      params: { q: query },
+      params: { q: query, includePath: includePath ? "true" : undefined },
     });
     return response.data;
   },

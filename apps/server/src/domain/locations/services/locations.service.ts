@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { BedsRepository } from '../repositories/beds.repository';
+import { StudentsRepository } from '../../students/repositories/students.repository';
 import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
 import {
@@ -31,6 +32,7 @@ export class LocationsService {
   constructor(
     private readonly locationsRepository: LocationsRepository,
     private readonly bedsRepository: BedsRepository,
+    private readonly studentsRepository: StudentsRepository,
     private readonly db: DatabaseService,
   ) {}
 
@@ -180,8 +182,12 @@ export class LocationsService {
     return this.locationsRepository.findWithAncestors(id);
   }
 
-  async search(query: string): Promise<Location[]> {
-    return this.locationsRepository.searchByName(query);
+  async search(query: string, options: { includePath?: boolean } = {}): Promise<Location[]> {
+    return this.locationsRepository.searchByName(query, options);
+  }
+
+  async findActiveResidents(locationId: number) {
+    return this.studentsRepository.findActiveResidentsByLocation(locationId);
   }
 
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {

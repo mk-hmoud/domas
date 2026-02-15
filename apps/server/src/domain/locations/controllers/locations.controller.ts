@@ -132,14 +132,22 @@ export class LocationsController {
 
   @Get('search')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  search(@Query('q') query: string) {
-    return this.locationsService.search(query);
+  search(@Query('q') query: string, @Query('includePath') includePath?: string) {
+    return this.locationsService.search(query, {
+      includePath: includePath === 'true',
+    });
   }
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.locationsService.findById(id);
+  }
+
+  @Get(':id/residents')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
+  getResidents(@Param('id', ParseIntPipe) id: number) {
+    return this.locationsService.findActiveResidents(id);
   }
 
   @Get(':id/children')

@@ -12,6 +12,7 @@ export class Location {
   isTrOnly!: boolean;
   ownership!: LocationOwnership;
   basePrice!: number | null;
+  locationPath?: string;
   createdAt!: Date;
   updatedAt!: Date;
 
