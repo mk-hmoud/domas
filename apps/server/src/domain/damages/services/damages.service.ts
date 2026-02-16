@@ -15,13 +15,24 @@ import { CreateDamageReportDto } from '../dto/create-damage-report.dto';
 import { DamageStatus } from '../../../common/enums/damage-status.enum';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { UndoService } from '../../audit/services/undo.service';
+import { DamageReport } from '../entities/damage-report.entity';
+import { PoolClient } from 'pg';
 
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
 @Injectable()
 export class DamagesService {
   private readonly logger = new Logger(DamagesService.name);
-  // ...
+
+  constructor(
+    private readonly repository: DamagesRepository,
+    private readonly inventoryRepository: InventoryRepository,
+    private readonly locationsRepository: LocationsRepository,
+    @Inject(forwardRef(() => UndoService))
+    private readonly undoService: UndoService,
+    private readonly db: DatabaseService,
+  ) {}
+
   /**
    * STEP 1: Staff reports the incident.
    * No financial impact yet.
