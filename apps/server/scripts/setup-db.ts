@@ -44,6 +44,7 @@ if (process.env.DATABASE_URL) {
 // secrets to inject into the sql files.
 const APP_USER_PASSWORD = getEnv('APP_USER_PASSWORD');
 const APP_USER = getEnv('APP_USER');
+const DB_NAME = getEnv('DB_NAME');
 
 async function run() {
   const client = new Client(DB_CONFIG);
@@ -71,6 +72,7 @@ async function run() {
       if (file.includes('00_roles.sql')) {
         sql = sql.replace(/\${APP_USER_PASSWORD}/g, APP_USER_PASSWORD);
         sql = sql.replace(/\${APP_USER}/g, APP_USER);
+        sql = sql.replace(/\${DB_NAME}/g, DB_NAME);
       }
 
       await client.query(sql);
