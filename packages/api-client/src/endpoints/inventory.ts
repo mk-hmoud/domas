@@ -107,6 +107,13 @@ export const inventory = {
     return response.data;
   },
 
+  findSnapshotsByBooking: async (bookingId: string): Promise<any[]> => {
+    const response = await apiClient.get<any[]>(
+      `/inventory/snapshots/booking/${bookingId}`,
+    );
+    return response.data;
+  },
+
   getMixedInventory: async (locationId: number): Promise<any[]> => {
     const response = await apiClient.get<any[]>(
       `/inventory/active-mixed/${locationId}`,

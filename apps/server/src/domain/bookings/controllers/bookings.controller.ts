@@ -22,6 +22,7 @@ import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
 import { CheckInBookingDto } from '../dto/check-in-booking.dto';
+import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 
 @Controller('bookings')
 @UseGuards(AuthenticatedGuard, PermissionsGuard)
@@ -65,6 +66,17 @@ export class BookingsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.bookingsService.checkIn(id, data, context);
+  }
+
+  @Post(':id/check-out')
+  @RequirePermissions(PERMISSIONS.BOOKINGS_UPDATE)
+  @HttpCode(HttpStatus.OK)
+  checkOut(
+    @Param('id') id: string,
+    @Body() data: CheckOutBookingDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.bookingsService.checkOut(id, data, context);
   }
 
   @Patch(':id')

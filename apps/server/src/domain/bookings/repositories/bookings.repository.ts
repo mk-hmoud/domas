@@ -127,6 +127,20 @@ export class BookingsRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
+  async checkOut(id: string, client?: PoolClient): Promise<Booking | null> {
+    const query = `
+      UPDATE bookings
+      SET 
+        status = 'completed',
+        checked_out_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    const result = await this.getClient(client).query(query, [id]);
+    return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
+  }
+
   async findAll(
     filters: { studentId?: string; status?: BookingOpsStatus },
     client?: PoolClient,

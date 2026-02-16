@@ -6,6 +6,7 @@ import {
   ApproveFinancialsDto,
   BookingOpsStatus,
   CheckInBookingDto,
+  CheckOutBookingDto,
 } from "@domas/ts-types";
 
 export const bookings = {
@@ -52,6 +53,14 @@ export const bookings = {
     const response = await apiClient.post<
       Booking & { assignedCardNumber?: number }
     >(`/bookings/${id}/check-in`, data);
+    return response.data;
+  },
+
+  checkOut: async (id: string, data: CheckOutBookingDto): Promise<Booking> => {
+    const response = await apiClient.post<Booking>(
+      `/bookings/${id}/check-out`,
+      data,
+    );
     return response.data;
   },
 };

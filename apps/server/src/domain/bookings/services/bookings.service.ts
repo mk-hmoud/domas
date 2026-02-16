@@ -24,7 +24,9 @@ import { InventoryService } from '../../inventory/services/inventory.service';
 import { AccessCardsService } from '../../access-cards/services/access-cards.service';
 import { ContractsService } from '../../contracts/services/contracts.service';
 import { CheckInBookingDto } from '../dto/check-in-booking.dto';
+import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 import { Inject, forwardRef } from '@nestjs/common';
+import { BedStatus } from 'src/common/enums/bed-status.enum';
 
 @Injectable()
 export class BookingsService {
@@ -218,6 +220,7 @@ export class BookingsService {
             cardNumber: data.specificCardNumber,
           },
           context,
+          client,
         );
         assignedCardNumber = card.cardNumber;
       }
@@ -252,6 +255,63 @@ export class BookingsService {
         ...updated!,
         assignedCardNumber,
       };
+    }, context);
+  }
+
+  async checkOut(
+    id: string,
+    data: CheckOutBookingDto,
+    context: AuditUserContext,
+  ): Promise<Booking> {
+    this.logger.log({ bookingId: id }, 'Processing check-out');
+
+    return this.db.transaction(async (client) => {
+      const booking = await this.bookingsRepository.findById(id, client);
+      if (!booking) {
+        throw new NotFoundException(`Booking with ID ${id} not found`);
+      }
+
+      if (booking.status !== BookingOpsStatus.ACTIVE) {
+        throw new BadRequestException(`Booking is in ${booking.status} state, cannot check out`);
+      }
+
+      // 1. Update Booking Status
+      const updated = await this.bookingsRepository.checkOut(id, client);
+
+      // 2. Return Access Card (if any)
+      // Find the active card for this booking
+      const cardRes = await client.query(
+        "SELECT id FROM access_cards WHERE current_booking_id = $1 AND status = 'active' LIMIT 1",
+        [id],
+      );
+      let cardId: number | undefined;
+      if (cardRes.rowCount && cardRes.rowCount > 0) {
+        cardId = cardRes.rows[0].id;
+        await this.accessCardsService.returnCard(cardId!, { notes: data.notes }, context, client);
+      }
+
+      // 3. Make Bed Available
+      await this.bedsRepository.updateStatus(booking.bedId, BedStatus.AVAILABLE, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CHECK_OUT_BOOKING,
+          entityType: 'booking',
+          entityId: id,
+          undoData: {
+            previousStatus: booking.status,
+            previousCheckedOutAt: booking.checkedOutAt,
+            bedId: booking.bedId,
+            cardId: cardId,
+          },
+          description: `Checked out booking ${id}`,
+        },
+        client,
+      );
+
+      this.logger.log({ bookingId: id }, 'Check-out completed');
+      return updated!;
     }, context);
   }
 

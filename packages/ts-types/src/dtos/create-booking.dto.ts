@@ -16,3 +16,7 @@ export interface CheckInBookingDto {
   autoAssignCard?: boolean;
   specificCardNumber?: number;
 }
+
+export interface CheckOutBookingDto {
+  notes?: string;
+}

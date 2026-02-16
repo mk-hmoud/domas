@@ -202,6 +202,8 @@ export class UndoService {
         return this.undoCancelBooking(log, client);
       case UndoActionType.CHECK_IN_BOOKING:
         return this.undoCheckInBooking(log, undoUserId, client);
+      case UndoActionType.CHECK_OUT_BOOKING:
+        return this.undoCheckOutBooking(log, undoUserId, client);
       case UndoActionType.APPROVE_BOOKING_FINANCIALS:
         return this.undoApproveBookingFinancials(log, client);
       case UndoActionType.REJECT_BOOKING:
@@ -739,6 +741,57 @@ export class UndoService {
             undoUserId,
             'Undo: Check-in reversed, card auto-returned',
           ],
+        );
+      }
+    }
+  }
+
+  private async undoCheckOutBooking(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
+    const { previousStatus, previousCheckedOutAt, bedId, cardId } = log.undoData;
+    const bookingId = log.entityId;
+
+    // 1. Revert Booking Status
+    await client.query('UPDATE bookings SET status = $1, checked_out_at = $2 WHERE id = $3', [
+      previousStatus,
+      previousCheckedOutAt,
+      bookingId,
+    ]);
+
+    // 2. Mark Bed as Occupied
+    await client.query("UPDATE beds SET status = 'occupied' WHERE id = $1", [bedId]);
+
+    // 3. Optional: Re-activate card if it was returned and is still available
+    if (cardId) {
+      const cardCheck = await client.query(
+        'SELECT status, current_booking_id FROM access_cards WHERE id = $1 FOR UPDATE',
+        [cardId],
+      );
+      if (cardCheck.rows[0] && cardCheck.rows[0].status === 'available') {
+        // Find student ID
+        const bRes = await client.query('SELECT student_id FROM bookings WHERE id = $1', [
+          bookingId,
+        ]);
+        const studentId = bRes.rows[0].student_id;
+
+        await client.query(
+          `UPDATE access_cards 
+           SET status = 'active', 
+               current_holder_id = $1, 
+               current_booking_id = $2, 
+               returned_at = NULL,
+               updated_at = NOW()
+           WHERE id = $3`,
+          [studentId, bookingId, cardId],
+        );
+
+        await client.query(
+          `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
+           VALUES ($1, $2, $3, 'issued', $4, $5)`,
+          [cardId, studentId, bookingId, undoUserId, 'Undo: Check-out reversed, card re-activated'],
         );
       }
     }

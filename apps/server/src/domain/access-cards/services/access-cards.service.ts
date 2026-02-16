@@ -18,6 +18,7 @@ import { CardStatus } from '../../../common/enums/card-status.enum';
 import { CardActionType } from '../../../common/enums/card-action-type.enum';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import { PoolClient } from 'pg';
 
 @Injectable()
 export class AccessCardsService {
@@ -30,8 +31,12 @@ export class AccessCardsService {
     private readonly db: DatabaseService,
   ) {}
 
-  async createBatch(data: CreateCardBatchDto, context: AuditUserContext) {
-    return this.db.transaction(async (client) => {
+  async createBatch(
+    data: CreateCardBatchDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ) {
+    const operation = async (client: PoolClient) => {
       const batch = await this.repository.createBatch(
         { ...data, createdBy: context.userId },
         client,
@@ -51,7 +56,10 @@ export class AccessCardsService {
       );
 
       return batch;
-    }, context);
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
   }
 
   async findAllBatches() {
@@ -62,8 +70,8 @@ export class AccessCardsService {
     return this.repository.findAllCards(filters);
   }
 
-  async issueCard(data: IssueCardDto, context: AuditUserContext) {
-    return this.db.transaction(async (client) => {
+  async issueCard(data: IssueCardDto, context: AuditUserContext, externalClient?: PoolClient) {
+    const operation = async (client: PoolClient) => {
       let card: AccessCard | null;
 
       // SCENARIO 1: Manual Input (Receptionist types specific number)
@@ -123,11 +131,19 @@ export class AccessCardsService {
       );
 
       return card;
-    }, context);
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
   }
 
-  async returnCard(id: number, data: ReturnCardDto, context: AuditUserContext) {
-    return this.db.transaction(async (client) => {
+  async returnCard(
+    id: number,
+    data: ReturnCardDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ) {
+    const operation = async (client: PoolClient) => {
       const card = await this.repository.findById(id, client);
       if (!card) throw new NotFoundException(`Card with ID ${id} not found`);
       if (card.status !== CardStatus.ACTIVE) {
@@ -174,11 +190,19 @@ export class AccessCardsService {
       );
 
       return updatedCard;
-    }, context);
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
   }
 
-  async updateStatus(id: number, data: UpdateCardStatusDto, context: AuditUserContext) {
-    return this.db.transaction(async (client) => {
+  async updateStatus(
+    id: number,
+    data: UpdateCardStatusDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ) {
+    const operation = async (client: PoolClient) => {
       const card = await this.repository.findById(id, client);
       if (!card) throw new NotFoundException(`Card with ID ${id} not found`);
 
@@ -224,7 +248,10 @@ export class AccessCardsService {
       // but we could register it if needed. For now, following existing pattern.
 
       return updatedCard;
-    }, context);
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
   }
 
   async getLogs(cardId: number) {

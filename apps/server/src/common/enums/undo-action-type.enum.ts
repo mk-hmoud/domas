@@ -23,6 +23,7 @@ export enum UndoActionType {
   CREATE_BOOKING = 'create_booking',
   CANCEL_BOOKING = 'cancel_booking',
   CHECK_IN_BOOKING = 'check_in_booking',
+  CHECK_OUT_BOOKING = 'check_out_booking',
   APPROVE_BOOKING_FINANCIALS = 'approve_booking_financials',
   REJECT_BOOKING = 'reject_booking',
   ASSIGN_ROLE = 'assign_role',
