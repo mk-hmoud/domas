@@ -10,6 +10,6 @@ import { AuditModule } from '../audit/audit.module';
   imports: [InventoryModule, LocationsModule, forwardRef(() => AuditModule)],
   controllers: [DamagesController],
   providers: [DamagesService, DamagesRepository],
-  exports: [DamagesService],
+  exports: [DamagesService, DamagesRepository],
 })
 export class DamagesModule {}

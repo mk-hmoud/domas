@@ -16,19 +16,12 @@ import { DamageStatus } from '../../../common/enums/damage-status.enum';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { UndoService } from '../../audit/services/undo.service';
 
+import { PERMISSIONS } from '../../../common/constants/permissions';
+
 @Injectable()
 export class DamagesService {
   private readonly logger = new Logger(DamagesService.name);
-
-  constructor(
-    private readonly repository: DamagesRepository,
-    private readonly inventoryRepository: InventoryRepository,
-    private readonly locationsRepository: LocationsRepository,
-    @Inject(forwardRef(() => UndoService))
-    private readonly undoService: UndoService,
-    private readonly db: DatabaseService,
-  ) {}
-
+  // ...
   /**
    * STEP 1: Staff reports the incident.
    * No financial impact yet.
@@ -95,6 +88,21 @@ export class DamagesService {
         client,
       );
 
+      // AUTO-APPROVE Logic
+      if (data.autoApprove) {
+        const canApprove =
+          context.permissions?.includes(PERMISSIONS.DAMAGES_MANAGE) || context.isRecoveryAdmin;
+        if (canApprove) {
+          this.logger.log({ reportId: report.id }, 'Triggering auto-approval for damage report');
+          await this.processApproval(report, context, client);
+        } else {
+          this.logger.warn(
+            { userId: context.userId },
+            'User attempted auto-approve without permissions',
+          );
+        }
+      }
+
       return report;
     }, context);
   }
@@ -126,147 +134,155 @@ export class DamagesService {
         throw new BadRequestException('Report is already processed');
       }
 
-      // 1. Find Liable Students (Dynamic list at time of approval)
-      let targetBookings: any[] = [];
+      await this.processApproval(report, context, client);
+    }, context);
+  }
 
-      if (report.culpritIds && report.culpritIds.length > 0) {
-        this.logger.log(
-          { reportId: id, culprits: report.culpritIds },
-          'Searching for specific culprits',
-        );
-        const query = `
-          SELECT b.id, b.student_id, s.nationality_code 
-          FROM bookings b 
-          JOIN students s ON b.student_id = s.id 
-          WHERE b.student_id = ANY($1) AND b.status = 'active'
-        `;
-        const res = await client.query(query, [report.culpritIds]);
-        targetBookings = res.rows;
-      } else if (report.snapshotId) {
-        this.logger.log(
-          { reportId: id, snapshotId: report.snapshotId },
-          'Searching for student via snapshot',
-        );
-        const query = `
-          SELECT b.id, b.student_id, s.nationality_code
-          FROM booking_inventory_snapshots bis
-          JOIN bookings b ON bis.booking_id = b.id
-          JOIN students s ON b.student_id = s.id
-          WHERE bis.id = $1 AND b.status = 'active'
-        `;
-        const res = await client.query(query, [report.snapshotId]);
-        targetBookings = res.rows;
-      }
+  private async processApproval(
+    report: DamageReport,
+    context: AuditUserContext,
+    client: PoolClient,
+  ) {
+    // 1. Find Liable Students (Dynamic list at time of approval)
+    let targetBookings: any[] = [];
 
-      // If no culprits and no specific snapshot student found, fallback to location-based group liability
-      if (targetBookings.length === 0) {
-        this.logger.log(
-          { reportId: id, locationId: report.locationId },
-          'No specific targets found, falling back to location residents',
-        );
-        const location = await this.locationsRepository.findById(report.locationId, client);
-        if (!location) throw new NotFoundException('Location not found');
-
-        const query = `
-          SELECT b.id, b.student_id, s.nationality_code
-          FROM bookings b
-          JOIN beds bd ON b.bed_id = bd.id
-          JOIN students s ON b.student_id = s.id
-          JOIN locations l ON bd.location_id = l.id
-          WHERE l.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
-            AND b.status = 'active'
-        `;
-        const res = await client.query(query, [report.locationId]);
-        targetBookings = res.rows;
-      }
-
+    if (report.culpritIds && report.culpritIds.length > 0) {
       this.logger.log(
-        { reportId: id, studentCount: targetBookings.length },
-        'Target students identified',
+        { reportId: report.id, culprits: report.culpritIds },
+        'Searching for specific culprits',
       );
+      const query = `
+        SELECT b.id, b.student_id, s.nationality_code 
+        FROM bookings b 
+        JOIN students s ON b.student_id = s.id 
+        WHERE b.student_id = ANY($1) AND b.status = 'active'
+      `;
+      const res = await client.query(query, [report.culpritIds]);
+      targetBookings = res.rows;
+    } else if (report.snapshotId) {
+      this.logger.log(
+        { reportId: report.id, snapshotId: report.snapshotId },
+        'Searching for student via snapshot',
+      );
+      const query = `
+        SELECT b.id, b.student_id, s.nationality_code
+        FROM booking_inventory_snapshots bis
+        JOIN bookings b ON bis.booking_id = b.id
+        JOIN students s ON b.student_id = s.id
+        WHERE bis.id = $1 AND b.status = 'active'
+      `;
+      const res = await client.query(query, [report.snapshotId]);
+      targetBookings = res.rows;
+    }
 
-      if (targetBookings.length === 0) {
-        throw new BadRequestException(
-          'No active students found at this location to attribute damage to.',
-        );
-      }
+    // If no culprits and no specific snapshot student found, fallback to location-based group liability
+    if (targetBookings.length === 0) {
+      this.logger.log(
+        { reportId: report.id, locationId: report.locationId },
+        'No specific targets found, falling back to location residents',
+      );
+      const location = await this.locationsRepository.findById(report.locationId, client);
+      if (!location) throw new NotFoundException('Location not found');
 
-      // 2. Fetch LIVE Pricing from Catalog or Report
-      let currentPriceTry = 0;
-      let currentPriceForeign = 0;
-      let foreignCurrency = 'EUR';
+      const query = `
+        SELECT b.id, b.student_id, s.nationality_code
+        FROM bookings b
+        JOIN beds bd ON b.bed_id = bd.id
+        JOIN students s ON b.student_id = s.id
+        JOIN locations l ON bd.location_id = l.id
+        WHERE l.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+          AND b.status = 'active'
+      `;
+      const res = await client.query(query, [report.locationId]);
+      targetBookings = res.rows;
+    }
 
-      if (report.snapshotId) {
-        // Fetch current live price from catalog via snapshot
-        const catalogItem = await this.inventoryRepository.findCatalogItemBySnapshot(
-          Number(report.snapshotId),
-          client,
-        );
-        if (!catalogItem) throw new NotFoundException('Catalog item not found for snapshot');
+    this.logger.log(
+      { reportId: report.id, studentCount: targetBookings.length },
+      'Target students identified',
+    );
 
-        currentPriceTry = Number(catalogItem.current_price_try);
-        currentPriceForeign = Number(catalogItem.current_price_foreign);
-        foreignCurrency = catalogItem.foreign_currency_code;
-      } else if (report.catalogId) {
-        // Fetch current live price directly from catalog
-        const catalogItem = await this.inventoryRepository.findCatalogById(
-          report.catalogId,
-          client,
-        );
-        if (!catalogItem) throw new NotFoundException('Catalog item not found');
+    if (targetBookings.length === 0) {
+      throw new BadRequestException(
+        'No active students found at this location to attribute damage to.',
+      );
+    }
 
-        currentPriceTry = Number(catalogItem.basePriceTry);
-        currentPriceForeign = Number(catalogItem.basePriceForeign);
-        foreignCurrency = catalogItem.foreignCurrencyCode;
-      } else {
-        currentPriceTry = Number(report.manualCostTry || 0);
-        currentPriceForeign = Number(report.manualCostForeign || 0);
-        foreignCurrency = report.manualCurrencyCode || 'EUR';
-      }
+    // 2. Fetch LIVE Pricing from Catalog or Report
+    let currentPriceTry = 0;
+    let currentPriceForeign = 0;
+    let foreignCurrency = 'EUR';
 
-      // 3. Update Report Status
-      await this.repository.updateReportStatus(id, DamageStatus.APPROVED, context.userId, client);
+    if (report.snapshotId) {
+      // Fetch current live price from catalog via snapshot
+      const catalogItem = await this.inventoryRepository.findCatalogItemBySnapshot(
+        Number(report.snapshotId),
+        client,
+      );
+      if (!catalogItem) throw new NotFoundException('Catalog item not found for snapshot');
 
-      // 4. Create Liabilities and Transactions
-      const splitDivisor = targetBookings.length;
+      currentPriceTry = Number(catalogItem.current_price_try);
+      currentPriceForeign = Number(catalogItem.current_price_foreign);
+      foreignCurrency = catalogItem.foreign_currency_code;
+    } else if (report.catalogId) {
+      // Fetch current live price directly from catalog
+      const catalogItem = await this.inventoryRepository.findCatalogById(report.catalogId, client);
+      if (!catalogItem) throw new NotFoundException('Catalog item not found');
 
-      for (const b of targetBookings) {
-        // DUAL CURRENCY LOGIC: Apply correct LIVE price per student nationality
-        const isTR = b.nationality_code === 'TR';
-        const studentAmount = isTR
-          ? currentPriceTry / splitDivisor
-          : currentPriceForeign / splitDivisor;
-        const studentCurrency = isTR ? 'TRY' : foreignCurrency;
+      currentPriceTry = Number(catalogItem.basePriceTry);
+      currentPriceForeign = Number(catalogItem.basePriceForeign);
+      foreignCurrency = catalogItem.foreignCurrencyCode;
+    } else {
+      currentPriceTry = Number(report.manualCostTry || 0);
+      currentPriceForeign = Number(report.manualCostForeign || 0);
+      foreignCurrency = report.manualCurrencyCode || 'EUR';
+    }
 
-        // A. Record Liability
-        await this.repository.createLiability(
-          {
-            damageReportId: report.id,
-            studentId: b.student_id,
-            amount: studentAmount,
-            currency: studentCurrency,
-          },
-          client,
-        );
-      }
+    // 3. Update Report Status
+    await this.repository.updateReportStatus(
+      report.id,
+      DamageStatus.APPROVED,
+      context.userId,
+      client,
+    );
 
-      await this.undoService.registerUndo(
+    // 4. Create Liabilities
+    const splitDivisor = targetBookings.length;
+
+    for (const b of targetBookings) {
+      const isTR = b.nationality_code === 'TR';
+      const studentAmount = isTR
+        ? currentPriceTry / splitDivisor
+        : currentPriceForeign / splitDivisor;
+      const studentCurrency = isTR ? 'TRY' : foreignCurrency;
+
+      await this.repository.createLiability(
         {
-          userId: context.userId,
-          actionType: UndoActionType.APPROVE_DAMAGE_REPORT,
-          entityType: 'damage_report',
-          entityId: id,
-          undoData: { previousStatus: report.status },
-          description: `Approved damage report ${id}`,
+          damageReportId: report.id,
+          studentId: b.student_id,
+          amount: studentAmount,
+          currency: studentCurrency,
         },
         client,
       );
+    }
 
-      this.logger.log(
-        { reportId: id, studentCount: targetBookings.length },
-        'Damage report approved and liabilities created',
-      );
-    }, context);
+    await this.undoService.registerUndo(
+      {
+        userId: context.userId,
+        actionType: UndoActionType.APPROVE_DAMAGE_REPORT,
+        entityType: 'damage_report',
+        entityId: report.id,
+        undoData: { previousStatus: report.status },
+        description: `Approved damage report ${report.id}`,
+      },
+      client,
+    );
+
+    this.logger.log(
+      { reportId: report.id, studentCount: targetBookings.length },
+      'Damage report approved and liabilities created',
+    );
   }
 
   async rejectReport(id: string, context: AuditUserContext) {

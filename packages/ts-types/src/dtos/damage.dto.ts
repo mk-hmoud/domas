@@ -9,6 +9,7 @@ export interface CreateDamageReportDto {
   manualCurrencyCode?: string;
   description: string;
   culpritIds?: string[]; // Array of student IDs
+  autoApprove?: boolean;
 }
 
 export interface ReviewDamageReportDto {

@@ -49,4 +49,8 @@ export class CreateDamageReportDto {
   @IsUUID('4', { each: true })
   @IsOptional()
   culpritIds?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  autoApprove?: boolean;
 }
