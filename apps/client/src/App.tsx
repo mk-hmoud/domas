@@ -13,6 +13,7 @@ import { AccountingPage } from './pages/AccountingPage';
 import { AccountPage } from './pages/AccountPage';
 import { InventoryCatalogPage } from './pages/InventoryCatalogPage';
 import { CheckInPage } from './pages/CheckInPage';
+import { CheckOutPage } from './pages/CheckOutPage';
 import { AccessCardsPage } from './pages/AccessCardsPage';
 import { DamagesPage } from './pages/DamagesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
@@ -60,6 +61,14 @@ function App() {
             element={
               <PermissionRoute permission="bookings.check_in">
                 <CheckInPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="check-out"
+            element={
+              <PermissionRoute permission="bookings.check_in">
+                <CheckOutPage />
               </PermissionRoute>
             }
           />

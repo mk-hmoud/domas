@@ -27,6 +27,7 @@ export * from "./components/Inventory/InventoryCatalogDrawer";
 export * from "./components/Inventory/InventoryAssignmentList";
 export * from "./components/Inventory/AssignInventoryModal";
 export * from "./components/CheckIn/CheckInDetailsModal";
+export * from "./components/CheckOut/CheckOutDetailsModal";
 export * from "./components/AccessCards/CardBatchModal";
 export * from "./components/AccessCards/CardBatchTable";
 export * from "./components/AccessCards/AccessCardTable";

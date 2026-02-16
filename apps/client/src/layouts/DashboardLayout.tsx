@@ -92,6 +92,11 @@ export function DashboardLayout() {
             requiredPermission: 'bookings.check_in',
           },
           {
+            label: t('nav.check_out'),
+            link: '/dashboard/check-out',
+            requiredPermission: 'bookings.check_in',
+          },
+          {
             label: t('nav.accounting'),
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',

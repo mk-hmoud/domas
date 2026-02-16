@@ -29,6 +29,7 @@ interface CreateDamageModalProps {
   onSubmit: (values: CreateDamageReportDto) => Promise<void>;
   students: Student[];
   loading?: boolean;
+  initialValues?: Partial<CreateDamageReportDto>;
 }
 
 export function CreateDamageModal({
@@ -37,6 +38,7 @@ export function CreateDamageModal({
   onSubmit,
   students,
   loading,
+  initialValues,
 }: CreateDamageModalProps) {
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === "tr";
@@ -62,6 +64,27 @@ export function CreateDamageModal({
         val.length > 5 ? null : t("validation_name_short"),
     },
   });
+
+  // Handle initialValues pre-filling
+  useEffect(() => {
+    if (opened && initialValues) {
+      form.setValues({
+        ...form.values,
+        ...initialValues,
+      });
+
+      // If catalogId is provided, we need to try to find the assignment key
+      if (initialValues.catalogId) {
+        // If we already have assignments, find the key
+        if (assignments.length > 0) {
+          const matching = assignments.find(
+            (a) => a.item?.id === initialValues.catalogId,
+          );
+          if (matching) setSelectedInventoryKey(matching.id);
+        }
+      }
+    }
+  }, [opened, initialValues, assignments.length]);
 
   // Fetch inventory assigned to location when location changes
   useEffect(() => {

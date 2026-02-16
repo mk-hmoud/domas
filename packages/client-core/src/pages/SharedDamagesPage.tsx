@@ -106,7 +106,8 @@ export function SharedDamagesPage() {
   const handleCreateReport = async (values: CreateDamageReportDto) => {
     setActionLoading(true);
     try {
-      await damages.createReport(values);
+      const canAutoApprove = hasPermission("damages.manage");
+      await damages.createReport({ ...values, autoApprove: canAutoApprove });
       notifications.show({
         title: t("success"),
         message: t("report_created"),

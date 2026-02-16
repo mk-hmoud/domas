@@ -13,5 +13,6 @@ export * from "./pages/SharedStudentsPage";
 export * from "./pages/SharedAccountPage";
 export * from "./pages/SharedInventoryCatalogPage";
 export * from "./pages/SharedCheckInPage";
+export * from "./pages/SharedCheckOutPage";
 export * from "./pages/SharedAccessCardsPage";
 export * from "./pages/SharedDamagesPage";
