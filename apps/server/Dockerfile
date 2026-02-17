@@ -1,30 +1,41 @@
+# STAGE 1: Build the NestJS App
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# 1. Copy root config
+COPY package.json package-lock.json turbo.json ./
+
+# 2. Copy Shared Packages
+COPY packages ./packages
+
+# 3. Copy App Source
+COPY apps/server ./apps/server
+
+# 4. Install Deps
+RUN npm ci
+
+# 5. Build
+RUN npm run build -w apps/server
+
+# STAGE 2: Production Image
 FROM node:20-alpine
 
 WORKDIR /app
 
-# 1. Copy the root files to setup workspaces
-COPY package.json package-lock.json turbo.json ./
-
-# 2. Copy the shared packages (Critical for Monorepo!)
+# Copy package.json files for production install
+COPY package.json package-lock.json ./
+COPY apps/server/package.json ./apps/server/
 COPY packages ./packages
 
-# 3. Copy the specific app source
-COPY apps/server ./apps/server
+# Install only production dependencies
+RUN npm ci --omit=dev
 
-# 4. Copy other apps' package.json files (Optional but strictly safer for npm ci)
-# If npm ci fails because of missing workspace folders, uncomment these:
-# COPY apps/client/package.json ./apps/client/package.json
-# COPY apps/client-student/package.json ./apps/client-student/package.json
+# Copy built artifacts from builder
+COPY --from=builder /app/apps/server/dist ./apps/server/dist
 
-# 5. Install Dependencies (from root, so it links everything)
-RUN npm ci
-
-# 6. Build the server (NestJS)
-# We run this from the root using -w (workspace) flag
-RUN npm run build -w apps/server
-
-# 7. Expose API Port
+# Expose API Port
 EXPOSE 3000
 
-# 8. Start the server
-CMD ["npm", "run", "start:dev", "-w", "apps/server"]
+# Start the server
+CMD ["npm", "run", "start:prod", "-w", "apps/server"]
