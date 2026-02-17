@@ -13,7 +13,7 @@ COPY packages ./packages
 COPY apps/client ./apps/client
 
 # 4. Install Deps
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # 5. Build
 # Pass the API URL as a build argument

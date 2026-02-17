@@ -13,7 +13,7 @@ COPY packages ./packages
 COPY apps/client-student ./apps/client-student
 
 # 4. Install Deps
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # 5. Build
 ARG VITE_API_URL

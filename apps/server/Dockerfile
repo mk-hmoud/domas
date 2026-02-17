@@ -13,7 +13,7 @@ COPY packages ./packages
 COPY apps/server ./apps/server
 
 # 4. Install Deps
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # 5. Build
 RUN npm run build -w apps/server
@@ -29,7 +29,7 @@ COPY apps/server/package.json ./apps/server/
 COPY packages ./packages
 
 # Install only production dependencies
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # Copy built artifacts from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
