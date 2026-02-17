@@ -3,18 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import pino from 'pino';
-import pretty from 'pino-pretty';
 
 // Load environment variables
 dotenv.config();
 
-const logger = pino(
-  pretty({
-    colorize: true,
-    singleLine: true,
-    ignore: 'pid,hostname',
-  }),
-);
+const logger = pino();
 
 function getEnv(key: string): string {
   const value = process.env[key];

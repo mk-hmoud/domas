@@ -8,7 +8,7 @@ import { AccessRepository } from '../src/domain/users/repositories/access.reposi
 import { DatabaseService } from '../src/core/database/database.service';
 import { LocationType } from '../src/common/enums/location-type.enum';
 import { AuditUserContext } from '../src/common/interfaces/audit-user-context.interface';
-import { COUNTRIES } from '@domas/ts-types';
+import { COUNTRIES } from '../../packages/ts-types/src';
 import { PERMISSIONS } from '../src/common/constants/permissions';
 import { SYSTEM_ROLES } from '../src/common/constants/system-roles';
 

@@ -10,7 +10,11 @@ COPY package.json package-lock.json turbo.json ./
 COPY packages ./packages
 
 # 3. Copy App Source
-COPY apps/server ./apps/server
+COPY apps/server/src ./apps/server/src
+COPY apps/server/scripts ./apps/server/scripts
+COPY apps/server/package.json ./apps/server/
+COPY apps/server/tsconfig.json ./apps/server/
+COPY apps/server/nest-cli.json ./apps/server/
 
 # 4. Install Deps
 RUN npm ci --ignore-scripts

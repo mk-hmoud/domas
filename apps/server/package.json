@@ -19,9 +19,12 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:setup": "ts-node scripts/setup-db.ts",
+    "db:setup:prod": "node dist/apps/server/scripts/setup-db.js",
     "db:reset": "ts-node scripts/reset-db.ts",
+    "db:reset:prod": "node dist/apps/server/scripts/reset-db.js",
     "db:debug": "ts-node scripts/debug-db.ts",
-    "init:prod": "ts-node scripts/init-production.ts"
+    "init:prod": "ts-node scripts/init-production.ts",
+    "init:prod:prod": "node dist/apps/server/scripts/init-production.js"
   },
   "dependencies": {
     "@domas/ts-types": "*",
