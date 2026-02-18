@@ -7,6 +7,6 @@
     },
     "outDir": "./dist"
   },
-  "include": ["src", "test", "scripts"],
+  "include": ["src", "test", "scripts", "../../packages/ts-types/src"],
   "exclude": ["node_modules", "dist"]
 }
