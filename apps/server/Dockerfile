@@ -4,7 +4,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 1. Copy root config (CRITICAL: Added tsconfig.json)
-COPY package.json package-lock.json turbo.json tsconfig.json ./
+COPY package.json package-lock.json turbo.json ./
 
 # 2. Copy Shared Packages
 COPY packages ./packages
