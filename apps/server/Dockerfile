@@ -45,4 +45,4 @@ COPY --from=builder /app/apps/server/dist ./apps/server/dist
 EXPOSE 3000
 
 # Start the server
-CMD ["npm", "run", "start:prod", "-w", "apps/server"]
+CMD ["node", "apps/server/dist/src/main"]
