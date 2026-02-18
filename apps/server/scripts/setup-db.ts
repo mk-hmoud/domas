@@ -37,7 +37,24 @@ if (process.env.DATABASE_URL) {
 // secrets to inject into the sql files.
 const APP_USER_PASSWORD = getEnv('APP_USER_PASSWORD');
 const APP_USER = getEnv('APP_USER');
-const DB_NAME = getEnv('DB_NAME');
+
+// DB_NAME is used for role creation in 00_roles.sql.
+// In prod, it's part of DATABASE_URL.
+let dbName = process.env.DB_NAME;
+if (!dbName && process.env.DATABASE_URL) {
+  // Extract db name from postgresql://user:pass@host:port/db_name
+  const parts = process.env.DATABASE_URL.split('/');
+  dbName = parts[parts.length - 1].split('?')[0];
+}
+
+if (!dbName) {
+  logger.error(
+    'Missing required environment variable: DB_NAME (and could not derive from DATABASE_URL)',
+  );
+  process.exit(1);
+}
+
+const DB_NAME = dbName as string;
 
 async function run() {
   const client = new Client(DB_CONFIG);
