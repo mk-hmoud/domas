@@ -3,24 +3,27 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copy root config
-COPY package.json package-lock.json turbo.json ./
+# 1. Copy root config (CRITICAL: Added tsconfig.json)
+COPY package.json package-lock.json turbo.json tsconfig.json ./
 
 # 2. Copy Shared Packages
 COPY packages ./packages
 
 # 3. Copy App Source
-COPY apps/server/src ./apps/server/src
-COPY apps/server/scripts ./apps/server/scripts
-COPY apps/server/package.json ./apps/server/
-COPY apps/server/tsconfig.json ./apps/server/
-COPY apps/server/nest-cli.json ./apps/server/
+# Instead of picking files one by one, copy the whole folder 
+# (This ensures tsconfig.build.json and others are included)
+COPY apps/server ./apps/server
 
 # 4. Install Deps
 RUN npm ci --ignore-scripts
 
 # 5. Build
 RUN npm run build -w apps/server
+
+# ---------------------------------------------------------
+# DEBUG: Uncomment this line if it fails again to see what was built
+# RUN ls -R apps/server/dist
+# ---------------------------------------------------------
 
 # STAGE 2: Production Image
 FROM node:20-alpine
