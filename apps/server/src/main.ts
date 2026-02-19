@@ -24,6 +24,10 @@ async function bootstrap() {
   const httpAdapter = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
+  // Essential for sessions to work behind a reverse proxy (Nginx, Cloudflare, etc)
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -35,10 +39,9 @@ async function bootstrap() {
   const databaseService = app.get(DatabaseService);
   const pool = databaseService.getPool();
 
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
-
   app.use(
     session({
+      name: 'domas.sid', // Explicit name
       store: new pgSession({
         pool: pool,
         tableName: 'session',
@@ -49,7 +52,10 @@ async function bootstrap() {
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
+        // In prod with SSL (even via proxy), this must be true.
+        // Lax sameSite allows cookies to be sent on top-level navigations.
         secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
       },
     }),
   );
