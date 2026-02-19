@@ -35,6 +35,8 @@ async function bootstrap() {
   const databaseService = app.get(DatabaseService);
   const pool = databaseService.getPool();
 
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   app.use(
     session({
       store: new pgSession({
