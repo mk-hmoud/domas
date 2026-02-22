@@ -105,7 +105,7 @@ export class DamagesService {
           context.permissions?.includes(PERMISSIONS.DAMAGES_MANAGE) || context.isRecoveryAdmin;
         if (canApprove) {
           this.logger.log({ reportId: report.id }, 'Triggering auto-approval for damage report');
-          await this.processApproval(report, context, client);
+          await this.processApproval(report, context, client, true); // skipUndo
         } else {
           this.logger.warn(
             { userId: context.userId },
@@ -153,6 +153,7 @@ export class DamagesService {
     report: DamageReport,
     context: AuditUserContext,
     client: PoolClient,
+    skipUndo = false,
   ) {
     // 1. Find Liable Students (Dynamic list at time of approval)
     let targetBookings: any[] = [];
@@ -278,17 +279,19 @@ export class DamagesService {
       );
     }
 
-    await this.undoService.registerUndo(
-      {
-        userId: context.userId,
-        actionType: UndoActionType.APPROVE_DAMAGE_REPORT,
-        entityType: 'damage_report',
-        entityId: report.id,
-        undoData: { previousStatus: report.status },
-        description: `Approved damage report ${report.id}`,
-      },
-      client,
-    );
+    if (!skipUndo) {
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.APPROVE_DAMAGE_REPORT,
+          entityType: 'damage_report',
+          entityId: report.id,
+          undoData: { previousStatus: report.status },
+          description: `Approved damage report ${report.id}`,
+        },
+        client,
+      );
+    }
 
     this.logger.log(
       { reportId: report.id, studentCount: targetBookings.length },

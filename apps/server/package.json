@@ -21,6 +21,7 @@
     "db:setup": "ts-node scripts/setup-db.ts",
     "db:setup:prod": "node dist/apps/server/scripts/setup-db.js",
     "db:reset": "ts-node scripts/reset-db.ts",
+    "db:seed": "ts-node scripts/seed.ts",
     "db:reset:prod": "node dist/apps/server/scripts/reset-db.js",
     "db:debug": "ts-node scripts/debug-db.ts",
     "init:prod": "ts-node scripts/init-production.ts",

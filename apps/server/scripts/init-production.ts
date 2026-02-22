@@ -67,11 +67,31 @@ async function bootstrap() {
       .createRole(SYSTEM_ROLES.ADMIN, 'System Administrator with full access', true)
       .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.ADMIN));
 
+    const managerRole = await accessRepository
+      .createRole(SYSTEM_ROLES.DORM_MANAGER, 'Dormitory Manager with operational access', true)
+      .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.DORM_MANAGER));
+
     // Assign Permissions
     if (adminRole) {
       await accessRepository.assignPermissionsToRole(adminRole.id, allPermissionIds);
     }
-    // TODO: Define specific permissions for other roles
+
+    if (managerRole) {
+      // Manager gets most permissions EXCEPT Role Creation and Booking Approvals
+      const managerPermissionIds = [];
+      const forbiddenSlugs: string[] = [
+        PERMISSIONS.ROLES_MANAGE, // Can't create roles
+        PERMISSIONS.BOOKINGS_APPROVE_FINANCIAL, // Can't approve bookings
+      ];
+
+      for (const slug of Object.values(PERMISSIONS)) {
+        if (!forbiddenSlugs.includes(slug)) {
+          const perm = await accessRepository.findPermissionBySlug(slug);
+          if (perm) managerPermissionIds.push(perm.id);
+        }
+      }
+      await accessRepository.assignPermissionsToRole(managerRole.id, managerPermissionIds);
+    }
 
     console.log('\u2705 RBAC seeded.');
 

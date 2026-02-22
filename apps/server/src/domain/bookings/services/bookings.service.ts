@@ -26,7 +26,7 @@ import { ContractsService } from '../../contracts/services/contracts.service';
 import { CheckInBookingDto } from '../dto/check-in-booking.dto';
 import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 import { Inject, forwardRef } from '@nestjs/common';
-import { BedStatus } from 'src/common/enums/bed-status.enum';
+import { BedStatus } from '../../../common/enums/bed-status.enum';
 
 @Injectable()
 export class BookingsService {
@@ -221,13 +221,14 @@ export class BookingsService {
           },
           context,
           client,
+          true, // skipUndo
         );
         assignedCardNumber = card.cardNumber;
       }
 
       // 3. Generate Contract PDF
       try {
-        await this.contractsService.generateCheckInContract(id, client);
+        await this.contractsService.generateCheckInContract(id, context.userId, client);
       } catch (contractError: any) {
         this.logger.error(
           { bookingId: id, error: contractError.message },
@@ -287,11 +288,27 @@ export class BookingsService {
       let cardId: number | undefined;
       if (cardRes.rowCount && cardRes.rowCount > 0) {
         cardId = cardRes.rows[0].id;
-        await this.accessCardsService.returnCard(cardId!, { notes: data.notes }, context, client);
+        await this.accessCardsService.returnCard(
+          cardId!,
+          { notes: data.notes },
+          context,
+          client,
+          true, // skipUndo
+        );
       }
 
       // 3. Make Bed Available
       await this.bedsRepository.updateStatus(booking.bedId, BedStatus.AVAILABLE, client);
+
+      // 4. Generate Check-Out Contract
+      try {
+        await this.contractsService.generateCheckOutContract(id, context.userId, client);
+      } catch (contractError: any) {
+        this.logger.error(
+          { bookingId: id, error: contractError.message },
+          'Failed to generate check-out contract',
+        );
+      }
 
       await this.undoService.registerUndo(
         {

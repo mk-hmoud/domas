@@ -70,7 +70,12 @@ export class AccessCardsService {
     return this.repository.findAllCards(filters);
   }
 
-  async issueCard(data: IssueCardDto, context: AuditUserContext, externalClient?: PoolClient) {
+  async issueCard(
+    data: IssueCardDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+    skipUndo = false,
+  ) {
     const operation = async (client: PoolClient) => {
       let card: AccessCard | null;
 
@@ -114,21 +119,23 @@ export class AccessCardsService {
         client,
       );
 
-      await this.undoService.registerUndo(
-        {
-          userId: context.userId,
-          actionType: UndoActionType.ISSUE_CARD,
-          entityType: 'access_card',
-          entityId: card.id.toString(),
-          undoData: {
-            previousStatus: CardStatus.AVAILABLE,
-            studentId: data.studentId,
-            bookingId: data.bookingId,
+      if (!skipUndo) {
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: UndoActionType.ISSUE_CARD,
+            entityType: 'access_card',
+            entityId: card.id.toString(),
+            undoData: {
+              previousStatus: CardStatus.AVAILABLE,
+              studentId: data.studentId,
+              bookingId: data.bookingId,
+            },
+            description: `Issued card #${card.cardNumber} to student ${data.studentId}`,
           },
-          description: `Issued card #${card.cardNumber} to student ${data.studentId}`,
-        },
-        client,
-      );
+          client,
+        );
+      }
 
       return card;
     };
@@ -142,6 +149,7 @@ export class AccessCardsService {
     data: ReturnCardDto,
     context: AuditUserContext,
     externalClient?: PoolClient,
+    skipUndo = false,
   ) {
     const operation = async (client: PoolClient) => {
       const card = await this.repository.findById(id, client);
@@ -173,21 +181,23 @@ export class AccessCardsService {
         client,
       );
 
-      await this.undoService.registerUndo(
-        {
-          userId: context.userId,
-          actionType: UndoActionType.RETURN_CARD,
-          entityType: 'access_card',
-          entityId: id.toString(),
-          undoData: {
-            previousStatus: card.status,
-            previousHolderId: card.currentHolderId,
-            previousBookingId: card.currentBookingId,
+      if (!skipUndo) {
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: UndoActionType.RETURN_CARD,
+            entityType: 'access_card',
+            entityId: id.toString(),
+            undoData: {
+              previousStatus: card.status,
+              previousHolderId: card.currentHolderId,
+              previousBookingId: card.currentBookingId,
+            },
+            description: `Returned card #${card.cardNumber}`,
           },
-          description: `Returned card #${card.cardNumber}`,
-        },
-        client,
-      );
+          client,
+        );
+      }
 
       return updatedCard;
     };

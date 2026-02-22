@@ -22,6 +22,7 @@ import {
   beds,
   locations,
   damages,
+  contracts,
 } from "@domas/api-client";
 import {
   Booking,
@@ -111,6 +112,10 @@ export function SharedCheckOutPage() {
         color: "green",
       });
       fetchBookings();
+      // Auto-download contract
+      contracts
+        .downloadContract(selectedBooking.id, "check_out")
+        .catch(console.error);
       return result;
     } catch (error) {
       notifications.show({

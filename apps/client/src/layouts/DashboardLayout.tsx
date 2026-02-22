@@ -2,12 +2,13 @@ import { useMemo, useState, useEffect } from 'react';
 import { Group, Text, Code } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
-  IconUsers,
-  IconChartBar,
-  IconSettings,
   IconBuildingSkyscraper,
   IconLayoutDashboard,
   IconArchive,
+  IconDoorEnter,
+  IconAddressBook,
+  IconSettings,
+  IconDatabase,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
@@ -69,18 +70,11 @@ export function DashboardLayout() {
         label: t('nav.dashboard'),
         icon: IconLayoutDashboard,
         link: '/dashboard',
-        // Dashboard is public to authenticated users.
       },
       {
-        label: t('nav.user_management'),
-        icon: IconUsers,
+        label: t('nav.operations'),
+        icon: IconDoorEnter,
         links: [
-          { label: t('nav.all_users'), link: '/dashboard/users', requiredPermission: 'users.view' },
-          {
-            label: t('nav.students'),
-            link: '/dashboard/students',
-            requiredPermission: 'students.view',
-          },
           {
             label: t('nav.bookings'),
             link: '/dashboard/bookings',
@@ -101,11 +95,16 @@ export function DashboardLayout() {
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',
           },
-          { label: t('nav.roles'), link: '/dashboard/roles', requiredPermission: 'roles.manage' },
+        ],
+      },
+      {
+        label: t('nav.registry'),
+        icon: IconAddressBook,
+        links: [
           {
-            label: t('nav.permissions'),
-            link: '/dashboard/permissions',
-            requiredPermission: 'permissions.view',
+            label: t('nav.students'),
+            link: '/dashboard/students',
+            requiredPermission: 'students.view',
           },
           {
             label: t('nav.access_cards'),
@@ -115,7 +114,7 @@ export function DashboardLayout() {
         ],
       },
       {
-        label: t('nav.inventory'),
+        label: t('nav.inventory_assets'),
         icon: IconArchive,
         links: [
           {
@@ -131,47 +130,40 @@ export function DashboardLayout() {
         ],
       },
       {
-        label: t('nav.monitoring'),
-        icon: IconChartBar,
-        links: [
-          {
-            label: t('nav.audit_logs'),
-            link: '/dashboard/logs/audit',
-            requiredPermission: 'audit.view',
-          },
-          {
-            label: t('nav.system_logs'),
-            link: '/dashboard/logs/system',
-            requiredPermission: 'audit.view',
-          }, // Assuming audit.view covers logs
-          {
-            label: t('nav.access_logs'),
-            link: '/dashboard/logs/access',
-            requiredPermission: 'audit.view',
-          },
-          {
-            label: t('nav.analytics'),
-            link: '/dashboard/analytics',
-            requiredPermission: 'reports.view',
-          },
-        ],
-      },
-      {
-        label: t('nav.system'),
+        label: t('nav.management'),
         icon: IconSettings,
         links: [
+          {
+            label: t('nav.locations'),
+            link: '/dashboard/locations',
+            requiredPermission: 'locations.view',
+          },
           {
             label: t('nav.semesters'),
             link: '/dashboard/semesters',
             requiredPermission: 'semesters.view',
           },
           {
-            label: t('nav.locations'),
-            link: '/dashboard/locations',
-            requiredPermission: 'locations.view',
+            label: t('nav.all_users'),
+            link: '/dashboard/users',
+            requiredPermission: 'users.view',
           },
-          { label: t('nav.settings'), link: '/dashboard/settings' }, // No permission required yet
-          { label: t('nav.backups'), link: '/dashboard/backups' }, // No permission required yet
+          {
+            label: t('nav.roles'),
+            link: '/dashboard/roles',
+            requiredPermission: 'roles.manage',
+          },
+        ],
+      },
+      {
+        label: t('nav.system'),
+        icon: IconDatabase,
+        links: [
+          {
+            label: t('nav.audit_logs'),
+            link: '/dashboard/logs/audit',
+            requiredPermission: 'audit.view',
+          },
         ],
       },
     ];

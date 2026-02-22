@@ -7,8 +7,9 @@ import {
   LoadingOverlay,
   Container,
   Text,
+  TextInput,
 } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { inventory } from "@domas/api-client";
 import {
@@ -27,6 +28,7 @@ export function SharedInventoryCatalogPage() {
   const { t } = useTranslation();
   const [data, setData] = useState<InventoryCatalogItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryCatalogItem | null>(
@@ -53,6 +55,14 @@ export function SharedInventoryCatalogPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const filteredData = data.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      item.nameEn.toLowerCase().includes(query) ||
+      item.nameTr.toLowerCase().includes(query)
+    );
+  });
 
   const handleCreate = async (values: CreateInventoryCatalogDto) => {
     setModalLoading(true);
@@ -148,9 +158,17 @@ export function SharedInventoryCatalogPage() {
         </Button>
       </Group>
 
+      <TextInput
+        placeholder={t("search_placeholder", "Search...")}
+        leftSection={<IconSearch size={16} />}
+        mb="md"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.currentTarget.value)}
+      />
+
       <Paper withBorder radius="md">
         <InventoryCatalogTable
-          data={data}
+          data={filteredData}
           onEdit={(item) => {
             setSelectedItem(item);
             setModalOpened(true);
