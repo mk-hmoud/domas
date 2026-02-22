@@ -227,7 +227,7 @@ export class BookingsService {
 
       // 3. Generate Contract PDF
       try {
-        await this.contractsService.generateCheckInContract(id, client);
+        await this.contractsService.generateCheckInContract(id, context.userId, client);
       } catch (contractError: any) {
         this.logger.error(
           { bookingId: id, error: contractError.message },
