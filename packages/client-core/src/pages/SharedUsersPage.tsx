@@ -10,8 +10,9 @@ import {
   Stack,
   Badge,
   Box,
+  TextInput,
 } from "@mantine/core";
-import { IconPlus, IconEdit } from "@tabler/icons-react";
+import { IconPlus, IconEdit, IconSearch } from "@tabler/icons-react";
 import { users, access } from "@domas/api-client";
 import {
   User,
@@ -39,6 +40,7 @@ export function SharedUsersPage({
     useState<PaginatedResult<User> | null>(null);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [activePage, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -64,6 +66,15 @@ export function SharedUsersPage({
   useEffect(() => {
     fetchData(activePage);
   }, [activePage, roleKey]);
+
+  const filteredData = (paginatedData?.data || []).filter((user) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      user.email.toLowerCase().includes(query) ||
+      user.firstName?.toLowerCase().includes(query) ||
+      user.lastName?.toLowerCase().includes(query)
+    );
+  });
 
   const handleCreateOrUpdateUser = async (
     values: CreateUserDto | (UpdateUserDto & { roleIds?: number[] }),
@@ -168,8 +179,16 @@ export function SharedUsersPage({
         </Button>
       </Group>
 
+      <TextInput
+        placeholder={t("search_placeholder", "Search...")}
+        leftSection={<IconSearch size={16} />}
+        mb="md"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.currentTarget.value)}
+      />
+
       <UsersTable
-        data={paginatedData?.data || []}
+        data={filteredData}
         onDelete={confirmDelete}
         onEdit={openEditModal}
         onRowClick={setViewUser}

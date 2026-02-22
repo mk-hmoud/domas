@@ -2,12 +2,13 @@ import { useMemo, useState, useEffect } from 'react';
 import { Group, Text, Code } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
-  IconUsers,
   IconBuildingSkyscraper,
   IconLayoutDashboard,
   IconArchive,
   IconDoorEnter,
-  IconHistory,
+  IconAddressBook,
+  IconSettings,
+  IconDatabase,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
@@ -71,9 +72,14 @@ export function DashboardLayout() {
         link: '/dashboard',
       },
       {
-        label: t('nav.operations', 'Operations'),
+        label: t('nav.operations'),
         icon: IconDoorEnter,
         links: [
+          {
+            label: t('nav.bookings'),
+            link: '/dashboard/bookings',
+            requiredPermission: 'bookings.view',
+          },
           {
             label: t('nav.check_in'),
             link: '/dashboard/check-in',
@@ -85,11 +91,6 @@ export function DashboardLayout() {
             requiredPermission: 'bookings.check_in',
           },
           {
-            label: t('nav.bookings'),
-            link: '/dashboard/bookings',
-            requiredPermission: 'bookings.view',
-          },
-          {
             label: t('nav.accounting'),
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',
@@ -97,16 +98,14 @@ export function DashboardLayout() {
         ],
       },
       {
-        label: t('nav.records', 'Records'),
-        icon: IconUsers,
+        label: t('nav.registry'),
+        icon: IconAddressBook,
         links: [
           {
             label: t('nav.students'),
             link: '/dashboard/students',
             requiredPermission: 'students.view',
           },
-          { label: t('nav.all_users'), link: '/dashboard/users', requiredPermission: 'users.view' },
-          { label: t('nav.roles'), link: '/dashboard/roles', requiredPermission: 'roles.manage' },
           {
             label: t('nav.access_cards'),
             link: '/dashboard/access-cards',
@@ -115,7 +114,7 @@ export function DashboardLayout() {
         ],
       },
       {
-        label: t('nav.inventory_assets', 'Inventory'),
+        label: t('nav.inventory_assets'),
         icon: IconArchive,
         links: [
           {
@@ -131,19 +130,35 @@ export function DashboardLayout() {
         ],
       },
       {
-        label: t('nav.system_logs', 'System & Logs'),
-        icon: IconHistory,
+        label: t('nav.management'),
+        icon: IconSettings,
         links: [
+          {
+            label: t('nav.locations'),
+            link: '/dashboard/locations',
+            requiredPermission: 'locations.view',
+          },
           {
             label: t('nav.semesters'),
             link: '/dashboard/semesters',
             requiredPermission: 'semesters.view',
           },
           {
-            label: t('nav.locations'),
-            link: '/dashboard/locations',
-            requiredPermission: 'locations.view',
+            label: t('nav.all_users'),
+            link: '/dashboard/users',
+            requiredPermission: 'users.view',
           },
+          {
+            label: t('nav.roles'),
+            link: '/dashboard/roles',
+            requiredPermission: 'roles.manage',
+          },
+        ],
+      },
+      {
+        label: t('nav.system'),
+        icon: IconDatabase,
+        links: [
           {
             label: t('nav.audit_logs'),
             link: '/dashboard/logs/audit',
