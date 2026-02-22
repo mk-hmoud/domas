@@ -221,6 +221,7 @@ export class BookingsService {
           },
           context,
           client,
+          true, // skipUndo
         );
         assignedCardNumber = card.cardNumber;
       }
@@ -287,7 +288,13 @@ export class BookingsService {
       let cardId: number | undefined;
       if (cardRes.rowCount && cardRes.rowCount > 0) {
         cardId = cardRes.rows[0].id;
-        await this.accessCardsService.returnCard(cardId!, { notes: data.notes }, context, client);
+        await this.accessCardsService.returnCard(
+          cardId!,
+          { notes: data.notes },
+          context,
+          client,
+          true, // skipUndo
+        );
       }
 
       // 3. Make Bed Available
