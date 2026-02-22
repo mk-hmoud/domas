@@ -23,6 +23,7 @@ import {
   IconCreditCard,
   IconCheck,
   IconMessageDots,
+  IconDownload,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
@@ -41,6 +42,7 @@ import {
   locations,
   inventory,
   accessCards,
+  contracts,
 } from "@domas/api-client";
 
 interface CheckOutDetailsModalProps {
@@ -143,6 +145,12 @@ export function CheckOutDetailsModal({
     const result = await onConfirm(notes);
     if (result) {
       setStep(3); // Success step
+    }
+  };
+
+  const handleDownloadContract = async () => {
+    if (booking) {
+      await contracts.downloadContract(booking.id, "check_out");
     }
   };
 
@@ -388,9 +396,18 @@ export function CheckOutDetailsModal({
                 </Text>
               </Box>
 
-              <Button onClick={onClose} size="md">
-                {t("finish")}
-              </Button>
+              <Group gap="sm">
+                <Button
+                  variant="light"
+                  leftSection={<IconDownload size={16} />}
+                  onClick={handleDownloadContract}
+                >
+                  {t("download_contract", "Download Contract")}
+                </Button>
+                <Button onClick={onClose} size="md">
+                  {t("finish")}
+                </Button>
+              </Group>
             </Stack>
           </Stepper.Completed>
         </Stepper>

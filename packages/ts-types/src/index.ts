@@ -14,6 +14,7 @@ export * from "./enums/inventory-scope.enum";
 export * from "./enums/card-status.enum";
 export * from "./enums/card-action-type.enum";
 export * from "./enums/damage-status.enum";
+export * from "./enums/contract-type.enum";
 
 export * from "./interfaces/user.interface";
 export * from "./interfaces/role.interface";
@@ -28,6 +29,7 @@ export * from "./interfaces/paginated-result.interface";
 export * from "./interfaces/inventory.interface";
 export * from "./interfaces/access-card.interface";
 export * from "./interfaces/damage.interface";
+export * from "./interfaces/contract.interface";
 
 export * from "./dtos/login-credentials.dto";
 export * from "./dtos/create-user.dto";

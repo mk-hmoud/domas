@@ -466,11 +466,13 @@ CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(bookin
 -- =============================================
 
 CREATE TABLE booking_contracts (
-    booking_id UUID PRIMARY KEY REFERENCES bookings(id) ON DELETE CASCADE,
+    booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+    type VARCHAR(20) NOT NULL DEFAULT 'check_in', -- 'check_in', 'check_out'
     pdf_data BYTEA NOT NULL,
     file_size INT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (booking_id, type)
 );
 
 -- =============================================

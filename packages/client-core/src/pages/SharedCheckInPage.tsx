@@ -14,7 +14,13 @@ import {
 } from "@mantine/core";
 import { IconDoorEnter, IconRefresh } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { bookings, students, beds, locations } from "@domas/api-client";
+import {
+  bookings,
+  students,
+  beds,
+  locations,
+  contracts,
+} from "@domas/api-client";
 import { Booking, BookingOpsStatus, Student } from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 import { CheckInDetailsModal } from "@domas/ui";
@@ -94,6 +100,8 @@ export function SharedCheckInPage() {
         color: "green",
       });
       fetchBookings();
+      // Auto-download contract
+      contracts.downloadContract(selectedBooking.id).catch(console.error);
       return result;
     } catch (error) {
       notifications.show({

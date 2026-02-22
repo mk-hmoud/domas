@@ -7,12 +7,16 @@ import { LocationsRepository } from '../../locations/repositories/locations.repo
 import { DatabaseService } from '../../../core/database/database.service';
 import { ContractsRepository } from '../repositories/contracts.repository';
 import { UsersRepository } from '../../users/repositories/users.repository';
+import { ContractType } from '../../../common/enums/contract-type.enum';
 import PDFDocument from 'pdfkit';
 import { PoolClient } from 'pg';
+import * as path from 'path';
 
 @Injectable()
 export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
+  private readonly fontPath = path.join(process.cwd(), 'src/assets/fonts/Roboto-Regular.ttf');
+  private readonly fontBoldPath = path.join(process.cwd(), 'src/assets/fonts/Roboto-Bold.ttf');
 
   constructor(
     private readonly bookingsRepository: BookingsRepository,
@@ -42,11 +46,6 @@ export class ContractsService {
     const staff = await this.usersRepository.findById(staffUserId, client);
 
     // Fetch any user with 'Dorm Manager' role for the manager signature
-    const managers = await this.usersRepository.findAll({ page: 1, limit: 1 }, client);
-    // This is a simplified lookup. Ideally, we'd have a findByRole method.
-    // For now, I will use the first user found as a placeholder or refine the query.
-
-    // Better: Query specifically for a manager
     const managerRes = await this.db.query(`
       SELECT u.* FROM users u
       JOIN user_roles ur ON u.id = ur.user_id
@@ -68,16 +67,163 @@ export class ContractsService {
       manager,
     );
 
-    await this.contractsRepository.upsert(bookingId, pdfBuffer, client);
+    await this.contractsRepository.upsert(bookingId, ContractType.CHECK_IN, pdfBuffer, client);
     await this.bookingsRepository.update(bookingId, { contractSigned: true }, client);
 
-    this.logger.log(`Contract generated for booking ${bookingId}`);
+    this.logger.log(`Check-in contract generated for booking ${bookingId}`);
   }
 
-  async getContractByBookingId(bookingId: string) {
-    const contract = await this.contractsRepository.findByBookingId(bookingId);
+  async generateCheckOutContract(
+    bookingId: string,
+    staffUserId: string,
+    client?: PoolClient,
+  ): Promise<void> {
+    const booking = await this.bookingsRepository.findById(bookingId, client);
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    const student = await this.studentsRepository.findById(booking.studentId, client);
+    const bed = await this.bedsRepository.findById(booking.bedId, client);
+    const room = await this.locationsRepository.findById(bed!.locationId, client);
+    const staff = await this.usersRepository.findById(staffUserId, client);
+
+    // Fetch liabilities for this student that might be linked to this booking/stay
+    const liabilitiesRes = await this.db.query(
+      `
+      SELECT dl.*, dr.description as report_description
+      FROM damage_liabilities dl
+      JOIN damage_reports dr ON dl.damage_report_id = dr.id
+      WHERE dl.student_id = $1 AND dr.created_at BETWEEN $2 AND NOW()
+    `,
+      [booking.studentId, booking.checkedInAt || booking.startDate],
+    );
+    const liabilities = liabilitiesRes.rows;
+
+    const managerRes = await this.db.query(`
+      SELECT u.* FROM users u
+      JOIN user_roles ur ON u.id = ur.user_id
+      JOIN roles r ON ur.role_id = r.id
+      WHERE r.name = 'Dorm Manager' AND u.is_active = TRUE
+      LIMIT 1
+    `);
+    const manager = managerRes.rows[0];
+
+    const pdfBuffer = await this.createCheckOutPdf(
+      student,
+      room,
+      bed,
+      booking,
+      liabilities,
+      staff,
+      manager,
+    );
+
+    await this.contractsRepository.upsert(bookingId, ContractType.CHECK_OUT, pdfBuffer, client);
+    this.logger.log(`Check-out contract generated for booking ${bookingId}`);
+  }
+
+  async getContract(bookingId: string, type: string) {
+    const contract = await this.contractsRepository.findById(bookingId, type);
     if (!contract) throw new NotFoundException('Contract not found');
     return contract;
+  }
+
+  private createCheckOutPdf(
+    student: any,
+    room: any,
+    bed: any,
+    booking: any,
+    liabilities: any[],
+    staff: any,
+    manager: any,
+  ): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const isTR = student.nationalityCode === 'TR';
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      const buffers: Buffer[] = [];
+
+      // Register fonts
+      doc.registerFont('Custom-Regular', this.fontPath);
+      doc.registerFont('Custom-Bold', this.fontBoldPath);
+
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
+
+      // --- HEADER ---
+      doc
+        .font('Custom-Bold')
+        .fontSize(14)
+        .text('EUROPEAN UNIVERSITY OF LEFKE', { align: 'center' });
+      doc
+        .fontSize(12)
+        .text(isTR ? 'Konaklama ve Yurt Yönetimi' : 'Accommodation and Housing Management', {
+          align: 'center',
+        });
+      doc.moveDown(0.5);
+      doc
+        .fontSize(14)
+        .text(
+          isTR
+            ? 'Yurt Çıkış ve Depozito İadesi Müracaat Formu'
+            : 'Released Dormitories and Deposit Refund Application Form',
+          { align: 'center', underline: true },
+        );
+      doc.moveDown();
+
+      // --- STUDENT INFO ---
+      doc.font('Custom-Regular').fontSize(10);
+      doc.text(
+        isTR
+          ? `Öğrenci Adı: ${student.firstName} ${student.lastName}`
+          : `Student Name: ${student.firstName} ${student.lastName}`,
+      );
+      doc.text(
+        isTR ? `Öğrenci No: ${student.studentNumber}` : `Student ID: ${student.studentNumber}`,
+      );
+      doc.text(
+        isTR
+          ? `Yurt / Oda: ${room.name} (${bed.label})`
+          : `Dorm / Room: ${room.name} (${bed.label})`,
+      );
+      doc.moveDown();
+
+      // --- LIABILITIES ---
+      doc.font('Custom-Bold').text(isTR ? 'Hasar ve Borç Durumu' : 'Damage and Debt Status');
+      doc.moveDown(0.5);
+
+      if (liabilities.length === 0) {
+        doc
+          .font('Custom-Regular')
+          .text(
+            isTR
+              ? 'Herhangi bir borç veya hasar kaydı bulunmamaktadır.'
+              : 'No debt or damage records found.',
+          );
+      } else {
+        liabilities.forEach((l) => {
+          doc.font('Custom-Regular').text(`- ${l.report_description}: ${l.amount} ${l.currency}`);
+        });
+      }
+      doc.moveDown();
+
+      // --- DECLARATION ---
+      const now = new Date();
+      doc.text(
+        isTR
+          ? `Yukarıda belirtilen bilgiler dahilinde yurttan çıkış işlemlerimin yapılmasını ve depozito iademin gerçekleştirilmesini arz ederim.`
+          : `I request that my dormitory check-out procedures be completed and my deposit refund be processed within the framework of the information provided above.`,
+      );
+      doc.text(`${isTR ? 'Tarih' : 'Date'}: ${now.toLocaleDateString()}`);
+      doc.moveDown(2);
+
+      // --- SIGNATURES ---
+      const ySig = doc.y;
+      doc.font('Custom-Regular').text(isTR ? 'Öğrenci İmzası' : 'Student Signature', 40, ySig);
+      doc.text(isTR ? 'Yurt Sorumlusu' : 'Dormitory Officer', 200, ySig);
+      doc.text(isTR ? 'Konaklama Müdürü' : 'Housing Manager', 380, ySig);
+
+      doc.end();
+    });
   }
 
   private createContractPdf(
@@ -113,13 +259,17 @@ export class ContractsService {
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers: Buffer[] = [];
 
+      // Register fonts
+      doc.registerFont('Custom-Regular', this.fontPath);
+      doc.registerFont('Custom-Bold', this.fontBoldPath);
+
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
       // --- 1. HEADER ---
       doc
-        .font('Helvetica-Bold')
+        .font('Custom-Bold')
         .fontSize(14)
         .text('EUROPEAN UNIVERSITY OF LEFKE', { align: 'center' });
 
@@ -136,7 +286,7 @@ export class ContractsService {
       doc.moveDown();
 
       // --- 2. PREAMBLE ---
-      doc.font('Helvetica').fontSize(10);
+      doc.font('Custom-Regular').fontSize(10);
 
       const preamble = isTR
         ? `${student.firstName} ${student.lastName} (Öğrenci No: ${student.studentNumber}), ` +
@@ -157,7 +307,7 @@ export class ContractsService {
 
       // --- 3. INVENTORY TABLE ---
       const tableTitle = isTR ? '1. Demirbaş/Stok Listesi' : '1. Inventory/Stock List';
-      doc.font('Helvetica-Bold').text(tableTitle, { underline: true });
+      doc.font('Custom-Bold').text(tableTitle, { underline: true });
       doc.moveDown(0.5);
 
       this.drawTable(doc, snapshots, isTR);
@@ -165,7 +315,7 @@ export class ContractsService {
       doc.moveDown();
 
       // --- 4. EXPLANATION / NOTE ---
-      doc.font('Helvetica-Bold').fontSize(9);
+      doc.font('Custom-Bold').fontSize(9);
       const note = isTR
         ? 'NOT: Diğer demirbaşların, duvar ve kapı boyalarının kirlenmesi ve yıpranması durumunda ödenecektir.'
         : 'NOTE: To be paid in case the other inventory, the wall and the door paints get dirty and worn.';
@@ -174,7 +324,7 @@ export class ContractsService {
 
       // --- 5. DECLARATION ---
       const now = new Date();
-      doc.font('Helvetica').fontSize(10);
+      doc.font('Custom-Regular').fontSize(10);
 
       const declaration = isTR
         ? `${room.name} numaralı odayı (Yatak: ${bed.label}), yukarıda belirtilen hususları dikkate alarak ` +
@@ -220,7 +370,7 @@ export class ContractsService {
     const now = new Date().toLocaleString(isTR ? 'tr-TR' : 'en-US');
     const studentFullName = `${student.firstName} ${student.lastName}`;
 
-    doc.font('Helvetica-Bold').fontSize(10);
+    doc.font('Custom-Bold').fontSize(10);
     const rulesTitle = isTR
       ? 'LAÜ YURT KURALLARI TEBLİĞ TUTANAĞI'
       : 'Rules, regulations and general guidelines for all students of the residence halls';
@@ -228,7 +378,7 @@ export class ContractsService {
     doc.text(rulesTitle, { align: 'center' });
     doc.moveDown(0.5);
 
-    doc.fontSize(7.5).font('Helvetica');
+    doc.fontSize(isTR ? 9 : 8).font('Custom-Regular');
 
     const rules = isTR
       ? [
@@ -309,7 +459,7 @@ export class ContractsService {
     });
 
     doc.moveDown(0.5);
-    doc.font('Helvetica-Bold');
+    doc.font('Custom-Bold');
     doc.text(`${isTR ? 'Öğrenci' : 'Student'}: ${studentFullName}`);
     doc.text(`${isTR ? 'No' : 'ID'}: ${student.studentNumber}`);
     doc.text(`${isTR ? 'Oda' : 'Room'}: ${room.name} (${bed.label})`);
@@ -319,50 +469,86 @@ export class ContractsService {
   }
 
   private drawTable(doc: PDFKit.PDFDocument, items: any[], isTR: boolean) {
-    let y = doc.y;
+    const startY = doc.y;
     const startX = 40;
-    const colName = 40;
-    const colPrefix = 300;
-    const colQty = 380;
-    const colCheck = 440;
+    const colWidth = 250; // Width of one of the two main columns
+    const gap = 10;
 
-    doc.fontSize(9).font('Helvetica-Bold');
-    doc.text(isTR ? 'Eşya Adı' : 'Item Name', colName, y);
-    doc.text(isTR ? 'Kapsam' : 'Scope', colPrefix, y);
-    doc.text(isTR ? 'Adet' : 'Qty', colQty, y);
-    doc.text(isTR ? 'Kontrol' : 'Check', colCheck, y);
+    // Sub-column offsets within each main column
+    const offName = 0;
+    const offScope = 160;
+    const offQty = 220;
 
-    y += 15;
-    doc.moveTo(startX, y).lineTo(550, y).stroke();
-    y += 5;
+    const drawHeader = (x: number, y: number) => {
+      doc.fontSize(9).font('Custom-Bold');
+      doc.text(isTR ? 'Eşya Adı' : 'Item Name', x + offName, y);
+      doc.text(isTR ? 'Kapsam' : 'Scope', x + offScope, y);
+      doc.text(isTR ? 'Adet' : 'Qty', x + offQty, y);
+      doc
+        .moveTo(x, y + 12)
+        .lineTo(x + colWidth, y + 12)
+        .stroke();
+    };
 
-    doc.font('Helvetica');
-    items.forEach((item, i) => {
-      if (y > 700) {
+    drawHeader(startX, startY);
+    drawHeader(startX + colWidth + gap, startY);
+
+    let currentY = startY + 18;
+    doc.font('Custom-Regular').fontSize(8.5);
+
+    // Split items into two halves
+    const half = Math.ceil(items.length / 2);
+    const leftItems = items.slice(0, half);
+    const rightItems = items.slice(half);
+
+    const maxRows = Math.max(leftItems.length, rightItems.length);
+
+    for (let i = 0; i < maxRows; i++) {
+      if (currentY > 700) {
         doc.addPage();
-        y = 50;
+        currentY = 50;
+        drawHeader(startX, currentY);
+        drawHeader(startX + colWidth + gap, currentY);
+        currentY += 18;
       }
 
-      const prefix = item.scope === 'bed' ? (isTR ? 'Kişisel' : 'Pers') : isTR ? 'Oda' : 'Room';
-      const itemName = isTR ? item.nameTr || item.nameEn : item.nameEn || item.nameTr;
-
+      // Zebra striping
       if (i % 2 === 0) {
         doc
-          .rect(startX, y - 2, 510, 14)
+          .rect(startX, currentY - 2, colWidth * 2 + gap, 12)
           .fillColor('#f5f5f5')
           .fill()
           .fillColor('black');
       }
 
-      doc.text(itemName, colName + 5, y);
-      doc.text(prefix, colPrefix, y);
-      doc.text(item.quantity.toString(), colQty, y);
-      doc.rect(colCheck, y, 10, 10).stroke();
+      // Left Column
+      const left = leftItems[i];
+      if (left) {
+        const prefix = left.scope === 'bed' ? (isTR ? 'Kişisel' : 'Pers') : isTR ? 'Oda' : 'Room';
+        const itemName = isTR ? left.nameTr || left.nameEn : left.nameEn || left.nameTr;
+        doc.text(itemName, startX + offName + 2, currentY, {
+          width: offScope - 5,
+          lineBreak: false,
+        });
+        doc.text(prefix, startX + offScope, currentY);
+        doc.text(left.quantity.toString(), startX + offQty, currentY);
+      }
 
-      y += 14;
-    });
+      // Right Column
+      const right = rightItems[i];
+      if (right) {
+        const xPos = startX + colWidth + gap;
+        const prefix = right.scope === 'bed' ? (isTR ? 'Kişisel' : 'Pers') : isTR ? 'Oda' : 'Room';
+        const itemName = isTR ? right.nameTr || right.nameEn : right.nameEn || right.nameTr;
+        doc.text(itemName, xPos + offName + 2, currentY, { width: offScope - 5, lineBreak: false });
+        doc.text(prefix, xPos + offScope, currentY);
+        doc.text(right.quantity.toString(), xPos + offQty, currentY);
+      }
 
-    doc.moveTo(startX, y).lineTo(550, y).stroke();
-    doc.y = y + 10;
+      currentY += 12;
+    }
+
+    doc.x = startX;
+    doc.y = currentY + 10;
   }
 }
