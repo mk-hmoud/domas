@@ -86,12 +86,20 @@ export class ContractsService {
     const room = await this.locationsRepository.findById(bed!.locationId, client);
     const staff = await this.usersRepository.findById(staffUserId, client);
 
+    const isTR = student!.nationalityCode === 'TR';
+
     // Fetch liabilities for this student that might be linked to this booking/stay
     const liabilitiesRes = await this.db.query(
       `
-      SELECT dl.*, dr.description as report_description
+      SELECT 
+        dl.*, 
+        dr.description as report_description,
+        COALESCE(cat.name_tr, snap.name_tr) as item_name_tr,
+        COALESCE(cat.name_en, snap.name_en) as item_name_en
       FROM damage_liabilities dl
       JOIN damage_reports dr ON dl.damage_report_id = dr.id
+      LEFT JOIN inventory_catalog cat ON dr.catalog_id = cat.id
+      LEFT JOIN booking_inventory_snapshots snap ON dr.snapshot_id = snap.id
       WHERE dl.student_id = $1 AND dr.created_at BETWEEN $2 AND NOW()
     `,
       [booking.studentId, booking.checkedInAt || booking.startDate],
@@ -107,6 +115,20 @@ export class ContractsService {
     `);
     const manager = managerRes.rows[0];
 
+    // Fetch Semester Deposit Info
+    const semesterRes = await this.db.query(
+      'SELECT deposit_amount_try, deposit_amount_foreign, foreign_currency_code FROM semesters WHERE id = $1',
+      [booking.semesterId],
+    );
+    const semester = semesterRes.rows[0];
+
+    const totalDeductions = liabilities.reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalDeposit = isTR
+      ? Number(semester.deposit_amount_try)
+      : Number(semester.deposit_amount_foreign);
+    const refundAmount = totalDeposit - totalDeductions;
+    const currency = isTR ? 'TRY' : semester.foreign_currency_code;
+
     const pdfBuffer = await this.createCheckOutPdf(
       student,
       room,
@@ -115,6 +137,7 @@ export class ContractsService {
       liabilities,
       staff,
       manager,
+      { totalDeposit, totalDeductions, refundAmount, currency },
     );
 
     await this.contractsRepository.upsert(bookingId, ContractType.CHECK_OUT, pdfBuffer, client);
@@ -135,6 +158,12 @@ export class ContractsService {
     liabilities: any[],
     staff: any,
     manager: any,
+    financials: {
+      totalDeposit: number;
+      totalDeductions: number;
+      refundAmount: number;
+      currency: string;
+    },
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const isTR = student.nationalityCode === 'TR';
@@ -149,19 +178,30 @@ export class ContractsService {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
+      const staffName = staff
+        ? staff.firstName && staff.lastName
+          ? `${staff.firstName} ${staff.lastName}`
+          : staff.email
+        : '....................';
+      const managerName = manager
+        ? manager.firstName && manager.lastName
+          ? `${manager.firstName} ${manager.lastName}`
+          : manager.email
+        : 'Umut KAYIKCI';
+
       // --- HEADER ---
       doc
         .font('Custom-Bold')
-        .fontSize(14)
+        .fontSize(12)
         .text('EUROPEAN UNIVERSITY OF LEFKE', { align: 'center' });
       doc
-        .fontSize(12)
+        .fontSize(10)
         .text(isTR ? 'Konaklama ve Yurt Yönetimi' : 'Accommodation and Housing Management', {
           align: 'center',
         });
       doc.moveDown(0.5);
       doc
-        .fontSize(14)
+        .fontSize(12)
         .text(
           isTR
             ? 'Yurt Çıkış ve Depozito İadesi Müracaat Formu'
@@ -170,57 +210,146 @@ export class ContractsService {
         );
       doc.moveDown();
 
-      // --- STUDENT INFO ---
-      doc.font('Custom-Regular').fontSize(10);
+      const lineGap = 15;
+      const col1 = 40;
+      const col2 = 300;
+
+      // --- SECTION 1: STUDENT ---
+      doc
+        .font('Custom-Bold')
+        .fontSize(10)
+        .text(
+          isTR ? '(1) Öğrenci Tarafından Doldurulacaktır.' : '(1) Will be filled by the Student.',
+        );
+      doc.font('Custom-Regular').fontSize(9);
+
+      const preamble = isTR
+        ? `Ben, Üniversitenin Lefke Merkez Yurdu nda kalan ${student.studentNumber} no lu öğrenci 2025-2026 / 1 ders yılı tatil / eve taşınma / diğer sebepler nedeniyle yurttan ayrılacağımdan yurt depozitomun iadesini / yurt borcuna aktarılmasını / kayıt harcına aktarılması için gereğini arz ederim.`
+        : `I staying in the university Lefke Center Dormitory students ${student.studentNumber} No. 2025-2026 / 2 academic of the year holiday / move house / I will leave the dormitory / residence for reasons other refund of my deposit / transfer to the dorm debt / registration fees would be transferred to the need for offering.`;
+
+      doc.text(preamble, { align: 'justify' });
+      doc.moveDown(0.5);
       doc.text(
-        isTR
-          ? `Öğrenci Adı: ${student.firstName} ${student.lastName}`
-          : `Student Name: ${student.firstName} ${student.lastName}`,
+        `${isTR ? 'Öğrenci Adı Soyadı' : 'Student Name Surname'}: ${student.firstName} ${student.lastName}`,
       );
       doc.text(
-        isTR ? `Öğrenci No: ${student.studentNumber}` : `Student ID: ${student.studentNumber}`,
-      );
-      doc.text(
-        isTR
-          ? `Yurt / Oda: ${room.name} (${bed.label})`
-          : `Dorm / Room: ${room.name} (${bed.label})`,
+        `${isTR ? 'Tarih' : 'Date'}: ${new Date().toLocaleDateString()}   ${isTR ? 'İmza' : 'Signature'}: ............................`,
       );
       doc.moveDown();
 
-      // --- LIABILITIES ---
-      doc.font('Custom-Bold').text(isTR ? 'Hasar ve Borç Durumu' : 'Damage and Debt Status');
-      doc.moveDown(0.5);
+      // --- SECTION 2: DORMITORY OFFICERS ---
+      doc
+        .font('Custom-Bold')
+        .text(
+          isTR
+            ? '(2) Yurt Sorumlusu Tarafından Doldurulacaktır.'
+            : '(2) Will be filled by Dormitory Officers.',
+        );
+      doc.font('Custom-Regular');
 
-      if (liabilities.length === 0) {
+      const officerText = isTR
+        ? `${student.firstName} ${student.lastName} isimli, ${student.studentNumber} kayıt nolu öğrenci Lefke Merkez Yurdu, ${room.name} / ${bed.label} nolu odasında kalmış olduğu süre içerisinde oluşan eksiklik / hasar vardır / yoktur.`
+        : `${student.firstName} ${student.lastName} with registration number ${student.studentNumber}, the student named EUL Lefke Center Dormitory stayed in room number ${room.name} / ${bed.label} which was formed in the lack of time / damage is / are not available.`;
+
+      doc.text(officerText, { align: 'justify' });
+      doc.moveDown(0.5);
+      doc.text(
+        `${isTR ? 'Yurt Sorumlusunun Adı Soyadı' : 'Dormitory Officer Name Surname'}: ${staffName}`,
+      );
+      doc.text(
+        `${isTR ? 'Tarih' : 'Date'}: ${new Date().toLocaleDateString()}   ${isTR ? 'İmza' : 'Signature'}: ............................`,
+      );
+
+      doc.moveDown(0.5);
+      doc.text(isTR ? 'Depozito Bilgileri:' : 'Deposit Information:');
+      doc.text(
+        isTR
+          ? `Depozito Miktarı: ${financials.totalDeposit} ${financials.currency} Kesinti Miktarı: ${financials.totalDeductions} ${financials.currency} İade Miktarı: ${financials.refundAmount} ${financials.currency}`
+          : `Amount of Deposit: ${financials.totalDeposit} ${financials.currency} Amount Deductions: ${financials.totalDeductions} ${financials.currency} Refund Amount: ${financials.refundAmount} ${financials.currency}`,
+      );
+      doc.text(isTR ? '* Detaylar için arka sayfa bakınız.' : '* See the back page for details.');
+      doc.moveDown();
+
+      // --- SECTION 3: MANAGER ---
+      doc
+        .font('Custom-Bold')
+        .text(
+          isTR ? '(3) Yurtlar ve Lojmanlar Müdürlüğü:' : '(3) Dormitories and Housing Directorate:',
+        );
+      doc.font('Custom-Regular');
+      doc.text(
+        `${isTR ? 'Yurtlar Müd. Adı Soyadı' : 'Dormitory Manager Name Surname'}: ${managerName}`,
+      );
+      doc.text(
+        `${isTR ? 'Tarih' : 'Date'}: ............................   ${isTR ? 'İmza' : 'Signature'}: ............................`,
+      );
+      doc.moveDown();
+
+      // --- SECTION 4: FINANCIAL ---
+      doc
+        .font('Custom-Bold')
+        .text(isTR ? '(4) Mali İşler Müdürlüğü:' : '(4) Financial Affairs Directorate:');
+      doc.font('Custom-Regular');
+      doc.text(
+        isTR
+          ? '1. Depozito ve Yurt Yatırımı/Borcu: ............................'
+          : '1. Deposit and Dormitory fees / Debt: ............................',
+      );
+      doc.text(
+        isTR
+          ? '2. Okul Harç Yatırımı / Borcu: ............................'
+          : '2. Tuition fee / Debt: ............................',
+      );
+      doc.text(
+        isTR
+          ? '3. Geçmiş Dönemlere Ait Borçlar: ............................'
+          : '3. The past Periods Debts: ............................',
+      );
+      doc.text(
+        isTR ? '4. Diğer: ............................' : '4. Others: ............................',
+      );
+      doc.moveDown(0.5);
+      doc.text(
+        isTR
+          ? 'Mali İşler Müdürü Adı Soyadı: ............................'
+          : 'Manager of Financial Affairs Name Surname: ............................',
+      );
+      doc.text(
+        `${isTR ? 'Tarih' : 'Date'}: ............................   ${isTR ? 'İmza' : 'Signature'}: ............................`,
+      );
+      doc.moveDown();
+
+      // --- SECTION 5: RECTOR ---
+      doc
+        .font('Custom-Bold')
+        .text(isTR ? '(5) Rektör Danışmanı Onayı:' : '(5) Rector Consultant Confirmation:');
+      doc.font('Custom-Regular');
+      doc.text(
+        isTR
+          ? 'Rektör Danışmanı Adı Soyadı: ............................'
+          : 'Rector Consultant Name Surname: ............................',
+      );
+      doc.text(
+        `${isTR ? 'Tarih' : 'Date'}: ............................   ${isTR ? 'İmza' : 'Signature'}: ............................`,
+      );
+
+      // --- LIABILITIES (BACK PAGE) ---
+      if (liabilities.length > 0) {
+        doc.addPage();
         doc
-          .font('Custom-Regular')
-          .text(
-            isTR
-              ? 'Herhangi bir borç veya hasar kaydı bulunmamaktadır.'
-              : 'No debt or damage records found.',
-          );
-      } else {
-        liabilities.forEach((l) => {
-          doc.font('Custom-Regular').text(`- ${l.report_description}: ${l.amount} ${l.currency}`);
+          .font('Custom-Bold')
+          .fontSize(12)
+          .text(isTR ? 'HASAR VE BORÇ DETAYLARI' : 'DAMAGE AND DEBT DETAILS', { align: 'center' });
+        doc.moveDown();
+        doc.font('Custom-Regular').fontSize(10);
+        liabilities.forEach((l, idx) => {
+          const itemName = isTR ? l.item_name_tr : l.item_name_en;
+          const displayLine = itemName
+            ? `${itemName} (${l.report_description}): ${l.amount} ${l.currency}`
+            : `${l.report_description}: ${l.amount} ${l.currency}`;
+          doc.text(`${idx + 1}. ${displayLine}`);
         });
       }
-      doc.moveDown();
-
-      // --- DECLARATION ---
-      const now = new Date();
-      doc.text(
-        isTR
-          ? `Yukarıda belirtilen bilgiler dahilinde yurttan çıkış işlemlerimin yapılmasını ve depozito iademin gerçekleştirilmesini arz ederim.`
-          : `I request that my dormitory check-out procedures be completed and my deposit refund be processed within the framework of the information provided above.`,
-      );
-      doc.text(`${isTR ? 'Tarih' : 'Date'}: ${now.toLocaleDateString()}`);
-      doc.moveDown(2);
-
-      // --- SIGNATURES ---
-      const ySig = doc.y;
-      doc.font('Custom-Regular').text(isTR ? 'Öğrenci İmzası' : 'Student Signature', 40, ySig);
-      doc.text(isTR ? 'Yurt Sorumlusu' : 'Dormitory Officer', 200, ySig);
-      doc.text(isTR ? 'Konaklama Müdürü' : 'Housing Manager', 380, ySig);
 
       doc.end();
     });
