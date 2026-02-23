@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LocationsService } from './services/locations.service';
 import { LocationsController } from './controllers/locations.controller';
 import { LocationsRepository } from './repositories/locations.repository';

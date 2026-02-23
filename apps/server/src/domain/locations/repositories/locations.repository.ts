@@ -4,6 +4,7 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { Location } from '../entities/location.entity';
 import { ILocationsRepository } from '../interfaces/locations-repository.interface';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
@@ -55,30 +56,90 @@ export class LocationsRepository implements ILocationsRepository {
   }
 
   async findAll(
-    pagination: PaginationDto,
+    filters: FindAllLocationsDto,
     client?: PoolClient,
-  ): Promise<PaginatedResult<Location>> {
-    const { page = 1, limit = 10 } = pagination;
+  ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
+    const {
+      page = 1,
+      limit = 10,
+      type,
+      genderLock,
+      isTrOnly,
+      isGuestZone,
+      ownership,
+      parentId,
+      onlyVacant,
+    } = filters;
     const offset = (page - 1) * limit;
 
-    const query = `
-      SELECT ${this.selectColumns}
-      FROM locations
-      WHERE deleted_at IS NULL
-      ORDER BY tree_path ASC
-      LIMIT $1 OFFSET $2
-    `;
-    const countQuery = `SELECT COUNT(*) FROM locations WHERE deleted_at IS NULL`;
-
     const dbClient = this.getClient(client);
+    const params: any[] = [];
+    const conditions: string[] = ['l.deleted_at IS NULL'];
+
+    if (type) {
+      params.push(type);
+      conditions.push(`l.type = $${params.length}`);
+    }
+    if (genderLock) {
+      params.push(genderLock);
+      conditions.push(`l.gender_lock = $${params.length}`);
+    }
+    if (isTrOnly !== undefined) {
+      params.push(isTrOnly);
+      conditions.push(`l.is_tr_only = $${params.length}`);
+    }
+    if (isGuestZone !== undefined) {
+      params.push(isGuestZone);
+      conditions.push(`l.is_guest_zone = $${params.length}`);
+    }
+    if (ownership) {
+      params.push(ownership);
+      conditions.push(`l.ownership = $${params.length}`);
+    }
+    if (parentId) {
+      const parent = await this.findById(parentId, client);
+      if (parent) {
+        params.push(parent.treePath);
+        conditions.push(
+          `l.tree_path <@ $${params.length} AND l.id != ${parentId} AND nlevel(l.tree_path) = nlevel($${params.length}) + 1`,
+        );
+      }
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Occupancy Subqueries
+    const totalBedsSub = `(SELECT COUNT(*)::INT FROM beds b WHERE b.location_id IN (SELECT id FROM locations WHERE tree_path <@ l.tree_path) AND b.deleted_at IS NULL)`;
+    const occupiedBedsSub = `(SELECT COUNT(*)::INT FROM beds b WHERE b.location_id IN (SELECT id FROM locations WHERE tree_path <@ l.tree_path) AND b.status = 'occupied' AND b.deleted_at IS NULL)`;
+
+    let baseQuery = `
+      SELECT 
+        l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock", 
+        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.ownership,
+        l.base_price as "basePrice", l.created_at as "createdAt", l.updated_at as "updatedAt",
+        ${totalBedsSub} as "totalBeds",
+        ${occupiedBedsSub} as "occupiedBeds"
+      FROM locations l
+      ${whereClause}
+    `;
+
+    if (onlyVacant) {
+      baseQuery = `SELECT * FROM (${baseQuery}) sub WHERE "occupiedBeds" < "totalBeds"`;
+    }
+
+    const query = `${baseQuery} ORDER BY "treePath" ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const countQuery = onlyVacant
+      ? `SELECT COUNT(*)::INT FROM (${baseQuery}) sub`
+      : `SELECT COUNT(*)::INT FROM locations l ${whereClause}`;
+
     const [result, countResult] = await Promise.all([
-      dbClient.query<Location>(query, [limit, offset]),
-      dbClient.query<{ count: string }>(countQuery),
+      dbClient.query(query, [...params, limit, offset]),
+      dbClient.query<{ count: number }>(countQuery, params),
     ]);
 
     return {
-      data: result.rows.map((row) => new Location(row)),
-      total: parseInt(countResult.rows[0].count, 10),
+      data: result.rows,
+      total: countResult.rows[0].count,
       page,
       limit,
     };

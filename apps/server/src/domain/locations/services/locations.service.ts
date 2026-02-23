@@ -28,6 +28,8 @@ import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { Inject, forwardRef } from '@nestjs/common';
 
+import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
+
 @Injectable()
 export class LocationsService {
   private readonly logger = new Logger(LocationsService.name);
@@ -188,8 +190,10 @@ export class LocationsService {
     }, context);
   }
 
-  async findAll(pagination: PaginationDto): Promise<PaginatedResult<Location>> {
-    return this.locationsRepository.findAll(pagination);
+  async findAll(
+    filters: FindAllLocationsDto,
+  ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
+    return this.locationsRepository.findAll(filters);
   }
 
   async findById(id: number): Promise<Location> {

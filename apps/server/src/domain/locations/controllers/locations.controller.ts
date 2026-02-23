@@ -38,6 +38,7 @@ import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 
@@ -126,8 +127,8 @@ export class LocationsController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findAll(@Query() pagination: PaginationDto) {
-    return this.locationsService.findAll(pagination);
+  findAll(@Query() filters: FindAllLocationsDto) {
+    return this.locationsService.findAll(filters);
   }
 
   @Get('search')
