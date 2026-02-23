@@ -5,6 +5,7 @@ import { Bed } from '../entities/bed.entity';
 import { IBedsRepository } from '../interfaces/beds-repository.interface';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
@@ -47,36 +48,72 @@ export class BedsRepository implements IBedsRepository {
     return new Bed(result.rows[0]);
   }
 
-  async findAll(
-    pagination: PaginationDto,
-    filters?: { locationId?: number; status?: BedStatus },
-    client?: PoolClient,
-  ): Promise<PaginatedResult<Bed>> {
-    const { page = 1, limit = 10 } = pagination;
+  async findAll(filters: FindAllBedsDto, client?: PoolClient): Promise<PaginatedResult<Bed>> {
+    const {
+      page = 1,
+      limit = 10,
+      locationId,
+      status,
+      genderLock,
+      isTrOnly,
+      isGuestZone,
+      ownership,
+      q,
+    } = filters;
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT ${this.selectColumns}
-      FROM beds
+      SELECT b.id, b.location_id as "locationId", b.label, b.status, 
+             b.is_tr_only as "isTrOnly", b.is_guest_zone as "isGuestZone", 
+             b.ownership, b.updated_at as "updatedAt",
+             l.name as "locationName"
+      FROM beds b
+      JOIN locations l ON b.location_id = l.id
     `;
     const values: any[] = [];
-    const conditions: string[] = ['deleted_at IS NULL'];
+    const conditions: string[] = ['b.deleted_at IS NULL'];
 
-    if (filters?.locationId) {
-      conditions.push(`location_id = $${values.length + 1}`);
-      values.push(filters.locationId);
+    if (locationId) {
+      conditions.push(`b.location_id = $${values.length + 1}`);
+      values.push(locationId);
     }
-    if (filters?.status) {
-      conditions.push(`status = $${values.length + 1}`);
-      values.push(filters.status);
+    if (status) {
+      conditions.push(`b.status = $${values.length + 1}`);
+      values.push(status);
+    }
+    if (genderLock) {
+      conditions.push(`l.gender_lock = $${values.length + 1}`);
+      values.push(genderLock);
+    }
+    if (isTrOnly !== undefined) {
+      conditions.push(`b.is_tr_only = $${values.length + 1}`);
+      values.push(isTrOnly);
+    }
+    if (isGuestZone !== undefined) {
+      conditions.push(`b.is_guest_zone = $${values.length + 1}`);
+      values.push(isGuestZone);
+    }
+    if (ownership) {
+      conditions.push(`b.ownership = $${values.length + 1}`);
+      values.push(ownership);
+    }
+    if (q) {
+      conditions.push(
+        `(b.label ILIKE $${values.length + 1} OR l.name ILIKE $${values.length + 1})`,
+      );
+      values.push(`%${q}%`);
     }
 
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += ` ORDER BY location_id ASC, label ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-    const countQuery = `SELECT COUNT(*) FROM beds ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}`;
+    query += ` ORDER BY l.name ASC, b.label ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    const countQuery = `
+      SELECT COUNT(*) FROM beds b 
+      JOIN locations l ON b.location_id = l.id
+      ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}
+    `;
 
     const dbClient = this.getClient(client);
     const [result, countResult] = await Promise.all([

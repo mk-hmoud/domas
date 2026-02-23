@@ -2,16 +2,13 @@ import { PoolClient } from 'pg';
 import { Bed } from '../entities/bed.entity';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 
 export interface IBedsRepository {
   create(data: Partial<Bed>, client?: PoolClient): Promise<Bed>;
   findById(id: number, client?: PoolClient): Promise<Bed | null>;
-  findAll(
-    pagination: PaginationDto,
-    filters?: { locationId?: number; status?: BedStatus },
-    client?: PoolClient,
-  ): Promise<PaginatedResult<Bed>>;
+  findAll(filters: FindAllBedsDto, client?: PoolClient): Promise<PaginatedResult<Bed>>;
   findByLocation(locationId: number, client?: PoolClient): Promise<Bed[]>;
   findAvailableBeds(locationId: number, client?: PoolClient): Promise<Bed[]>;
   findByStatus(status: BedStatus, client?: PoolClient): Promise<Bed[]>;

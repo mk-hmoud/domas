@@ -19,6 +19,7 @@ import { Bed } from '../entities/bed.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PoolClient } from 'pg';
@@ -37,11 +38,8 @@ export class BedsService {
     private readonly db: DatabaseService,
   ) {}
 
-  async findAll(
-    pagination: PaginationDto,
-    filters?: { locationId?: number; status?: BedStatus },
-  ): Promise<PaginatedResult<Bed>> {
-    return this.bedsRepository.findAll(pagination, filters);
+  async findAll(filters: FindAllBedsDto): Promise<PaginatedResult<Bed>> {
+    return this.bedsRepository.findAll(filters);
   }
 
   async create(

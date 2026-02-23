@@ -107,8 +107,7 @@ export class BedsController {
   @Get()
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
   findAll(@Query() query: FindAllBedsDto) {
-    const { locationId, status, ...pagination } = query;
-    return this.bedsService.findAll(pagination, { locationId, status });
+    return this.bedsService.findAll(query);
   }
 
   @Patch(':id')
