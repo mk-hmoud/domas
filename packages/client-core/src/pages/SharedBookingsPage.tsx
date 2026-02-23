@@ -26,9 +26,7 @@ import {
 import {
   Booking,
   Student,
-  Bed,
   Semester,
-  BedStatus,
   CreateBookingDto,
   CreateStudentDto,
 } from "@domas/ts-types";
@@ -50,7 +48,6 @@ export function SharedBookingsPage() {
 
   // Data for modal & mapping
   const [studentList, setStudentList] = useState<Student[]>([]);
-  const [availableBeds, setAvailableBeds] = useState<Bed[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
   const [locationsMap, setLocationsMap] = useState<Map<number, string>>(
     new Map(),
@@ -81,16 +78,13 @@ export function SharedBookingsPage() {
       const [studentsRes, bedsRes, semestersRes, locationsRes] =
         await Promise.all([
           students.findAll({ limit: 1000 }),
-          beds.findAll({ limit: 10000 }), // Fetch ALL beds for mapping
+          beds.findAll({ limit: 10000 }),
           semesters.findAll({ limit: 1000 }),
           locations.findAll({ limit: 10000 }), // Fetch all locations to map names
         ]);
 
       // Update Modal Data
       setStudentList(studentsRes.data);
-      setAvailableBeds(
-        bedsRes.data.filter((b) => b.status === BedStatus.AVAILABLE),
-      );
       setAllSemesters(semestersRes.data);
 
       // Build Locations Map
@@ -248,13 +242,7 @@ export function SharedBookingsPage() {
           value: s.id,
           label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
         }))}
-        beds={availableBeds.map((b) => {
-          const roomName = locationsMap.get(b.locationId) || "Unknown Room";
-          return {
-            value: b.id.toString(),
-            label: `${roomName} - ${b.label}`,
-          };
-        })}
+        locationsMap={locationsMap}
         semesters={allSemesters.map((s) => ({
           value: s.id.toString(),
           label: s.displayName,

@@ -8,6 +8,7 @@ import {
   Container,
   Text,
   TextInput,
+  Card,
 } from "@mantine/core";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -60,7 +61,9 @@ export function SharedInventoryCatalogPage() {
     const query = searchQuery.toLowerCase();
     return (
       item.nameEn.toLowerCase().includes(query) ||
-      item.nameTr.toLowerCase().includes(query)
+      item.nameTr.toLowerCase().includes(query) ||
+      item.scope.toLowerCase().includes(query) ||
+      t(`inventory_scope.${item.scope}`).toLowerCase().includes(query)
     );
   });
 
@@ -158,13 +161,14 @@ export function SharedInventoryCatalogPage() {
         </Button>
       </Group>
 
-      <TextInput
-        placeholder={t("search_placeholder", "Search...")}
-        leftSection={<IconSearch size={16} />}
-        mb="md"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.currentTarget.value)}
-      />
+      <Card withBorder padding="md" radius="md" mb="md">
+        <TextInput
+          placeholder={t("search_placeholder", "Search...")}
+          leftSection={<IconSearch size={16} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+        />
+      </Card>
 
       <Paper withBorder radius="md">
         <InventoryCatalogTable
