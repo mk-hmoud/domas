@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BedsRepository } from '../repositories/beds.repository';
+import { StudentsRepository } from '../../students/repositories/students.repository';
 import { CreateBedDto } from '../dto/create-bed.dto';
 import { UpdateBedDto } from '../dto/update-bed.dto';
 import { BulkCreateBedDto, BulkDeleteBedDto, BulkUpdateBedStatusDto } from '../dto/bulk-bed.dto';
@@ -25,6 +26,7 @@ import { PoolClient } from 'pg';
 export class BedsService {
   constructor(
     private readonly bedsRepository: BedsRepository,
+    private readonly studentsRepository: StudentsRepository,
     private readonly db: DatabaseService,
   ) {}
 
@@ -173,5 +175,15 @@ export class BedsService {
         await this.bedsRepository.updateGuestZone(id, dto.isGuestZone, client);
       }
     }, context);
+  }
+
+  async findEligibleBeds(studentId: string): Promise<Bed[]> {
+    const student = await this.studentsRepository.findById(studentId);
+    if (!student) throw new NotFoundException(`Student with ID ${studentId} not found`);
+
+    return this.bedsRepository.findEligibleBeds({
+      gender: student.gender,
+      nationalityCode: student.nationalityCode,
+    });
   }
 }

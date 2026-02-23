@@ -386,4 +386,36 @@ export class LocationsRepository implements ILocationsRepository {
     target.ownership = ownership;
     return target;
   }
+
+  async clearGenderLockIfEmpty(locationId: number, client?: PoolClient): Promise<void> {
+    const query = `
+      UPDATE locations
+      SET gender_lock = NULL, updated_at = NOW()
+      WHERE id = $1
+        AND NOT EXISTS (
+          -- Check for physical occupancy
+          SELECT 1 FROM beds b
+          WHERE b.location_id = locations.id 
+            AND b.status = 'occupied'
+            AND b.deleted_at IS NULL
+        )
+        AND NOT EXISTS (
+          -- Check for logical reservations (upcoming or active bookings)
+          SELECT 1 FROM bookings bo
+          JOIN beds b2 ON bo.bed_id = b2.id
+          WHERE b2.location_id = locations.id
+            AND bo.status NOT IN ('cancelled', 'rejected', 'completed')
+        )
+    `;
+    await this.getClient(client).query(query, [locationId]);
+  }
+
+  async lockGenderIfNull(locationId: number, gender: string, client?: PoolClient): Promise<void> {
+    const query = `
+      UPDATE locations
+      SET gender_lock = $1, updated_at = NOW()
+      WHERE id = $2 AND gender_lock IS NULL
+    `;
+    await this.getClient(client).query(query, [gender, locationId]);
+  }
 }

@@ -4,9 +4,12 @@ import {
   BadRequestException,
   Logger,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { UndoRepository } from '../repositories/undo.repository';
 import { UsersRepository } from '../../users/repositories/users.repository';
+import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { UndoLog } from '../entities/undo-log.entity';
@@ -22,6 +25,8 @@ export class UndoService {
   constructor(
     private readonly undoRepository: UndoRepository,
     private readonly usersRepository: UsersRepository,
+    @Inject(forwardRef(() => LocationsRepository))
+    private readonly locationsRepository: LocationsRepository,
     private readonly db: DatabaseService,
   ) {}
 
@@ -645,7 +650,21 @@ export class UndoService {
 
   private async undoCreateBooking(log: UndoLog, client: PoolClient): Promise<void> {
     const bookingId = log.entityId;
+
+    // 1. Get locationId before deletion
+    const bookingRes = await client.query(
+      'SELECT bd.location_id FROM bookings bo JOIN beds bd ON bo.bed_id = bd.id WHERE bo.id = $1',
+      [bookingId],
+    );
+
+    // 2. Delete the booking
     await client.query('DELETE FROM bookings WHERE id = $1', [bookingId]);
+
+    // 3. Clear gender lock if room is now empty
+    if (bookingRes.rows.length > 0) {
+      const locationId = bookingRes.rows[0].location_id;
+      await this.locationsRepository.clearGenderLockIfEmpty(locationId, client);
+    }
   }
 
   private async undoUpdateBooking(log: UndoLog, client: PoolClient): Promise<void> {

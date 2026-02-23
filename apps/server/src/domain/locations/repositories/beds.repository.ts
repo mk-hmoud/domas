@@ -203,6 +203,38 @@ export class BedsRepository implements IBedsRepository {
     return parseInt(result.rows[0].count, 10);
   }
 
+  async findEligibleBeds(filters: { gender: string; nationalityCode: string }): Promise<Bed[]> {
+    const isTurkish = filters.nationalityCode === 'TR';
+
+    const query = `
+      SELECT 
+        b.id, 
+        b.location_id as "locationId", 
+        b.label, 
+        b.status, 
+        b.is_tr_only as "isTrOnly",
+        b.is_guest_zone as "isGuestZone",
+        b.ownership,
+        b.updated_at as "updatedAt",
+        l.name as "locationName"
+      FROM beds b
+      JOIN locations l ON b.location_id = l.id
+      WHERE b.status = 'available'
+        AND b.deleted_at IS NULL
+        AND l.deleted_at IS NULL
+        -- Gender Lock Check: room's lock must match student gender or be NULL
+        AND (l.gender_lock IS NULL OR l.gender_lock = $1)
+        -- TR Only Check: if room is TR only, student must be Turkish
+        AND (l.is_tr_only = FALSE OR $2 = TRUE)
+        -- Bed specific TR Only check
+        AND (b.is_tr_only = FALSE OR $2 = TRUE)
+      ORDER BY l.name ASC, b.label ASC
+    `;
+
+    const result = await this.db.query(query, [filters.gender, isTurkish]);
+    return result.rows.map((row) => new Bed(row));
+  }
+
   async updateTrOnly(id: number, isTrOnly: boolean, client?: PoolClient): Promise<Bed> {
     const query = `UPDATE beds SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
     const result = await this.getClient(client).query<Bed>(query, [isTrOnly, id]);

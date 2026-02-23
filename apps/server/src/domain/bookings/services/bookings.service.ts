@@ -81,6 +81,11 @@ export class BookingsService {
 
     return this.db.transaction(async (client) => {
       const booking = await this.bookingsRepository.create(data, client);
+
+      // Lock gender if currently NULL (Dynamic Lock)
+      // student and bed are already fetched above the transaction
+      await this.locationsRepository.lockGenderIfNull(bed!.locationId, student!.gender, client);
+
       await this.undoService.registerUndo(
         {
           userId: context.userId,
@@ -299,6 +304,12 @@ export class BookingsService {
 
       // 3. Make Bed Available
       await this.bedsRepository.updateStatus(booking.bedId, BedStatus.AVAILABLE, client);
+
+      // 3.1 Clear Gender Lock if room is empty
+      const bed = await this.bedsRepository.findById(booking.bedId, client);
+      if (bed) {
+        await this.locationsRepository.clearGenderLockIfEmpty(bed.locationId, client);
+      }
 
       // 4. Generate Check-Out Contract
       try {

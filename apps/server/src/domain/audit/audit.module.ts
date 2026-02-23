@@ -7,9 +7,10 @@ import { UndoRepository } from './repositories/undo.repository';
 import { AuditController } from './controllers/audit.controller';
 import { UndoController } from './controllers/undo.controller';
 import { UsersModule } from '../users/users.module';
+import { LocationsModule } from '../locations/locations.module';
 
 @Module({
-  imports: [forwardRef(() => UsersModule)],
+  imports: [forwardRef(() => UsersModule), forwardRef(() => LocationsModule)],
   controllers: [AuditController, UndoController],
   providers: [
     AuditService,
