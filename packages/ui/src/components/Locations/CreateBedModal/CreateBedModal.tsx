@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, TextInput, Button, Group, Select } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ interface CreateBedModalProps {
   onClose: () => void;
   onSubmit: (values: CreateBedDto) => Promise<void>;
   locationId: number;
+  initialValues?: CreateBedDto | null;
 }
 
 export function CreateBedModal({
@@ -16,12 +17,13 @@ export function CreateBedModal({
   onClose,
   onSubmit,
   locationId,
+  initialValues,
 }: CreateBedModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<CreateBedDto>({
-    initialValues: {
+    initialValues: initialValues || {
       locationId,
       label: "",
       status: BedStatus.AVAILABLE,
@@ -31,11 +33,24 @@ export function CreateBedModal({
     },
   });
 
+  useEffect(() => {
+    if (opened) {
+      if (initialValues) {
+        form.setValues(initialValues);
+      } else {
+        form.reset();
+        form.setFieldValue("locationId", locationId);
+      }
+    }
+  }, [opened, initialValues, locationId]);
+
   const handleSubmit = async (values: CreateBedDto) => {
     setLoading(true);
     try {
-      await onSubmit({ ...values, locationId });
-      form.reset();
+      await onSubmit({
+        ...values,
+        locationId: values.locationId || locationId,
+      });
       onClose();
     } catch (error) {
       console.error(error);
@@ -48,7 +63,7 @@ export function CreateBedModal({
     <Modal
       opened={opened}
       onClose={onClose}
-      title={t("create_bed", { defaultValue: "Create Bed" })}
+      title={initialValues ? t("edit_bed") : t("create_bed")}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <TextInput
@@ -86,7 +101,7 @@ export function CreateBedModal({
             {t("cancel")}
           </Button>
           <Button type="submit" loading={loading}>
-            {t("create")}
+            {initialValues ? t("save") : t("create")}
           </Button>
         </Group>
       </form>

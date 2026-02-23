@@ -63,10 +63,23 @@ export class BedsRepository implements IBedsRepository {
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT b.id, b.location_id as "locationId", b.label, b.status, 
-             b.is_tr_only as "isTrOnly", b.is_guest_zone as "isGuestZone", 
-             b.ownership, b.updated_at as "updatedAt",
-             l.name as "locationName"
+      SELECT 
+        b.id, 
+        b.location_id as "locationId", 
+        b.label, 
+        b.status, 
+        b.is_tr_only as "isTrOnly", 
+        b.is_guest_zone as "isGuestZone", 
+        b.ownership, 
+        b.updated_at as "updatedAt",
+        'bed' as "type",
+        l.name as "locationName",
+        (SELECT string_agg(name, ' > ' ORDER BY tree_path) FROM locations WHERE tree_path @> l.tree_path) as "locationPath",
+        (SELECT s.first_name || ' ' || s.last_name 
+         FROM bookings bo 
+         JOIN students s ON bo.student_id = s.id 
+         WHERE bo.bed_id = b.id AND bo.status IN ('active', 'ready_for_checkin')
+         LIMIT 1) as "residentName"
       FROM beds b
       JOIN locations l ON b.location_id = l.id
     `;
@@ -98,10 +111,16 @@ export class BedsRepository implements IBedsRepository {
       values.push(ownership);
     }
     if (q) {
-      conditions.push(
-        `(b.label ILIKE $${values.length + 1} OR l.name ILIKE $${values.length + 1})`,
-      );
       values.push(`%${q}%`);
+      const pIdx = values.length;
+      conditions.push(
+        `(b.label ILIKE $${pIdx} OR EXISTS (
+          SELECT 1 FROM locations l2 
+          WHERE l2.tree_path @> l.tree_path 
+          AND l2.name ILIKE $${pIdx}
+          AND l2.deleted_at IS NULL
+        ))`,
+      );
     }
 
     if (conditions.length > 0) {

@@ -10,4 +10,10 @@ export interface Bed {
   isGuestZone: boolean;
   ownership: LocationOwnership;
   updatedAt: Date;
+  locationName?: string;
+  locationPath?: string;
+  totalBeds?: number;
+  occupiedBeds?: number;
+  residentName?: string;
+  type?: string;
 }

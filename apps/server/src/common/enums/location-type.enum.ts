@@ -5,4 +5,5 @@ export enum LocationType {
   BLOCK = 'block',
   FLOOR = 'floor',
   ROOM = 'room',
+  BED = 'bed',
 }

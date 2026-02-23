@@ -818,7 +818,7 @@ export class UndoService {
     undoUserId: string,
     client: PoolClient,
   ): Promise<void> {
-    const { previousStatus, previousCheckInDate } = log.undoData;
+    const { previousStatus, previousCheckInDate, bedId } = log.undoData;
     const bookingId = log.entityId;
 
     // 1. Revert Booking Status & Reset Contract Flag
@@ -827,15 +827,26 @@ export class UndoService {
       [previousStatus, previousCheckInDate, bookingId],
     );
 
-    // 2. CLEANUP: Delete the inventory snapshots generated during check-in
+    // 2. Mark Bed as Available
+    if (bedId) {
+      await client.query("UPDATE beds SET status = 'available' WHERE id = $1", [bedId]);
+
+      // 2.1 Clear Gender Lock if room is now empty
+      const bedRes = await client.query('SELECT location_id FROM beds WHERE id = $1', [bedId]);
+      if (bedRes.rows.length > 0) {
+        await this.locationsRepository.clearGenderLockIfEmpty(bedRes.rows[0].location_id, client);
+      }
+    }
+
+    // 3. CLEANUP: Delete the inventory snapshots generated during check-in
     await client.query('DELETE FROM booking_inventory_snapshots WHERE booking_id = $1', [
       bookingId,
     ]);
 
-    // 3. CONTRACT CLEANUP: Delete the generated contract
+    // 4. CONTRACT CLEANUP: Delete the generated contract
     await client.query('DELETE FROM booking_contracts WHERE booking_id = $1', [bookingId]);
 
-    // 4. CARD REVERSION: If a card was issued during this check-in, return it to the pool
+    // 5. CARD REVERSION: If a card was issued during this check-in, return it to the pool
     const cardRes = await client.query(
       `UPDATE access_cards 
        SET status = 'available', 

@@ -16,6 +16,10 @@ import {
   Drawer,
   ActionIcon,
   Divider,
+  SegmentedControl,
+  Pagination,
+  LoadingOverlay,
+  Tabs,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -25,6 +29,8 @@ import {
   IconCurrencyDollar,
   IconUser,
   IconX,
+  IconHierarchy,
+  IconTable,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -34,6 +40,7 @@ import {
   InventoryCatalogItem,
   CreateInventoryAssignmentDto,
   InventoryScope,
+  FindAllLocationsDto,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -50,10 +57,12 @@ import {
   LocationIcon,
   InventoryAssignmentList,
   AssignInventoryModal,
+  LocationRegistryTable,
+  LocationRegistryFilters,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
-import { locations, inventory } from "@domas/api-client";
+import { locations, inventory, beds } from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
 import { findLocationPath } from "../utils/location-utils";
@@ -66,11 +75,88 @@ function LocationsContent() {
     treeData,
     selectedNode,
     children,
-    loading,
+    loading: treeLoading,
     selectNode,
     deleteLocation,
     refreshTree,
   } = useLocations();
+
+  // View State
+  const [activeView, setActiveView] = useState<string>("structure");
+  const [activeTab, setActiveTab] = useState<string | null>("locations");
+
+  // Registry View State
+  const [registryData, setRegistryData] = useState<any[]>([]);
+  const [registryLoading, setRegistryLoading] = useState(false);
+  const [registryFilters, setRegistryFilters] = useState<FindAllLocationsDto>({
+    page: 1,
+    limit: 10,
+  });
+  const [totalRegistryItems, setTotalRegistryRegistryItems] = useState(0);
+
+  const fetchRegistryData = async () => {
+    setRegistryLoading(true);
+    try {
+      // Clean up filters to remove false booleans so they don't strictly filter on server
+      const cleanFilters: any = { ...registryFilters };
+      ["isTrOnly", "isGuestZone", "onlyVacant"].forEach((key) => {
+        if (cleanFilters[key] === false) {
+          delete cleanFilters[key];
+        }
+      });
+
+      if (activeTab === "locations") {
+        const result = await locations.findAll(cleanFilters);
+        setRegistryData(result.data);
+        setTotalRegistryRegistryItems(result.total);
+      } else {
+        const result = await beds.findAll({
+          ...cleanFilters,
+          page: registryFilters.page,
+          limit: registryFilters.limit,
+        });
+        setRegistryData(result.data);
+        setTotalRegistryRegistryItems(result.total);
+      }
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
+    } finally {
+      setRegistryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === "registry") {
+      fetchRegistryData();
+    }
+  }, [activeView, activeTab, registryFilters]);
+
+  const handleFilterChange = (key: string, value: any) => {
+    setRegistryFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      page: 1, // Reset to first page on filter change
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setRegistryFilters({
+      page: 1,
+      limit: 10,
+      q: "",
+      type: undefined,
+      genderLock: undefined,
+      isTrOnly: undefined,
+      isGuestZone: undefined,
+      ownership: undefined,
+      onlyVacant: undefined,
+      status: undefined,
+    });
+  };
 
   const showInventory = useMemo(() => {
     return (
@@ -88,9 +174,9 @@ function LocationsContent() {
     id: number | null;
     type?: LocationType;
   }>({ id: null });
-  const [locationToEdit, setLocationToEdit] = useState<LocationNode | null>(
-    null,
-  );
+  const [locationToEdit, setLocationToEdit] = useState<any | null>(null);
+  const [editBedModalOpened, setEditBedModalOpened] = useState(false);
+  const [bedToEdit, setBedToEdit] = useState<any | null>(null);
 
   // Inventory State
   const [inventoryAssignments, setInventoryAssignments] = useState<
@@ -114,7 +200,7 @@ function LocationsContent() {
     selectedNode?.type === LocationType.ROOM,
   );
 
-  // Shared Selection State (Tree + Children)
+  // Shared Selection State (Tree + Children + Registry)
   const { selectedIds, toggleSelection, setSelectedIds, clearSelection } =
     useLocationSelection([]);
 
@@ -188,21 +274,6 @@ function LocationsContent() {
   }, [selectedNode]);
 
   const handleToggleSelection = (id: number | string) => {
-    // Find the node to check its type
-    const findNode = (nodes: LocationNode[]): LocationNode | undefined => {
-      for (const node of nodes) {
-        if (String(node.id) === String(id)) return node;
-        if (node.children) {
-          const found = findNode(node.children);
-          if (found) return found;
-        }
-      }
-      return undefined;
-    };
-
-    const node = findNode(treeData);
-    if (node?.type === LocationType.UNIVERSITY) return;
-
     // Handle prefixed IDs from tree (e.g. "bed-123")
     const numericId =
       typeof id === "string" && id.startsWith("bed-")
@@ -245,6 +316,7 @@ function LocationsContent() {
             color: "green",
           });
           await refreshTree();
+          if (activeView === "registry") fetchRegistryData();
           clearSelection();
         } catch (error) {
           notifications.show({
@@ -270,6 +342,7 @@ function LocationsContent() {
         color: "green",
       });
       await refreshTree();
+      if (activeView === "registry") fetchRegistryData();
       clearSelection();
       setBulkEditModalOpened(false);
     } catch (error) {
@@ -292,13 +365,13 @@ function LocationsContent() {
     }
   };
 
-  const handleEditChild = (child: LocationNode) => {
+  const handleEditChild = (child: LocationNode | any) => {
     setLocationToEdit(child);
     setParentForCreation({ id: null });
     setCreateModalOpened(true);
   };
 
-  const confirmDeleteLocation = (node: LocationNode) => {
+  const confirmDeleteLocation = (node: LocationNode | any) => {
     modals.openConfirmModal({
       title: t("delete_location_title"),
       children: (
@@ -310,11 +383,12 @@ function LocationsContent() {
       confirmProps: { color: "red" },
       onConfirm: async () => {
         await deleteLocation(Number(node.id));
+        if (activeView === "registry") fetchRegistryData();
       },
     });
   };
 
-  const handleDeleteChild = (child: LocationNode) => {
+  const handleDeleteChild = (child: LocationNode | any) => {
     confirmDeleteLocation(child);
   };
 
@@ -340,6 +414,17 @@ function LocationsContent() {
       setSelectedIds((prev) => prev.filter((id) => !childIds.includes(id)));
     } else {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...childIds])));
+    }
+  };
+
+  const handleToggleSelectAllRegistry = () => {
+    const allIds = registryData.map((l) => l.id);
+    const allSelected = allIds.every((id) => selectedIds.includes(id));
+
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !allIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...allIds])));
     }
   };
 
@@ -395,8 +480,9 @@ function LocationsContent() {
         });
       }
 
-      // Refresh the tree after any modification
+      // Refresh data
       await refreshTree();
+      if (activeView === "registry") fetchRegistryData();
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -411,6 +497,26 @@ function LocationsContent() {
 
   const handleShowSelection = () => {
     setViewSelectionDrawerOpened(true);
+  };
+
+  const handleUpdateBed = async (values: any) => {
+    if (!bedToEdit) return;
+    try {
+      await beds.update(bedToEdit.id, values);
+      notifications.show({
+        title: t("success"),
+        message: t("bed_updated", "Bed updated successfully"),
+        color: "green",
+      });
+      if (activeView === "registry") fetchRegistryData();
+      await refreshTree();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
+    }
   };
 
   const handleAssignItem = async (values: CreateInventoryAssignmentDto) => {
@@ -476,7 +582,7 @@ function LocationsContent() {
 
   // Helper to find selected nodes for display
   const getSelectedNodes = () => {
-    const found: LocationNode[] = [];
+    const found: any[] = [];
     const findRecursively = (nodes: LocationNode[]) => {
       for (const node of nodes) {
         const numericId =
@@ -493,12 +599,24 @@ function LocationsContent() {
       }
     };
     findRecursively(treeData);
+
+    // Also check registry data for selected items not in the currently loaded tree structure
+    // (though tree usually has everything, it might be collapsed)
+    registryData.forEach((item) => {
+      if (
+        selectedIds.includes(item.id) &&
+        !found.find((f) => f.id === item.id)
+      ) {
+        found.push(item);
+      }
+    });
+
     return found;
   };
 
   const selectedNodesList = viewSelectionDrawerOpened ? getSelectedNodes() : [];
 
-  if (loading && treeData.length === 0) {
+  if (treeLoading && treeData.length === 0) {
     return (
       <Center h="100%">
         <Loader size="xl" />
@@ -508,269 +626,399 @@ function LocationsContent() {
 
   return (
     <Container size="xl" py="xl">
-      <Title mb="lg">
-        {t("locations_management", { defaultValue: "Locations Management" })}
-      </Title>
-      <LocationsManager
-        sidebar={
-          <LocationTree
-            data={treeData}
-            selectedId={selectedNode?.id}
-            onSelect={selectNode}
-            selectedIds={selectedIds}
-            onToggleSelection={handleToggleSelection}
-            onSelectBranch={handleSelectBranch}
-          />
-        }
-      >
-        {selectedNode ? (
-          <LocationDetail
-            title={selectedNode.name}
-            type={selectedNode.type}
-            breadcrumbs={breadcrumbs}
-            actions={
-              <>
-                {selectedNode.type !== LocationType.UNIVERSITY && (
-                  <>
-                    <Button variant="default" onClick={handleEditLocation}>
-                      {t("edit")}
-                    </Button>
+      <Group justify="space-between" mb="lg">
+        <Title>
+          {t("locations_management", { defaultValue: "Locations Management" })}
+        </Title>
+        <SegmentedControl
+          value={activeView}
+          onChange={setActiveView}
+          data={[
+            {
+              label: (
+                <Center>
+                  <IconHierarchy size={16} />
+                  <Box ml={10}>{t("structure", "Structure")}</Box>
+                </Center>
+              ),
+              value: "structure",
+            },
+            {
+              label: (
+                <Center>
+                  <IconTable size={16} />
+                  <Box ml={10}>{t("registry", "Registry")}</Box>
+                </Center>
+              ),
+              value: "registry",
+            },
+          ]}
+        />
+      </Group>
+
+      {activeView === "structure" ? (
+        <LocationsManager
+          sidebar={
+            <LocationTree
+              data={treeData}
+              selectedId={selectedNode?.id}
+              onSelect={selectNode}
+              selectedIds={selectedIds}
+              onToggleSelection={handleToggleSelection}
+              onSelectBranch={handleSelectBranch}
+            />
+          }
+        >
+          {selectedNode ? (
+            <LocationDetail
+              title={selectedNode.name}
+              type={selectedNode.type}
+              breadcrumbs={breadcrumbs}
+              actions={
+                <>
+                  {selectedNode.type !== LocationType.UNIVERSITY && (
+                    <>
+                      <Button variant="default" onClick={handleEditLocation}>
+                        {t("edit")}
+                      </Button>
+                      <Button
+                        variant="default"
+                        color="red"
+                        leftSection={<IconTrash size={16} />}
+                        onClick={handleDeleteSelected}
+                      >
+                        {t("delete")}
+                      </Button>
+                    </>
+                  )}
+                  {selectedNode.type === LocationType.ROOM ? (
                     <Button
-                      variant="default"
-                      color="red"
-                      leftSection={<IconTrash size={16} />}
-                      onClick={handleDeleteSelected}
+                      leftSection={<IconPlus size={16} />}
+                      onClick={() => setCreateBedModalOpened(true)}
                     >
-                      {t("delete")}
+                      {t("create_bed", { defaultValue: "Create Bed" })}
                     </Button>
-                  </>
-                )}
-                {selectedNode.type === LocationType.ROOM ? (
-                  <Button
-                    leftSection={<IconPlus size={16} />}
-                    onClick={() => setCreateBedModalOpened(true)}
-                  >
-                    {t("create_bed", { defaultValue: "Create Bed" })}
-                  </Button>
-                ) : (
-                  <Button
-                    leftSection={<IconPlus size={16} />}
-                    onClick={handleOpenCreateChild}
-                  >
-                    {t("add_child")}
-                  </Button>
-                )}
-              </>
-            }
-          >
-            <Paper p="md" mb="md" withBorder bg="var(--mantine-color-body)">
-              <Group>
-                <Badge
-                  variant="light"
-                  color="blue"
-                  leftSection={<IconBuildingBank size={14} />}
-                >
-                  {t(`ownerships.${selectedNode.ownership}`, {
-                    defaultValue: selectedNode.ownership,
-                  })}
-                </Badge>
-                {selectedNode.isTrOnly && (
+                  ) : (
+                    <Button
+                      leftSection={<IconPlus size={16} />}
+                      onClick={handleOpenCreateChild}
+                    >
+                      {t("add_child")}
+                    </Button>
+                  )}
+                </>
+              }
+            >
+              <Paper p="md" mb="md" withBorder bg="var(--mantine-color-body)">
+                <Group>
                   <Badge
                     variant="light"
-                    color="red"
-                    leftSection={<IconFlag size={14} />}
+                    color="blue"
+                    leftSection={<IconBuildingBank size={14} />}
                   >
-                    TR Only
+                    {t(`ownerships.${selectedNode.ownership}`, {
+                      defaultValue: selectedNode.ownership,
+                    })}
                   </Badge>
-                )}
-                {selectedNode.isGuestZone && (
-                  <Badge
-                    variant="light"
-                    color="orange"
-                    leftSection={<IconUser size={14} />}
-                  >
-                    Guest Zone
-                  </Badge>
-                )}
-                {selectedNode.basePrice > 0 && (
-                  <Badge
-                    variant="light"
-                    color="green"
-                    leftSection={<IconCurrencyDollar size={14} />}
-                  >
-                    {selectedNode.basePrice}
-                  </Badge>
-                )}
-              </Group>
-            </Paper>
+                  {selectedNode.isTrOnly && (
+                    <Badge
+                      variant="light"
+                      color="red"
+                      leftSection={<IconFlag size={14} />}
+                    >
+                      TR Only
+                    </Badge>
+                  )}
+                  {selectedNode.isGuestZone && (
+                    <Badge
+                      variant="light"
+                      color="orange"
+                      leftSection={<IconUser size={14} />}
+                    >
+                      Guest Zone
+                    </Badge>
+                  )}
+                  {selectedNode.basePrice > 0 && (
+                    <Badge
+                      variant="light"
+                      color="green"
+                      leftSection={<IconCurrencyDollar size={14} />}
+                    >
+                      {selectedNode.basePrice}
+                    </Badge>
+                  )}
+                </Group>
+              </Paper>
 
-            {selectedNode.type === LocationType.BED ? (
-              <Stack gap="md" p="md">
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("bed_label", { defaultValue: "Label" })}
-                  </Text>
-                  <Text size="lg" fw={600}>
-                    {selectedNode.name}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("status", { defaultValue: "Status" })}
-                  </Text>
-                  <Badge
-                    color={
-                      selectedNode.status === "available"
-                        ? "green"
-                        : selectedNode.status === "maintenance"
-                          ? "orange"
-                          : "blue"
-                    }
-                  >
-                    {t(`bed_status.${selectedNode.status}`)}
-                  </Badge>
-                </Box>
+              {selectedNode.type === LocationType.BED ? (
+                <Stack gap="md" p="md">
+                  <Box>
+                    <Text size="xs" c="dimmed">
+                      {t("bed_label", { defaultValue: "Label" })}
+                    </Text>
+                    <Text size="lg" fw={600}>
+                      {selectedNode.name}
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Text size="xs" c="dimmed">
+                      {t("status", { defaultValue: "Status" })}
+                    </Text>
+                    <Badge
+                      color={
+                        selectedNode.status === "available"
+                          ? "green"
+                          : selectedNode.status === "maintenance"
+                            ? "orange"
+                            : "blue"
+                      }
+                    >
+                      {t(`bed_status.${selectedNode.status}`)}
+                    </Badge>
+                  </Box>
 
-                {showInventory && (
-                  <>
-                    <Divider />
-                    <InventoryAssignmentList
-                      data={inventoryAssignments}
-                      loading={inventoryLoading}
-                      onAddClick={() => setAssignModalOpened(true)}
-                      onRemove={handleDeleteAssignment}
-                      onUpdateQuantity={handleUpdateAssignmentQuantity}
-                    />
-                  </>
-                )}
-              </Stack>
-            ) : selectedNode.type === LocationType.ROOM ? (
-              <>
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
-                  {roomBeds.map((bed) => (
-                    <BedCard
-                      key={bed.id}
-                      id={bed.id}
-                      label={bed.label}
-                      status={bed.status}
-                      onClick={() =>
-                        selectNode({
-                          children: [],
-                          ...bed,
-                          id: `bed-${bed.id}`,
-                          name: bed.label,
-                          type: LocationType.BED,
-                        })
-                      }
-                      onEdit={() => {}}
-                      onDelete={() => handleDeleteBed(bed)}
-                    />
-                  ))}
-                </SimpleGrid>
-                {roomBeds.length === 0 && (
-                  <Text c="dimmed" ta="center" py="md">
-                    No beds found
-                  </Text>
-                )}
-
-                {showInventory && (
-                  <>
-                    <Divider my="md" />
-                    <InventoryAssignmentList
-                      data={inventoryAssignments}
-                      loading={inventoryLoading}
-                      onAddClick={() => setAssignModalOpened(true)}
-                      onRemove={handleDeleteAssignment}
-                      onUpdateQuantity={handleUpdateAssignmentQuantity}
-                    />
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                {children.length > 0 && (
-                  <Group mb="md">
-                    <Checkbox
-                      checked={
-                        children.length > 0 &&
-                        children.every((c) =>
-                          selectedIds.includes(Number(c.id)),
-                        )
-                      }
-                      indeterminate={
-                        children.some((c) =>
-                          selectedIds.includes(Number(c.id)),
-                        ) &&
-                        !children.every((c) =>
-                          selectedIds.includes(Number(c.id)),
-                        )
-                      }
-                      onChange={handleToggleSelectAllChildren}
-                      label={t("select_all", { defaultValue: "Select All" })}
-                    />
-                  </Group>
-                )}
-                {children.length > 0 ? (
-                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                    {children.map((child) =>
-                      selectedNode.type === LocationType.FLOOR ? (
-                        <RoomCard
-                          key={child.id}
-                          id={Number(child.id)}
-                          name={child.name}
-                          genderLock={child.genderLock || undefined}
-                          selected={selectedIds.includes(Number(child.id))}
-                          onClick={() => selectNode(child as any)}
-                          onSelect={() =>
-                            handleToggleSelection(Number(child.id))
-                          }
-                          onEdit={() => handleEditChild(child as any)}
-                          onDelete={() => handleDeleteChild(child as any)}
-                        />
-                      ) : (
-                        <GenericLocationCard
-                          key={child.id}
-                          id={Number(child.id)}
-                          name={child.name}
-                          icon={<LocationIcon type={child.type} />}
-                          selected={selectedIds.includes(Number(child.id))}
-                          onClick={() => selectNode(child as any)}
-                          onSelect={() =>
-                            handleToggleSelection(Number(child.id))
-                          }
-                          onEdit={() => handleEditChild(child as any)}
-                          onDelete={() => handleDeleteChild(child as any)}
-                        />
-                      ),
-                    )}
+                  {showInventory && (
+                    <>
+                      <Divider />
+                      <InventoryAssignmentList
+                        data={inventoryAssignments}
+                        loading={inventoryLoading}
+                        onAddClick={() => setAssignModalOpened(true)}
+                        onRemove={handleDeleteAssignment}
+                        onUpdateQuantity={handleUpdateAssignmentQuantity}
+                      />
+                    </>
+                  )}
+                </Stack>
+              ) : selectedNode.type === LocationType.ROOM ? (
+                <>
+                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
+                    {roomBeds.map((bed) => (
+                      <BedCard
+                        key={bed.id}
+                        id={bed.id}
+                        label={bed.label}
+                        status={bed.status}
+                        onClick={() =>
+                          selectNode({
+                            children: [],
+                            ...bed,
+                            id: `bed-${bed.id}`,
+                            name: bed.label,
+                            type: LocationType.BED,
+                          })
+                        }
+                        onEdit={() => {}}
+                        onDelete={() => handleDeleteBed(bed)}
+                      />
+                    ))}
                   </SimpleGrid>
-                ) : (
-                  <Text c="dimmed" ta="center" py="xl">
-                    {t("no_sub_locations")}
-                  </Text>
-                )}
+                  {roomBeds.length === 0 && (
+                    <Text c="dimmed" ta="center" py="md">
+                      No beds found
+                    </Text>
+                  )}
 
-                {showInventory && (
-                  <>
-                    <Divider my="md" />
-                    <InventoryAssignmentList
-                      data={inventoryAssignments}
-                      loading={inventoryLoading}
-                      onAddClick={() => setAssignModalOpened(true)}
-                      onRemove={handleDeleteAssignment}
-                      onUpdateQuantity={handleUpdateAssignmentQuantity}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </LocationDetail>
-        ) : (
-          <Center h="100%">
-            <Text c="dimmed">{t("select_location_prompt")}</Text>
-          </Center>
-        )}
-      </LocationsManager>
+                  {showInventory && (
+                    <>
+                      <Divider my="md" />
+                      <InventoryAssignmentList
+                        data={inventoryAssignments}
+                        loading={inventoryLoading}
+                        onAddClick={() => setAssignModalOpened(true)}
+                        onRemove={handleDeleteAssignment}
+                        onUpdateQuantity={handleUpdateAssignmentQuantity}
+                      />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {children.length > 0 && (
+                    <Group mb="md">
+                      <Checkbox
+                        checked={
+                          children.length > 0 &&
+                          children.every((c) =>
+                            selectedIds.includes(Number(c.id)),
+                          )
+                        }
+                        indeterminate={
+                          children.some((c) =>
+                            selectedIds.includes(Number(c.id)),
+                          ) &&
+                          !children.every((c) =>
+                            selectedIds.includes(Number(c.id)),
+                          )
+                        }
+                        onChange={handleToggleSelectAllChildren}
+                        label={t("select_all", { defaultValue: "Select All" })}
+                      />
+                    </Group>
+                  )}
+                  {children.length > 0 ? (
+                    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+                      {children.map((child) =>
+                        selectedNode.type === LocationType.FLOOR ? (
+                          <RoomCard
+                            key={child.id}
+                            id={Number(child.id)}
+                            name={child.name}
+                            genderLock={child.genderLock || undefined}
+                            selected={selectedIds.includes(Number(child.id))}
+                            onClick={() => selectNode(child as any)}
+                            onSelect={() =>
+                              handleToggleSelection(Number(child.id))
+                            }
+                            onEdit={() => handleEditChild(child as any)}
+                            onDelete={() => handleDeleteChild(child as any)}
+                          />
+                        ) : (
+                          <GenericLocationCard
+                            key={child.id}
+                            id={Number(child.id)}
+                            name={child.name}
+                            icon={<LocationIcon type={child.type} />}
+                            selected={selectedIds.includes(Number(child.id))}
+                            onClick={() => selectNode(child as any)}
+                            onSelect={() =>
+                              handleToggleSelection(Number(child.id))
+                            }
+                            onEdit={() => handleEditChild(child as any)}
+                            onDelete={() => handleDeleteChild(child as any)}
+                          />
+                        ),
+                      )}
+                    </SimpleGrid>
+                  ) : (
+                    <Text c="dimmed" ta="center" py="xl">
+                      {t("no_sub_locations")}
+                    </Text>
+                  )}
+
+                  {showInventory && (
+                    <>
+                      <Divider my="md" />
+                      <InventoryAssignmentList
+                        data={inventoryAssignments}
+                        loading={inventoryLoading}
+                        onAddClick={() => setAssignModalOpened(true)}
+                        onRemove={handleDeleteAssignment}
+                        onUpdateQuantity={handleUpdateAssignmentQuantity}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </LocationDetail>
+          ) : (
+            <Center h="100%">
+              <Text c="dimmed">{t("select_location_prompt")}</Text>
+            </Center>
+          )}
+        </LocationsManager>
+      ) : (
+        <Stack gap="md">
+          <Tabs value={activeTab} onChange={setActiveTab} variant="outline">
+            <Tabs.List>
+              <Tabs.Tab
+                value="locations"
+                leftSection={<LocationIcon type={LocationType.CAMPUS} />}
+              >
+                {t("locations", "Locations")}
+              </Tabs.Tab>
+              <Tabs.Tab
+                value="beds"
+                leftSection={<LocationIcon type={LocationType.BED} />}
+              >
+                {t("beds", "Beds")}
+              </Tabs.Tab>
+            </Tabs.List>
+
+            <Tabs.Panel value="locations" pt="md">
+              <Stack gap="md">
+                <LocationRegistryFilters
+                  filters={registryFilters}
+                  onFilterChange={handleFilterChange}
+                  onClearFilters={handleClearFilters}
+                />
+                <Paper withBorder radius="md" style={{ position: "relative" }}>
+                  <LoadingOverlay visible={registryLoading} />
+                  <LocationRegistryTable
+                    data={registryData}
+                    onView={(loc) => {
+                      setActiveView("structure");
+                      selectNode(loc as any);
+                    }}
+                    onEdit={handleEditChild}
+                    onDelete={confirmDeleteLocation}
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                  />
+                </Paper>
+              </Stack>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="beds" pt="md">
+              <Stack gap="md">
+                <LocationRegistryFilters
+                  filters={registryFilters}
+                  onFilterChange={handleFilterChange}
+                  onClearFilters={handleClearFilters}
+                />
+                <Paper withBorder radius="md" style={{ position: "relative" }}>
+                  <LoadingOverlay visible={registryLoading} />
+                  <LocationRegistryTable
+                    data={registryData}
+                    onView={(bed) => {
+                      setActiveView("structure");
+                      // Convert virtual ID to bed- prefixed ID for the tree
+                      const targetId = `bed-${bed.id}`;
+                      selectNode({
+                        ...bed,
+                        id: targetId,
+                        type: LocationType.BED,
+                      } as any);
+                    }}
+                    onEdit={(bed) => {
+                      setBedToEdit(bed);
+                      setEditBedModalOpened(true);
+                    }}
+                    onDelete={(bed) => {
+                      modals.openConfirmModal({
+                        title: t("delete_bed"),
+                        children: (
+                          <Text size="sm">{t("confirm_delete_message")}</Text>
+                        ),
+                        labels: { confirm: t("confirm"), cancel: t("cancel") },
+                        confirmProps: { color: "red" },
+                        onConfirm: async () => {
+                          await beds.remove(bed.id);
+                          fetchRegistryData();
+                        },
+                      });
+                    }}
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                  />
+                </Paper>
+              </Stack>
+            </Tabs.Panel>
+          </Tabs>
+
+          <Group justify="flex-end">
+            <Pagination
+              total={Math.ceil(
+                totalRegistryItems / (registryFilters.limit || 10),
+              )}
+              value={registryFilters.page}
+              onChange={(p) => handleFilterChange("page", p)}
+            />
+          </Group>
+        </Stack>
+      )}
 
       <CreateLocationModal
         opened={createModalOpened}
@@ -789,6 +1037,17 @@ function LocationsContent() {
         onClose={() => setCreateBedModalOpened(false)}
         onSubmit={handleCreateBed}
         locationId={Number(selectedNode?.id)}
+      />
+
+      <CreateBedModal
+        opened={editBedModalOpened}
+        onClose={() => {
+          setEditBedModalOpened(false);
+          setBedToEdit(null);
+        }}
+        onSubmit={handleUpdateBed}
+        locationId={bedToEdit?.locationId}
+        initialValues={bedToEdit}
       />
 
       <AssignInventoryModal

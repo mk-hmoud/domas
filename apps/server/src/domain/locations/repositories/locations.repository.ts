@@ -55,13 +55,11 @@ export class LocationsRepository implements ILocationsRepository {
     return new Location(result.rows[0]);
   }
 
-  async findAll(
-    filters: FindAllLocationsDto,
-    client?: PoolClient,
-  ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
+  async findAll(filters: FindAllLocationsDto, client?: PoolClient): Promise<PaginatedResult<any>> {
     const {
       page = 1,
       limit = 10,
+      q,
       type,
       genderLock,
       isTrOnly,
@@ -76,6 +74,10 @@ export class LocationsRepository implements ILocationsRepository {
     const params: any[] = [];
     const conditions: string[] = ['l.deleted_at IS NULL'];
 
+    if (q) {
+      params.push(`%${q}%`);
+      conditions.push(`l.name ILIKE $${params.length}`);
+    }
     if (type) {
       params.push(type);
       conditions.push(`l.type = $${params.length}`);
@@ -111,6 +113,7 @@ export class LocationsRepository implements ILocationsRepository {
     // Occupancy Subqueries
     const totalBedsSub = `(SELECT COUNT(*)::INT FROM beds b WHERE b.location_id IN (SELECT id FROM locations WHERE tree_path <@ l.tree_path) AND b.deleted_at IS NULL)`;
     const occupiedBedsSub = `(SELECT COUNT(*)::INT FROM beds b WHERE b.location_id IN (SELECT id FROM locations WHERE tree_path <@ l.tree_path) AND b.status = 'occupied' AND b.deleted_at IS NULL)`;
+    const pathSub = `(SELECT string_agg(name, ' > ' ORDER BY tree_path) FROM locations WHERE tree_path @> l.tree_path AND id != l.id)`;
 
     let baseQuery = `
       SELECT 
@@ -118,7 +121,8 @@ export class LocationsRepository implements ILocationsRepository {
         l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.ownership,
         l.base_price as "basePrice", l.created_at as "createdAt", l.updated_at as "updatedAt",
         ${totalBedsSub} as "totalBeds",
-        ${occupiedBedsSub} as "occupiedBeds"
+        ${occupiedBedsSub} as "occupiedBeds",
+        ${pathSub} as "locationPath"
       FROM locations l
       ${whereClause}
     `;
@@ -127,19 +131,19 @@ export class LocationsRepository implements ILocationsRepository {
       baseQuery = `SELECT * FROM (${baseQuery}) sub WHERE "occupiedBeds" < "totalBeds"`;
     }
 
-    const query = `${baseQuery} ORDER BY "treePath" ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const finalQuery = `${baseQuery} ORDER BY l.tree_path ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     const countQuery = onlyVacant
       ? `SELECT COUNT(*)::INT FROM (${baseQuery}) sub`
       : `SELECT COUNT(*)::INT FROM locations l ${whereClause}`;
 
     const [result, countResult] = await Promise.all([
-      dbClient.query(query, [...params, limit, offset]),
-      dbClient.query<{ count: number }>(countQuery, params),
+      dbClient.query(finalQuery, [...params, limit, offset]),
+      dbClient.query<{ count: string | number }>(countQuery, params),
     ]);
 
     return {
       data: result.rows,
-      total: countResult.rows[0].count,
+      total: parseInt(countResult.rows[0].count.toString(), 10),
       page,
       limit,
     };
@@ -243,6 +247,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.basePrice !== undefined) addUpdate('base_price', data.basePrice);
+    if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
+    if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
+    if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
+    if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
 
     if (updates.length === 0) {
       const loc = await this.findById(id, client);
@@ -278,6 +286,22 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.basePrice !== undefined) {
       updates.push(`base_price = $${paramIndex++}`);
       values.push(data.basePrice);
+    }
+    if (data.genderLock !== undefined) {
+      updates.push(`gender_lock = $${paramIndex++}`);
+      values.push(data.genderLock);
+    }
+    if (data.isGuestZone !== undefined) {
+      updates.push(`is_guest_zone = $${paramIndex++}`);
+      values.push(data.isGuestZone);
+    }
+    if (data.isTrOnly !== undefined) {
+      updates.push(`is_tr_only = $${paramIndex++}`);
+      values.push(data.isTrOnly);
+    }
+    if (data.ownership !== undefined) {
+      updates.push(`ownership = $${paramIndex++}`);
+      values.push(data.ownership);
     }
 
     if (updates.length === 0) return;

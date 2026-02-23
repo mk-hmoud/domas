@@ -206,6 +206,9 @@ export class BookingsService {
 
       const updated = await this.bookingsRepository.checkIn(id, client);
 
+      // 0. Mark Bed as Occupied
+      await this.bedsRepository.updateStatus(booking.bedId, BedStatus.OCCUPIED, client);
+
       // 1. Generate inventory snapshot for the contract
       await this.inventoryService.generateSnapshotForBooking(
         id,
@@ -250,6 +253,7 @@ export class BookingsService {
           undoData: {
             previousStatus: booking.status,
             previousCheckInDate: booking.checkedInAt,
+            bedId: booking.bedId,
           },
           description: `Checked in booking ${id}`,
         },
