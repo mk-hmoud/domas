@@ -222,12 +222,10 @@ export class BedsRepository implements IBedsRepository {
       WHERE b.status = 'available'
         AND b.deleted_at IS NULL
         AND l.deleted_at IS NULL
-        -- Gender Lock Check: room's lock must match student gender or be NULL
+        -- Explicit Gender Lock Check on the Room
         AND (l.gender_lock IS NULL OR l.gender_lock = $1)
-        -- TR Only Check: if room is TR only, student must be Turkish
-        AND (l.is_tr_only = FALSE OR $2 = TRUE)
-        -- Bed specific TR Only check
-        AND (b.is_tr_only = FALSE OR $2 = TRUE)
+        -- Explicit TR Only Check on the Room or the Bed
+        AND ((l.is_tr_only = FALSE AND b.is_tr_only = FALSE) OR $2 = TRUE)
       ORDER BY l.name ASC, b.label ASC
     `;
 

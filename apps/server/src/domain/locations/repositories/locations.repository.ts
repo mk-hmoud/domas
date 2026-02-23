@@ -321,18 +321,35 @@ export class LocationsRepository implements ILocationsRepository {
     const target = await this.findById(id, client);
     if (!target) throw new Error('Location not found');
 
-    let query = '';
-    let params: any[] = [];
+    const dbClient = this.getClient(client);
 
     if (cascade) {
-      query = `UPDATE locations SET is_guest_zone = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
-      params = [isGuestZone, target.treePath];
+      // Update locations
+      await dbClient.query(
+        `UPDATE locations SET is_guest_zone = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isGuestZone, target.treePath],
+      );
+      // Update all beds in those locations
+      await dbClient.query(
+        `
+        UPDATE beds SET is_guest_zone = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [isGuestZone, target.treePath],
+      );
     } else {
-      query = `UPDATE locations SET is_guest_zone = $1 WHERE id = $2 AND deleted_at IS NULL`;
-      params = [isGuestZone, id];
+      await dbClient.query(
+        `UPDATE locations SET is_guest_zone = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isGuestZone, id],
+      );
+      // Update beds in this specific location only
+      await dbClient.query(
+        `UPDATE beds SET is_guest_zone = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isGuestZone, id],
+      );
     }
 
-    await this.getClient(client).query(query, params);
     target.isGuestZone = isGuestZone;
     return target;
   }
@@ -346,18 +363,32 @@ export class LocationsRepository implements ILocationsRepository {
     const target = await this.findById(id, client);
     if (!target) throw new Error('Location not found');
 
-    let query = '';
-    let params: any[] = [];
+    const dbClient = this.getClient(client);
 
     if (cascade) {
-      query = `UPDATE locations SET is_tr_only = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
-      params = [isTrOnly, target.treePath];
+      await dbClient.query(
+        `UPDATE locations SET is_tr_only = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isTrOnly, target.treePath],
+      );
+      await dbClient.query(
+        `
+        UPDATE beds SET is_tr_only = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [isTrOnly, target.treePath],
+      );
     } else {
-      query = `UPDATE locations SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL`;
-      params = [isTrOnly, id];
+      await dbClient.query(
+        `UPDATE locations SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isTrOnly, id],
+      );
+      await dbClient.query(
+        `UPDATE beds SET is_tr_only = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isTrOnly, id],
+      );
     }
 
-    await this.getClient(client).query(query, params);
     target.isTrOnly = isTrOnly;
     return target;
   }
@@ -371,18 +402,32 @@ export class LocationsRepository implements ILocationsRepository {
     const target = await this.findById(id, client);
     if (!target) throw new Error('Location not found');
 
-    let query = '';
-    let params: any[] = [];
+    const dbClient = this.getClient(client);
 
     if (cascade) {
-      query = `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
-      params = [ownership, target.treePath];
+      await dbClient.query(
+        `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [ownership, target.treePath],
+      );
+      await dbClient.query(
+        `
+        UPDATE beds SET ownership = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [ownership, target.treePath],
+      );
     } else {
-      query = `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`;
-      params = [ownership, id];
+      await dbClient.query(
+        `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [ownership, id],
+      );
+      await dbClient.query(
+        `UPDATE beds SET ownership = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [ownership, id],
+      );
     }
 
-    await this.getClient(client).query(query, params);
     target.ownership = ownership;
     return target;
   }

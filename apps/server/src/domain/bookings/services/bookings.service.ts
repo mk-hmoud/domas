@@ -59,17 +59,17 @@ export class BookingsService {
     const room = await this.locationsRepository.findById(bed.locationId);
     if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
 
-    // 2. Fetch hierarchy for inheritance checks (isTrOnly and Ownership)
-    const hierarchy = await this.locationsRepository.findWithAncestors(room.id);
-
-    // 3. Check TR Only Constraint (Inherited)
-    const isTrOnly = hierarchy.some((loc) => loc.isTrOnly);
+    // 2. Check TR Only Constraint (Explicit)
+    // Check both room and bed level
+    const isTrOnly = room.isTrOnly || bed.isTrOnly;
     if (isTrOnly && student.nationalityCode !== 'TR') {
       throw new BadRequestException('This location is reserved for Turkish citizens only');
     }
 
-    // 4. Check Ownership Constraint (Rectorate - Inherited)
-    const isRectorate = hierarchy.some((loc) => loc.ownership === LocationOwnership.RECTORATE);
+    // 3. Check Ownership Constraint (Rectorate - Explicit)
+    const isRectorate =
+      room.ownership === LocationOwnership.RECTORATE ||
+      bed.ownership === LocationOwnership.RECTORATE;
 
     if (isRectorate) {
       // Check if user is Admin

@@ -6,9 +6,10 @@ import { BedsController } from './controllers/beds.controller';
 import { BedsService } from './services/beds.service';
 import { BedsRepository } from './repositories/beds.repository';
 import { StudentsModule } from '../students/students.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [StudentsModule],
+  imports: [StudentsModule, forwardRef(() => AuditModule)],
   controllers: [LocationsController, BedsController],
   providers: [LocationsService, LocationsRepository, BedsService, BedsRepository],
   exports: [LocationsService, BedsService, LocationsRepository, BedsRepository],
