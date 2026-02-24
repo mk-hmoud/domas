@@ -7,3 +7,4 @@ export * from "./LocationTree/LocationTree";
 export * from "./LocationDetail/LocationDetail";
 export * from "./LocationsManager";
 export * from "./LocationIcon";
+export * from "./LocationRegistry";

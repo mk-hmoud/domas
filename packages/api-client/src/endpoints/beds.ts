@@ -29,6 +29,13 @@ export const beds = {
     return response.data;
   },
 
+  findEligible: async (studentId: string): Promise<Bed[]> => {
+    const response = await apiClient.get<Bed[]>("/beds/eligible-beds", {
+      params: { studentId },
+    });
+    return response.data;
+  },
+
   findOne: async (id: number): Promise<Bed> => {
     const response = await apiClient.get<Bed>(`/beds/${id}`);
     return response.data;

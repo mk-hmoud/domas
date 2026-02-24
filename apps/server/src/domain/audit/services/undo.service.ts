@@ -4,9 +4,12 @@ import {
   BadRequestException,
   Logger,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { UndoRepository } from '../repositories/undo.repository';
 import { UsersRepository } from '../../users/repositories/users.repository';
+import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { UndoLog } from '../entities/undo-log.entity';
@@ -22,6 +25,8 @@ export class UndoService {
   constructor(
     private readonly undoRepository: UndoRepository,
     private readonly usersRepository: UsersRepository,
+    @Inject(forwardRef(() => LocationsRepository))
+    private readonly locationsRepository: LocationsRepository,
     private readonly db: DatabaseService,
   ) {}
 
@@ -160,8 +165,16 @@ export class UndoService {
         return this.undoCreateBed(log, client);
       case UndoActionType.DELETE_BED:
         return this.undoDeleteBed(log, client);
+      case UndoActionType.UPDATE_BED:
+        return this.undoUpdateBed(log, client);
       case UndoActionType.UPDATE_BED_STATUS:
         return this.undoUpdateBedStatus(log, client);
+      case UndoActionType.UPDATE_BED_TR_ONLY:
+        return this.undoUpdateBedTrOnly(log, client);
+      case UndoActionType.UPDATE_BED_OWNERSHIP:
+        return this.undoUpdateBedOwnership(log, client);
+      case UndoActionType.UPDATE_BED_GUEST_ZONE:
+        return this.undoUpdateBedGuestZone(log, client);
 
       // Students
       case UndoActionType.DELETE_STUDENT:
@@ -319,78 +332,118 @@ export class UndoService {
   }
 
   private async undoUpdateGenderLock(log: UndoLog, client: PoolClient): Promise<void> {
-    const { previousGenderLock, affectedLocations } = log.undoData;
+    const { previousGenderLock, cascade } = log.undoData;
     const locationId = parseInt(log.entityId, 10);
 
-    await client.query(
-      `UPDATE locations SET gender_lock = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-      [previousGenderLock, locationId],
-    );
+    const location = await client.query('SELECT tree_path FROM locations WHERE id = $1', [
+      locationId,
+    ]);
+    if (location.rowCount === 0) return;
+    const treePath = location.rows[0].tree_path;
 
-    if (affectedLocations && affectedLocations.length > 0) {
-      for (const loc of affectedLocations) {
-        await client.query(
-          `UPDATE locations SET gender_lock = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-          [loc.previousGenderLock, loc.id],
-        );
-      }
+    if (cascade) {
+      await client.query(
+        `UPDATE locations SET gender_lock = $1, updated_at = NOW() WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [previousGenderLock, treePath],
+      );
+    } else {
+      await client.query(
+        `UPDATE locations SET gender_lock = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+        [previousGenderLock, locationId],
+      );
     }
   }
 
   private async undoUpdateGuestZone(log: UndoLog, client: PoolClient): Promise<void> {
-    const { previousGuestZone, affectedLocations } = log.undoData;
+    const { previousGuestZone, cascade } = log.undoData;
     const locationId = parseInt(log.entityId, 10);
 
-    await client.query(
-      `UPDATE locations SET is_guest_zone = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-      [previousGuestZone, locationId],
-    );
+    const location = await client.query('SELECT tree_path FROM locations WHERE id = $1', [
+      locationId,
+    ]);
+    if (location.rowCount === 0) return;
+    const treePath = location.rows[0].tree_path;
 
-    if (affectedLocations) {
-      for (const loc of affectedLocations) {
-        await client.query(
-          `UPDATE locations SET is_guest_zone = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-          [loc.previousGuestZone, loc.id],
-        );
-      }
+    if (cascade) {
+      await client.query(
+        `UPDATE locations SET is_guest_zone = $1, updated_at = NOW() WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [previousGuestZone, treePath],
+      );
+      await client.query(
+        `UPDATE beds SET is_guest_zone = $1 WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2) AND deleted_at IS NULL`,
+        [previousGuestZone, treePath],
+      );
+    } else {
+      await client.query(
+        `UPDATE locations SET is_guest_zone = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+        [previousGuestZone, locationId],
+      );
+      await client.query(
+        `UPDATE beds SET is_guest_zone = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [previousGuestZone, locationId],
+      );
     }
   }
 
   private async undoUpdateTrOnly(log: UndoLog, client: PoolClient): Promise<void> {
-    const { previousTrOnly, affectedLocations } = log.undoData;
+    const { previousTrOnly, cascade } = log.undoData;
     const locationId = parseInt(log.entityId, 10);
 
-    await client.query(
-      `UPDATE locations SET is_tr_only = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-      [previousTrOnly, locationId],
-    );
+    const location = await client.query('SELECT tree_path FROM locations WHERE id = $1', [
+      locationId,
+    ]);
+    if (location.rowCount === 0) return;
+    const treePath = location.rows[0].tree_path;
 
-    if (affectedLocations) {
-      for (const loc of affectedLocations) {
-        await client.query(
-          `UPDATE locations SET is_tr_only = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-          [loc.previousTrOnly, loc.id],
-        );
-      }
+    if (cascade) {
+      await client.query(
+        `UPDATE locations SET is_tr_only = $1, updated_at = NOW() WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [previousTrOnly, treePath],
+      );
+      await client.query(
+        `UPDATE beds SET is_tr_only = $1 WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2) AND deleted_at IS NULL`,
+        [previousTrOnly, treePath],
+      );
+    } else {
+      await client.query(
+        `UPDATE locations SET is_tr_only = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+        [previousTrOnly, locationId],
+      );
+      await client.query(
+        `UPDATE beds SET is_tr_only = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [previousTrOnly, locationId],
+      );
     }
   }
 
   private async undoUpdateOwnership(log: UndoLog, client: PoolClient): Promise<void> {
-    const { previousOwnership, affectedLocations } = log.undoData;
+    const { previousOwnership, cascade } = log.undoData;
     const locationId = parseInt(log.entityId, 10);
 
-    await client.query(
-      `UPDATE locations SET ownership = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-      [previousOwnership, locationId],
-    );
+    const location = await client.query('SELECT tree_path FROM locations WHERE id = $1', [
+      locationId,
+    ]);
+    if (location.rowCount === 0) return;
+    const treePath = location.rows[0].tree_path;
 
-    if (affectedLocations) {
-      for (const loc of affectedLocations) {
-        await client.query(
-          `UPDATE locations SET ownership = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
-          [loc.previousOwnership, loc.id],
-        );
-      }
+    if (cascade) {
+      await client.query(
+        `UPDATE locations SET ownership = $1, updated_at = NOW() WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [previousOwnership, treePath],
+      );
+      await client.query(
+        `UPDATE beds SET ownership = $1 WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2) AND deleted_at IS NULL`,
+        [previousOwnership, treePath],
+      );
+    } else {
+      await client.query(
+        `UPDATE locations SET ownership = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+        [previousOwnership, locationId],
+      );
+      await client.query(
+        `UPDATE beds SET ownership = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [previousOwnership, locationId],
+      );
     }
   }
 
@@ -421,6 +474,37 @@ export class UndoService {
     await client.query('UPDATE beds SET deleted_at = NULL WHERE id = $1', [bedId]);
   }
 
+  private async undoUpdateBed(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = parseInt(log.entityId, 10);
+    const data = log.undoData;
+
+    const allowedFields = {
+      label: 'label',
+      locationId: 'location_id',
+      status: 'status',
+    };
+
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    for (const [camelKey, snakeKey] of Object.entries(allowedFields)) {
+      if (data[camelKey] !== undefined) {
+        updates.push(`${snakeKey} = $${paramIndex++}`);
+        values.push(data[camelKey]);
+      }
+    }
+
+    if (updates.length === 0) return;
+
+    values.push(id);
+    const res = await client.query(
+      `UPDATE beds SET ${updates.join(', ')} WHERE id = $${paramIndex} AND deleted_at IS NULL`,
+      values,
+    );
+    if (res.rowCount === 0) throw new BadRequestException('Bed not found or is deleted');
+  }
+
   private async undoUpdateBedStatus(log: UndoLog, client: PoolClient): Promise<void> {
     const { previousStatus } = log.undoData;
     const bedId = parseInt(log.entityId, 10);
@@ -429,6 +513,27 @@ export class UndoService {
       [previousStatus, bedId],
     );
     if (res.rowCount === 0) throw new BadRequestException('Bed not found or is deleted');
+  }
+
+  private async undoUpdateBedTrOnly(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousTrOnly } = log.undoData;
+    const bedId = parseInt(log.entityId, 10);
+    await client.query('UPDATE beds SET is_tr_only = $1 WHERE id = $2', [previousTrOnly, bedId]);
+  }
+
+  private async undoUpdateBedOwnership(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousOwnership } = log.undoData;
+    const bedId = parseInt(log.entityId, 10);
+    await client.query('UPDATE beds SET ownership = $1 WHERE id = $2', [previousOwnership, bedId]);
+  }
+
+  private async undoUpdateBedGuestZone(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousGuestZone } = log.undoData;
+    const bedId = parseInt(log.entityId, 10);
+    await client.query('UPDATE beds SET is_guest_zone = $1 WHERE id = $2', [
+      previousGuestZone,
+      bedId,
+    ]);
   }
 
   // ===========================================================================
@@ -645,7 +750,21 @@ export class UndoService {
 
   private async undoCreateBooking(log: UndoLog, client: PoolClient): Promise<void> {
     const bookingId = log.entityId;
+
+    // 1. Get locationId before deletion
+    const bookingRes = await client.query(
+      'SELECT bd.location_id FROM bookings bo JOIN beds bd ON bo.bed_id = bd.id WHERE bo.id = $1',
+      [bookingId],
+    );
+
+    // 2. Delete the booking
     await client.query('DELETE FROM bookings WHERE id = $1', [bookingId]);
+
+    // 3. Clear gender lock if room is now empty
+    if (bookingRes.rows.length > 0) {
+      const locationId = bookingRes.rows[0].location_id;
+      await this.locationsRepository.clearGenderLockIfEmpty(locationId, client);
+    }
   }
 
   private async undoUpdateBooking(log: UndoLog, client: PoolClient): Promise<void> {
@@ -699,7 +818,7 @@ export class UndoService {
     undoUserId: string,
     client: PoolClient,
   ): Promise<void> {
-    const { previousStatus, previousCheckInDate } = log.undoData;
+    const { previousStatus, previousCheckInDate, bedId } = log.undoData;
     const bookingId = log.entityId;
 
     // 1. Revert Booking Status & Reset Contract Flag
@@ -708,15 +827,26 @@ export class UndoService {
       [previousStatus, previousCheckInDate, bookingId],
     );
 
-    // 2. CLEANUP: Delete the inventory snapshots generated during check-in
+    // 2. Mark Bed as Available
+    if (bedId) {
+      await client.query("UPDATE beds SET status = 'available' WHERE id = $1", [bedId]);
+
+      // 2.1 Clear Gender Lock if room is now empty
+      const bedRes = await client.query('SELECT location_id FROM beds WHERE id = $1', [bedId]);
+      if (bedRes.rows.length > 0) {
+        await this.locationsRepository.clearGenderLockIfEmpty(bedRes.rows[0].location_id, client);
+      }
+    }
+
+    // 3. CLEANUP: Delete the inventory snapshots generated during check-in
     await client.query('DELETE FROM booking_inventory_snapshots WHERE booking_id = $1', [
       bookingId,
     ]);
 
-    // 3. CONTRACT CLEANUP: Delete the generated contract
+    // 4. CONTRACT CLEANUP: Delete the generated contract
     await client.query('DELETE FROM booking_contracts WHERE booking_id = $1', [bookingId]);
 
-    // 4. CARD REVERSION: If a card was issued during this check-in, return it to the pool
+    // 5. CARD REVERSION: If a card was issued during this check-in, return it to the pool
     const cardRes = await client.query(
       `UPDATE access_cards 
        SET status = 'available', 

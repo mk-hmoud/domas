@@ -172,4 +172,16 @@ export class BookingsRepository {
     const result = await this.getClient(client).query<{ count: string }>(query, [semesterId]);
     return parseInt(result.rows[0].count, 10);
   }
+
+  async countActiveByRoom(locationId: number, client?: PoolClient): Promise<number> {
+    const query = `
+      SELECT COUNT(*) 
+      FROM bookings b
+      JOIN beds bd ON b.bed_id = bd.id
+      WHERE bd.location_id = $1 
+        AND b.status NOT IN ('cancelled', 'rejected', 'completed')
+    `;
+    const result = await this.getClient(client).query<{ count: string }>(query, [locationId]);
+    return parseInt(result.rows[0].count, 10);
+  }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Modal,
@@ -6,13 +6,15 @@ import {
   Group,
   SimpleGrid,
   ActionIcon,
+  Loader,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateBookingDto, CreateStudentDto } from "@domas/ts-types";
+import { CreateBookingDto, CreateStudentDto, Bed } from "@domas/ts-types";
 import { IconPlus } from "@tabler/icons-react";
 import { StudentModal } from "../Students";
+import { beds as bedsApi } from "@domas/api-client";
 
 interface CreateBookingModalProps {
   opened: boolean;
@@ -20,8 +22,8 @@ interface CreateBookingModalProps {
   onSubmit: (values: CreateBookingDto) => Promise<void>;
   onCreateStudent: (values: CreateStudentDto) => Promise<void>;
   students: { value: string; label: string }[];
-  beds: { value: string; label: string }[];
   semesters: { value: string; label: string }[];
+  locationsMap: Map<number, string>;
 }
 
 export function CreateBookingModal({
@@ -30,12 +32,14 @@ export function CreateBookingModal({
   onSubmit,
   onCreateStudent,
   students,
-  beds,
   semesters,
+  locationsMap,
 }: CreateBookingModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [studentModalOpened, setStudentModalOpened] = useState(false);
+  const [eligibleBeds, setEligibleBeds] = useState<Bed[]>([]);
+  const [loadingBeds, setLoadingBeds] = useState(false);
 
   const form = useForm<any>({
     initialValues: {
@@ -52,6 +56,49 @@ export function CreateBookingModal({
       startDate: (val) => (val ? null : t("field_required")),
       endDate: (val) => (val ? null : t("field_required")),
     },
+  });
+
+  useEffect(() => {
+    if (opened) {
+      form.reset();
+      setEligibleBeds([]);
+    }
+  }, [opened]);
+
+  useEffect(() => {
+    if (form.values.studentId) {
+      fetchEligibleBeds(form.values.studentId);
+    } else {
+      setEligibleBeds([]);
+      form.setFieldValue("bedId", 0);
+    }
+  }, [form.values.studentId]);
+
+  const fetchEligibleBeds = async (studentId: string) => {
+    setLoadingBeds(true);
+    try {
+      const result = await bedsApi.findEligible(studentId);
+      setEligibleBeds(result);
+      // Reset bed selection if current one is not in new list
+      if (
+        form.values.bedId &&
+        !result.find((b) => b.id === Number(form.values.bedId))
+      ) {
+        form.setFieldValue("bedId", 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch eligible beds:", error);
+    } finally {
+      setLoadingBeds(false);
+    }
+  };
+
+  const bedOptions = eligibleBeds.map((b) => {
+    const roomName = locationsMap.get(b.locationId) || "Unknown Room";
+    return {
+      value: b.id.toString(),
+      label: `${roomName} - ${b.label}`,
+    };
   });
 
   const handleSubmit = async (values: any) => {
@@ -127,13 +174,21 @@ export function CreateBookingModal({
             />
             <Select
               label={t("bed")}
-              placeholder={t("select_bed")}
-              data={beds}
+              placeholder={
+                eligibleBeds.length > 0
+                  ? t("select_bed")
+                  : t("select_student_first")
+              }
+              data={bedOptions}
               searchable
               required
+              rightSection={loadingBeds ? <Loader size="xs" /> : null}
+              disabled={!form.values.studentId || loadingBeds}
               {...form.getInputProps("bedId")}
               onChange={(val) => form.setFieldValue("bedId", Number(val))}
-              value={form.values.bedId?.toString()}
+              value={
+                form.values.bedId === 0 ? "" : form.values.bedId?.toString()
+              }
             />
           </SimpleGrid>
 

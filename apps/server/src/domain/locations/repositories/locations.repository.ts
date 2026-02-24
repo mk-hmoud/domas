@@ -4,6 +4,7 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { Location } from '../entities/location.entity';
 import { ILocationsRepository } from '../interfaces/locations-repository.interface';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
@@ -54,31 +55,95 @@ export class LocationsRepository implements ILocationsRepository {
     return new Location(result.rows[0]);
   }
 
-  async findAll(
-    pagination: PaginationDto,
-    client?: PoolClient,
-  ): Promise<PaginatedResult<Location>> {
-    const { page = 1, limit = 10 } = pagination;
+  async findAll(filters: FindAllLocationsDto, client?: PoolClient): Promise<PaginatedResult<any>> {
+    const {
+      page = 1,
+      limit = 10,
+      q,
+      type,
+      genderLock,
+      isTrOnly,
+      isGuestZone,
+      ownership,
+      parentId,
+      onlyVacant,
+    } = filters;
     const offset = (page - 1) * limit;
 
-    const query = `
-      SELECT ${this.selectColumns}
-      FROM locations
-      WHERE deleted_at IS NULL
-      ORDER BY tree_path ASC
-      LIMIT $1 OFFSET $2
-    `;
-    const countQuery = `SELECT COUNT(*) FROM locations WHERE deleted_at IS NULL`;
-
     const dbClient = this.getClient(client);
+    const params: any[] = [];
+    const conditions: string[] = ['l.deleted_at IS NULL'];
+
+    if (q) {
+      params.push(`%${q}%`);
+      conditions.push(`l.name ILIKE $${params.length}`);
+    }
+    if (type) {
+      params.push(type);
+      conditions.push(`l.type = $${params.length}`);
+    }
+    if (genderLock) {
+      params.push(genderLock);
+      conditions.push(`l.gender_lock = $${params.length}`);
+    }
+    if (isTrOnly !== undefined) {
+      params.push(isTrOnly);
+      conditions.push(`l.is_tr_only = $${params.length}`);
+    }
+    if (isGuestZone !== undefined) {
+      params.push(isGuestZone);
+      conditions.push(`l.is_guest_zone = $${params.length}`);
+    }
+    if (ownership) {
+      params.push(ownership);
+      conditions.push(`l.ownership = $${params.length}`);
+    }
+    if (parentId) {
+      const parent = await this.findById(parentId, client);
+      if (parent) {
+        params.push(parent.treePath);
+        conditions.push(
+          `l.tree_path <@ $${params.length} AND l.id != ${parentId} AND nlevel(l.tree_path) = nlevel($${params.length}) + 1`,
+        );
+      }
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Occupancy Subqueries
+    const totalBedsSub = `(SELECT COUNT(*)::INT FROM beds b WHERE b.location_id IN (SELECT id FROM locations WHERE tree_path <@ l.tree_path) AND b.deleted_at IS NULL)`;
+    const occupiedBedsSub = `(SELECT COUNT(*)::INT FROM beds b WHERE b.location_id IN (SELECT id FROM locations WHERE tree_path <@ l.tree_path) AND b.status = 'occupied' AND b.deleted_at IS NULL)`;
+    const pathSub = `(SELECT string_agg(name, ' > ' ORDER BY tree_path) FROM locations WHERE tree_path @> l.tree_path AND id != l.id)`;
+
+    let baseQuery = `
+      SELECT 
+        l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock", 
+        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.ownership,
+        l.base_price as "basePrice", l.created_at as "createdAt", l.updated_at as "updatedAt",
+        ${totalBedsSub} as "totalBeds",
+        ${occupiedBedsSub} as "occupiedBeds",
+        ${pathSub} as "locationPath"
+      FROM locations l
+      ${whereClause}
+    `;
+
+    if (onlyVacant) {
+      baseQuery = `SELECT * FROM (${baseQuery}) sub WHERE "occupiedBeds" < "totalBeds"`;
+    }
+
+    const finalQuery = `${baseQuery} ORDER BY l.tree_path ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const countQuery = onlyVacant
+      ? `SELECT COUNT(*)::INT FROM (${baseQuery}) sub`
+      : `SELECT COUNT(*)::INT FROM locations l ${whereClause}`;
+
     const [result, countResult] = await Promise.all([
-      dbClient.query<Location>(query, [limit, offset]),
-      dbClient.query<{ count: string }>(countQuery),
+      dbClient.query(finalQuery, [...params, limit, offset]),
+      dbClient.query<{ count: string | number }>(countQuery, params),
     ]);
 
     return {
-      data: result.rows.map((row) => new Location(row)),
-      total: parseInt(countResult.rows[0].count, 10),
+      data: result.rows,
+      total: parseInt(countResult.rows[0].count.toString(), 10),
       page,
       limit,
     };
@@ -182,6 +247,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.basePrice !== undefined) addUpdate('base_price', data.basePrice);
+    if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
+    if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
+    if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
+    if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
 
     if (updates.length === 0) {
       const loc = await this.findById(id, client);
@@ -217,6 +286,22 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.basePrice !== undefined) {
       updates.push(`base_price = $${paramIndex++}`);
       values.push(data.basePrice);
+    }
+    if (data.genderLock !== undefined) {
+      updates.push(`gender_lock = $${paramIndex++}`);
+      values.push(data.genderLock);
+    }
+    if (data.isGuestZone !== undefined) {
+      updates.push(`is_guest_zone = $${paramIndex++}`);
+      values.push(data.isGuestZone);
+    }
+    if (data.isTrOnly !== undefined) {
+      updates.push(`is_tr_only = $${paramIndex++}`);
+      values.push(data.isTrOnly);
+    }
+    if (data.ownership !== undefined) {
+      updates.push(`ownership = $${paramIndex++}`);
+      values.push(data.ownership);
     }
 
     if (updates.length === 0) return;
@@ -321,18 +406,35 @@ export class LocationsRepository implements ILocationsRepository {
     const target = await this.findById(id, client);
     if (!target) throw new Error('Location not found');
 
-    let query = '';
-    let params: any[] = [];
+    const dbClient = this.getClient(client);
 
     if (cascade) {
-      query = `UPDATE locations SET is_guest_zone = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
-      params = [isGuestZone, target.treePath];
+      // Update locations
+      await dbClient.query(
+        `UPDATE locations SET is_guest_zone = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isGuestZone, target.treePath],
+      );
+      // Update all beds in those locations
+      await dbClient.query(
+        `
+        UPDATE beds SET is_guest_zone = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [isGuestZone, target.treePath],
+      );
     } else {
-      query = `UPDATE locations SET is_guest_zone = $1 WHERE id = $2 AND deleted_at IS NULL`;
-      params = [isGuestZone, id];
+      await dbClient.query(
+        `UPDATE locations SET is_guest_zone = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isGuestZone, id],
+      );
+      // Update beds in this specific location only
+      await dbClient.query(
+        `UPDATE beds SET is_guest_zone = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isGuestZone, id],
+      );
     }
 
-    await this.getClient(client).query(query, params);
     target.isGuestZone = isGuestZone;
     return target;
   }
@@ -346,18 +448,32 @@ export class LocationsRepository implements ILocationsRepository {
     const target = await this.findById(id, client);
     if (!target) throw new Error('Location not found');
 
-    let query = '';
-    let params: any[] = [];
+    const dbClient = this.getClient(client);
 
     if (cascade) {
-      query = `UPDATE locations SET is_tr_only = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
-      params = [isTrOnly, target.treePath];
+      await dbClient.query(
+        `UPDATE locations SET is_tr_only = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isTrOnly, target.treePath],
+      );
+      await dbClient.query(
+        `
+        UPDATE beds SET is_tr_only = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [isTrOnly, target.treePath],
+      );
     } else {
-      query = `UPDATE locations SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL`;
-      params = [isTrOnly, id];
+      await dbClient.query(
+        `UPDATE locations SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isTrOnly, id],
+      );
+      await dbClient.query(
+        `UPDATE beds SET is_tr_only = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isTrOnly, id],
+      );
     }
 
-    await this.getClient(client).query(query, params);
     target.isTrOnly = isTrOnly;
     return target;
   }
@@ -371,19 +487,65 @@ export class LocationsRepository implements ILocationsRepository {
     const target = await this.findById(id, client);
     if (!target) throw new Error('Location not found');
 
-    let query = '';
-    let params: any[] = [];
+    const dbClient = this.getClient(client);
 
     if (cascade) {
-      query = `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
-      params = [ownership, target.treePath];
+      await dbClient.query(
+        `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [ownership, target.treePath],
+      );
+      await dbClient.query(
+        `
+        UPDATE beds SET ownership = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [ownership, target.treePath],
+      );
     } else {
-      query = `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`;
-      params = [ownership, id];
+      await dbClient.query(
+        `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [ownership, id],
+      );
+      await dbClient.query(
+        `UPDATE beds SET ownership = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [ownership, id],
+      );
     }
 
-    await this.getClient(client).query(query, params);
     target.ownership = ownership;
     return target;
+  }
+
+  async clearGenderLockIfEmpty(locationId: number, client?: PoolClient): Promise<void> {
+    const query = `
+      UPDATE locations
+      SET gender_lock = NULL, updated_at = NOW()
+      WHERE id = $1
+        AND NOT EXISTS (
+          -- Check for physical occupancy
+          SELECT 1 FROM beds b
+          WHERE b.location_id = locations.id 
+            AND b.status = 'occupied'
+            AND b.deleted_at IS NULL
+        )
+        AND NOT EXISTS (
+          -- Check for logical reservations (upcoming or active bookings)
+          SELECT 1 FROM bookings bo
+          JOIN beds b2 ON bo.bed_id = b2.id
+          WHERE b2.location_id = locations.id
+            AND bo.status NOT IN ('cancelled', 'rejected', 'completed')
+        )
+    `;
+    await this.getClient(client).query(query, [locationId]);
+  }
+
+  async lockGenderIfNull(locationId: number, gender: string, client?: PoolClient): Promise<void> {
+    const query = `
+      UPDATE locations
+      SET gender_lock = $1, updated_at = NOW()
+      WHERE id = $2 AND gender_lock IS NULL
+    `;
+    await this.getClient(client).query(query, [gender, locationId]);
   }
 }

@@ -39,6 +39,12 @@ import type { AuditUserContext } from '../../../common/interfaces/audit-user-con
 export class BedsController {
   constructor(private readonly bedsService: BedsService) {}
 
+  @Get('eligible-beds')
+  @RequirePermissions(PERMISSIONS.BOOKINGS_CREATE)
+  async findEligibleBeds(@Query('studentId') studentId: string) {
+    return this.bedsService.findEligibleBeds(studentId);
+  }
+
   @Post()
   @RequirePermissions(PERMISSIONS.LOCATIONS_CREATE)
   create(@Body() createBedDto: CreateBedDto, @UserContext() context: AuditUserContext) {
@@ -101,8 +107,7 @@ export class BedsController {
   @Get()
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
   findAll(@Query() query: FindAllBedsDto) {
-    const { locationId, status, ...pagination } = query;
-    return this.bedsService.findAll(pagination, { locationId, status });
+    return this.bedsService.findAll(query);
   }
 
   @Patch(':id')

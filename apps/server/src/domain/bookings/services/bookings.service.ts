@@ -59,17 +59,17 @@ export class BookingsService {
     const room = await this.locationsRepository.findById(bed.locationId);
     if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
 
-    // 2. Fetch hierarchy for inheritance checks (isTrOnly and Ownership)
-    const hierarchy = await this.locationsRepository.findWithAncestors(room.id);
-
-    // 3. Check TR Only Constraint (Inherited)
-    const isTrOnly = hierarchy.some((loc) => loc.isTrOnly);
+    // 2. Check TR Only Constraint (Explicit)
+    // Check both room and bed level
+    const isTrOnly = room.isTrOnly || bed.isTrOnly;
     if (isTrOnly && student.nationalityCode !== 'TR') {
       throw new BadRequestException('This location is reserved for Turkish citizens only');
     }
 
-    // 4. Check Ownership Constraint (Rectorate - Inherited)
-    const isRectorate = hierarchy.some((loc) => loc.ownership === LocationOwnership.RECTORATE);
+    // 3. Check Ownership Constraint (Rectorate - Explicit)
+    const isRectorate =
+      room.ownership === LocationOwnership.RECTORATE ||
+      bed.ownership === LocationOwnership.RECTORATE;
 
     if (isRectorate) {
       // Check if user is Admin
@@ -81,6 +81,11 @@ export class BookingsService {
 
     return this.db.transaction(async (client) => {
       const booking = await this.bookingsRepository.create(data, client);
+
+      // Lock gender if currently NULL (Dynamic Lock)
+      // student and bed are already fetched above the transaction
+      await this.locationsRepository.lockGenderIfNull(bed!.locationId, student!.gender, client);
+
       await this.undoService.registerUndo(
         {
           userId: context.userId,
@@ -201,6 +206,9 @@ export class BookingsService {
 
       const updated = await this.bookingsRepository.checkIn(id, client);
 
+      // 0. Mark Bed as Occupied
+      await this.bedsRepository.updateStatus(booking.bedId, BedStatus.OCCUPIED, client);
+
       // 1. Generate inventory snapshot for the contract
       await this.inventoryService.generateSnapshotForBooking(
         id,
@@ -245,6 +253,7 @@ export class BookingsService {
           undoData: {
             previousStatus: booking.status,
             previousCheckInDate: booking.checkedInAt,
+            bedId: booking.bedId,
           },
           description: `Checked in booking ${id}`,
         },
@@ -299,6 +308,12 @@ export class BookingsService {
 
       // 3. Make Bed Available
       await this.bedsRepository.updateStatus(booking.bedId, BedStatus.AVAILABLE, client);
+
+      // 3.1 Clear Gender Lock if room is empty
+      const bed = await this.bedsRepository.findById(booking.bedId, client);
+      if (bed) {
+        await this.locationsRepository.clearGenderLockIfEmpty(bed.locationId, client);
+      }
 
       // 4. Generate Check-Out Contract
       try {

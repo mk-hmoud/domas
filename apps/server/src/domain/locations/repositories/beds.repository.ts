@@ -5,6 +5,7 @@ import { Bed } from '../entities/bed.entity';
 import { IBedsRepository } from '../interfaces/beds-repository.interface';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
@@ -47,36 +48,91 @@ export class BedsRepository implements IBedsRepository {
     return new Bed(result.rows[0]);
   }
 
-  async findAll(
-    pagination: PaginationDto,
-    filters?: { locationId?: number; status?: BedStatus },
-    client?: PoolClient,
-  ): Promise<PaginatedResult<Bed>> {
-    const { page = 1, limit = 10 } = pagination;
+  async findAll(filters: FindAllBedsDto, client?: PoolClient): Promise<PaginatedResult<Bed>> {
+    const {
+      page = 1,
+      limit = 10,
+      locationId,
+      status,
+      genderLock,
+      isTrOnly,
+      isGuestZone,
+      ownership,
+      q,
+    } = filters;
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT ${this.selectColumns}
-      FROM beds
+      SELECT 
+        b.id, 
+        b.location_id as "locationId", 
+        b.label, 
+        b.status, 
+        b.is_tr_only as "isTrOnly", 
+        b.is_guest_zone as "isGuestZone", 
+        b.ownership, 
+        b.updated_at as "updatedAt",
+        'bed' as "type",
+        l.name as "locationName",
+        (SELECT string_agg(name, ' > ' ORDER BY tree_path) FROM locations WHERE tree_path @> l.tree_path) as "locationPath",
+        (SELECT s.first_name || ' ' || s.last_name 
+         FROM bookings bo 
+         JOIN students s ON bo.student_id = s.id 
+         WHERE bo.bed_id = b.id AND bo.status IN ('active', 'ready_for_checkin')
+         LIMIT 1) as "residentName"
+      FROM beds b
+      JOIN locations l ON b.location_id = l.id
     `;
     const values: any[] = [];
-    const conditions: string[] = ['deleted_at IS NULL'];
+    const conditions: string[] = ['b.deleted_at IS NULL'];
 
-    if (filters?.locationId) {
-      conditions.push(`location_id = $${values.length + 1}`);
-      values.push(filters.locationId);
+    if (locationId) {
+      conditions.push(`b.location_id = $${values.length + 1}`);
+      values.push(locationId);
     }
-    if (filters?.status) {
-      conditions.push(`status = $${values.length + 1}`);
-      values.push(filters.status);
+    if (status) {
+      conditions.push(`b.status = $${values.length + 1}`);
+      values.push(status);
+    }
+    if (genderLock) {
+      conditions.push(`l.gender_lock = $${values.length + 1}`);
+      values.push(genderLock);
+    }
+    if (isTrOnly !== undefined) {
+      conditions.push(`b.is_tr_only = $${values.length + 1}`);
+      values.push(isTrOnly);
+    }
+    if (isGuestZone !== undefined) {
+      conditions.push(`b.is_guest_zone = $${values.length + 1}`);
+      values.push(isGuestZone);
+    }
+    if (ownership) {
+      conditions.push(`b.ownership = $${values.length + 1}`);
+      values.push(ownership);
+    }
+    if (q) {
+      values.push(`%${q}%`);
+      const pIdx = values.length;
+      conditions.push(
+        `(b.label ILIKE $${pIdx} OR EXISTS (
+          SELECT 1 FROM locations l2 
+          WHERE l2.tree_path @> l.tree_path 
+          AND l2.name ILIKE $${pIdx}
+          AND l2.deleted_at IS NULL
+        ))`,
+      );
     }
 
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += ` ORDER BY location_id ASC, label ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-    const countQuery = `SELECT COUNT(*) FROM beds ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}`;
+    query += ` ORDER BY l.name ASC, b.label ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+    const countQuery = `
+      SELECT COUNT(*) FROM beds b 
+      JOIN locations l ON b.location_id = l.id
+      ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}
+    `;
 
     const dbClient = this.getClient(client);
     const [result, countResult] = await Promise.all([
@@ -201,6 +257,36 @@ export class BedsRepository implements IBedsRepository {
       BedStatus.AVAILABLE,
     ]);
     return parseInt(result.rows[0].count, 10);
+  }
+
+  async findEligibleBeds(filters: { gender: string; nationalityCode: string }): Promise<Bed[]> {
+    const isTurkish = filters.nationalityCode === 'TR';
+
+    const query = `
+      SELECT 
+        b.id, 
+        b.location_id as "locationId", 
+        b.label, 
+        b.status, 
+        b.is_tr_only as "isTrOnly",
+        b.is_guest_zone as "isGuestZone",
+        b.ownership,
+        b.updated_at as "updatedAt",
+        l.name as "locationName"
+      FROM beds b
+      JOIN locations l ON b.location_id = l.id
+      WHERE b.status = 'available'
+        AND b.deleted_at IS NULL
+        AND l.deleted_at IS NULL
+        -- Explicit Gender Lock Check on the Room
+        AND (l.gender_lock IS NULL OR l.gender_lock = $1)
+        -- Explicit TR Only Check on the Room or the Bed
+        AND ((l.is_tr_only = FALSE AND b.is_tr_only = FALSE) OR $2 = TRUE)
+      ORDER BY l.name ASC, b.label ASC
+    `;
+
+    const result = await this.db.query(query, [filters.gender, isTurkish]);
+    return result.rows.map((row) => new Bed(row));
   }
 
   async updateTrOnly(id: number, isTrOnly: boolean, client?: PoolClient): Promise<Bed> {

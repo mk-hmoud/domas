@@ -24,6 +24,11 @@ import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PoolClient } from 'pg';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import { Inject, forwardRef } from '@nestjs/common';
+
+import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 
 @Injectable()
 export class LocationsService {
@@ -33,6 +38,8 @@ export class LocationsService {
     private readonly locationsRepository: LocationsRepository,
     private readonly bedsRepository: BedsRepository,
     private readonly studentsRepository: StudentsRepository,
+    @Inject(forwardRef(() => UndoService))
+    private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
 
@@ -100,9 +107,23 @@ export class LocationsService {
     externalClient?: PoolClient,
   ): Promise<Location> {
     const operation = async (client: PoolClient) => {
+      let parentFlags: Partial<Location> = {};
+
+      if (data.parentId) {
+        const parent = await this.locationsRepository.findById(data.parentId, client);
+        if (parent) {
+          parentFlags = {
+            genderLock: parent.genderLock,
+            isTrOnly: parent.isTrOnly,
+            isGuestZone: parent.isGuestZone,
+            ownership: parent.ownership,
+          };
+        }
+      }
+
       const tempPath = 'temp';
       const created = await this.locationsRepository.create(
-        { ...data, treePath: tempPath },
+        { ...parentFlags, ...data, treePath: tempPath },
         client,
       );
 
@@ -110,13 +131,28 @@ export class LocationsService {
 
       if (data.parentId) {
         const parent = await this.locationsRepository.findById(data.parentId, client);
-        if (!parent) {
-          throw new NotFoundException(`Parent location with ID ${data.parentId} not found`);
-        }
-        treePath = `${parent.treePath}.${treePath}`;
+        treePath = `${parent!.treePath}.${treePath}`;
       }
 
-      return this.locationsRepository.update(created.id, { treePath } as any, client);
+      const location = await this.locationsRepository.update(
+        created.id,
+        { treePath } as any,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_LOCATION,
+          entityType: 'location',
+          entityId: location.id.toString(),
+          undoData: {},
+          description: `Created location ${location.name}`,
+        },
+        client,
+      );
+
+      return location;
     };
 
     if (externalClient) {
@@ -154,8 +190,10 @@ export class LocationsService {
     }, context);
   }
 
-  async findAll(pagination: PaginationDto): Promise<PaginatedResult<Location>> {
-    return this.locationsRepository.findAll(pagination);
+  async findAll(
+    filters: FindAllLocationsDto,
+  ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
+    return this.locationsRepository.findAll(filters);
   }
 
   async findById(id: number): Promise<Location> {
@@ -193,12 +231,26 @@ export class LocationsService {
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
     this.logger.log({ locationId: id, data }, 'Updating location');
     const location = await this.db.transaction(async (client) => {
-      const location = await this.locationsRepository.findById(id, client);
-      if (!location) {
+      const existing = await this.locationsRepository.findById(id, client);
+      if (!existing) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
 
-      return this.locationsRepository.update(id, data, client);
+      const updated = await this.locationsRepository.update(id, data, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_LOCATION,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Updated location ${existing.name}`,
+        },
+        client,
+      );
+
+      return updated;
     }, context);
     this.logger.log({ locationId: id }, 'Location updated successfully');
     return location;
@@ -207,11 +259,23 @@ export class LocationsService {
   async delete(id: number, context: AuditUserContext): Promise<void> {
     this.logger.log({ locationId: id }, 'Deleting location');
     await this.db.transaction(async (client) => {
-      const exists = await this.locationsRepository.exists(id, client);
-      if (!exists) {
+      const existing = await this.locationsRepository.findById(id, client);
+      if (!existing) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
       await this.locationsRepository.delete(id, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_LOCATION,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Deleted location ${existing.name}`,
+        },
+        client,
+      );
     }, context);
     this.logger.log({ locationId: id }, 'Location deleted successfully');
   }
@@ -226,7 +290,27 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
-      return this.locationsRepository.updateGenderLock(id, genderLock, cascade, client);
+
+      const updated = await this.locationsRepository.updateGenderLock(
+        id,
+        genderLock,
+        cascade,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_GENDER_LOCK,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousGenderLock: location.genderLock, cascade },
+          description: `Updated gender lock on ${location.name}`,
+        },
+        client,
+      );
+
+      return updated;
     };
 
     if (externalClient) return operation(externalClient);
@@ -245,7 +329,27 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
-      return this.locationsRepository.updateGuestZone(id, isGuestZone, cascade, client);
+
+      const updated = await this.locationsRepository.updateGuestZone(
+        id,
+        isGuestZone,
+        cascade,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_GUEST_ZONE,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousGuestZone: location.isGuestZone, cascade },
+          description: `Updated guest zone on ${location.name}`,
+        },
+        client,
+      );
+
+      return updated;
     };
 
     if (externalClient) return operation(externalClient);
@@ -264,7 +368,22 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
-      return this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
+
+      const updated = await this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_TR_ONLY,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousTrOnly: location.isTrOnly, cascade },
+          description: `Updated TR-only status on ${location.name}`,
+        },
+        client,
+      );
+
+      return updated;
     };
 
     if (externalClient) return operation(externalClient);
@@ -283,7 +402,27 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
-      return this.locationsRepository.updateOwnership(id, ownership, cascade, client);
+
+      const updated = await this.locationsRepository.updateOwnership(
+        id,
+        ownership,
+        cascade,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_OWNERSHIP,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousOwnership: location.ownership, cascade },
+          description: `Updated ownership on ${location.name}`,
+        },
+        client,
+      );
+
+      return updated;
     };
 
     if (externalClient) return operation(externalClient);

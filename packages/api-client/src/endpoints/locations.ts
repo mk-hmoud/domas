@@ -4,7 +4,7 @@ import {
   CreateLocationDto,
   UpdateLocationDto,
   PaginatedResult,
-  PaginationDto,
+  FindAllLocationsDto,
   BulkCreateLocationDto,
   BulkUpdateLocationDto,
   BulkDeleteLocationDto,
@@ -52,12 +52,13 @@ export const locations = {
   },
 
   findAll: async (
-    params?: PaginationDto,
-  ): Promise<PaginatedResult<Location>> => {
-    const response = await apiClient.get<PaginatedResult<Location>>(
-      "/locations",
-      { params },
-    );
+    params?: FindAllLocationsDto,
+  ): Promise<
+    PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>
+  > => {
+    const response = await apiClient.get<
+      PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>
+    >("/locations", { params });
     return response.data;
   },
 
