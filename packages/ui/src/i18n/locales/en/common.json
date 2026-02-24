@@ -525,6 +525,7 @@
   "male": "Male",
   "female": "Female",
   "students": "Students",
+  "occupied_status_lock_notice": "This bed is occupied. Status changes must be performed through check-out or undo processes.",
   "create_bed": "Create Bed",
   "bed_label": "Bed Label",
   "bed_status": {

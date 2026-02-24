@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { BedsRepository } from '../repositories/beds.repository';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
@@ -37,6 +37,30 @@ export class BedsService {
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
+
+  private validateStatusTransition(current: BedStatus, next?: BedStatus) {
+    if (!next || current === next) return;
+
+    // RULE: Cannot change status FROM 'occupied' to anything else via general methods
+    if (current === BedStatus.OCCUPIED) {
+      throw new BadRequestException(
+        'Cannot manually change status of an occupied bed. Use the check-out or undo process.',
+      );
+    }
+
+    // RULE: Cannot change status TO 'occupied' via general methods
+    if (next === BedStatus.OCCUPIED) {
+      throw new BadRequestException(
+        'Cannot manually change status to occupied. Occupancy is managed via bookings.',
+      );
+    }
+
+    // Explicitly allow transitions only between AVAILABLE and MAINTENANCE
+    const allowed = [BedStatus.AVAILABLE, BedStatus.MAINTENANCE];
+    if (!allowed.includes(current) || !allowed.includes(next)) {
+      throw new BadRequestException(`Invalid status transition from ${current} to ${next}`);
+    }
+  }
 
   async findAll(filters: FindAllBedsDto): Promise<PaginatedResult<Bed>> {
     return this.bedsRepository.findAll(filters);
@@ -106,6 +130,8 @@ export class BedsService {
       if (!existing) {
         throw new NotFoundException(`Bed with ID ${id} not found`);
       }
+
+      this.validateStatusTransition(existing.status, data.status);
 
       try {
         const updated = await this.bedsRepository.update(id, data, client);
@@ -243,7 +269,11 @@ export class BedsService {
   async updateStatusMany(dto: BulkUpdateBedStatusDto, context: AuditUserContext): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
-        await this.bedsRepository.updateStatus(id, dto.status, client);
+        const bed = await this.bedsRepository.findById(id, client);
+        if (bed) {
+          this.validateStatusTransition(bed.status, dto.status);
+          await this.bedsRepository.updateStatus(id, dto.status, client);
+        }
       }
     }, context);
   }

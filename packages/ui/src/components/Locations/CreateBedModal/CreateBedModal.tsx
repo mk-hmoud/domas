@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
-import { Modal, TextInput, Button, Group, Select } from "@mantine/core";
+import {
+  Modal,
+  TextInput,
+  Button,
+  Group,
+  Select,
+  Alert,
+  Text,
+  Stack,
+  Box,
+} from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
 import { CreateBedDto, BedStatus } from "@domas/ts-types";
+import { IconInfoCircle } from "@tabler/icons-react";
 
 interface CreateBedModalProps {
   opened: boolean;
@@ -21,6 +32,8 @@ export function CreateBedModal({
 }: CreateBedModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+
+  const isOccupied = initialValues?.status === BedStatus.OCCUPIED;
 
   const form = useForm<CreateBedDto>({
     initialValues: initialValues || {
@@ -59,6 +72,27 @@ export function CreateBedModal({
     }
   };
 
+  const statusOptions = [
+    {
+      value: BedStatus.AVAILABLE,
+      label: t("bed_status.available", { defaultValue: "Available" }),
+    },
+    {
+      value: BedStatus.MAINTENANCE,
+      label: t("bed_status.maintenance", {
+        defaultValue: "Maintenance",
+      }),
+    },
+  ];
+
+  // If currently occupied, we show it but it's disabled.
+  if (isOccupied) {
+    statusOptions.push({
+      value: BedStatus.OCCUPIED,
+      label: t("bed_status.occupied", { defaultValue: "Occupied" }),
+    });
+  }
+
   return (
     <Modal
       opened={opened}
@@ -66,35 +100,39 @@ export function CreateBedModal({
       title={initialValues ? t("edit_bed") : t("create_bed")}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <TextInput
-          label={t("bed_label", { defaultValue: "Label" })}
-          placeholder="e.g. A, B, 1, 2"
-          required
-          {...form.getInputProps("label")}
-        />
+        <Stack gap="md">
+          <TextInput
+            label={t("bed_label", { defaultValue: "Label" })}
+            placeholder="e.g. A, B, 1, 2"
+            required
+            {...form.getInputProps("label")}
+          />
 
-        <Select
-          label={t("status")}
-          mt="md"
-          data={[
-            {
-              value: BedStatus.AVAILABLE,
-              label: t("bed_status.available", { defaultValue: "Available" }),
-            },
-            {
-              value: BedStatus.OCCUPIED,
-              label: t("bed_status.occupied", { defaultValue: "Occupied" }),
-            },
-            {
-              value: BedStatus.MAINTENANCE,
-              label: t("bed_status.maintenance", {
-                defaultValue: "Maintenance",
-              }),
-            },
-          ]}
-          required
-          {...form.getInputProps("status")}
-        />
+          <Box>
+            <Select
+              label={t("status")}
+              data={statusOptions}
+              required
+              disabled={isOccupied}
+              {...form.getInputProps("status")}
+            />
+            {isOccupied && (
+              <Alert
+                icon={<IconInfoCircle size={16} />}
+                color="blue"
+                mt="xs"
+                variant="light"
+              >
+                <Text size="xs">
+                  {t("occupied_status_lock_notice", {
+                    defaultValue:
+                      "This bed is occupied. Status changes must be performed through check-out or undo processes.",
+                  })}
+                </Text>
+              </Alert>
+            )}
+          </Box>
+        </Stack>
 
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onClose}>
