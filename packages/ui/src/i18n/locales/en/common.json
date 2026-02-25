@@ -302,6 +302,16 @@
   "none": "None",
   "locations": "Locations",
   "beds": "Beds",
+  "location_selection": "Housing Selection",
+  "location_type": {
+    "university": "University",
+    "campus": "Campus",
+    "building": "Building",
+    "block": "Block",
+    "floor": "Floor",
+    "room": "Room",
+    "bed": "Bed"
+  },
   "is_guest_zone_label": "Is Guest Zone?",
   "create": "Create",
   "edit": "Edit",
@@ -504,7 +514,7 @@
     }
   },
   "student_number": "Student Number",
-  "national_id": "National ID",
+  "national_id": "National ID / Passport ID",
   "birth_date": "Birth Date",
   "birth_place": "Birth Place",
   "department": "Department",
@@ -549,6 +559,9 @@
   "entity": "Entity",
   "time": "Time",
   "undone": "Undone",
+  "no_eligible_beds_available": "No eligible beds available in this location.",
+  "auto_create_beds": "Auto Create Beds (A, B, C...)",
+  "bed_count": "Bed Count",
 
   "ownerships": {
     "dorm": "Dorm",

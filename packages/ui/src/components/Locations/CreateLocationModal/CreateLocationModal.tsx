@@ -226,15 +226,13 @@ export function CreateLocationModal({
         {form.values.type === LocationType.ROOM && !initialValues && (
           <Group mb="md" align="flex-end">
             <Switch
-              label={t("auto_create_beds", {
-                defaultValue: "Auto Create Beds (A, B, C...)",
-              })}
+              label={t("auto_create_beds")}
               checked={autoCreateBeds}
               onChange={(e) => setAutoCreateBeds(e.currentTarget.checked)}
             />
             {autoCreateBeds && (
               <NumberInput
-                label={t("bed_count", { defaultValue: "Bed Count" })}
+                label={t("bed_count")}
                 value={bedCount}
                 onChange={(val) => setBedCount(Number(val))}
                 min={1}

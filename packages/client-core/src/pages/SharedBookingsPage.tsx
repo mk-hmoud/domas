@@ -16,13 +16,7 @@ import {
   Card,
 } from "@mantine/core";
 import { IconPlus, IconSearch, IconEdit } from "@tabler/icons-react";
-import {
-  bookings,
-  students,
-  beds,
-  semesters,
-  locations,
-} from "@domas/api-client";
+import { bookings, students, beds, semesters } from "@domas/api-client";
 import {
   Booking,
   Student,
@@ -49,9 +43,6 @@ export function SharedBookingsPage() {
   // Data for modal & mapping
   const [studentList, setStudentList] = useState<Student[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
-  const [locationsMap, setLocationsMap] = useState<Map<number, string>>(
-    new Map(),
-  );
   const [bedsMap, setBedsMap] = useState<Map<number, string>>(new Map());
   const [studentsMap, setStudentsMap] = useState<Map<string, string>>(
     new Map(),
@@ -75,38 +66,20 @@ export function SharedBookingsPage() {
 
   const fetchModalData = async () => {
     try {
-      const [studentsRes, bedsRes, semestersRes, locationsRes] =
-        await Promise.all([
-          students.findAll({ limit: 1000 }),
-          beds.findAll({ limit: 10000 }),
-          semesters.findAll({ limit: 1000 }),
-          locations.findAll({ limit: 10000 }), // Fetch all locations to map names
-        ]);
+      const [studentsRes, bedsRes, semestersRes] = await Promise.all([
+        students.findAll({ limit: 1000 }),
+        beds.findAll({ limit: 10000 }),
+        semesters.findAll({ limit: 1000 }),
+      ]);
 
       // Update Modal Data
       setStudentList(studentsRes.data);
       setAllSemesters(semestersRes.data);
 
-      // Build Locations Map
-      const idToName = new Map<number, string>();
-      locationsRes.data.forEach((loc) =>
-        idToName.set(Number(loc.id), loc.name),
-      );
-
-      const locMap = new Map<number, string>();
-      locationsRes.data.forEach((loc) => {
-        const pathIds = loc.treePath.split(".");
-        const pathNames = pathIds
-          .map((id) => idToName.get(Number(id)) || "???")
-          .join(" > ");
-        locMap.set(Number(loc.id), pathNames);
-      });
-      setLocationsMap(locMap);
-
       // Build Beds Map
       const bMap = new Map<number, string>();
       bedsRes.data.forEach((b) => {
-        const roomName = locMap.get(b.locationId) || "Unknown Room";
+        const roomName = b.locationName || "Unknown Room";
         bMap.set(b.id, `${roomName} - ${b.label}`);
       });
       setBedsMap(bMap);
@@ -242,7 +215,6 @@ export function SharedBookingsPage() {
           value: s.id,
           label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
         }))}
-        locationsMap={locationsMap}
         semesters={allSemesters.map((s) => ({
           value: s.id.toString(),
           label: s.displayName,

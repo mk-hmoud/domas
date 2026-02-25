@@ -8,3 +8,4 @@ export * from "./LocationDetail/LocationDetail";
 export * from "./LocationsManager";
 export * from "./LocationIcon";
 export * from "./LocationRegistry";
+export * from "./HierarchicalBedSelector";

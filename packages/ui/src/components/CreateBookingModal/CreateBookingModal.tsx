@@ -6,15 +6,15 @@ import {
   Group,
   SimpleGrid,
   ActionIcon,
-  Loader,
+  Divider,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateBookingDto, CreateStudentDto, Bed } from "@domas/ts-types";
+import { CreateBookingDto, CreateStudentDto } from "@domas/ts-types";
 import { IconPlus } from "@tabler/icons-react";
 import { StudentModal } from "../Students";
-import { beds as bedsApi } from "@domas/api-client";
+import { HierarchicalBedSelector } from "../Locations";
 
 interface CreateBookingModalProps {
   opened: boolean;
@@ -23,7 +23,6 @@ interface CreateBookingModalProps {
   onCreateStudent: (values: CreateStudentDto) => Promise<void>;
   students: { value: string; label: string }[];
   semesters: { value: string; label: string }[];
-  locationsMap: Map<number, string>;
 }
 
 export function CreateBookingModal({
@@ -33,13 +32,10 @@ export function CreateBookingModal({
   onCreateStudent,
   students,
   semesters,
-  locationsMap,
 }: CreateBookingModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [studentModalOpened, setStudentModalOpened] = useState(false);
-  const [eligibleBeds, setEligibleBeds] = useState<Bed[]>([]);
-  const [loadingBeds, setLoadingBeds] = useState(false);
 
   const form = useForm<any>({
     initialValues: {
@@ -61,45 +57,8 @@ export function CreateBookingModal({
   useEffect(() => {
     if (opened) {
       form.reset();
-      setEligibleBeds([]);
     }
   }, [opened]);
-
-  useEffect(() => {
-    if (form.values.studentId) {
-      fetchEligibleBeds(form.values.studentId);
-    } else {
-      setEligibleBeds([]);
-      form.setFieldValue("bedId", 0);
-    }
-  }, [form.values.studentId]);
-
-  const fetchEligibleBeds = async (studentId: string) => {
-    setLoadingBeds(true);
-    try {
-      const result = await bedsApi.findEligible(studentId);
-      setEligibleBeds(result);
-      // Reset bed selection if current one is not in new list
-      if (
-        form.values.bedId &&
-        !result.find((b) => b.id === Number(form.values.bedId))
-      ) {
-        form.setFieldValue("bedId", 0);
-      }
-    } catch (error) {
-      console.error("Failed to fetch eligible beds:", error);
-    } finally {
-      setLoadingBeds(false);
-    }
-  };
-
-  const bedOptions = eligibleBeds.map((b) => {
-    const roomName = locationsMap.get(b.locationId) || "Unknown Room";
-    return {
-      value: b.id.toString(),
-      label: `${roomName} - ${b.label}`,
-    };
-  });
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -162,35 +121,29 @@ export function CreateBookingModal({
             </ActionIcon>
           </Group>
 
-          <SimpleGrid cols={2} mt="md">
-            <Select
-              label={t("semester_label")}
-              placeholder={t("select_semester")}
-              data={semesters}
-              required
-              {...form.getInputProps("semesterId")}
-              onChange={(val) => form.setFieldValue("semesterId", Number(val))}
-              value={form.values.semesterId?.toString()}
-            />
-            <Select
-              label={t("bed")}
-              placeholder={
-                eligibleBeds.length > 0
-                  ? t("select_bed")
-                  : t("select_student_first")
-              }
-              data={bedOptions}
-              searchable
-              required
-              rightSection={loadingBeds ? <Loader size="xs" /> : null}
-              disabled={!form.values.studentId || loadingBeds}
-              {...form.getInputProps("bedId")}
-              onChange={(val) => form.setFieldValue("bedId", Number(val))}
-              value={
-                form.values.bedId === 0 ? "" : form.values.bedId?.toString()
-              }
-            />
-          </SimpleGrid>
+          <Select
+            label={t("semester_label")}
+            placeholder={t("select_semester")}
+            data={semesters}
+            required
+            mb="md"
+            {...form.getInputProps("semesterId")}
+            onChange={(val) => form.setFieldValue("semesterId", Number(val))}
+            value={form.values.semesterId?.toString()}
+          />
+
+          <Divider
+            label={t("location_selection", "Housing Selection")}
+            labelPosition="center"
+            my="lg"
+          />
+
+          <HierarchicalBedSelector
+            studentId={form.values.studentId}
+            value={form.values.bedId}
+            onChange={(val) => form.setFieldValue("bedId", val)}
+            error={form.errors.bedId}
+          />
 
           <SimpleGrid cols={2} mt="md">
             <DatePickerInput

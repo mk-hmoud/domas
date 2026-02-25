@@ -300,6 +300,16 @@
   "none": "Hiçbiri",
   "locations": "Lokasyonlar",
   "beds": "Yataklar",
+  "location_selection": "Konaklama Seçimi",
+  "location_type": {
+    "university": "Üniversite",
+    "campus": "Kampüs",
+    "building": "Bina",
+    "block": "Blok",
+    "floor": "Kat",
+    "room": "Oda",
+    "bed": "Yatak"
+  },
   "is_guest_zone_label": "Misafir Bölgesi mi?",
   "create": "Oluştur",
   "edit": "Düzenle",
@@ -502,7 +512,10 @@
     }
   },
   "student_number": "Öğrenci Numarası",
-  "national_id": "Kimlik No",
+  "national_id": "Kimlik No / Pasaport No",
+  "no_eligible_beds_available": "Bu lokasyonda uygun yatak bulunmamaktadır.",
+  "auto_create_beds": "Yatakları Otomatik Oluştur (A, B, C...)",
+  "bed_count": "Yatak Sayısı",
   "birth_date": "Doğum Tarihi",
   "birth_place": "Doğum Yeri",
   "department": "Bölüm",
