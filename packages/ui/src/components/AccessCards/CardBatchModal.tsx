@@ -1,6 +1,5 @@
 import {
   Modal,
-  TextInput,
   NumberInput,
   Button,
   Stack,
@@ -30,13 +29,11 @@ export function CardBatchModal({
 
   const form = useForm<CreateCardBatchDto>({
     initialValues: {
-      name: "",
       rangeStart: 1,
       rangeEnd: 100,
       locationId: undefined,
     },
     validate: {
-      name: (val) => (val ? null : t("field_required")),
       rangeStart: (val) => (val > 0 ? null : t("invalid_number")),
       rangeEnd: (val, values) =>
         val > values.rangeStart
@@ -60,12 +57,6 @@ export function CardBatchModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <TextInput
-            label={t("batch_name")}
-            required
-            {...form.getInputProps("name")}
-          />
-
           <Select
             label={t("location")}
             placeholder={t("pick_one")}
@@ -75,6 +66,7 @@ export function CardBatchModal({
             }))}
             searchable
             clearable
+            required
             value={
               form.values.locationId ? form.values.locationId.toString() : null
             }

@@ -19,6 +19,7 @@ import {
   AccessCard,
   CreateCardBatchDto,
   Location,
+  LocationType,
 } from "@domas/ts-types";
 import { CardBatchModal, CardBatchTable, AccessCardTable } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
@@ -77,6 +78,11 @@ export function SharedAccessCardsPage() {
     }
   };
 
+  const allowedLocations = locationList.filter(
+    (loc) =>
+      loc.type === LocationType.BUILDING || loc.type === LocationType.BLOCK,
+  );
+
   return (
     <Container size="lg" py="xl">
       <Stack gap="lg">
@@ -127,7 +133,7 @@ export function SharedAccessCardsPage() {
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
         onSubmit={handleCreateBatch}
-        locations={locationList}
+        locations={allowedLocations}
       />
     </Container>
   );
