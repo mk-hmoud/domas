@@ -366,6 +366,25 @@ export class InventoryRepository {
     await this.getClient(client).query(query, values);
   }
 
+  async cloneSnapshots(
+    oldBookingId: string,
+    newBookingId: string,
+    client?: PoolClient,
+  ): Promise<void> {
+    const query = `
+      INSERT INTO booking_inventory_snapshots (
+        booking_id, catalog_id, name_tr, name_en, description_tr, description_en, 
+        scope, quantity, location_name
+      )
+      SELECT 
+        $2, catalog_id, name_tr, name_en, description_tr, description_en, 
+        scope, quantity, location_name
+      FROM booking_inventory_snapshots
+      WHERE booking_id = $1
+    `;
+    await this.getClient(client).query(query, [oldBookingId, newBookingId]);
+  }
+
   async findSnapshotsByBooking(
     bookingId: string,
     client?: PoolClient,

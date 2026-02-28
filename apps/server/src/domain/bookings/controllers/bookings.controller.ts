@@ -14,6 +14,8 @@ import { BookingsService } from '../services/bookings.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingDto } from '../dto/update-booking.dto';
 import { UpdateBookingDatesDto } from '../dto/update-booking-dates.dto';
+import { TransferBookingDto } from '../dto/transfer-booking.dto';
+import { BulkTransferBookingDto } from '../dto/bulk-transfer-booking.dto';
 import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
@@ -78,6 +80,22 @@ export class BookingsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.bookingsService.checkOut(id, data, context);
+  }
+
+  @Post(':id/transfer')
+  @RequirePermissions(PERMISSIONS.BOOKINGS_CREATE)
+  transfer(
+    @Param('id') id: string,
+    @Body() dto: TransferBookingDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.bookingsService.transfer(id, dto, context);
+  }
+
+  @Post('bulk-transfer')
+  @RequirePermissions(PERMISSIONS.BOOKINGS_CREATE)
+  transferMany(@Body() dto: BulkTransferBookingDto, @UserContext() context: AuditUserContext) {
+    return this.bookingsService.transferMany(dto, context);
   }
 
   @Patch(':id')
