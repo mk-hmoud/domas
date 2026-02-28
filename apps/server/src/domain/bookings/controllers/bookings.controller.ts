@@ -13,6 +13,7 @@ import {
 import { BookingsService } from '../services/bookings.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingDto } from '../dto/update-booking.dto';
+import { UpdateBookingDatesDto } from '../dto/update-booking-dates.dto';
 import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
@@ -87,5 +88,15 @@ export class BookingsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.bookingsService.update(id, updateBookingDto, context);
+  }
+
+  @Patch(':id/dates')
+  @RequirePermissions(PERMISSIONS.BOOKINGS_UPDATE)
+  adjustDates(
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingDatesDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.bookingsService.adjustDates(id, dto, context);
   }
 }

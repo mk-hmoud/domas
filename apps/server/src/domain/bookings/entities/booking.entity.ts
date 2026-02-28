@@ -6,6 +6,7 @@ export class Booking {
   studentId!: string;
   bedId!: number;
   semesterId!: number;
+  previousBookingId?: string;
   startDate!: Date;
   endDate!: Date;
   status!: BookingOpsStatus;

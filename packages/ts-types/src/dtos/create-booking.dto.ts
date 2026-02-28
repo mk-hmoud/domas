@@ -5,8 +5,9 @@ export interface CreateBookingDto {
   studentId: string;
   bedId: number;
   semesterId: number;
-  startDate: string;
-  endDate: string;
+  previousBookingId?: string;
+  startDate?: string;
+  endDate?: string;
   status?: BookingOpsStatus;
   paymentStatus?: PaymentStatus;
 }

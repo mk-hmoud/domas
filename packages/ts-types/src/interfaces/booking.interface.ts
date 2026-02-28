@@ -6,6 +6,7 @@ export interface Booking {
   studentId: string;
   bedId: number;
   semesterId: number;
+  previousBookingId?: string;
   startDate: string; // ISO Date string
   endDate: string; // ISO Date string
   status: BookingOpsStatus;

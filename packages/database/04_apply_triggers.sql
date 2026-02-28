@@ -234,12 +234,6 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 -- BUSINESS LOGIC TRIGGERS
 -- =============================================
 
--- Validates booking dates to be within semester
-DROP TRIGGER IF EXISTS validate_booking_dates_trigger ON bookings;
-CREATE TRIGGER validate_booking_dates_trigger
-BEFORE INSERT OR UPDATE ON bookings
-FOR EACH ROW EXECUTE FUNCTION validate_booking_dates();
-
 -- Validates bed location is in a room
 DROP TRIGGER IF EXISTS validate_bed_location_trigger ON beds;
 CREATE TRIGGER validate_bed_location_trigger

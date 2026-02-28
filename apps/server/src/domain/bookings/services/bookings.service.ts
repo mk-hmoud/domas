@@ -10,6 +10,7 @@ import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { BookingsRepository } from '../repositories/bookings.repository';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingDto } from '../dto/update-booking.dto';
+import { UpdateBookingDatesDto } from '../dto/update-booking-dates.dto';
 import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
 import { Booking } from '../entities/booking.entity';
 import { DatabaseService } from '../../../core/database/database.service';
@@ -79,8 +80,30 @@ export class BookingsService {
       }
     }
 
+    // 4. Fetch Semester for Default Dates
+    const semesterRes = await this.db.query(
+      'SELECT start_date, end_date FROM semesters WHERE id = $1',
+      [data.semesterId],
+    );
+    if (semesterRes.rowCount === 0) throw new NotFoundException('Semester not found');
+    const semester = semesterRes.rows[0];
+
+    const finalStartDate = data.startDate || semester.start_date;
+    const finalEndDate = data.endDate || semester.end_date;
+
+    if (new Date(finalStartDate) >= new Date(finalEndDate)) {
+      throw new BadRequestException('Start date must be before end date.');
+    }
+
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.create(data, client);
+      const booking = await this.bookingsRepository.create(
+        {
+          ...data,
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+        },
+        client,
+      );
 
       // Lock gender if currently NULL (Dynamic Lock)
       // student and bed are already fetched above the transaction
@@ -347,10 +370,73 @@ export class BookingsService {
     }, context);
   }
 
-  async update(id: string, data: UpdateBookingDto, context: AuditUserContext): Promise<Booking> {
+  async adjustDates(
+    id: string,
+    data: UpdateBookingDatesDto,
+    context: AuditUserContext,
+  ): Promise<Booking> {
+    this.logger.log({ bookingId: id, data }, 'Adjusting booking dates');
+
+    const toDateString = (d: Date | string) => {
+      const date = typeof d === 'string' ? new Date(d) : d;
+      // Use a 4-hour buffer to handle timezone shifts (e.g., 22:00Z -> 02:00 Local)
+      const buffer = 4 * 60 * 60 * 1000;
+      const shifted = new Date(date.getTime() + buffer);
+      const year = shifted.getUTCFullYear();
+      const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(shifted.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.findById(id, client);
-      if (!booking) throw new NotFoundException(`Booking with ID ${id} not found`);
+      const existing = await this.bookingsRepository.findById(id, client);
+      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+
+      // 1. Validate Date Order
+      const newStart = data.startDate ? new Date(data.startDate) : existing.startDate;
+      const newEnd = data.endDate ? new Date(data.endDate) : existing.endDate;
+
+      if (newStart > newEnd) {
+        throw new BadRequestException(`Start date must be before or equal to end date`);
+      }
+
+      // 2. Enforce "Golden Rule"
+      const isFinal =
+        existing.status === BookingOpsStatus.COMPLETED ||
+        existing.status === BookingOpsStatus.CANCELLED ||
+        existing.status === BookingOpsStatus.REJECTED;
+
+      const existingStartStr = toDateString(existing.startDate);
+      const existingEndStr = toDateString(existing.endDate);
+      const inputStartStr = data.startDate ? toDateString(data.startDate) : null;
+      const inputEndStr = data.endDate ? toDateString(data.endDate) : null;
+
+      this.logger.debug(
+        {
+          bookingId: id,
+          existingStartStr,
+          inputStartStr,
+          existingEndStr,
+          inputEndStr,
+        },
+        'Date comparison details',
+      );
+
+      // Cannot change START DATE after check-in or if finalized
+      if (inputStartStr && inputStartStr !== existingStartStr) {
+        if (existing.status === BookingOpsStatus.ACTIVE || isFinal) {
+          throw new BadRequestException(
+            'Cannot change the start date of an active or finalized booking.',
+          );
+        }
+      }
+
+      // Cannot change END DATE if finalized
+      if (inputEndStr && inputEndStr !== existingEndStr) {
+        if (isFinal) {
+          throw new BadRequestException('Cannot change the end date of a finalized booking.');
+        }
+      }
 
       const updated = await this.bookingsRepository.update(id, data, client);
 
@@ -360,7 +446,32 @@ export class BookingsService {
           actionType: UndoActionType.UPDATE_BOOKING,
           entityType: 'booking',
           entityId: id,
-          undoData: booking,
+          undoData: existing,
+          description: `Adjusted dates for booking ${id}`,
+        },
+        client,
+      );
+
+      return updated!;
+    }, context);
+  }
+
+  async update(id: string, data: UpdateBookingDto, context: AuditUserContext): Promise<Booking> {
+    this.logger.log({ bookingId: id, data }, 'Updating booking');
+
+    return this.db.transaction(async (client) => {
+      const existing = await this.bookingsRepository.findById(id, client);
+      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+
+      const updated = await this.bookingsRepository.update(id, data, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_BOOKING,
+          entityType: 'booking',
+          entityId: id,
+          undoData: existing,
           description: `Updated booking ${id}`,
         },
         client,

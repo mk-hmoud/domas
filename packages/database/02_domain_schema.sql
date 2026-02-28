@@ -261,7 +261,8 @@ CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES students(id),
     bed_id INT NOT NULL REFERENCES beds(id), -- reserve bed
-    semester_id INT REFERENCES semesters(id),
+    semester_id INT NOT NULL REFERENCES semesters(id),
+    previous_booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL,
     
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,

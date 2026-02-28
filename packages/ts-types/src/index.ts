@@ -51,6 +51,7 @@ export * from "./dtos/find-all-semesters.dto";
 export * from "./dtos/find-all-users.dto";
 export * from "./dtos/create-booking.dto";
 export * from "./dtos/update-booking.dto";
+export * from "./dtos/update-booking-dates.dto";
 export * from "./dtos/approve-financials.dto";
 export * from "./dtos/search-audit.dto";
 export * from "./dtos/create-student.dto";

@@ -21,6 +21,7 @@ export class BookingsRepository {
       studentId: row.student_id,
       bedId: row.bed_id,
       semesterId: row.semester_id,
+      previousBookingId: row.previous_booking_id,
       startDate: row.start_date,
       endDate: row.end_date,
       status: row.status,
@@ -37,23 +38,25 @@ export class BookingsRepository {
     });
   }
 
-  async create(data: CreateBookingDto, client?: PoolClient): Promise<Booking> {
+  async create(data: Partial<Booking>, client?: PoolClient): Promise<Booking> {
     const query = `
       INSERT INTO bookings (
-        student_id, bed_id, semester_id, start_date, end_date, status, payment_status
+        student_id, bed_id, semester_id, previous_booking_id, start_date, end_date, status, payment_status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
     const values = [
       data.studentId,
       data.bedId,
       data.semesterId,
+      data.previousBookingId || null,
       data.startDate,
       data.endDate,
       data.status || BookingOpsStatus.PENDING_ACCOUNTING,
       data.paymentStatus || PaymentStatus.PENDING,
     ];
+
     const result = await this.getClient(client).query(query, values);
     return this.mapRowToEntity(result.rows[0]);
   }

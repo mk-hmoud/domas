@@ -3,6 +3,7 @@ import {
   Booking,
   CreateBookingDto,
   UpdateBookingDto,
+  UpdateBookingDatesDto,
   ApproveFinancialsDto,
   BookingOpsStatus,
   CheckInBookingDto,
@@ -32,6 +33,17 @@ export const bookings = {
 
   update: async (id: string, data: UpdateBookingDto): Promise<Booking> => {
     const response = await apiClient.patch<Booking>(`/bookings/${id}`, data);
+    return response.data;
+  },
+
+  adjustDates: async (
+    id: string,
+    data: UpdateBookingDatesDto,
+  ): Promise<Booking> => {
+    const response = await apiClient.patch<Booking>(
+      `/bookings/${id}/dates`,
+      data,
+    );
     return response.data;
   },
 
