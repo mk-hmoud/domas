@@ -7,6 +7,12 @@ export class UpdateBedTrOnlyDto {
   isTrOnly!: boolean;
 }
 
+export class UpdateBedForeignerOnlyDto {
+  @IsBoolean()
+  @IsNotEmpty()
+  isForeignerOnly!: boolean;
+}
+
 export class UpdateBedGuestZoneDto {
   @IsBoolean()
   @IsNotEmpty()

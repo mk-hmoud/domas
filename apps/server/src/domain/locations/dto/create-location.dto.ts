@@ -35,6 +35,10 @@ export class CreateLocationDto {
   @IsOptional()
   isTrOnly?: boolean = false;
 
+  @IsBoolean()
+  @IsOptional()
+  isForeignerOnly?: boolean = false;
+
   @IsEnum(LocationOwnership)
   @IsOptional()
   ownership?: LocationOwnership = LocationOwnership.DORM;

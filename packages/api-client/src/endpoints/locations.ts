@@ -11,10 +11,12 @@ import {
   UpdateGenderLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
+  UpdateForeignerOnlyDto,
   UpdateOwnershipDto,
   BulkUpdateGenderLockDto,
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
+  BulkUpdateForeignerOnlyDto,
   BulkUpdateOwnershipDto,
   CreateRoomWithBedsDto,
   BulkCreateRoomWithBedsDto,
@@ -138,6 +140,17 @@ export const locations = {
     return response.data;
   },
 
+  updateForeignerOnly: async (
+    id: number,
+    data: UpdateForeignerOnlyDto,
+  ): Promise<Location> => {
+    const response = await apiClient.patch<Location>(
+      `/locations/${id}/foreigner-only`,
+      data,
+    );
+    return response.data;
+  },
+
   updateOwnership: async (
     id: number,
     data: UpdateOwnershipDto,
@@ -165,6 +178,12 @@ export const locations = {
 
   updateTrOnlyMany: async (data: BulkUpdateTrOnlyDto): Promise<void> => {
     await apiClient.patch("/locations/bulk-tr-only", data);
+  },
+
+  updateForeignerOnlyMany: async (
+    data: BulkUpdateForeignerOnlyDto,
+  ): Promise<void> => {
+    await apiClient.patch("/locations/bulk-foreigner-only", data);
   },
 
   updateOwnershipMany: async (data: BulkUpdateOwnershipDto): Promise<void> => {

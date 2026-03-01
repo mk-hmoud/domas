@@ -63,6 +63,7 @@ CREATE TABLE locations (
     -- Guest Isolation
     is_guest_zone BOOLEAN DEFAULT FALSE,
     is_tr_only BOOLEAN DEFAULT FALSE,
+    is_foreigner_only BOOLEAN DEFAULT FALSE,
     ownership location_ownership_type DEFAULT 'dorm',
     
     -- Room Specifics (Only used if type = 'room')
@@ -240,6 +241,7 @@ CREATE TABLE beds (
     
     -- constraints
     is_tr_only BOOLEAN DEFAULT FALSE,
+    is_foreigner_only BOOLEAN DEFAULT FALSE,
     is_guest_zone BOOLEAN DEFAULT FALSE,
     ownership location_ownership_type DEFAULT 'dorm',
     

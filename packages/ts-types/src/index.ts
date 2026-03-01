@@ -61,12 +61,30 @@ export * from "./dtos/update-student.dto";
 export * from "./dtos/find-all-students.dto";
 export * from "./dtos/bulk-student.dto";
 export * from "./dtos/update-student-status.dto";
-export * from "./dtos/update-policies.dto";
-export * from "./dtos/bulk-update-policies.dto";
+export type {
+  UpdateGenderLockDto,
+  UpdateGuestZoneDto,
+  UpdateTrOnlyDto,
+  UpdateForeignerOnlyDto,
+  UpdateOwnershipDto,
+  BulkUpdateGenderLockDto,
+  BulkUpdateGuestZoneDto,
+  BulkUpdateTrOnlyDto,
+  BulkUpdateForeignerOnlyDto,
+  BulkUpdateOwnershipDto,
+} from "./dtos/update-policies.dto";
 export * from "./dtos/create-room-with-beds.dto";
 export * from "./dtos/bulk-bed.dto";
-export * from "./dtos/update-bed-policies.dto";
-export * from "./dtos/bulk-update-bed-policies.dto";
+export type {
+  UpdateBedTrOnlyDto,
+  UpdateBedForeignerOnlyDto,
+  UpdateBedGuestZoneDto,
+  UpdateBedOwnershipDto,
+  BulkUpdateBedTrOnlyDto,
+  BulkUpdateBedForeignerOnlyDto,
+  BulkUpdateBedGuestZoneDto,
+  BulkUpdateBedOwnershipDto,
+} from "./dtos/update-bed-policies.dto";
 export * from "./dtos/account.dto";
 export * from "./dtos/inventory.dto";
 export * from "./dtos/access-card.dto";

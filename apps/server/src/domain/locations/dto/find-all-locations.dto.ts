@@ -27,6 +27,11 @@ export class FindAllLocationsDto extends PaginationDto {
   @IsBoolean()
   @IsOptional()
   @Type(() => Boolean)
+  isForeignerOnly?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Type(() => Boolean)
   isGuestZone?: boolean;
 
   @IsEnum(LocationOwnership)

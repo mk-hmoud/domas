@@ -7,6 +7,7 @@ export class Bed {
   label!: string;
   status!: BedStatus;
   isTrOnly!: boolean;
+  isForeignerOnly!: boolean;
   isGuestZone!: boolean;
   ownership!: LocationOwnership;
   updatedAt!: Date;

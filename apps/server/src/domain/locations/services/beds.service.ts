@@ -7,11 +7,13 @@ import { UpdateBedDto } from '../dto/update-bed.dto';
 import { BulkCreateBedDto, BulkDeleteBedDto, BulkUpdateBedStatusDto } from '../dto/bulk-bed.dto';
 import {
   UpdateBedTrOnlyDto,
+  UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
   UpdateBedOwnershipDto,
 } from '../dto/update-bed-policies.dto';
 import {
   BulkUpdateBedTrOnlyDto,
+  BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
   BulkUpdateBedOwnershipDto,
 } from '../dto/bulk-update-bed-policies.dto';
@@ -204,6 +206,33 @@ export class BedsService {
     }, context);
   }
 
+  async updateForeignerOnly(
+    id: number,
+    isForeignerOnly: boolean,
+    context: AuditUserContext,
+  ): Promise<Bed> {
+    return this.db.transaction(async (client) => {
+      const bed = await this.bedsRepository.findById(id, client);
+      if (!bed) throw new NotFoundException(`Bed with ID ${id} not found`);
+
+      const updated = await this.bedsRepository.updateForeignerOnly(id, isForeignerOnly, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_BED_FOREIGNER_ONLY,
+          entityType: 'bed',
+          entityId: id.toString(),
+          undoData: { previousForeignerOnly: bed.isForeignerOnly },
+          description: `Updated Foreigner-only status on bed ${bed.label}`,
+        },
+        client,
+      );
+
+      return updated;
+    }, context);
+  }
+
   async updateOwnership(id: number, ownership: any, context: AuditUserContext): Promise<Bed> {
     return this.db.transaction(async (client) => {
       const bed = await this.bedsRepository.findById(id, client);
@@ -282,6 +311,17 @@ export class BedsService {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.bedsRepository.updateTrOnly(id, dto.isTrOnly, client);
+      }
+    }, context);
+  }
+
+  async updateForeignerOnlyMany(
+    dto: BulkUpdateBedForeignerOnlyDto,
+    context: AuditUserContext,
+  ): Promise<void> {
+    return this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.bedsRepository.updateForeignerOnly(id, dto.isForeignerOnly, client);
       }
     }, context);
   }

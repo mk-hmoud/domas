@@ -70,6 +70,12 @@ export class BookingsService {
       throw new BadRequestException('This location is reserved for Turkish citizens only');
     }
 
+    // 2.1 Check Foreigner Only Constraint (Explicit)
+    const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
+    if (isForeignerOnly && student.nationalityCode === 'TR') {
+      throw new BadRequestException('This location is reserved for foreign students only');
+    }
+
     // 3. Check Ownership Constraint (Rectorate - Explicit)
     const isRectorate =
       room.ownership === LocationOwnership.RECTORATE ||

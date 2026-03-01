@@ -31,6 +31,11 @@ export class FindAllBedsDto extends PaginationDto {
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
+  isForeignerOnly?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
   isGuestZone?: boolean;
 
   @IsOptional()

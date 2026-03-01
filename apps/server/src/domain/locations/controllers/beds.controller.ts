@@ -17,12 +17,14 @@ import { CreateBedDto } from '../dto/create-bed.dto';
 import { UpdateBedDto } from '../dto/update-bed.dto';
 import {
   UpdateBedTrOnlyDto,
+  UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
   UpdateBedOwnershipDto,
 } from '../dto/update-bed-policies.dto';
 import { BulkCreateBedDto, BulkDeleteBedDto, BulkUpdateBedStatusDto } from '../dto/bulk-bed.dto';
 import {
   BulkUpdateBedTrOnlyDto,
+  BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
   BulkUpdateBedOwnershipDto,
 } from '../dto/bulk-update-bed-policies.dto';
@@ -78,6 +80,16 @@ export class BedsController {
     return this.bedsService.updateTrOnlyMany(dto, context);
   }
 
+  @Patch('bulk-foreigner-only')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateForeignerOnlyMany(
+    @Body() dto: BulkUpdateBedForeignerOnlyDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.bedsService.updateForeignerOnlyMany(dto, context);
+  }
+
   @Patch('bulk-ownership')
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -128,6 +140,16 @@ export class BedsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.bedsService.updateTrOnly(id, dto.isTrOnly, context);
+  }
+
+  @Patch(':id/foreigner-only')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateForeignerOnly(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateBedForeignerOnlyDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.bedsService.updateForeignerOnly(id, dto.isForeignerOnly, context);
   }
 
   @Patch(':id/ownership')

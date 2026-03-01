@@ -11,6 +11,16 @@ export class BulkUpdateBedTrOnlyDto {
   isTrOnly!: boolean;
 }
 
+export class BulkUpdateBedForeignerOnlyDto {
+  @IsArray()
+  @IsInt({ each: true })
+  ids!: number[];
+
+  @IsBoolean()
+  @IsNotEmpty()
+  isForeignerOnly!: boolean;
+}
+
 export class BulkUpdateBedGuestZoneDto {
   @IsArray()
   @IsInt({ each: true })

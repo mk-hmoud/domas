@@ -26,6 +26,7 @@ export class LocationsRepository implements ILocationsRepository {
       gender_lock as "genderLock", 
       is_guest_zone as "isGuestZone", 
       is_tr_only as "isTrOnly",
+      is_foreigner_only as "isForeignerOnly",
       ownership,
       base_price as "basePrice", 
       created_at as "createdAt", 
@@ -36,9 +37,9 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, ownership, base_price
+        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, base_price
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -48,6 +49,7 @@ export class LocationsRepository implements ILocationsRepository {
       data.genderLock || null,
       data.isGuestZone || false,
       data.isTrOnly || false,
+      data.isForeignerOnly || false,
       data.ownership || LocationOwnership.DORM,
       data.basePrice || null,
     ];
@@ -63,6 +65,7 @@ export class LocationsRepository implements ILocationsRepository {
       type,
       genderLock,
       isTrOnly,
+      isForeignerOnly,
       isGuestZone,
       ownership,
       parentId,
@@ -89,6 +92,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (isTrOnly !== undefined) {
       params.push(isTrOnly);
       conditions.push(`l.is_tr_only = $${params.length}`);
+    }
+    if (isForeignerOnly !== undefined) {
+      params.push(isForeignerOnly);
+      conditions.push(`l.is_foreigner_only = $${params.length}`);
     }
     if (isGuestZone !== undefined) {
       params.push(isGuestZone);
@@ -118,7 +125,7 @@ export class LocationsRepository implements ILocationsRepository {
     let baseQuery = `
       SELECT 
         l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock", 
-        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.ownership,
+        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
         l.base_price as "basePrice", l.created_at as "createdAt", l.updated_at as "updatedAt",
         ${totalBedsSub} as "totalBeds",
         ${occupiedBedsSub} as "occupiedBeds",
@@ -250,6 +257,7 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
     if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
+    if (data.isForeignerOnly !== undefined) addUpdate('is_foreigner_only', data.isForeignerOnly);
     if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
 
     if (updates.length === 0) {
@@ -298,6 +306,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.isTrOnly !== undefined) {
       updates.push(`is_tr_only = $${paramIndex++}`);
       values.push(data.isTrOnly);
+    }
+    if (data.isForeignerOnly !== undefined) {
+      updates.push(`is_foreigner_only = $${paramIndex++}`);
+      values.push(data.isForeignerOnly);
     }
     if (data.ownership !== undefined) {
       updates.push(`ownership = $${paramIndex++}`);
@@ -475,6 +487,45 @@ export class LocationsRepository implements ILocationsRepository {
     }
 
     target.isTrOnly = isTrOnly;
+    return target;
+  }
+
+  async updateForeignerOnly(
+    id: number,
+    isForeignerOnly: boolean,
+    cascade: boolean,
+    client?: PoolClient,
+  ): Promise<Location> {
+    const target = await this.findById(id, client);
+    if (!target) throw new Error('Location not found');
+
+    const dbClient = this.getClient(client);
+
+    if (cascade) {
+      await dbClient.query(
+        `UPDATE locations SET is_foreigner_only = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isForeignerOnly, target.treePath],
+      );
+      await dbClient.query(
+        `
+        UPDATE beds SET is_foreigner_only = $1 
+        WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
+          AND deleted_at IS NULL
+      `,
+        [isForeignerOnly, target.treePath],
+      );
+    } else {
+      await dbClient.query(
+        `UPDATE locations SET is_foreigner_only = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isForeignerOnly, id],
+      );
+      await dbClient.query(
+        `UPDATE beds SET is_foreigner_only = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isForeignerOnly, id],
+      );
+    }
+
+    target.isForeignerOnly = isForeignerOnly;
     return target;
   }
 
