@@ -59,8 +59,4 @@ export class CreateSemesterDto {
   @IsEnum(SemesterStatus)
   @IsOptional()
   status?: SemesterStatus = SemesterStatus.PLANNED;
-
-  @IsBoolean()
-  @IsOptional()
-  autoActivate?: boolean = true;
 }

@@ -15,7 +15,6 @@ export class Semester {
   foreignCurrencyCode!: string;
   paymentDeadlineDate?: Date;
   status!: SemesterStatus;
-  autoActivate!: boolean;
   createdAt!: Date;
   updatedAt!: Date;
   createdBy?: string;

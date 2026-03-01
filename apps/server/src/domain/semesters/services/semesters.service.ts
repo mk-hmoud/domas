@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SemestersRepository } from '../repositories/semesters.repository';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
@@ -14,12 +15,47 @@ import { BookingsRepository } from '../../bookings/repositories/bookings.reposit
 
 @Injectable()
 export class SemestersService {
+  private readonly logger = new Logger(SemestersService.name);
+
   constructor(
     private readonly semestersRepository: SemestersRepository,
     private readonly bookingsRepository: BookingsRepository,
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleAutoTransitions() {
+    this.logger.log('Checking for automatic semester transitions...');
+    const pending = await this.semestersRepository.findPendingAutoTransitions();
+
+    if (pending.length === 0) {
+      return;
+    }
+
+    for (const semester of pending) {
+      try {
+        let newStatus: SemesterStatus | null = null;
+
+        if (semester.status === SemesterStatus.PLANNED) {
+          newStatus = SemesterStatus.OPEN;
+        } else if (semester.status === SemesterStatus.OPEN) {
+          newStatus = SemesterStatus.ACTIVE;
+        }
+
+        if (newStatus) {
+          this.logger.log(`Auto-transitioning semester ${semester.displayName} to ${newStatus}...`);
+          await this.updateStatus(semester.id, newStatus, {
+            userId: '00000000-0000-0000-0000-000000000000', // System
+            username: 'system',
+            ipAddress: '127.0.0.1',
+          });
+        }
+      } catch (error: any) {
+        this.logger.error(`Failed to auto-transition semester ${semester.id}: ${error.message}`);
+      }
+    }
+  }
 
   private async validateStatusTransition(
     currentStatus: SemesterStatus,

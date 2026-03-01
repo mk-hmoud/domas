@@ -30,7 +30,6 @@ export class SemestersRepository {
       foreign_currency_code as "foreignCurrencyCode",
       payment_deadline_date as "paymentDeadlineDate",
       status,
-      auto_activate as "autoActivate",
       created_at as "createdAt", 
       updated_at as "updatedAt",
       created_by as "createdBy"
@@ -49,9 +48,9 @@ export class SemestersRepository {
       INSERT INTO semesters (
         type, academic_year, display_name, start_date, end_date, booking_start_date, booking_end_date,
         deposit_amount_try, deposit_amount_foreign, foreign_currency_code, payment_deadline_date,
-        status, auto_activate
+        status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -67,7 +66,6 @@ export class SemestersRepository {
       data.foreignCurrencyCode || 'EUR',
       data.paymentDeadlineDate || null,
       data.status,
-      data.autoActivate || false,
     ];
     const result = await this.getClient(client).query<Semester>(query, values);
     return new Semester(result.rows[0]);
@@ -148,7 +146,6 @@ export class SemestersRepository {
     if (data.paymentDeadlineDate !== undefined)
       addUpdate('payment_deadline_date', data.paymentDeadlineDate);
     if (data.status) addUpdate('status', data.status);
-    if (data.autoActivate !== undefined) addUpdate('auto_activate', data.autoActivate);
 
     if (updates.length === 0) {
       return this.findById(id, client);
@@ -180,5 +177,15 @@ export class SemestersRepository {
     // But this method was generic "turn off all".
     const query = `UPDATE semesters SET status = 'closed' WHERE status = 'active'`;
     await this.getClient(client).query(query);
+  }
+
+  async findPendingAutoTransitions(client?: PoolClient): Promise<Semester[]> {
+    const query = `
+      SELECT ${this.selectColumns}
+      FROM semesters
+      WHERE status = 'open' AND start_date <= CURRENT_DATE
+    `;
+    const result = await this.getClient(client).query<Semester>(query);
+    return result.rows.map((r) => new Semester(r));
   }
 }

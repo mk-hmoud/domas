@@ -210,7 +210,6 @@ CREATE TABLE semesters (
     
     -- 5. Lifecycle
     status semester_status_enum DEFAULT 'planned',
-    auto_activate BOOLEAN DEFAULT TRUE,    
     
     -- Meta
     created_at TIMESTAMPTZ DEFAULT NOW(),

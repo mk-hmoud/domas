@@ -426,19 +426,6 @@ export function SharedSemestersPage() {
               </Box>
             </Group>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("semester.auto_activate", {
-                    defaultValue: "Auto Activate",
-                  })}
-                </Text>
-                <Badge color={viewSemester.autoActivate ? "blue" : "gray"}>
-                  {viewSemester.autoActivate ? t("active") : t("inactive")}
-                </Badge>
-              </Box>
-            </Group>
-
             <Button
               variant="light"
               leftSection={<IconEdit size={16} />}

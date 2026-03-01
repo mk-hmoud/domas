@@ -709,7 +709,6 @@ export class UndoService {
       foreignCurrencyCode: 'foreign_currency_code',
       paymentDeadlineDate: 'payment_deadline_date',
       status: 'status',
-      autoActivate: 'auto_activate',
     };
 
     const updates: string[] = [];

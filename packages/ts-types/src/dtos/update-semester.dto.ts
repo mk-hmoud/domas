@@ -13,5 +13,4 @@ export interface UpdateSemesterDto {
   foreignCurrencyCode?: string;
   paymentDeadlineDate?: string;
   status?: SemesterStatus;
-  autoActivate?: boolean;
 }
