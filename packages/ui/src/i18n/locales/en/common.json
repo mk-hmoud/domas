@@ -339,6 +339,8 @@
   "application": "Application",
   "create_new_booking": "Create New Booking",
   "create_booking": "Create Booking",
+  "stay_period": "Stay Period",
+  "modify_stay_period": "Modify Stay Period",
   "select_student": "Select Student",
   "select_student_first": "Select a student first",
   "select_semester": "Select Semester",
@@ -560,6 +562,7 @@
   "time": "Time",
   "undone": "Undone",
   "no_eligible_beds_available": "No eligible beds available in this location.",
+  "out_of_bounds_warning": "Note: Custom dates fall outside the standard semester period.",
   "auto_create_beds": "Auto Create Beds (A, B, C...)",
   "bed_count": "Bed Count",
 

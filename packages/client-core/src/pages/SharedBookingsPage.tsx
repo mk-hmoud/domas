@@ -14,8 +14,16 @@ import {
   Badge,
   TextInput,
   Card,
+  Divider,
+  SimpleGrid,
+  Alert,
 } from "@mantine/core";
-import { IconPlus, IconSearch, IconEdit } from "@tabler/icons-react";
+import {
+  IconPlus,
+  IconSearch,
+  IconEdit,
+  IconInfoCircle,
+} from "@tabler/icons-react";
 import { bookings, students, beds, semesters } from "@domas/api-client";
 import {
   Booking,
@@ -28,9 +36,13 @@ import { CreateBookingModal, BookingsTable } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import { DatePickerInput } from "@mantine/dates";
+import { useAuth } from "../context/AuthContext";
+import dayjs from "dayjs";
 
 export function SharedBookingsPage() {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
   const [data, setData] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpened, setModalOpened] = useState(false);
@@ -40,6 +52,11 @@ export function SharedBookingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300);
 
+  // Date Editing State (Inline Drawer)
+  const [isEditingDates, setIsEditingDates] = useState(false);
+  const [editStartDate, setEditStartDate] = useState<Date | null>(null);
+  const [editEndDate, setEditEndDate] = useState<Date | null>(null);
+
   // Data for modal & mapping
   const [studentList, setStudentList] = useState<Student[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
@@ -47,6 +64,10 @@ export function SharedBookingsPage() {
   const [studentsMap, setStudentsMap] = useState<Map<string, string>>(
     new Map(),
   );
+
+  // Full Edit State
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -107,17 +128,84 @@ export function SharedBookingsPage() {
   useEffect(() => {
     if (modalOpened) {
       fetchModalData();
+    } else {
+      // Clear edit info when modal closes
+      setIsEditMode(false);
+      setBookingToEdit(null);
     }
   }, [modalOpened]);
 
-  const handleCreateBooking = async (values: CreateBookingDto) => {
+  useEffect(() => {
+    if (selectedBooking) {
+      setEditStartDate(new Date(selectedBooking.startDate));
+      setEditEndDate(new Date(selectedBooking.endDate));
+      setIsEditingDates(false);
+    }
+  }, [selectedBooking]);
+
+  const handleUpdateDates = async () => {
+    if (!selectedBooking || !editStartDate || !editEndDate) return;
+
+    setLoading(true);
     try {
-      await bookings.create(values);
+      const start = new Date(editStartDate);
+      const end = new Date(editEndDate);
+
+      await bookings.adjustDates(selectedBooking.id, {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+      });
       notifications.show({
         title: t("success"),
-        message: t("booking_created", "Booking created successfully"),
+        message: t("stay_period_updated", "Stay period updated successfully"),
         color: "green",
       });
+      await fetchBookings();
+      setIsEditingDates(false);
+      // Update local selection to reflect new dates
+      setSelectedBooking((prev) =>
+        prev
+          ? {
+              ...prev,
+              startDate: start.toISOString(),
+              endDate: end.toISOString(),
+            }
+          : null,
+      );
+    } catch (error: any) {
+      notifications.show({
+        title: t("error"),
+        message: error.response?.data?.message || t("failed_to_update_period"),
+        color: "red",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditClick = (booking: Booking) => {
+    setBookingToEdit(booking);
+    setIsEditMode(true);
+    setModalOpened(true);
+  };
+
+  const handleCreateBooking = async (values: CreateBookingDto) => {
+    try {
+      if (isEditMode && bookingToEdit) {
+        await bookings.update(bookingToEdit.id, values);
+        notifications.show({
+          title: t("success"),
+          message: t("booking_updated", "Booking updated successfully"),
+          color: "green",
+        });
+      } else {
+        await bookings.create(values);
+        notifications.show({
+          title: t("success"),
+          message: t("booking_created", "Booking created successfully"),
+          color: "green",
+        });
+      }
       await fetchBookings();
       setModalOpened(false);
     } catch (error) {
@@ -196,7 +284,7 @@ export function SharedBookingsPage() {
           bedsMap={bedsMap}
           onSelect={setSelectedBooking}
           onView={setSelectedBooking}
-          onEdit={(booking) => console.log("Edit", booking)}
+          onEdit={handleEditClick}
           onDelete={(booking) => console.log("Delete", booking)}
         />
         {filteredData.length === 0 && !loading && (
@@ -215,10 +303,10 @@ export function SharedBookingsPage() {
           value: s.id,
           label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
         }))}
-        semesters={allSemesters.map((s) => ({
-          value: s.id.toString(),
-          label: s.displayName,
-        }))}
+        semesters={allSemesters}
+        initialStudentId={isEditMode ? bookingToEdit?.studentId : null}
+        initialBedId={isEditMode ? bookingToEdit?.bedId : null}
+        isEdit={isEditMode}
       />
 
       <Drawer
@@ -240,6 +328,115 @@ export function SharedBookingsPage() {
 
             <Box>
               <Text size="xs" c="dimmed">
+                ID
+              </Text>
+              <Code>{selectedBooking.id}</Code>
+            </Box>
+
+            <Divider
+              label={t("stay_period", "Stay Period")}
+              labelPosition="center"
+            />
+
+            {!isEditingDates ? (
+              <Stack gap="xs">
+                <Group grow>
+                  <Box>
+                    <Text size="xs" c="dimmed">
+                      {t("start_date")}
+                    </Text>
+                    <Text>
+                      {new Date(selectedBooking.startDate).toLocaleDateString()}
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Text size="xs" c="dimmed">
+                      {t("end_date")}
+                    </Text>
+                    <Text>
+                      {new Date(selectedBooking.endDate).toLocaleDateString()}
+                    </Text>
+                  </Box>
+                </Group>
+                {hasPermission("bookings.update") && (
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    leftSection={<IconEdit size={14} />}
+                    onClick={() => setIsEditingDates(true)}
+                  >
+                    {t("modify_stay_period", "Modify Stay Period")}
+                  </Button>
+                )}
+              </Stack>
+            ) : (
+              <Stack gap="sm">
+                {(() => {
+                  const s = allSemesters.find(
+                    (sem) => sem.id === selectedBooking.semesterId,
+                  );
+                  if (
+                    s &&
+                    editStartDate &&
+                    editEndDate &&
+                    (dayjs(editStartDate).isBefore(dayjs(s.startDate), "day") ||
+                      dayjs(editEndDate).isAfter(dayjs(s.endDate), "day"))
+                  ) {
+                    return (
+                      <Alert
+                        color="orange"
+                        icon={<IconInfoCircle size={16} />}
+                        variant="light"
+                      >
+                        {t("out_of_bounds_warning")}
+                      </Alert>
+                    );
+                  }
+                  return null;
+                })()}
+                <SimpleGrid cols={2}>
+                  <DatePickerInput
+                    label={t("start_date")}
+                    value={editStartDate}
+                    onChange={setEditStartDate as any}
+                    required
+                    disabled={
+                      selectedBooking.status === "active" ||
+                      selectedBooking.status === "completed" ||
+                      selectedBooking.status === "cancelled" ||
+                      selectedBooking.status === "rejected"
+                    }
+                  />
+                  <DatePickerInput
+                    label={t("end_date")}
+                    value={editEndDate}
+                    onChange={setEditEndDate as any}
+                    required
+                    disabled={
+                      selectedBooking.status === "completed" ||
+                      selectedBooking.status === "cancelled" ||
+                      selectedBooking.status === "rejected"
+                    }
+                  />
+                </SimpleGrid>
+                <Group grow>
+                  <Button
+                    variant="default"
+                    onClick={() => setIsEditingDates(false)}
+                  >
+                    {t("cancel")}
+                  </Button>
+                  <Button onClick={handleUpdateDates} loading={loading}>
+                    {t("save_changes", "Save Changes")}
+                  </Button>
+                </Group>
+              </Stack>
+            )}
+
+            <Divider />
+
+            <Box>
+              <Text size="xs" c="dimmed">
                 {t("bed")}
               </Text>
               <Text fw={500}>
@@ -247,36 +444,10 @@ export function SharedBookingsPage() {
               </Text>
             </Box>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("start_date")}
-                </Text>
-                <Text>
-                  {new Date(selectedBooking.startDate).toLocaleDateString()}
-                </Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("end_date")}
-                </Text>
-                <Text>
-                  {new Date(selectedBooking.endDate).toLocaleDateString()}
-                </Text>
-              </Box>
-            </Group>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                ID
-              </Text>
-              <Code>{selectedBooking.id}</Code>
-            </Box>
-
             <Button
               variant="light"
               leftSection={<IconEdit size={16} />}
-              onClick={() => console.log("Edit", selectedBooking)}
+              onClick={() => handleEditClick(selectedBooking)}
             >
               {t("edit")}
             </Button>
