@@ -63,8 +63,4 @@ export class CreateSemesterDto {
   @IsBoolean()
   @IsOptional()
   autoActivate?: boolean = true;
-
-  @IsBoolean()
-  @IsOptional()
-  autoClose?: boolean = true;
 }

@@ -46,11 +46,28 @@ export class SemestersService {
       );
     }
 
-    // Special Rule: OPEN -> PLANNED requires 0 bookings
+    // 1. OPEN -> PLANNED requires 0 bookings
     if (currentStatus === SemesterStatus.OPEN && newStatus === SemesterStatus.PLANNED) {
       const count = await this.bookingsRepository.countBySemester(semesterId);
       if (count > 0) {
         throw new BadRequestException('Cannot revert to PLANNED because bookings exist');
+      }
+    }
+
+    // 2. ACTIVE -> CLOSED requires 0 Active or Ready-for-Checkin residents
+    if (currentStatus === SemesterStatus.ACTIVE && newStatus === SemesterStatus.CLOSED) {
+      const activeRes = await this.db.query(
+        `SELECT COUNT(*) FROM bookings 
+         WHERE semester_id = $1 
+         AND status IN ('active', 'ready_for_checkin')`,
+        [semesterId],
+      );
+      const activeCount = parseInt(activeRes.rows[0].count, 10);
+
+      if (activeCount > 0) {
+        throw new BadRequestException(
+          `Cannot close semester: ${activeCount} students are still checked-in or awaiting check-in. Please resolve all bookings first.`,
+        );
       }
     }
   }

@@ -14,5 +14,4 @@ export interface UpdateSemesterDto {
   paymentDeadlineDate?: string;
   status?: SemesterStatus;
   autoActivate?: boolean;
-  autoClose?: boolean;
 }

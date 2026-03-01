@@ -62,8 +62,4 @@ export class UpdateSemesterDto {
   @IsBoolean()
   @IsOptional()
   autoActivate?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  autoClose?: boolean;
 }

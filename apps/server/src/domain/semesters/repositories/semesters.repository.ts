@@ -31,7 +31,6 @@ export class SemestersRepository {
       payment_deadline_date as "paymentDeadlineDate",
       status,
       auto_activate as "autoActivate",
-      auto_close as "autoClose",
       created_at as "createdAt", 
       updated_at as "updatedAt",
       created_by as "createdBy"
@@ -50,9 +49,9 @@ export class SemestersRepository {
       INSERT INTO semesters (
         type, academic_year, display_name, start_date, end_date, booking_start_date, booking_end_date,
         deposit_amount_try, deposit_amount_foreign, foreign_currency_code, payment_deadline_date,
-        status, auto_activate, auto_close
+        status, auto_activate
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -69,7 +68,6 @@ export class SemestersRepository {
       data.paymentDeadlineDate || null,
       data.status,
       data.autoActivate || false,
-      data.autoClose || false,
     ];
     const result = await this.getClient(client).query<Semester>(query, values);
     return new Semester(result.rows[0]);
@@ -151,7 +149,6 @@ export class SemestersRepository {
       addUpdate('payment_deadline_date', data.paymentDeadlineDate);
     if (data.status) addUpdate('status', data.status);
     if (data.autoActivate !== undefined) addUpdate('auto_activate', data.autoActivate);
-    if (data.autoClose !== undefined) addUpdate('auto_close', data.autoClose);
 
     if (updates.length === 0) {
       return this.findById(id, client);

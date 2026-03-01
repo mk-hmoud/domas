@@ -710,7 +710,6 @@ export class UndoService {
       paymentDeadlineDate: 'payment_deadline_date',
       status: 'status',
       autoActivate: 'auto_activate',
-      autoClose: 'auto_close',
     };
 
     const updates: string[] = [];

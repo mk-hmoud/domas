@@ -54,7 +54,6 @@ export function SemesterModal({
       foreignCurrencyCode: "USD",
       status: SemesterStatus.PLANNED,
       autoActivate: false,
-      autoClose: false,
     },
     validate: {
       academicYear: (val) => (val ? null : t("field_required")),
@@ -95,7 +94,6 @@ export function SemesterModal({
           foreignCurrencyCode: initialValues.foreignCurrencyCode,
           status: initialValues.status,
           autoActivate: initialValues.autoActivate,
-          autoClose: initialValues.autoClose,
         });
       } else if (lastSemester) {
         // Smart Pre-fill Logic
@@ -134,7 +132,6 @@ export function SemesterModal({
           foreignCurrencyCode: lastSemester.foreignCurrencyCode,
           status: SemesterStatus.PLANNED,
           autoActivate: false,
-          autoClose: false,
         });
       } else {
         form.reset();
@@ -343,11 +340,6 @@ export function SemesterModal({
               })}
               checked={form.values.autoActivate}
               {...form.getInputProps("autoActivate", { type: "checkbox" })}
-            />
-            <Switch
-              label={t("semester.auto_close", { defaultValue: "Auto Close" })}
-              checked={form.values.autoClose}
-              {...form.getInputProps("autoClose", { type: "checkbox" })}
             />
           </Group>
 
