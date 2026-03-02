@@ -7,6 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { AccessCardsRepository } from '../repositories/access-cards.repository';
+import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { AccessCard } from '../entities/access-card.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
@@ -16,6 +17,7 @@ import { ReturnCardDto } from '../dto/return-card.dto';
 import { UpdateCardStatusDto } from '../dto/update-card-status.dto';
 import { CardStatus } from '../../../common/enums/card-status.enum';
 import { CardActionType } from '../../../common/enums/card-action-type.enum';
+import { LocationType } from '../../../common/enums/location-type.enum';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { PoolClient } from 'pg';
@@ -26,6 +28,7 @@ export class AccessCardsService {
 
   constructor(
     private readonly repository: AccessCardsRepository,
+    private readonly locationsRepository: LocationsRepository,
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
@@ -37,8 +40,22 @@ export class AccessCardsService {
     externalClient?: PoolClient,
   ) {
     const operation = async (client: PoolClient) => {
+      let batchName = `Batch ${data.rangeStart}-${data.rangeEnd}`;
+
+      if (data.locationId) {
+        const location = await this.locationsRepository.findById(data.locationId, client);
+        if (!location) throw new NotFoundException(`Location ${data.locationId} not found`);
+
+        if (location.type !== LocationType.BUILDING && location.type !== LocationType.BLOCK) {
+          throw new BadRequestException(
+            'Access card batches can only be associated with Buildings or Blocks',
+          );
+        }
+        batchName = `${location.name} (${data.rangeStart}-${data.rangeEnd})`;
+      }
+
       const batch = await this.repository.createBatch(
-        { ...data, createdBy: context.userId },
+        { ...data, name: batchName, createdBy: context.userId },
         client,
       );
       await this.repository.createCardsInBatch(batch.id, data.rangeStart, data.rangeEnd, client);
@@ -50,7 +67,7 @@ export class AccessCardsService {
           entityType: 'card_batch',
           entityId: batch.id.toString(),
           undoData: {},
-          description: `Created card batch ${batch.name} (${data.rangeStart}-${data.rangeEnd})`,
+          description: `Created card batch ${batch.name}`,
         },
         client,
       );

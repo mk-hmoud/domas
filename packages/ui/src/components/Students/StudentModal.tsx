@@ -155,7 +155,7 @@ export function StudentModal({
             {...form.getInputProps("studentNumber")}
           />
           <TextInput
-            label={t("national_id", { defaultValue: "National ID" })}
+            label={t("national_id")}
             required
             {...form.getInputProps("nationalId")}
           />

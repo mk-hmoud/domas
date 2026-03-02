@@ -44,6 +44,20 @@ export class BulkUpdateTrOnlyDto {
   cascade?: boolean = true;
 }
 
+export class BulkUpdateForeignerOnlyDto {
+  @IsArray()
+  @IsInt({ each: true })
+  ids!: number[];
+
+  @IsBoolean()
+  @IsNotEmpty()
+  isForeignerOnly!: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  cascade?: boolean = true;
+}
+
 export class BulkUpdateOwnershipDto {
   @IsArray()
   @IsInt({ each: true })

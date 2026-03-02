@@ -57,6 +57,7 @@ export function LocationRegistryFilters({
           {(filters.type ||
             filters.genderLock ||
             filters.isTrOnly ||
+            filters.isForeignerOnly ||
             filters.isGuestZone ||
             filters.ownership ||
             filters.onlyVacant ||
@@ -134,6 +135,14 @@ export function LocationRegistryFilters({
                 checked={filters.isTrOnly === true}
                 onChange={(e) =>
                   onFilterChange("isTrOnly", e.currentTarget.checked)
+                }
+                mb="xs"
+              />
+              <Checkbox
+                label={t("foreigner_only", "INT Only")}
+                checked={filters.isForeignerOnly === true}
+                onChange={(e) =>
+                  onFilterChange("isForeignerOnly", e.currentTarget.checked)
                 }
                 mb="xs"
               />

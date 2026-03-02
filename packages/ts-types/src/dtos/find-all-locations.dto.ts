@@ -9,6 +9,7 @@ export interface FindAllLocationsDto extends PaginationDto {
   type?: LocationType;
   genderLock?: GenderType;
   isTrOnly?: boolean;
+  isForeignerOnly?: boolean;
   isGuestZone?: boolean;
   ownership?: LocationOwnership;
   parentId?: number;

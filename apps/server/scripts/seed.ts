@@ -154,7 +154,6 @@ async function bootstrap() {
     if (!batches.find((b) => b.name === 'General Pool 2025')) {
       await accessCardsService.createBatch(
         {
-          name: 'General Pool 2025',
           rangeStart: 0,
           rangeEnd: 100,
           locationId: building.id,

@@ -24,6 +24,7 @@ export class BedsRepository implements IBedsRepository {
       label, 
       status, 
       is_tr_only as "isTrOnly",
+      is_foreigner_only as "isForeignerOnly",
       is_guest_zone as "isGuestZone",
       ownership,
       updated_at as "updatedAt"
@@ -32,8 +33,8 @@ export class BedsRepository implements IBedsRepository {
 
   async create(data: Partial<Bed>, client?: PoolClient): Promise<Bed> {
     const query = `
-      INSERT INTO beds (location_id, label, status, is_tr_only, is_guest_zone, ownership)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO beds (location_id, label, status, is_tr_only, is_foreigner_only, is_guest_zone, ownership)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -41,6 +42,7 @@ export class BedsRepository implements IBedsRepository {
       data.label,
       data.status || BedStatus.AVAILABLE,
       data.isTrOnly || false,
+      data.isForeignerOnly || false,
       data.isGuestZone || false,
       data.ownership || LocationOwnership.DORM,
     ];
@@ -56,6 +58,7 @@ export class BedsRepository implements IBedsRepository {
       status,
       genderLock,
       isTrOnly,
+      isForeignerOnly,
       isGuestZone,
       ownership,
       q,
@@ -69,6 +72,7 @@ export class BedsRepository implements IBedsRepository {
         b.label, 
         b.status, 
         b.is_tr_only as "isTrOnly", 
+        b.is_foreigner_only as "isForeignerOnly",
         b.is_guest_zone as "isGuestZone", 
         b.ownership, 
         b.updated_at as "updatedAt",
@@ -101,6 +105,10 @@ export class BedsRepository implements IBedsRepository {
     if (isTrOnly !== undefined) {
       conditions.push(`b.is_tr_only = $${values.length + 1}`);
       values.push(isTrOnly);
+    }
+    if (isForeignerOnly !== undefined) {
+      conditions.push(`b.is_foreigner_only = $${values.length + 1}`);
+      values.push(isForeignerOnly);
     }
     if (isGuestZone !== undefined) {
       conditions.push(`b.is_guest_zone = $${values.length + 1}`);
@@ -210,6 +218,22 @@ export class BedsRepository implements IBedsRepository {
       updates.push(`status = $${paramIndex++}`);
       values.push(data.status);
     }
+    if (data.isTrOnly !== undefined) {
+      updates.push(`is_tr_only = $${paramIndex++}`);
+      values.push(data.isTrOnly);
+    }
+    if (data.isForeignerOnly !== undefined) {
+      updates.push(`is_foreigner_only = $${paramIndex++}`);
+      values.push(data.isForeignerOnly);
+    }
+    if (data.isGuestZone !== undefined) {
+      updates.push(`is_guest_zone = $${paramIndex++}`);
+      values.push(data.isGuestZone);
+    }
+    if (data.ownership !== undefined) {
+      updates.push(`ownership = $${paramIndex++}`);
+      values.push(data.ownership);
+    }
 
     if (updates.length === 0) {
       const bed = await this.findById(id, client);
@@ -282,6 +306,8 @@ export class BedsRepository implements IBedsRepository {
         AND (l.gender_lock IS NULL OR l.gender_lock = $1)
         -- Explicit TR Only Check on the Room or the Bed
         AND ((l.is_tr_only = FALSE AND b.is_tr_only = FALSE) OR $2 = TRUE)
+        -- Explicit Foreigner Only Check on the Room or the Bed (isTurkish is $2)
+        AND ((l.is_foreigner_only = FALSE AND b.is_foreigner_only = FALSE) OR $2 = FALSE)
       ORDER BY l.name ASC, b.label ASC
     `;
 
@@ -292,6 +318,16 @@ export class BedsRepository implements IBedsRepository {
   async updateTrOnly(id: number, isTrOnly: boolean, client?: PoolClient): Promise<Bed> {
     const query = `UPDATE beds SET is_tr_only = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
     const result = await this.getClient(client).query<Bed>(query, [isTrOnly, id]);
+    return new Bed(result.rows[0]);
+  }
+
+  async updateForeignerOnly(
+    id: number,
+    isForeignerOnly: boolean,
+    client?: PoolClient,
+  ): Promise<Bed> {
+    const query = `UPDATE beds SET is_foreigner_only = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
+    const result = await this.getClient(client).query<Bed>(query, [isForeignerOnly, id]);
     return new Bed(result.rows[0]);
   }
 

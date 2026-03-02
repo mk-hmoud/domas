@@ -236,6 +236,18 @@ export class InventoryService {
     return this.inventoryRepository.findAvailableExtras();
   }
 
+  async cloneSnapshotsForBooking(
+    oldBookingId: string,
+    newBookingId: string,
+    client?: PoolClient,
+  ): Promise<void> {
+    this.logger.log(
+      { oldBookingId, newBookingId },
+      'Cloning inventory snapshots for booking transfer/renewal',
+    );
+    await this.inventoryRepository.cloneSnapshots(oldBookingId, newBookingId, client);
+  }
+
   async generateSnapshotForBooking(
     bookingId: string,
     bedId: number,

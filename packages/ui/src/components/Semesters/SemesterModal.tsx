@@ -3,7 +3,6 @@ import {
   Modal,
   Button,
   Group,
-  Switch,
   Select,
   NumberInput,
   SimpleGrid,
@@ -53,8 +52,6 @@ export function SemesterModal({
       depositAmountForeign: 0,
       foreignCurrencyCode: "USD",
       status: SemesterStatus.PLANNED,
-      autoActivate: false,
-      autoClose: false,
     },
     validate: {
       academicYear: (val) => (val ? null : t("field_required")),
@@ -94,8 +91,6 @@ export function SemesterModal({
           depositAmountForeign: initialValues.depositAmountForeign,
           foreignCurrencyCode: initialValues.foreignCurrencyCode,
           status: initialValues.status,
-          autoActivate: initialValues.autoActivate,
-          autoClose: initialValues.autoClose,
         });
       } else if (lastSemester) {
         // Smart Pre-fill Logic
@@ -133,8 +128,6 @@ export function SemesterModal({
           depositAmountForeign: lastSemester.depositAmountForeign,
           foreignCurrencyCode: lastSemester.foreignCurrencyCode,
           status: SemesterStatus.PLANNED,
-          autoActivate: false,
-          autoClose: false,
         });
       } else {
         form.reset();
@@ -335,21 +328,6 @@ export function SemesterModal({
             required
             {...form.getInputProps("status")}
           />
-
-          <Group>
-            <Switch
-              label={t("semester.auto_activate", {
-                defaultValue: "Auto Activate",
-              })}
-              checked={form.values.autoActivate}
-              {...form.getInputProps("autoActivate", { type: "checkbox" })}
-            />
-            <Switch
-              label={t("semester.auto_close", { defaultValue: "Auto Close" })}
-              checked={form.values.autoClose}
-              {...form.getInputProps("autoClose", { type: "checkbox" })}
-            />
-          </Group>
 
           <Group justify="flex-end" mt="xl">
             <Button variant="default" onClick={onClose}>

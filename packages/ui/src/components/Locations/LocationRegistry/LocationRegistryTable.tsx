@@ -115,6 +115,11 @@ export function LocationRegistryTable({
                 TR
               </Badge>
             )}
+            {item.isForeignerOnly && (
+              <Badge color="grape" variant="outline" size="xs">
+                INT
+              </Badge>
+            )}
             {item.isGuestZone && (
               <Badge color="orange" variant="outline" size="xs">
                 Guest

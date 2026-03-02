@@ -6,12 +6,14 @@ import {
   FindAllBedsDto,
   PaginatedResult,
   UpdateBedTrOnlyDto,
+  UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
   UpdateBedOwnershipDto,
   BulkCreateBedDto,
   BulkDeleteBedDto,
   BulkUpdateBedStatusDto,
   BulkUpdateBedTrOnlyDto,
+  BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
   BulkUpdateBedOwnershipDto,
 } from "@domas/ts-types";
@@ -51,6 +53,17 @@ export const beds = {
     return response.data;
   },
 
+  updateForeignerOnly: async (
+    id: number,
+    data: UpdateBedForeignerOnlyDto,
+  ): Promise<Bed> => {
+    const response = await apiClient.patch<Bed>(
+      `/beds/${id}/foreigner-only`,
+      data,
+    );
+    return response.data;
+  },
+
   updateOwnership: async (
     id: number,
     data: UpdateBedOwnershipDto,
@@ -82,6 +95,12 @@ export const beds = {
 
   updateTrOnlyMany: async (data: BulkUpdateBedTrOnlyDto): Promise<void> => {
     await apiClient.patch("/beds/bulk-tr-only", data);
+  },
+
+  updateForeignerOnlyMany: async (
+    data: BulkUpdateBedForeignerOnlyDto,
+  ): Promise<void> => {
+    await apiClient.patch("/beds/bulk-foreigner-only", data);
   },
 
   updateOwnershipMany: async (

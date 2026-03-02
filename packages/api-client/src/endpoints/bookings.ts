@@ -3,6 +3,9 @@ import {
   Booking,
   CreateBookingDto,
   UpdateBookingDto,
+  UpdateBookingDatesDto,
+  TransferBookingDto,
+  BulkTransferBookingDto,
   ApproveFinancialsDto,
   BookingOpsStatus,
   CheckInBookingDto,
@@ -32,6 +35,33 @@ export const bookings = {
 
   update: async (id: string, data: UpdateBookingDto): Promise<Booking> => {
     const response = await apiClient.patch<Booking>(`/bookings/${id}`, data);
+    return response.data;
+  },
+
+  adjustDates: async (
+    id: string,
+    data: UpdateBookingDatesDto,
+  ): Promise<Booking> => {
+    const response = await apiClient.patch<Booking>(
+      `/bookings/${id}/dates`,
+      data,
+    );
+    return response.data;
+  },
+
+  transfer: async (id: string, data: TransferBookingDto): Promise<Booking> => {
+    const response = await apiClient.post<Booking>(
+      `/bookings/${id}/transfer`,
+      data,
+    );
+    return response.data;
+  },
+
+  transferMany: async (data: BulkTransferBookingDto): Promise<Booking[]> => {
+    const response = await apiClient.post<Booking[]>(
+      "/bookings/bulk-transfer",
+      data,
+    );
     return response.data;
   },
 

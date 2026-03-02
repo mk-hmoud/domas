@@ -5,10 +5,6 @@ export class CreateCardBatchDto {
   @IsOptional()
   locationId?: number;
 
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
-
   @IsInt()
   @Min(1)
   @IsNotEmpty()

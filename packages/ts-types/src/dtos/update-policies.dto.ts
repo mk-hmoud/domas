@@ -16,7 +16,42 @@ export interface UpdateTrOnlyDto {
   cascade?: boolean;
 }
 
+export interface UpdateForeignerOnlyDto {
+  isForeignerOnly: boolean;
+  cascade?: boolean;
+}
+
 export interface UpdateOwnershipDto {
+  ownership: LocationOwnership;
+  cascade?: boolean;
+}
+
+export interface BulkUpdateGenderLockDto {
+  ids: number[];
+  genderLock: GenderType | null;
+  cascade?: boolean;
+}
+
+export interface BulkUpdateGuestZoneDto {
+  ids: number[];
+  isGuestZone: boolean;
+  cascade?: boolean;
+}
+
+export interface BulkUpdateTrOnlyDto {
+  ids: number[];
+  isTrOnly: boolean;
+  cascade?: boolean;
+}
+
+export interface BulkUpdateForeignerOnlyDto {
+  ids: number[];
+  isForeignerOnly: boolean;
+  cascade?: boolean;
+}
+
+export interface BulkUpdateOwnershipDto {
+  ids: number[];
   ownership: LocationOwnership;
   cascade?: boolean;
 }

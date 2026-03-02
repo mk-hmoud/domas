@@ -32,6 +32,16 @@ export class UpdateTrOnlyDto {
   cascade?: boolean = true;
 }
 
+export class UpdateForeignerOnlyDto {
+  @IsBoolean()
+  @IsNotEmpty()
+  isForeignerOnly!: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  cascade?: boolean = true;
+}
+
 export class UpdateOwnershipDto {
   @IsEnum(LocationOwnership)
   @IsNotEmpty()

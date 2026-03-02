@@ -14,8 +14,16 @@ import {
   BulkUpdateGenderLockDto,
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
+  BulkUpdateForeignerOnlyDto,
   BulkUpdateOwnershipDto,
 } from '../dto/bulk-update-policies.dto';
+import {
+  UpdateGenderLockDto,
+  UpdateGuestZoneDto,
+  UpdateTrOnlyDto,
+  UpdateForeignerOnlyDto,
+  UpdateOwnershipDto,
+} from '../dto/update-policies.dto';
 import { Location } from '../entities/location.entity';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
@@ -463,6 +471,66 @@ export class LocationsService {
     await this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.updateTrOnly(id, dto.isTrOnly, dto.cascade ?? true, context, client);
+      }
+    }, context);
+  }
+
+  async updateForeignerOnly(
+    id: number,
+    isForeignerOnly: boolean,
+    cascade: boolean,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+
+      const updated = await this.locationsRepository.updateForeignerOnly(
+        id,
+        isForeignerOnly,
+        cascade,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_FOREIGNER_ONLY,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousForeignerOnly: location.isForeignerOnly, cascade },
+          description: `Updated Foreigner-only status on ${location.name}`,
+        },
+        client,
+      );
+
+      return updated;
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ locationId: id, isForeignerOnly, cascade }, 'Updating Foreigner Only status');
+    return this.db.transaction(operation, context);
+  }
+
+  async updateForeignerOnlyMany(
+    dto: BulkUpdateForeignerOnlyDto,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log(
+      { count: dto.ids.length, isForeignerOnly: dto.isForeignerOnly },
+      'Bulk updating Foreigner Only',
+    );
+    await this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.updateForeignerOnly(
+          id,
+          dto.isForeignerOnly,
+          dto.cascade ?? true,
+          context,
+          client,
+        );
       }
     }, context);
   }

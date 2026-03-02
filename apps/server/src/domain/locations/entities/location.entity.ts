@@ -10,6 +10,7 @@ export class Location {
   genderLock!: GenderType | null;
   isGuestZone!: boolean;
   isTrOnly!: boolean;
+  isForeignerOnly!: boolean;
   ownership!: LocationOwnership;
   basePrice!: number | null;
   locationPath?: string;

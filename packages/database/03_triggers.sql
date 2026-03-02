@@ -267,27 +267,6 @@ ORDER BY event_timestamp DESC;
 -- BUSINESS LOGIC TRIGGERS
 -- =============================================
 
--- Validate booking dates against semester dates
-CREATE OR REPLACE FUNCTION validate_booking_dates()
-RETURNS TRIGGER AS $$
-DECLARE
-    sem_start DATE;
-    sem_end DATE;
-BEGIN
-    SELECT start_date, end_date INTO sem_start, sem_end
-    FROM semesters
-    WHERE id = NEW.semester_id;
-    
-    IF NEW.start_date < sem_start OR NEW.end_date > sem_end THEN
-        RAISE EXCEPTION 'Booking dates (% to %) must be within semester dates (% to %)',
-            NEW.start_date, NEW.end_date, sem_start, sem_end;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-
 -- Ensure beds can only be assigned to locations of type 'room'
 CREATE OR REPLACE FUNCTION validate_bed_location()
 RETURNS TRIGGER AS $$

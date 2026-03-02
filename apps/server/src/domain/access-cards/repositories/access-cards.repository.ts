@@ -19,7 +19,7 @@ export class AccessCardsRepository {
   // --- Batches ---
 
   async createBatch(
-    data: CreateCardBatchDto & { createdBy: string },
+    data: CreateCardBatchDto & { createdBy: string; name?: string },
     client?: PoolClient,
   ): Promise<CardBatch> {
     const query = `
@@ -31,7 +31,7 @@ export class AccessCardsRepository {
     `;
     const values = [
       data.locationId || null,
-      data.name,
+      data.name || null,
       data.rangeStart,
       data.rangeEnd,
       data.createdBy,

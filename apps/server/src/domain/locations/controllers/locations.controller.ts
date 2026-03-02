@@ -19,6 +19,7 @@ import {
   UpdateGenderLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
+  UpdateForeignerOnlyDto,
   UpdateOwnershipDto,
 } from '../dto/update-policies.dto';
 import {
@@ -30,6 +31,7 @@ import {
   BulkUpdateGenderLockDto,
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
+  BulkUpdateForeignerOnlyDto,
   BulkUpdateOwnershipDto,
 } from '../dto/bulk-update-policies.dto';
 import { CreateRoomWithBedsDto, BulkCreateRoomWithBedsDto } from '../dto/create-room-with-beds.dto';
@@ -113,6 +115,16 @@ export class LocationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   updateTrOnlyMany(@Body() dto: BulkUpdateTrOnlyDto, @UserContext() context: AuditUserContext) {
     return this.locationsService.updateTrOnlyMany(dto, context);
+  }
+
+  @Patch('bulk-foreigner-only')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  updateForeignerOnlyMany(
+    @Body() dto: BulkUpdateForeignerOnlyDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateForeignerOnlyMany(dto, context);
   }
 
   @Patch('bulk-ownership')
@@ -201,6 +213,21 @@ export class LocationsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.locationsService.updateTrOnly(id, dto.isTrOnly, dto.cascade ?? true, context);
+  }
+
+  @Patch(':id/foreigner-only')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateForeignerOnly(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateForeignerOnlyDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateForeignerOnly(
+      id,
+      dto.isForeignerOnly,
+      dto.cascade ?? true,
+      context,
+    );
   }
 
   @Patch(':id/ownership')

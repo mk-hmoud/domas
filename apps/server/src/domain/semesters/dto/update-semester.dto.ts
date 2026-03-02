@@ -58,12 +58,4 @@ export class UpdateSemesterDto {
   @IsEnum(SemesterStatus)
   @IsOptional()
   status?: SemesterStatus;
-
-  @IsBoolean()
-  @IsOptional()
-  autoActivate?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  autoClose?: boolean;
 }

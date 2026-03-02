@@ -35,6 +35,7 @@ export function BulkEditLocationModal({
   // States to track which fields to update
   const [updateOwnership, setUpdateOwnership] = useState(false);
   const [updateTrOnly, setUpdateTrOnly] = useState(false);
+  const [updateForeignerOnly, setUpdateForeignerOnly] = useState(false);
   const [updateGuestZone, setUpdateGuestZone] = useState(false);
   const [updateGenderLock, setUpdateGenderLock] = useState(false);
 
@@ -42,6 +43,7 @@ export function BulkEditLocationModal({
     initialValues: {
       ownership: LocationOwnership.DORM,
       isTrOnly: false,
+      isForeignerOnly: false,
       isGuestZone: false,
       genderLock: undefined,
     },
@@ -53,6 +55,7 @@ export function BulkEditLocationModal({
       const payload: UpdateLocationDto = {};
       if (updateOwnership) payload.ownership = values.ownership;
       if (updateTrOnly) payload.isTrOnly = values.isTrOnly;
+      if (updateForeignerOnly) payload.isForeignerOnly = values.isForeignerOnly;
       if (updateGuestZone) payload.isGuestZone = values.isGuestZone;
       if (updateGenderLock) payload.genderLock = values.genderLock;
 
@@ -63,6 +66,7 @@ export function BulkEditLocationModal({
       form.reset();
       setUpdateOwnership(false);
       setUpdateTrOnly(false);
+      setUpdateForeignerOnly(false);
       setUpdateGuestZone(false);
       setUpdateGenderLock(false);
       onClose();
@@ -121,6 +125,19 @@ export function BulkEditLocationModal({
 
           <Group align="center">
             <Checkbox
+              checked={updateForeignerOnly}
+              onChange={(e) => setUpdateForeignerOnly(e.currentTarget.checked)}
+              label={t("is_foreigner_only")}
+              style={{ width: 150 }}
+            />
+            <Switch
+              disabled={!updateForeignerOnly}
+              {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+            />
+          </Group>
+
+          <Group align="center">
+            <Checkbox
               checked={updateGuestZone}
               onChange={(e) => setUpdateGuestZone(e.currentTarget.checked)}
               label={t("is_guest_zone_label")}
@@ -160,6 +177,7 @@ export function BulkEditLocationModal({
             disabled={
               !updateOwnership &&
               !updateTrOnly &&
+              !updateForeignerOnly &&
               !updateGuestZone &&
               !updateGenderLock
             }

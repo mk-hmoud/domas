@@ -157,6 +157,8 @@ export class UndoService {
         return this.undoUpdateGuestZone(log, client);
       case UndoActionType.UPDATE_TR_ONLY:
         return this.undoUpdateTrOnly(log, client);
+      case UndoActionType.UPDATE_FOREIGNER_ONLY:
+        return this.undoUpdateForeignerOnly(log, client);
       case UndoActionType.UPDATE_OWNERSHIP:
         return this.undoUpdateOwnership(log, client);
 
@@ -171,6 +173,8 @@ export class UndoService {
         return this.undoUpdateBedStatus(log, client);
       case UndoActionType.UPDATE_BED_TR_ONLY:
         return this.undoUpdateBedTrOnly(log, client);
+      case UndoActionType.UPDATE_BED_FOREIGNER_ONLY:
+        return this.undoUpdateBedForeignerOnly(log, client);
       case UndoActionType.UPDATE_BED_OWNERSHIP:
         return this.undoUpdateBedOwnership(log, client);
       case UndoActionType.UPDATE_BED_GUEST_ZONE:
@@ -416,6 +420,37 @@ export class UndoService {
     }
   }
 
+  private async undoUpdateForeignerOnly(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousForeignerOnly, cascade } = log.undoData;
+    const locationId = parseInt(log.entityId, 10);
+
+    const location = await client.query('SELECT tree_path FROM locations WHERE id = $1', [
+      locationId,
+    ]);
+    if (location.rowCount === 0) return;
+    const treePath = location.rows[0].tree_path;
+
+    if (cascade) {
+      await client.query(
+        `UPDATE locations SET is_foreigner_only = $1, updated_at = NOW() WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [previousForeignerOnly, treePath],
+      );
+      await client.query(
+        `UPDATE beds SET is_foreigner_only = $1 WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2) AND deleted_at IS NULL`,
+        [previousForeignerOnly, treePath],
+      );
+    } else {
+      await client.query(
+        `UPDATE locations SET is_foreigner_only = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+        [previousForeignerOnly, locationId],
+      );
+      await client.query(
+        `UPDATE beds SET is_foreigner_only = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [previousForeignerOnly, locationId],
+      );
+    }
+  }
+
   private async undoUpdateOwnership(log: UndoLog, client: PoolClient): Promise<void> {
     const { previousOwnership, cascade } = log.undoData;
     const locationId = parseInt(log.entityId, 10);
@@ -519,6 +554,15 @@ export class UndoService {
     const { previousTrOnly } = log.undoData;
     const bedId = parseInt(log.entityId, 10);
     await client.query('UPDATE beds SET is_tr_only = $1 WHERE id = $2', [previousTrOnly, bedId]);
+  }
+
+  private async undoUpdateBedForeignerOnly(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousForeignerOnly } = log.undoData;
+    const bedId = parseInt(log.entityId, 10);
+    await client.query('UPDATE beds SET is_foreigner_only = $1 WHERE id = $2', [
+      previousForeignerOnly,
+      bedId,
+    ]);
   }
 
   private async undoUpdateBedOwnership(log: UndoLog, client: PoolClient): Promise<void> {
@@ -709,8 +753,6 @@ export class UndoService {
       foreignCurrencyCode: 'foreign_currency_code',
       paymentDeadlineDate: 'payment_deadline_date',
       status: 'status',
-      autoActivate: 'auto_activate',
-      autoClose: 'auto_close',
     };
 
     const updates: string[] = [];

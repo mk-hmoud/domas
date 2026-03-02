@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SemestersRepository } from '../repositories/semesters.repository';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
@@ -14,12 +15,47 @@ import { BookingsRepository } from '../../bookings/repositories/bookings.reposit
 
 @Injectable()
 export class SemestersService {
+  private readonly logger = new Logger(SemestersService.name);
+
   constructor(
     private readonly semestersRepository: SemestersRepository,
     private readonly bookingsRepository: BookingsRepository,
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
   ) {}
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleAutoTransitions() {
+    this.logger.log('Checking for automatic semester transitions...');
+    const pending = await this.semestersRepository.findPendingAutoTransitions();
+
+    if (pending.length === 0) {
+      return;
+    }
+
+    for (const semester of pending) {
+      try {
+        let newStatus: SemesterStatus | null = null;
+
+        if (semester.status === SemesterStatus.PLANNED) {
+          newStatus = SemesterStatus.OPEN;
+        } else if (semester.status === SemesterStatus.OPEN) {
+          newStatus = SemesterStatus.ACTIVE;
+        }
+
+        if (newStatus) {
+          this.logger.log(`Auto-transitioning semester ${semester.displayName} to ${newStatus}...`);
+          await this.updateStatus(semester.id, newStatus, {
+            userId: '00000000-0000-0000-0000-000000000000', // System
+            username: 'system',
+            ipAddress: '127.0.0.1',
+          });
+        }
+      } catch (error: any) {
+        this.logger.error(`Failed to auto-transition semester ${semester.id}: ${error.message}`);
+      }
+    }
+  }
 
   private async validateStatusTransition(
     currentStatus: SemesterStatus,
@@ -46,11 +82,28 @@ export class SemestersService {
       );
     }
 
-    // Special Rule: OPEN -> PLANNED requires 0 bookings
+    // 1. OPEN -> PLANNED requires 0 bookings
     if (currentStatus === SemesterStatus.OPEN && newStatus === SemesterStatus.PLANNED) {
       const count = await this.bookingsRepository.countBySemester(semesterId);
       if (count > 0) {
         throw new BadRequestException('Cannot revert to PLANNED because bookings exist');
+      }
+    }
+
+    // 2. ACTIVE -> CLOSED requires 0 Active or Ready-for-Checkin residents
+    if (currentStatus === SemesterStatus.ACTIVE && newStatus === SemesterStatus.CLOSED) {
+      const activeRes = await this.db.query(
+        `SELECT COUNT(*) FROM bookings 
+         WHERE semester_id = $1 
+         AND status IN ('active', 'ready_for_checkin')`,
+        [semesterId],
+      );
+      const activeCount = parseInt(activeRes.rows[0].count, 10);
+
+      if (activeCount > 0) {
+        throw new BadRequestException(
+          `Cannot close semester: ${activeCount} students are still checked-in or awaiting check-in. Please resolve all bookings first.`,
+        );
       }
     }
   }

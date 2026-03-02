@@ -10,11 +10,15 @@ import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { BookingsRepository } from '../repositories/bookings.repository';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingDto } from '../dto/update-booking.dto';
+import { UpdateBookingDatesDto } from '../dto/update-booking-dates.dto';
+import { TransferBookingDto } from '../dto/transfer-booking.dto';
+import { BulkTransferBookingDto } from '../dto/bulk-transfer-booking.dto';
 import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
 import { Booking } from '../entities/booking.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
+import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
@@ -66,6 +70,12 @@ export class BookingsService {
       throw new BadRequestException('This location is reserved for Turkish citizens only');
     }
 
+    // 2.1 Check Foreigner Only Constraint (Explicit)
+    const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
+    if (isForeignerOnly && student.nationalityCode === 'TR') {
+      throw new BadRequestException('This location is reserved for foreign students only');
+    }
+
     // 3. Check Ownership Constraint (Rectorate - Explicit)
     const isRectorate =
       room.ownership === LocationOwnership.RECTORATE ||
@@ -79,8 +89,30 @@ export class BookingsService {
       }
     }
 
+    // 4. Fetch Semester for Default Dates
+    const semesterRes = await this.db.query(
+      'SELECT start_date, end_date FROM semesters WHERE id = $1',
+      [data.semesterId],
+    );
+    if (semesterRes.rowCount === 0) throw new NotFoundException('Semester not found');
+    const semester = semesterRes.rows[0];
+
+    const finalStartDate = data.startDate || semester.start_date;
+    const finalEndDate = data.endDate || semester.end_date;
+
+    if (new Date(finalStartDate) >= new Date(finalEndDate)) {
+      throw new BadRequestException('Start date must be before end date.');
+    }
+
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.create(data, client);
+      const booking = await this.bookingsRepository.create(
+        {
+          ...data,
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+        },
+        client,
+      );
 
       // Lock gender if currently NULL (Dynamic Lock)
       // student and bed are already fetched above the transaction
@@ -347,10 +379,242 @@ export class BookingsService {
     }, context);
   }
 
-  async update(id: string, data: UpdateBookingDto, context: AuditUserContext): Promise<Booking> {
+  async transferMany(dto: BulkTransferBookingDto, context: AuditUserContext): Promise<Booking[]> {
+    this.logger.log(
+      { count: dto.bookingIds.length, targetSemesterId: dto.targetSemesterId },
+      'Bulk transferring bookings',
+    );
+
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.findById(id, client);
-      if (!booking) throw new NotFoundException(`Booking with ID ${id} not found`);
+      // 1. Fetch Target Semester for Default Dates
+      const semesterRes = await client.query(
+        'SELECT start_date, end_date FROM semesters WHERE id = $1',
+        [dto.targetSemesterId],
+      );
+      if (semesterRes.rowCount === 0) throw new NotFoundException('Target semester not found');
+      const semester = semesterRes.rows[0];
+
+      // 2. Resolve Dates (Shared for all transfers in this bulk operation if provided)
+      const finalStartDate = dto.startDate || semester.start_date;
+      const finalEndDate = dto.endDate || semester.end_date;
+
+      if (new Date(finalStartDate) >= new Date(finalEndDate)) {
+        throw new BadRequestException('Resolved start date must be before end date.');
+      }
+
+      const results: Booking[] = [];
+
+      for (const id of dto.bookingIds) {
+        const existing = await this.bookingsRepository.findById(id, client);
+        if (!existing) {
+          this.logger.warn({ bookingId: id }, 'Booking not found during bulk transfer, skipping');
+          continue;
+        }
+
+        // 3. Check for existing transfer
+        const duplicateRes = await client.query(
+          'SELECT id FROM bookings WHERE previous_booking_id = $1',
+          [id],
+        );
+        if (duplicateRes.rowCount! > 0) {
+          this.logger.warn({ bookingId: id }, 'Booking already transferred, skipping');
+          continue;
+        }
+
+        try {
+          const newBooking = await this.bookingsRepository.create(
+            {
+              studentId: existing.studentId,
+              bedId: existing.bedId,
+              semesterId: dto.targetSemesterId,
+              previousBookingId: id,
+              startDate: finalStartDate,
+              endDate: finalEndDate,
+              status: BookingOpsStatus.PENDING_ACCOUNTING,
+              paymentStatus: PaymentStatus.PENDING,
+            },
+            client,
+          );
+
+          // 4. Inventory Rollover: Clone snapshots from the old booking to the new one
+          await this.inventoryService.cloneSnapshotsForBooking(id, newBooking.id, client);
+
+          await this.undoService.registerUndo(
+            {
+              userId: context.userId,
+              actionType: UndoActionType.CREATE_BOOKING,
+              entityType: 'booking',
+              entityId: newBooking.id,
+              undoData: {},
+              description: `Transferred booking ${id} to semester ${dto.targetSemesterId} (Bulk)`,
+            },
+            client,
+          );
+
+          results.push(newBooking);
+        } catch (error: any) {
+          if (error.code === '23P04') {
+            this.logger.warn({ bookingId: id }, 'Bed already occupied for target dates, skipping');
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      this.logger.log({ processed: results.length }, 'Bulk transfer completed');
+      return results;
+    }, context);
+  }
+
+  async transfer(
+    id: string,
+    data: TransferBookingDto,
+    context: AuditUserContext,
+  ): Promise<Booking> {
+    this.logger.log(
+      { bookingId: id, targetSemesterId: data.targetSemesterId },
+      'Transferring booking',
+    );
+
+    return this.db.transaction(async (client) => {
+      // 1. Fetch Existing Booking
+      const existing = await this.bookingsRepository.findById(id, client);
+      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+
+      // 2. Fetch Target Semester for Default Dates (Consistency Fix: using client)
+      const semesterRes = await client.query(
+        'SELECT start_date, end_date FROM semesters WHERE id = $1',
+        [data.targetSemesterId],
+      );
+      if (semesterRes.rowCount === 0) throw new NotFoundException('Target semester not found');
+      const semester = semesterRes.rows[0];
+
+      // 3. Resolve Dates
+      const finalStartDate = data.startDate || semester.start_date;
+      const finalEndDate = data.endDate || semester.end_date;
+
+      if (new Date(finalStartDate) >= new Date(finalEndDate)) {
+        throw new BadRequestException('Resolved start date must be before end date.');
+      }
+
+      // 4. Check for existing transfer
+      const duplicateRes = await client.query(
+        'SELECT id FROM bookings WHERE previous_booking_id = $1',
+        [id],
+      );
+      if (duplicateRes.rowCount! > 0) {
+        throw new BadRequestException('This booking has already been transferred/renewed.');
+      }
+
+      // 5. Create New Booking (Linked)
+      try {
+        const newBooking = await this.bookingsRepository.create(
+          {
+            studentId: existing.studentId,
+            bedId: existing.bedId,
+            semesterId: data.targetSemesterId,
+            previousBookingId: id,
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            status: BookingOpsStatus.PENDING_ACCOUNTING,
+            paymentStatus: PaymentStatus.PENDING,
+          },
+          client,
+        );
+
+        // 6. Inventory Rollover: Clone snapshots from the old booking to the new one
+        await this.inventoryService.cloneSnapshotsForBooking(id, newBooking.id, client);
+
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: UndoActionType.CREATE_BOOKING,
+            entityType: 'booking',
+            entityId: newBooking.id,
+            undoData: {},
+            description: `Transferred booking ${id} to semester ${data.targetSemesterId}`,
+          },
+          client,
+        );
+
+        this.logger.log({ oldId: id, newId: newBooking.id }, 'Booking transferred successfully');
+        return newBooking;
+      } catch (error: any) {
+        if (error.code === '23P04') {
+          throw new BadRequestException('The bed is already booked for the target semester dates.');
+        }
+        throw error;
+      }
+    }, context);
+  }
+
+  async adjustDates(
+    id: string,
+    data: UpdateBookingDatesDto,
+    context: AuditUserContext,
+  ): Promise<Booking> {
+    this.logger.log({ bookingId: id, data }, 'Adjusting booking dates');
+
+    const toDateString = (d: Date | string) => {
+      const date = typeof d === 'string' ? new Date(d) : d;
+      // Use a 4-hour buffer to handle timezone shifts (e.g., 22:00Z -> 02:00 Local)
+      const buffer = 4 * 60 * 60 * 1000;
+      const shifted = new Date(date.getTime() + buffer);
+      const year = shifted.getUTCFullYear();
+      const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(shifted.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    return this.db.transaction(async (client) => {
+      const existing = await this.bookingsRepository.findById(id, client);
+      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+
+      // 1. Validate Date Order
+      const newStart = data.startDate ? new Date(data.startDate) : existing.startDate;
+      const newEnd = data.endDate ? new Date(data.endDate) : existing.endDate;
+
+      if (newStart > newEnd) {
+        throw new BadRequestException(`Start date must be before or equal to end date`);
+      }
+
+      // 2. Enforce "Golden Rule"
+      const isFinal =
+        existing.status === BookingOpsStatus.COMPLETED ||
+        existing.status === BookingOpsStatus.CANCELLED ||
+        existing.status === BookingOpsStatus.REJECTED;
+
+      const existingStartStr = toDateString(existing.startDate);
+      const existingEndStr = toDateString(existing.endDate);
+      const inputStartStr = data.startDate ? toDateString(data.startDate) : null;
+      const inputEndStr = data.endDate ? toDateString(data.endDate) : null;
+
+      this.logger.debug(
+        {
+          bookingId: id,
+          existingStartStr,
+          inputStartStr,
+          existingEndStr,
+          inputEndStr,
+        },
+        'Date comparison details',
+      );
+
+      // Cannot change START DATE after check-in or if finalized
+      if (inputStartStr && inputStartStr !== existingStartStr) {
+        if (existing.status === BookingOpsStatus.ACTIVE || isFinal) {
+          throw new BadRequestException(
+            'Cannot change the start date of an active or finalized booking.',
+          );
+        }
+      }
+
+      // Cannot change END DATE if finalized
+      if (inputEndStr && inputEndStr !== existingEndStr) {
+        if (isFinal) {
+          throw new BadRequestException('Cannot change the end date of a finalized booking.');
+        }
+      }
 
       const updated = await this.bookingsRepository.update(id, data, client);
 
@@ -360,7 +624,32 @@ export class BookingsService {
           actionType: UndoActionType.UPDATE_BOOKING,
           entityType: 'booking',
           entityId: id,
-          undoData: booking,
+          undoData: existing,
+          description: `Adjusted dates for booking ${id}`,
+        },
+        client,
+      );
+
+      return updated!;
+    }, context);
+  }
+
+  async update(id: string, data: UpdateBookingDto, context: AuditUserContext): Promise<Booking> {
+    this.logger.log({ bookingId: id, data }, 'Updating booking');
+
+    return this.db.transaction(async (client) => {
+      const existing = await this.bookingsRepository.findById(id, client);
+      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+
+      const updated = await this.bookingsRepository.update(id, data, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_BOOKING,
+          entityType: 'booking',
+          entityId: id,
+          undoData: existing,
           description: `Updated booking ${id}`,
         },
         client,

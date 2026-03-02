@@ -24,6 +24,10 @@ export class UpdateLocationDto {
   @IsOptional()
   isTrOnly?: boolean;
 
+  @IsBoolean()
+  @IsOptional()
+  isForeignerOnly?: boolean;
+
   @IsEnum(LocationOwnership)
   @IsOptional()
   ownership?: LocationOwnership;

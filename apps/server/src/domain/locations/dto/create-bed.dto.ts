@@ -21,6 +21,10 @@ export class CreateBedDto {
 
   @IsBoolean()
   @IsOptional()
+  isForeignerOnly?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   isGuestZone?: boolean;
 
   @IsEnum(LocationOwnership)

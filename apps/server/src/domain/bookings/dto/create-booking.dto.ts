@@ -15,13 +15,17 @@ export class CreateBookingDto {
   @IsNotEmpty()
   semesterId!: number;
 
-  @IsDateString()
-  @IsNotEmpty()
-  startDate!: string;
+  @IsUUID()
+  @IsOptional()
+  previousBookingId?: string;
 
   @IsDateString()
-  @IsNotEmpty()
-  endDate!: string;
+  @IsOptional()
+  startDate?: string;
+
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
 
   @IsEnum(BookingOpsStatus)
   @IsOptional()

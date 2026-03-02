@@ -63,6 +63,7 @@ CREATE TABLE locations (
     -- Guest Isolation
     is_guest_zone BOOLEAN DEFAULT FALSE,
     is_tr_only BOOLEAN DEFAULT FALSE,
+    is_foreigner_only BOOLEAN DEFAULT FALSE,
     ownership location_ownership_type DEFAULT 'dorm',
     
     -- Room Specifics (Only used if type = 'room')
@@ -210,8 +211,6 @@ CREATE TABLE semesters (
     
     -- 5. Lifecycle
     status semester_status_enum DEFAULT 'planned',
-    auto_activate BOOLEAN DEFAULT TRUE,    
-    auto_close BOOLEAN DEFAULT TRUE,       
     
     -- Meta
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -242,6 +241,7 @@ CREATE TABLE beds (
     
     -- constraints
     is_tr_only BOOLEAN DEFAULT FALSE,
+    is_foreigner_only BOOLEAN DEFAULT FALSE,
     is_guest_zone BOOLEAN DEFAULT FALSE,
     ownership location_ownership_type DEFAULT 'dorm',
     
@@ -261,7 +261,8 @@ CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES students(id),
     bed_id INT NOT NULL REFERENCES beds(id), -- reserve bed
-    semester_id INT REFERENCES semesters(id),
+    semester_id INT NOT NULL REFERENCES semesters(id),
+    previous_booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL,
     
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
