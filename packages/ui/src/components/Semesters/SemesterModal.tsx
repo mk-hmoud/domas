@@ -137,17 +137,17 @@ export function SemesterModal({
       }
     }
   }, [opened, initialValues, lastSemester]);
-
   const handleSubmit = async (values: any) => {
     const toIso = (date: any) => {
       if (!date) return undefined;
       if (date instanceof Date) return date.toISOString();
-      return date; // Assume it's already a string if not a Date
+      return date;
     };
 
-    // Convert Dates back to ISO strings for the API
     const payload: CreateSemesterDto = {
       ...values,
+      depositAmountTry: Number(values.depositAmountTry),
+      depositAmountForeign: Number(values.depositAmountForeign),
       startDate: toIso(values.startDate),
       endDate: toIso(values.endDate),
       bookingStartDate: toIso(values.bookingStartDate),
@@ -156,7 +156,6 @@ export function SemesterModal({
     await onSubmit(payload);
     onClose();
   };
-
   const initialStatus = initialValues?.status;
   const isIdentityLocked =
     initialStatus === SemesterStatus.OPEN ||
