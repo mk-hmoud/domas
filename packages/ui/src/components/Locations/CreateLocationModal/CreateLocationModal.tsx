@@ -58,6 +58,7 @@ export function CreateLocationModal({
       genderLock: undefined,
       isGuestZone: false,
       isTrOnly: false,
+      isForeignerOnly: false,
       ownership: LocationOwnership.DORM,
       basePrice: 0,
     },
@@ -107,6 +108,7 @@ export function CreateLocationModal({
           genderLock: initialValues.genderLock || undefined,
           isGuestZone: initialValues.isGuestZone || false,
           isTrOnly: initialValues.isTrOnly || false,
+          isForeignerOnly: initialValues.isForeignerOnly || false,
           ownership: initialValues.ownership || LocationOwnership.DORM,
           basePrice: initialValues.basePrice || 0,
         });
@@ -288,6 +290,10 @@ export function CreateLocationModal({
             <Switch
               label={t("is_tr_only")}
               {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_foreigner_only")}
+              {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
             />
           </Group>
         )}

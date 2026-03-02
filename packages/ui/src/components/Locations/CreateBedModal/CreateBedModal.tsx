@@ -9,10 +9,11 @@ import {
   Text,
   Stack,
   Box,
+  Switch,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateBedDto, BedStatus } from "@domas/ts-types";
+import { CreateBedDto, BedStatus, LocationOwnership } from "@domas/ts-types";
 import { IconInfoCircle } from "@tabler/icons-react";
 
 interface CreateBedModalProps {
@@ -40,6 +41,10 @@ export function CreateBedModal({
       locationId,
       label: "",
       status: BedStatus.AVAILABLE,
+      isTrOnly: false,
+      isForeignerOnly: false,
+      isGuestZone: false,
+      ownership: LocationOwnership.DORM,
     },
     validate: {
       label: (val) => (val ? null : t("field_required")),
@@ -49,7 +54,13 @@ export function CreateBedModal({
   useEffect(() => {
     if (opened) {
       if (initialValues) {
-        form.setValues(initialValues);
+        form.setValues({
+          ...initialValues,
+          isTrOnly: initialValues.isTrOnly || false,
+          isForeignerOnly: initialValues.isForeignerOnly || false,
+          isGuestZone: initialValues.isGuestZone || false,
+          ownership: initialValues.ownership || LocationOwnership.DORM,
+        });
       } else {
         form.reset();
         form.setFieldValue("locationId", locationId);
@@ -132,6 +143,21 @@ export function CreateBedModal({
               </Alert>
             )}
           </Box>
+
+          <Group>
+            <Switch
+              label={t("is_tr_only")}
+              {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_foreigner_only")}
+              {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_guest_zone_label")}
+              {...form.getInputProps("isGuestZone", { type: "checkbox" })}
+            />
+          </Group>
         </Stack>
 
         <Group justify="flex-end" mt="xl">

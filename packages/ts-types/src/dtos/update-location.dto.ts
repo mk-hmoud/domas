@@ -8,6 +8,7 @@ export interface UpdateLocationDto {
   genderLock?: GenderType;
   isGuestZone?: boolean;
   isTrOnly?: boolean;
+  isForeignerOnly?: boolean;
   ownership?: LocationOwnership;
   basePrice?: number;
 }

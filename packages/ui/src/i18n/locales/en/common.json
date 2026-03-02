@@ -547,6 +547,7 @@
   },
   "ownership": "Ownership",
   "is_tr_only": "TR Citizens Only?",
+  "is_foreigner_only": "Foreigners Only?",
   "base_price": "Base Price",
   "bulk_create": "Bulk Create",
   "bulk_edit": "Bulk Edit",

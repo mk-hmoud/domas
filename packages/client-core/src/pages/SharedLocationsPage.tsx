@@ -729,6 +729,15 @@ function LocationsContent() {
                       TR Only
                     </Badge>
                   )}
+                  {selectedNode.isForeignerOnly && (
+                    <Badge
+                      variant="light"
+                      color="grape"
+                      leftSection={<IconFlag size={14} />}
+                    >
+                      INT Only
+                    </Badge>
+                  )}
                   {selectedNode.isGuestZone && (
                     <Badge
                       variant="light"

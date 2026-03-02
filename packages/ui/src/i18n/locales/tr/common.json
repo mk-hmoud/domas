@@ -549,6 +549,7 @@
   },
   "ownership": "Mülkiyet",
   "is_tr_only": "Sadece TC Vatandaşı?",
+  "is_foreigner_only": "Sadece Yabancı Uyruklu?",
   "base_price": "Taban Fiyat",
   "bulk_create": "Toplu Oluştur",
   "bulk_edit": "Toplu Düzenle",
