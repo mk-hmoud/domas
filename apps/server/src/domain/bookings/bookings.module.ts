@@ -14,9 +14,9 @@ import { ContractsModule } from '../contracts/contracts.module';
   imports: [
     LocationsModule,
     StudentsModule,
-    UsersModule,
-    AuditModule,
-    InventoryModule,
+    forwardRef(() => UsersModule),
+    forwardRef(() => AuditModule),
+    forwardRef(() => InventoryModule),
     AccessCardsModule,
     forwardRef(() => ContractsModule),
   ],

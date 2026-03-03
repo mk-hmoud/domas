@@ -20,11 +20,60 @@ import { CreateInventoryCatalogDto } from '../dto/create-inventory-catalog.dto';
 import { UpdateInventoryCatalogDto } from '../dto/update-inventory-catalog.dto';
 import { CreateInventoryAssignmentDto } from '../dto/create-inventory-assignment.dto';
 import { UpdateInventoryAssignmentDto } from '../dto/update-inventory-assignment.dto';
+import {
+  CreateInventoryTemplateDto,
+  ApplyInventoryTemplateDto,
+} from '../dto/inventory-template.dto';
 
 @Controller('inventory')
 @UseGuards(AuthenticatedGuard, PermissionsGuard)
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
+
+  // --- Templates ---
+
+  @Post('templates')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  createTemplate(
+    @Body() data: CreateInventoryTemplateDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.inventoryService.createTemplate(data, context);
+  }
+
+  @Get('templates')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  findAllTemplates(@Query('scope') scope?: string) {
+    return this.inventoryService.findAllTemplates({ scope });
+  }
+
+  @Get('templates/:id')
+  @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
+  findTemplateById(@Param('id') id: string) {
+    return this.inventoryService.findTemplateById(parseInt(id, 10));
+  }
+
+  @Patch('templates/:id')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  updateTemplate(
+    @Param('id') id: string,
+    @Body() data: Partial<CreateInventoryTemplateDto>,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.inventoryService.updateTemplate(parseInt(id, 10), data, context);
+  }
+
+  @Delete('templates/:id')
+  @RequirePermissions(PERMISSIONS.INVENTORY_MANAGE)
+  deleteTemplate(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.inventoryService.deleteTemplate(parseInt(id, 10), context);
+  }
+
+  @Post('templates/apply')
+  @RequirePermissions(PERMISSIONS.INVENTORY_ASSIGN)
+  applyTemplate(@Body() data: ApplyInventoryTemplateDto, @UserContext() context: AuditUserContext) {
+    return this.inventoryService.applyTemplate(data, context);
+  }
 
   // --- Catalog ---
 

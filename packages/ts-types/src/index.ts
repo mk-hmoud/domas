@@ -27,6 +27,7 @@ export * from "./interfaces/semester.interface";
 export * from "./interfaces/audit.interface";
 export * from "./interfaces/paginated-result.interface";
 export * from "./interfaces/inventory.interface";
+export * from "./interfaces/inventory-template.interface";
 export * from "./interfaces/access-card.interface";
 export * from "./interfaces/damage.interface";
 export * from "./interfaces/contract.interface";

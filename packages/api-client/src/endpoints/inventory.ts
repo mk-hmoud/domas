@@ -2,13 +2,60 @@ import { apiClient } from "../client";
 import {
   InventoryCatalogItem,
   InventoryAssignment,
+  InventoryTemplate,
   CreateInventoryCatalogDto,
   UpdateInventoryCatalogDto,
   CreateInventoryAssignmentDto,
   UpdateInventoryAssignmentDto,
+  CreateInventoryTemplateDto,
+  ApplyInventoryTemplateDto,
 } from "@domas/ts-types";
 
 export const inventory = {
+  // --- Templates ---
+  createTemplate: async (
+    data: CreateInventoryTemplateDto,
+  ): Promise<InventoryTemplate> => {
+    const response = await apiClient.post<InventoryTemplate>(
+      "/inventory/templates",
+      data,
+    );
+    return response.data;
+  },
+
+  findAllTemplates: async (): Promise<InventoryTemplate[]> => {
+    const response = await apiClient.get<InventoryTemplate[]>(
+      "/inventory/templates",
+    );
+    return response.data;
+  },
+
+  findTemplateById: async (id: number): Promise<InventoryTemplate> => {
+    const response = await apiClient.get<InventoryTemplate>(
+      `/inventory/templates/${id}`,
+    );
+    return response.data;
+  },
+
+  updateTemplate: async (
+    id: number,
+    data: Partial<CreateInventoryTemplateDto>,
+  ): Promise<InventoryTemplate> => {
+    const response = await apiClient.patch<InventoryTemplate>(
+      `/inventory/templates/${id}`,
+      data,
+    );
+    return response.data;
+  },
+
+  deleteTemplate: async (id: number): Promise<void> => {
+    await apiClient.delete(`/inventory/templates/${id}`);
+  },
+
+  applyTemplate: async (data: ApplyInventoryTemplateDto): Promise<void> => {
+    await apiClient.post("/inventory/templates/apply", data);
+  },
+
   // --- Catalog ---
   createCatalog: async (
     data: CreateInventoryCatalogDto,

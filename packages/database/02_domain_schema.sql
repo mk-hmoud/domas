@@ -254,8 +254,42 @@ CREATE TABLE beds (
 CREATE INDEX idx_beds_deleted_at ON beds(deleted_at) WHERE deleted_at IS NULL;
 
 
+-- 3. Inventory Templates
+CREATE TABLE inventory_templates (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    name VARCHAR(100) NOT NULL, -- e.g., "Standard Single Bed"
+    description TEXT,
+    
+    -- Target scope (CRITICAL for UI filtering and backend validation)
+    scope inventory_scope NOT NULL, -- 'bed', 'room', 'shared'
+    
+    -- Metadata
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    deleted_at TIMESTAMPTZ
+);
+
+-- Template Items (Lean and fast)
+CREATE TABLE inventory_template_items (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    template_id INT NOT NULL REFERENCES inventory_templates(id) ON DELETE CASCADE,
+    catalog_id INT NOT NULL REFERENCES inventory_catalog(id),
+    quantity INT NOT NULL DEFAULT 1,
+    
+    UNIQUE (template_id, catalog_id),
+    CONSTRAINT quantity_positive CHECK (quantity > 0)
+);
+
+CREATE INDEX idx_template_items_template ON inventory_template_items(template_id);
+CREATE INDEX idx_template_items_catalog ON inventory_template_items(catalog_id);
+
 -- =============================================
--- 5. BOOKING & FINANCE
+-- BOOKINGS & CONTRACTS
 -- =============================================
 CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

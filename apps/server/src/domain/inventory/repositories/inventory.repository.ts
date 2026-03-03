@@ -4,10 +4,12 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { InventoryCatalog } from '../entities/inventory-catalog.entity';
 import { InventoryAssignment } from '../entities/inventory-assignment.entity';
 import { BookingInventorySnapshot } from '../entities/booking-inventory-snapshot.entity';
+import { InventoryTemplate, InventoryTemplateItem } from '../entities/inventory-template.entity';
 import { CreateInventoryCatalogDto } from '../dto/create-inventory-catalog.dto';
 import { UpdateInventoryCatalogDto } from '../dto/update-inventory-catalog.dto';
 import { CreateInventoryAssignmentDto } from '../dto/create-inventory-assignment.dto';
 import { UpdateInventoryAssignmentDto } from '../dto/update-inventory-assignment.dto';
+import { CreateInventoryTemplateDto } from '../dto/inventory-template.dto';
 
 @Injectable()
 export class InventoryRepository {
@@ -15,6 +17,165 @@ export class InventoryRepository {
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
+  }
+
+  // --- Templates ---
+
+  async createTemplate(
+    data: CreateInventoryTemplateDto & { createdBy: string },
+    client?: PoolClient,
+  ): Promise<InventoryTemplate> {
+    const dbClient = this.getClient(client);
+
+    // 1. Create Template
+    const templateRes = await dbClient.query(
+      `
+      INSERT INTO inventory_templates (name, description, scope, created_by)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, name, description, scope, is_active as "isActive", 
+                created_at as "createdAt", updated_at as "updatedAt", created_by as "createdBy"
+    `,
+      [data.name, data.description || null, data.scope, data.createdBy],
+    );
+
+    const template = new InventoryTemplate(templateRes.rows[0]);
+
+    // 2. Create Items
+    if (data.items.length > 0) {
+      const values: any[] = [];
+      const rows: string[] = [];
+      let paramIndex = 1;
+
+      for (const item of data.items) {
+        rows.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+        values.push(template.id, item.catalogId, item.quantity);
+      }
+
+      await dbClient.query(
+        `
+        INSERT INTO inventory_template_items (template_id, catalog_id, quantity)
+        VALUES ${rows.join(', ')}
+      `,
+        values,
+      );
+    }
+
+    return template;
+  }
+
+  async findAllTemplates(filters: { scope?: string } = {}): Promise<InventoryTemplate[]> {
+    const conditions: string[] = ['deleted_at IS NULL'];
+    const values: any[] = [];
+
+    if (filters.scope) {
+      conditions.push(`scope = $${values.length + 1}`);
+      values.push(filters.scope);
+    }
+
+    const query = `
+      SELECT id, name, description, scope, is_active as "isActive", 
+             created_at as "createdAt", updated_at as "updatedAt", created_by as "createdBy"
+      FROM inventory_templates
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY name ASC
+    `;
+    const result = await this.db.query(query, values);
+    return result.rows.map((r) => new InventoryTemplate(r));
+  }
+
+  async findTemplateById(id: number, client?: PoolClient): Promise<InventoryTemplate | null> {
+    const dbClient = this.getClient(client);
+
+    const templateRes = await dbClient.query(
+      `
+      SELECT id, name, description, scope, is_active as "isActive", 
+             created_at as "createdAt", updated_at as "updatedAt", created_by as "createdBy"
+      FROM inventory_templates
+      WHERE id = $1 AND deleted_at IS NULL
+    `,
+      [id],
+    );
+
+    if (templateRes.rowCount === 0) return null;
+    const template = new InventoryTemplate(templateRes.rows[0]);
+
+    const itemsRes = await dbClient.query(
+      `
+      SELECT iti.id, iti.template_id as "templateId", iti.catalog_id as "catalogId", iti.quantity,
+             ic.name_tr as "nameTr", ic.name_en as "nameEn"
+      FROM inventory_template_items iti
+      JOIN inventory_catalog ic ON iti.catalog_id = ic.id
+      WHERE iti.template_id = $1
+    `,
+      [id],
+    );
+
+    template.items = itemsRes.rows.map((r) => new InventoryTemplateItem(r));
+    return template;
+  }
+
+  async updateTemplate(
+    id: number,
+    data: Partial<CreateInventoryTemplateDto>,
+    client?: PoolClient,
+  ): Promise<InventoryTemplate | null> {
+    const dbClient = this.getClient(client);
+
+    // 1. Update main fields if provided
+    if (data.name || data.description !== undefined || data.scope) {
+      const updates: string[] = [];
+      const values: any[] = [];
+      let pIdx = 1;
+
+      if (data.name) {
+        updates.push(`name = $${pIdx++}`);
+        values.push(data.name);
+      }
+      if (data.description !== undefined) {
+        updates.push(`description = $${pIdx++}`);
+        values.push(data.description);
+      }
+      if (data.scope) {
+        updates.push(`scope = $${pIdx++}`);
+        values.push(data.scope);
+      }
+
+      values.push(id);
+      await dbClient.query(
+        `UPDATE inventory_templates SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${pIdx}`,
+        values,
+      );
+    }
+
+    // 2. Update items if provided (Full Replace)
+    if (data.items) {
+      await dbClient.query('DELETE FROM inventory_template_items WHERE template_id = $1', [id]);
+
+      if (data.items.length > 0) {
+        const values: any[] = [];
+        const rows: string[] = [];
+        let pIdx = 1;
+
+        for (const item of data.items) {
+          rows.push(`($${pIdx++}, $${pIdx++}, $${pIdx++})`);
+          values.push(id, item.catalogId, item.quantity);
+        }
+
+        await dbClient.query(
+          `INSERT INTO inventory_template_items (template_id, catalog_id, quantity) VALUES ${rows.join(', ')}`,
+          values,
+        );
+      }
+    }
+
+    return this.findTemplateById(id, client);
+  }
+
+  async deleteTemplate(id: number, client?: PoolClient): Promise<void> {
+    await this.getClient(client).query(
+      'UPDATE inventory_templates SET deleted_at = NOW() WHERE id = $1',
+      [id],
+    );
   }
 
   private getCatalogSelectColumns(alias = 'c'): string {

@@ -12,9 +12,9 @@ import { UsersModule } from '../users/users.module';
   imports: [
     forwardRef(() => BookingsModule),
     StudentsModule,
-    InventoryModule,
-    LocationsModule,
-    UsersModule,
+    forwardRef(() => InventoryModule),
+    forwardRef(() => LocationsModule),
+    forwardRef(() => UsersModule),
   ],
   controllers: [ContractsController],
   providers: [ContractsService, ContractsRepository],
