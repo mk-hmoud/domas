@@ -255,7 +255,46 @@ async function bootstrap() {
     });
     logger.log('Inventory Catalog checked/created.');
 
-    // 6. Assign Inventory
+    // 6. Inventory Templates
+    logger.log('Checking Inventory Templates...');
+    const allTemplates = await inventoryService.findAllTemplates();
+    const updatedCatalog = await inventoryService.findAllCatalog();
+
+    const findCatalogId = (nameEn: string) => updatedCatalog.find((i) => i.nameEn === nameEn)?.id;
+
+    if (!allTemplates.find((t) => t.name === 'Standard Single Bed')) {
+      const bedId = findCatalogId('Standard Bed');
+      if (bedId) {
+        await inventoryService.createTemplate(
+          {
+            name: 'Standard Single Bed',
+            description: 'Basic items for one bed',
+            scope: InventoryScope.BED,
+            items: [{ catalogId: bedId, quantity: 1 }],
+          },
+          seedContext,
+        );
+        logger.log('Created Standard Single Bed Template.');
+      }
+    }
+
+    if (!allTemplates.find((t) => t.name === 'Standard Triple Room')) {
+      const deskId = findCatalogId('Study Desk');
+      if (deskId) {
+        await inventoryService.createTemplate(
+          {
+            name: 'Standard Triple Room',
+            description: 'Furniture for a 3-person room',
+            scope: InventoryScope.ROOM,
+            items: [{ catalogId: deskId, quantity: 3 }],
+          },
+          seedContext,
+        );
+        logger.log('Created Standard Triple Room Template.');
+      }
+    }
+
+    // 7. Assign Inventory
     logger.log('Checking Assignments...');
     const floorAssignments = await inventoryService.findAssignmentsByLocation(floor.id);
     if (!floorAssignments.find((a) => a.catalogId === oven.id)) {

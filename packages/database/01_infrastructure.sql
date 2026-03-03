@@ -3,6 +3,46 @@
 -- =============================================
 
 -- =============================================
+-- ENUM DEFINITIONS (Early Setup)
+-- =============================================
+
+DO $$ BEGIN
+    CREATE TYPE gender_type AS ENUM ('male', 'female');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE bed_status AS ENUM ('available', 'occupied', 'maintenance');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE booking_status_enum AS ENUM ('draft', 'pending_accounting', 'ready_for_checkin', 'active', 'completed', 'cancelled', 'rejected');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payment_status_enum AS ENUM ('pending', 'partial', 'paid', 'failed', 'refunded');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room', 'bed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE location_ownership_type AS ENUM ('dorm', 'rectorate');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE semester_status_enum AS ENUM ('planned', 'open', 'active', 'closed', 'archived');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE semester_type_enum AS ENUM ('fall', 'spring', 'summer');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE inventory_scope AS ENUM ('bed', 'room', 'shared');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- =============================================
 -- EXTENSIONS
 -- =============================================
 
