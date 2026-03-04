@@ -64,20 +64,39 @@ export class InventoryRepository {
   }
 
   async findAllTemplates(filters: { scope?: string } = {}): Promise<InventoryTemplate[]> {
-    const conditions: string[] = ['deleted_at IS NULL'];
+    const conditions: string[] = ['t.deleted_at IS NULL'];
     const values: any[] = [];
 
     if (filters.scope) {
-      conditions.push(`scope = $${values.length + 1}`);
       values.push(filters.scope);
+      conditions.push(`t.scope = $${values.length}`);
     }
 
     const query = `
-      SELECT id, name, description, scope, is_active as "isActive", 
-             created_at as "createdAt", updated_at as "updatedAt", created_by as "createdBy"
-      FROM inventory_templates
+      SELECT 
+        t.id, t.name, t.description, t.scope, t.is_active as "isActive", 
+        t.created_at as "createdAt", t.updated_at as "updatedAt", t.created_by as "createdBy",
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', iti.id,
+                'templateId', iti.template_id,
+                'catalogId', iti.catalog_id,
+                'quantity', iti.quantity,
+                'itemNameTr', ic.name_tr,
+                'itemNameEn', ic.name_en
+              )
+            ) 
+            FROM inventory_template_items iti
+            JOIN inventory_catalog ic ON iti.catalog_id = ic.id
+            WHERE iti.template_id = t.id
+          ),
+          '[]'
+        ) as items
+      FROM inventory_templates t
       WHERE ${conditions.join(' AND ')}
-      ORDER BY name ASC
+      ORDER BY t.name ASC
     `;
     const result = await this.db.query(query, values);
     return result.rows.map((r) => new InventoryTemplate(r));

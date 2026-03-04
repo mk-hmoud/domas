@@ -457,7 +457,8 @@ export class InventoryService {
         const res = await client.query(
           `INSERT INTO inventory_assignments (catalog_id, location_id, quantity) 
            VALUES ${rows.join(', ')}
-           ON CONFLICT (location_id, catalog_id) DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = NOW()
+           ON CONFLICT (location_id, catalog_id) WHERE location_id IS NOT NULL 
+           DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = NOW()
            RETURNING id`,
           values,
         );
@@ -486,7 +487,8 @@ export class InventoryService {
         const res = await client.query(
           `INSERT INTO inventory_assignments (catalog_id, bed_id, quantity) 
            VALUES ${rows.join(', ')}
-           ON CONFLICT (bed_id, catalog_id) DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = NOW()
+           ON CONFLICT (bed_id, catalog_id) WHERE bed_id IS NOT NULL 
+           DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = NOW()
            RETURNING id`,
           values,
         );
