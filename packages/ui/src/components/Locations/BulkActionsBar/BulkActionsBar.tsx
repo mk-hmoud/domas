@@ -19,6 +19,7 @@ import {
   IconCheck,
   IconUserOff,
   IconEye,
+  IconFiles,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +30,7 @@ interface BulkActionsBarProps {
   onEdit?: () => void;
   onActivate?: () => void;
   onDeactivate?: () => void;
+  onApplyTemplate?: () => void;
   onClear: () => void;
   onShowSelection?: () => void;
 }
@@ -40,6 +42,7 @@ export function BulkActionsBar({
   onEdit,
   onActivate,
   onDeactivate,
+  onApplyTemplate,
   onClear,
   onShowSelection,
 }: BulkActionsBarProps) {
@@ -175,6 +178,24 @@ export function BulkActionsBar({
                       }}
                     />
                     {t("duplicate", { defaultValue: "Duplicate" })}
+                  </Button>
+                )}
+                {onApplyTemplate && (
+                  <Button
+                    variant="subtle"
+                    color="blue"
+                    size="xs"
+                    onClick={onApplyTemplate}
+                    c="blue.3"
+                  >
+                    <IconFiles
+                      style={{
+                        width: rem(14),
+                        height: rem(14),
+                        marginRight: 6,
+                      }}
+                    />
+                    {t("apply_blueprint", { defaultValue: "Apply Blueprint" })}
                   </Button>
                 )}
                 <Button

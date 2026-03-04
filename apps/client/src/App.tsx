@@ -12,6 +12,7 @@ import { RolesPage } from './pages/RolesPage';
 import { AccountingPage } from './pages/AccountingPage';
 import { AccountPage } from './pages/AccountPage';
 import { InventoryCatalogPage } from './pages/InventoryCatalogPage';
+import { InventoryTemplatesPage } from './pages/InventoryTemplatesPage';
 import { CheckInPage } from './pages/CheckInPage';
 import { CheckOutPage } from './pages/CheckOutPage';
 import { AccessCardsPage } from './pages/AccessCardsPage';
@@ -86,6 +87,14 @@ function App() {
             element={
               <PermissionRoute permission="inventory.manage">
                 <InventoryCatalogPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="inventory/templates"
+            element={
+              <PermissionRoute permission="inventory.manage">
+                <InventoryTemplatesPage />
               </PermissionRoute>
             }
           />

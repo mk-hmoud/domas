@@ -123,6 +123,11 @@ export function DashboardLayout() {
             requiredPermission: 'inventory.manage',
           },
           {
+            label: t('nav.inventory_templates'),
+            link: '/dashboard/inventory/templates',
+            requiredPermission: 'inventory.manage',
+          },
+          {
             label: t('nav.damages'),
             link: '/dashboard/damages',
             requiredPermission: 'damages.view',

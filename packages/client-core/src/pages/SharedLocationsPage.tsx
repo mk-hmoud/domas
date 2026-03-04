@@ -31,6 +31,7 @@ import {
   IconX,
   IconHierarchy,
   IconTable,
+  IconFiles,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -41,6 +42,8 @@ import {
   CreateInventoryAssignmentDto,
   InventoryScope,
   FindAllLocationsDto,
+  ApplyInventoryTemplateDto,
+  InventoryTemplate,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -59,6 +62,7 @@ import {
   AssignInventoryModal,
   LocationRegistryTable,
   LocationRegistryFilters,
+  ApplyTemplateModal,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
@@ -187,6 +191,14 @@ function LocationsContent() {
   >([]);
   const [assignModalOpened, setAssignModalOpened] = useState(false);
   const [inventoryLoading, setInventoryLoading] = useState(false);
+
+  // Template State
+  const [templates, setTemplates] = useState<InventoryTemplate[]>([]);
+  const [applyTemplateModalOpened, setApplyTemplateModalOpened] =
+    useState(false);
+  const [templateTargetType, setTemplateTargetType] = useState<
+    "location" | "bed"
+  >("location");
 
   // Bed Management
   const {
@@ -495,6 +507,77 @@ function LocationsContent() {
     setLocationToEdit(null);
   };
 
+  const fetchTemplates = async () => {
+    try {
+      const res = await inventory.findAllTemplates();
+      setTemplates(res);
+    } catch (error) {
+      console.error("Failed to fetch templates:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const handleOpenApplyTemplate = (item: any) => {
+    // If it's a single item from the table row
+    if (item) {
+      setTemplateTargetType(item.type === "bed" ? "bed" : "location");
+      // Pre-set the selection to just this one item
+      setSelectedIds([item.id]);
+    } else {
+      // For bulk, use the active tab
+      setTemplateTargetType(activeTab === "beds" ? "bed" : "location");
+    }
+    setApplyTemplateModalOpened(true);
+  };
+
+  const handleApplyTemplate = async (values: ApplyInventoryTemplateDto) => {
+    setInventoryLoading(true);
+    try {
+      // Determine targets based on current selection or single view
+      let payload = { ...values };
+
+      if (selectedIds.length > 0) {
+        if (activeTab === "beds") {
+          payload.bedIds = selectedIds;
+        } else {
+          payload.locationIds = selectedIds;
+        }
+      } else if (selectedNode) {
+        if (selectedNode.type === LocationType.BED) {
+          const bid =
+            typeof selectedNode.id === "string"
+              ? Number(selectedNode.id.replace("bed-", ""))
+              : Number(selectedNode.id);
+          payload.bedIds = [bid];
+        } else {
+          payload.locationIds = [Number(selectedNode.id)];
+        }
+      }
+
+      await inventory.applyTemplate(payload);
+      notifications.show({
+        title: t("success"),
+        message: t("template_applied_success", {
+          defaultValue: "Blueprint applied successfully",
+        }),
+        color: "green",
+      });
+      if (selectedNode) fetchInventory();
+      clearSelection();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_apply_template"),
+        color: "red",
+      });
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
   const handleShowSelection = () => {
     setViewSelectionDrawerOpened(true);
   };
@@ -692,12 +775,26 @@ function LocationsContent() {
                     </>
                   )}
                   {selectedNode.type === LocationType.ROOM ? (
-                    <Button
-                      leftSection={<IconPlus size={16} />}
-                      onClick={() => setCreateBedModalOpened(true)}
-                    >
-                      {t("create_bed", { defaultValue: "Create Bed" })}
-                    </Button>
+                    <>
+                      <Button
+                        variant="light"
+                        leftSection={<IconPlus size={16} />}
+                        onClick={() => setCreateBedModalOpened(true)}
+                      >
+                        {t("create_bed", { defaultValue: "Create Bed" })}
+                      </Button>
+                      <Button
+                        variant="light"
+                        color="blue"
+                        leftSection={<IconFiles size={16} />}
+                        onClick={() => {
+                          setTemplateTargetType("location");
+                          setApplyTemplateModalOpened(true);
+                        }}
+                      >
+                        {t("apply_blueprint")}
+                      </Button>
+                    </>
                   ) : (
                     <Button
                       leftSection={<IconPlus size={16} />}
@@ -961,6 +1058,7 @@ function LocationsContent() {
                     }}
                     onEdit={handleEditChild}
                     onDelete={confirmDeleteLocation}
+                    onApplyTemplate={handleOpenApplyTemplate}
                     selectedIds={selectedIds}
                     onToggleSelection={handleToggleSelection}
                     onToggleSelectAll={handleToggleSelectAllRegistry}
@@ -1008,6 +1106,7 @@ function LocationsContent() {
                         },
                       });
                     }}
+                    onApplyTemplate={handleOpenApplyTemplate}
                     selectedIds={selectedIds}
                     onToggleSelection={handleToggleSelection}
                     onToggleSelectAll={handleToggleSelectAllRegistry}
@@ -1083,6 +1182,7 @@ function LocationsContent() {
         selectedCount={selectedIds.length}
         onDelete={handleBulkDelete}
         onEdit={handleBulkEdit}
+        onApplyTemplate={() => handleOpenApplyTemplate(null)}
         onClear={clearSelection}
         onShowSelection={handleShowSelection}
       />
@@ -1092,6 +1192,16 @@ function LocationsContent() {
         onClose={() => setBulkEditModalOpened(false)}
         onSubmit={handleSubmitBulkEdit}
         count={selectedIds.length}
+      />
+
+      <ApplyTemplateModal
+        opened={applyTemplateModalOpened}
+        onClose={() => setApplyTemplateModalOpened(false)}
+        onSubmit={handleApplyTemplate}
+        templates={templates}
+        targetType={templateTargetType}
+        count={selectedIds.length || 1}
+        loading={inventoryLoading}
       />
 
       <Drawer

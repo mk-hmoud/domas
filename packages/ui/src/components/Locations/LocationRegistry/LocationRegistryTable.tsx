@@ -9,7 +9,7 @@ import {
   Stack,
   Checkbox,
 } from "@mantine/core";
-import { IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconPencil, IconTrash, IconFiles } from "@tabler/icons-react";
 import { Location, GenderType, Bed } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { LocationIcon } from "../LocationIcon";
@@ -19,6 +19,7 @@ interface LocationRegistryTableProps {
   onView: (item: any) => void;
   onEdit: (item: any) => void;
   onDelete: (item: any) => void;
+  onApplyTemplate?: (item: any) => void;
   selectedIds: number[];
   onToggleSelection: (id: number) => void;
   onToggleSelectAll: () => void;
@@ -29,6 +30,7 @@ export function LocationRegistryTable({
   onView,
   onEdit,
   onDelete,
+  onApplyTemplate,
   selectedIds,
   onToggleSelection,
   onToggleSelectAll,
@@ -163,6 +165,21 @@ export function LocationRegistryTable({
         </Table.Td>
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Group gap={4} justify="flex-end">
+            {onApplyTemplate && (
+              <Tooltip
+                label={t("apply_blueprint", {
+                  defaultValue: "Apply Blueprint",
+                })}
+              >
+                <ActionIcon
+                  variant="subtle"
+                  color="blue"
+                  onClick={() => onApplyTemplate(item)}
+                >
+                  <IconFiles size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
             <Tooltip label={t("edit")}>
               <ActionIcon
                 variant="subtle"
