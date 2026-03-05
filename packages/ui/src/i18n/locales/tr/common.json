@@ -111,6 +111,17 @@
     "approved": "Onaylandı",
     "rejected": "Reddedildi"
   },
+  "booking_status": {
+    "draft": "Taslak",
+    "pending_accounting": "Finansal Onay Bekliyor",
+    "ready_for_checkin": "Girişe Hazır",
+    "confirmed": "Onaylandı (Yenileme)",
+    "active": "Aktif",
+    "completed": "Tamamlandı",
+    "transferred": "Transfer Edildi",
+    "cancelled": "İptal Edildi",
+    "rejected": "Reddedildi"
+  },
   "damaged": "Hasarlı",
   "liabilities": "Sorumluluklar",
   "reported_damages": "Bildirilen",

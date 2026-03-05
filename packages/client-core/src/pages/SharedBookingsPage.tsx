@@ -333,6 +333,15 @@ export function SharedBookingsPage() {
               <Code>{selectedBooking.id}</Code>
             </Box>
 
+            {selectedBooking.previousBookingId && (
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("rolled_over_from", { defaultValue: "Rolled over from" })}
+                </Text>
+                <Code color="blue">{selectedBooking.previousBookingId}</Code>
+              </Box>
+            )}
+
             <Divider
               label={t("stay_period", "Stay Period")}
               labelPosition="center"

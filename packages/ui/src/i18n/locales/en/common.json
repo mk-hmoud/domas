@@ -111,6 +111,17 @@
     "approved": "Approved",
     "rejected": "Rejected"
   },
+  "booking_status": {
+    "draft": "Draft",
+    "pending_accounting": "Pending Financials",
+    "ready_for_checkin": "Ready for Check-In",
+    "confirmed": "Confirmed (Renewal)",
+    "active": "Active",
+    "completed": "Completed",
+    "transferred": "Transferred",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected"
+  },
   "damaged": "Damaged",
   "liabilities": "Liabilities",
   "reported_damages": "Reported",

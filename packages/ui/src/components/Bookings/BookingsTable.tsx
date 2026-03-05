@@ -32,6 +32,30 @@ export function BookingsTable({
 }: BookingsTableProps) {
   const { t } = useTranslation();
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "green";
+      case "ready_for_checkin":
+        return "blue";
+      case "confirmed":
+        return "cyan";
+      case "transferred":
+        return "grape";
+      case "pending_accounting":
+        return "orange";
+      case "draft":
+        return "yellow";
+      case "completed":
+        return "gray";
+      case "cancelled":
+      case "rejected":
+        return "red";
+      default:
+        return "gray";
+    }
+  };
+
   const rows = data.map((booking) => (
     <Table.Tr
       key={booking.id}
@@ -43,7 +67,11 @@ export function BookingsTable({
       </Table.Td>
       <Table.Td>{bedsMap.get(booking.bedId) || booking.bedId}</Table.Td>
       <Table.Td>
-        <Badge variant="light">{booking.status}</Badge>
+        <Badge color={getStatusColor(booking.status)} variant="light">
+          {t(`booking_status.${booking.status}`, {
+            defaultValue: booking.status,
+          })}
+        </Badge>
       </Table.Td>
       <Table.Td>{new Date(booking.startDate).toLocaleDateString()}</Table.Td>
       <Table.Td>{new Date(booking.endDate).toLocaleDateString()}</Table.Td>
