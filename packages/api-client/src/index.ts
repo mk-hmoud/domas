@@ -13,3 +13,4 @@ export * from "./endpoints/inventory";
 export * from "./endpoints/access-cards";
 export * from "./endpoints/contracts";
 export * from "./endpoints/damages";
+export * from "./endpoints/imports";

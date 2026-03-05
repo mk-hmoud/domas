@@ -15,6 +15,7 @@ import { UpdateBookingDatesDto } from '../dto/update-booking-dates.dto';
 import { TransferBookingDto } from '../dto/transfer-booking.dto';
 import { BulkTransferBookingDto } from '../dto/bulk-transfer-booking.dto';
 import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
+import { FindAllBookingsDto } from '../dto/find-all-bookings.dto';
 import { Booking } from '../entities/booking.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
@@ -32,6 +33,7 @@ import { CheckInBookingDto } from '../dto/check-in-booking.dto';
 import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 import { Inject, forwardRef } from '@nestjs/common';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
+import { PoolClient } from 'pg';
 
 @Injectable()
 export class BookingsService {
@@ -51,61 +53,62 @@ export class BookingsService {
     private readonly db: DatabaseService,
   ) {}
 
-  async create(data: CreateBookingDto, context: AuditUserContext): Promise<Booking> {
-    this.logger.log({ studentId: data.studentId, bedId: data.bedId }, 'Creating new booking');
+  async create(
+    data: CreateBookingDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Booking> {
+    const operation = async (client: PoolClient) => {
+      this.logger.log({ studentId: data.studentId, bedId: data.bedId }, 'Creating new booking');
 
-    // 1. Fetch Constraints Data
-    const student = await this.studentsRepository.findById(data.studentId);
-    if (!student) throw new NotFoundException(`Student with ID ${data.studentId} not found`);
+      // 1. Fetch Constraints Data
+      const student = await this.studentsRepository.findById(data.studentId, client);
+      if (!student) throw new NotFoundException(`Student with ID ${data.studentId} not found`);
 
-    const bed = await this.bedsRepository.findById(data.bedId);
-    if (!bed) throw new NotFoundException(`Bed with ID ${data.bedId} not found`);
+      const bed = await this.bedsRepository.findById(data.bedId, client);
+      if (!bed) throw new NotFoundException(`Bed with ID ${data.bedId} not found`);
 
-    const room = await this.locationsRepository.findById(bed.locationId);
-    if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
+      const room = await this.locationsRepository.findById(bed.locationId, client);
+      if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
 
-    // 2. Check TR Only Constraint (Explicit)
-    // Check both room and bed level
-    const isTrOnly = room.isTrOnly || bed.isTrOnly;
-    if (isTrOnly && student.nationalityCode !== 'TR') {
-      throw new BadRequestException('This location is reserved for Turkish citizens only');
-    }
-
-    // 2.1 Check Foreigner Only Constraint (Explicit)
-    const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
-    if (isForeignerOnly && student.nationalityCode === 'TR') {
-      throw new BadRequestException('This location is reserved for foreign students only');
-    }
-
-    // 3. Check Ownership Constraint (Rectorate - Explicit)
-    const isRectorate =
-      room.ownership === LocationOwnership.RECTORATE ||
-      bed.ownership === LocationOwnership.RECTORATE;
-
-    if (isRectorate) {
-      // Check if user is Admin
-      const user = await this.usersService.findById(context.userId);
-      if (!user || !user.isRecoveryAdmin) {
-        throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
+      // 2. Constraints Check
+      const isTrOnly = room.isTrOnly || bed.isTrOnly;
+      if (isTrOnly && student.nationalityCode !== 'TR') {
+        throw new BadRequestException('This location is reserved for Turkish citizens only');
       }
-    }
 
-    // 4. Fetch Semester for Default Dates
-    const semesterRes = await this.db.query(
-      'SELECT start_date, end_date FROM semesters WHERE id = $1',
-      [data.semesterId],
-    );
-    if (semesterRes.rowCount === 0) throw new NotFoundException('Semester not found');
-    const semester = semesterRes.rows[0];
+      const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
+      if (isForeignerOnly && student.nationalityCode === 'TR') {
+        throw new BadRequestException('This location is reserved for foreign students only');
+      }
 
-    const finalStartDate = data.startDate || semester.start_date;
-    const finalEndDate = data.endDate || semester.end_date;
+      const isRectorate =
+        room.ownership === LocationOwnership.RECTORATE ||
+        bed.ownership === LocationOwnership.RECTORATE;
 
-    if (new Date(finalStartDate) >= new Date(finalEndDate)) {
-      throw new BadRequestException('Start date must be before end date.');
-    }
+      if (isRectorate) {
+        const user = await this.usersService.findById(context.userId, context, client);
+        if (!user || !user.isRecoveryAdmin) {
+          throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
+        }
+      }
 
-    return this.db.transaction(async (client) => {
+      // 3. Fetch Semester & Dates
+      const semesterRes = await client.query(
+        'SELECT start_date, end_date FROM semesters WHERE id = $1',
+        [data.semesterId],
+      );
+      if (semesterRes.rowCount === 0) throw new NotFoundException('Semester not found');
+      const semester = semesterRes.rows[0];
+
+      const finalStartDate = data.startDate || semester.start_date;
+      const finalEndDate = data.endDate || semester.end_date;
+
+      if (new Date(finalStartDate) >= new Date(finalEndDate)) {
+        throw new BadRequestException('Start date must be before end date.');
+      }
+
+      // 4. Persist
       const booking = await this.bookingsRepository.create(
         {
           ...data,
@@ -115,10 +118,10 @@ export class BookingsService {
         client,
       );
 
-      // Lock gender if currently NULL (Dynamic Lock)
-      // student and bed are already fetched above the transaction
-      await this.locationsRepository.lockGenderIfNull(bed!.locationId, student!.gender, client);
+      // 5. Dynamic Lock
+      await this.locationsRepository.lockGenderIfNull(bed.locationId, student.gender, client);
 
+      // 6. Audit
       await this.undoService.registerUndo(
         {
           userId: context.userId,
@@ -130,9 +133,13 @@ export class BookingsService {
         },
         client,
       );
+
       this.logger.log({ bookingId: booking.id }, 'Booking created successfully');
       return booking;
-    }, context);
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
   }
 
   async findById(id: string): Promise<Booking> {

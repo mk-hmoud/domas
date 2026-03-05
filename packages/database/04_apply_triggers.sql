@@ -96,6 +96,12 @@ CREATE TRIGGER update_damage_liabilities_modtime
 BEFORE UPDATE ON damage_liabilities
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Import Batches
+DROP TRIGGER IF EXISTS update_import_batches_modtime ON import_batches;
+CREATE TRIGGER update_import_batches_modtime
+BEFORE UPDATE ON import_batches
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -228,6 +234,12 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_damage_liabilities_change ON damage_liabilities;
 CREATE TRIGGER audit_damage_liabilities_change
 AFTER INSERT OR UPDATE OR DELETE ON damage_liabilities
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Import Batches
+DROP TRIGGER IF EXISTS audit_import_batches_change ON import_batches;
+CREATE TRIGGER audit_import_batches_change
+AFTER INSERT OR UPDATE OR DELETE ON import_batches
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

@@ -193,4 +193,21 @@ export class BookingsRepository {
     const result = await this.getClient(client).query<{ count: string }>(query, [locationId]);
     return parseInt(result.rows[0].count, 10);
   }
+
+  async checkAvailability(
+    bedId: number,
+    startDate: Date,
+    endDate: Date,
+    client?: PoolClient,
+  ): Promise<boolean> {
+    const query = `
+      SELECT 1 FROM bookings
+      WHERE bed_id = $1
+        AND daterange(start_date, end_date, '[)') && daterange($2::date, $3::date, '[)')
+        AND status NOT IN ('cancelled', 'rejected', 'draft')
+      LIMIT 1
+    `;
+    const result = await this.getClient(client).query(query, [bedId, startDate, endDate]);
+    return (result.rowCount ?? 0) === 0;
+  }
 }

@@ -578,3 +578,33 @@ CREATE TABLE access_card_logs (
     
     notes TEXT
 );
+
+-- =============================================
+-- BULK IMPORT SYSTEM
+-- =============================================
+
+CREATE TABLE import_batches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    filename VARCHAR(255) NOT NULL,
+    uploaded_by UUID NOT NULL REFERENCES users(id),
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    total_rows INT NOT NULL,
+    successful_rows INT DEFAULT 0,
+    failed_rows INT DEFAULT 0,
+    
+    status VARCHAR(20) DEFAULT 'processing' CHECK (status IN ('processing', 'completed', 'failed')),
+    
+    -- Store full results for UI feedback
+    -- Array of { index: number, status: 'success' | 'error', error?: string, studentId?: string, bookingId?: string, data: any }
+    results JSONB, 
+    notes TEXT,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_import_batches_uploaded_by ON import_batches(uploaded_by);
+CREATE INDEX idx_import_batches_uploaded_at ON import_batches(uploaded_at);

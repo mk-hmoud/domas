@@ -269,6 +269,10 @@ export class UndoService {
       case UndoActionType.REJECT_DAMAGE_REPORT:
         return this.undoRejectDamageReport(log, client);
 
+      // Bulk Import
+      case UndoActionType.BULK_IMPORT_STUDENT:
+        return this.undoBulkImport(log, client);
+
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
     }
@@ -1241,6 +1245,61 @@ export class UndoService {
     await client.query(
       'UPDATE damage_reports SET status = $1, reviewed_by = NULL, reviewed_at = NULL WHERE id = $2',
       [previousStatus, reportId],
+    );
+  }
+
+  // ===========================================================================
+  // Bulk Import Handlers
+  // ===========================================================================
+
+  private async undoBulkImport(log: UndoLog, client: PoolClient): Promise<void> {
+    const { batchId, createdStudentIds, createdBookingIds } = log.undoData;
+    if (!batchId) throw new BadRequestException('Missing batchId in undo data');
+
+    // 1. SAFETY CHECK: Check if any bookings have been paid for
+    if (createdBookingIds && createdBookingIds.length > 0) {
+      const paidCheck = await client.query(
+        `SELECT id FROM bookings 
+         WHERE id = ANY($1) 
+           AND payment_status != 'pending'`,
+        [createdBookingIds],
+      );
+
+      if (paidCheck.rowCount! > 0) {
+        throw new BadRequestException(
+          'Cannot undo import: Some students have already made payments or have active financial records.',
+        );
+      }
+    }
+
+    // 2. GENDER LOCK CLEANUP: Find locations affected by these bookings
+    if (createdBookingIds && createdBookingIds.length > 0) {
+      const locationRes = await client.query(
+        `SELECT DISTINCT bd.location_id 
+         FROM bookings b 
+         JOIN beds bd ON b.bed_id = bd.id 
+         WHERE b.id = ANY($1)`,
+        [createdBookingIds],
+      );
+
+      // 3. ATOMIC DELETION: Bookings first
+      await client.query('DELETE FROM bookings WHERE id = ANY($1)', [createdBookingIds]);
+
+      // 4. CLEAR GENDER LOCKS if rooms are now empty
+      for (const row of locationRes.rows) {
+        await this.locationsRepository.clearGenderLockIfEmpty(row.location_id, client);
+      }
+    }
+
+    // 5. ATOMIC DELETION: Students
+    if (createdStudentIds && createdStudentIds.length > 0) {
+      await client.query('DELETE FROM students WHERE id = ANY($1)', [createdStudentIds]);
+    }
+
+    // 6. Update batch status
+    await client.query(
+      "UPDATE import_batches SET status = 'failed', notes = 'Import undone by user' WHERE id = $1",
+      [batchId],
     );
   }
 }

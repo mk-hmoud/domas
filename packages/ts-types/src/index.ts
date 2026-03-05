@@ -59,7 +59,8 @@ export * from "./dtos/approve-financials.dto";
 export * from "./dtos/search-audit.dto";
 export * from "./dtos/create-student.dto";
 export * from "./dtos/update-student.dto";
-export * from "./dtos/find-all-students.dto";
+export * from "./dtos/find-all-bookings.dto";
+export * from "./dtos/bulk-import.dto";
 export * from "./dtos/bulk-student.dto";
 export * from "./dtos/update-student-status.dto";
 export type {

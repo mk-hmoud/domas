@@ -16,6 +16,7 @@ import { InventoryModule } from './domain/inventory/inventory.module';
 import { AccessCardsModule } from './domain/access-cards/access-cards.module';
 import { ContractsModule } from './domain/contracts/contracts.module';
 import { DamagesModule } from './domain/damages/damages.module';
+import { ImportsModule } from './domain/imports/imports.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DamagesModule } from './domain/damages/damages.module';
     AccessCardsModule,
     ContractsModule,
     DamagesModule,
+    ImportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

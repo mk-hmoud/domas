@@ -46,4 +46,7 @@ export enum UndoActionType {
   CREATE_DAMAGE_REPORT = "create_damage_report",
   APPROVE_DAMAGE_REPORT = "approve_damage_report",
   REJECT_DAMAGE_REPORT = "reject_damage_report",
+
+  // Bulk Import
+  BULK_IMPORT_STUDENT = "bulk_import_student",
 }
