@@ -5,6 +5,7 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { BookingsRepository } from '../repositories/bookings.repository';
@@ -187,10 +188,15 @@ export class BookingsService {
         return updated!;
       }
 
+      const targetStatus = booking.previousBookingId
+        ? BookingOpsStatus.CONFIRMED
+        : BookingOpsStatus.READY_FOR_CHECKIN;
+
       const updated = await this.bookingsRepository.approveFinancials(
         id,
         context.userId,
         data.paymentStatus,
+        targetStatus,
         client,
       );
 
@@ -656,6 +662,101 @@ export class BookingsService {
       );
 
       return updated!;
+    }, context);
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleAutomaticTransitions() {
+    this.logger.log('Checking for automatic booking transitions (Rollovers)...');
+    const context: AuditUserContext = {
+      userId: '00000000-0000-0000-0000-000000000000',
+      username: 'system_cron',
+      ipAddress: '127.0.0.1',
+    };
+
+    const results = await this.processSemesterTransitions(context);
+    if (results.length > 0) {
+      this.logger.log(
+        `Automatically flipped ${results.length} bookings to ACTIVE for new semester`,
+      );
+    }
+  }
+
+  /**
+   * THE FLIP: Atomic transition from Old Semester (ACTIVE -> TRANSFERRED)
+   * to New Semester (CONFIRMED -> ACTIVE).
+   */
+  async processSemesterTransitions(context: AuditUserContext): Promise<Booking[]> {
+    return this.db.transaction(async (client) => {
+      // 1. Find ACTIVE bookings in semesters that have ALREADY ENDED
+      const expiredBookingsRes = await client.query(`
+        SELECT b.* 
+        FROM bookings b
+        JOIN semesters s ON b.semester_id = s.id
+        WHERE b.status = 'active'
+          AND s.end_date <= CURRENT_DATE
+      `);
+
+      const flipped: Booking[] = [];
+
+      for (const oldBooking of expiredBookingsRes.rows) {
+        // 2. Check if this student has a CONFIRMED booking for the NEXT term
+        const nextBookingRes = await client.query(
+          `SELECT * FROM bookings 
+           WHERE previous_booking_id = $1 
+             AND status = 'confirmed' 
+           LIMIT 1`,
+          [oldBooking.id],
+        );
+
+        if (nextBookingRes.rowCount === 0) {
+          // No renewal found. Standard checkout logic would go here if automated,
+          // but for now we only handle the Renewal Flip.
+          continue;
+        }
+
+        const nextBooking = nextBookingRes.rows[0];
+
+        // 3. PERFORM THE ATOMIC FLIP
+
+        // A. Set Old -> TRANSFERRED
+        await client.query(
+          "UPDATE bookings SET status = 'transferred', checked_out_at = NOW(), updated_at = NOW() WHERE id = $1",
+          [oldBooking.id],
+        );
+
+        // B. Set New -> ACTIVE
+        const updatedNewRes = await client.query(
+          "UPDATE bookings SET status = 'active', checked_in_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *",
+          [nextBooking.id],
+        );
+
+        // C. Relink Access Card
+        await this.accessCardsService.relinkCardForTransfer(
+          oldBooking.id,
+          nextBooking.id,
+          oldBooking.student_id,
+          context,
+          client,
+        );
+
+        // D. Undo/Audit log
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: UndoActionType.UPDATE_BOOKING,
+            entityType: 'booking',
+            entityId: nextBooking.id,
+            undoData: { previousStatus: 'confirmed', oldBookingId: oldBooking.id },
+            description: `Automatic rollover flip: ${oldBooking.id} (Transferred) -> ${nextBooking.id} (Active)`,
+          },
+          client,
+        );
+
+        flipped.push(new Booking(updatedNewRes.rows[0]));
+      }
+
+      return flipped;
     }, context);
   }
 }

@@ -15,7 +15,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-    CREATE TYPE booking_status_enum AS ENUM ('draft', 'pending_accounting', 'ready_for_checkin', 'active', 'completed', 'cancelled', 'rejected');
+    CREATE TYPE booking_status_enum AS ENUM ('draft', 'pending_accounting', 'ready_for_checkin', 'confirmed', 'active', 'completed', 'transferred', 'cancelled', 'rejected');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN

@@ -98,6 +98,7 @@ export class BookingsRepository {
     id: string,
     approvedBy: string,
     paymentStatus?: PaymentStatus,
+    targetStatus: BookingOpsStatus = BookingOpsStatus.READY_FOR_CHECKIN,
     client?: PoolClient,
   ): Promise<Booking | null> {
     const query = `
@@ -106,13 +107,18 @@ export class BookingsRepository {
         is_accounting_approved = TRUE,
         accounting_approved_at = NOW(),
         accounting_approved_by = $2,
-        status = 'ready_for_checkin',
+        status = $4,
         payment_status = COALESCE($3, payment_status),
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `;
-    const result = await this.getClient(client).query(query, [id, approvedBy, paymentStatus]);
+    const result = await this.getClient(client).query(query, [
+      id,
+      approvedBy,
+      paymentStatus,
+      targetStatus,
+    ]);
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 

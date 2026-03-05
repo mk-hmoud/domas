@@ -284,4 +284,39 @@ export class AccessCardsService {
   async getLogs(cardId: number) {
     return this.repository.findLogsByCard(cardId);
   }
+
+  async relinkCardForTransfer(
+    oldBookingId: string,
+    newBookingId: string,
+    studentId: string,
+    context: AuditUserContext,
+    client: PoolClient,
+  ): Promise<AccessCard | null> {
+    const activeCards = await this.repository.findAllCards({
+      status: CardStatus.ACTIVE,
+    });
+    const card = activeCards.find((c) => c.currentBookingId === oldBookingId);
+
+    if (!card) return null;
+
+    const updated = await this.repository.updateCard(
+      card.id,
+      { currentBookingId: newBookingId },
+      client,
+    );
+
+    await this.repository.createLog(
+      {
+        cardId: card.id,
+        studentId,
+        bookingId: newBookingId,
+        actionType: CardActionType.ISSUED, // Re-issued for new booking
+        performedBy: context.userId,
+        notes: `Transfer rollover from booking ${oldBookingId}`,
+      },
+      client,
+    );
+
+    return updated;
+  }
 }
