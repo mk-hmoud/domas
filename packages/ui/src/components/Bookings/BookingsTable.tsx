@@ -4,6 +4,7 @@ import {
   IconEye,
   IconEdit,
   IconTrash,
+  IconArrowsLeftRight,
 } from "@tabler/icons-react";
 import { Booking } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,7 @@ interface BookingsTableProps {
   onEdit?: (booking: Booking) => void;
   onDelete?: (booking: Booking) => void;
   onView?: (booking: Booking) => void;
+  onTransfer?: (booking: Booking) => void;
 }
 
 export function BookingsTable({
@@ -26,6 +28,7 @@ export function BookingsTable({
   onEdit,
   onDelete,
   onView,
+  onTransfer,
 }: BookingsTableProps) {
   const { t } = useTranslation();
 
@@ -62,6 +65,16 @@ export function BookingsTable({
                 onClick={() => onView(booking)}
               >
                 {t("view_details", { defaultValue: "View Details" })}
+              </Menu.Item>
+            )}
+            {onTransfer && (
+              <Menu.Item
+                leftSection={<IconArrowsLeftRight size={14} />}
+                onClick={() => onTransfer(booking)}
+              >
+                {t("transfer_to_semester", {
+                  defaultValue: "Transfer to Next Semester",
+                })}
               </Menu.Item>
             )}
             {onEdit && (

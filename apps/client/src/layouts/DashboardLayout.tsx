@@ -81,6 +81,11 @@ export function DashboardLayout() {
             requiredPermission: 'bookings.view',
           },
           {
+            label: t('nav.transfers'),
+            link: '/dashboard/transfers',
+            requiredPermission: 'bookings.view',
+          },
+          {
             label: t('nav.check_in'),
             link: '/dashboard/check-in',
             requiredPermission: 'bookings.check_in',

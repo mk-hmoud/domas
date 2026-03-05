@@ -8,6 +8,7 @@ export * from "./pages/SharedLocationsPage";
 export * from "./pages/SharedUsersPage";
 export * from "./pages/SharedSemestersPage";
 export * from "./pages/SharedBookingsPage";
+export * from "./pages/SharedTransfersPage";
 export * from "./pages/SharedAuditLogsPage";
 export * from "./pages/SharedStudentsPage";
 export * from "./pages/SharedAccountPage";
