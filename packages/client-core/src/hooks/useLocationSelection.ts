@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 
-export function useLocationSelection(allItemIds: number[]) {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+export function useLocationSelection(allItemIds: (string | number)[]) {
+  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
 
-  const toggleSelection = useCallback((id: number) => {
+  const toggleSelection = useCallback((id: string | number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
