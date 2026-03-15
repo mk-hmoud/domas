@@ -7,12 +7,14 @@ import {
   Text,
   Badge,
   ThemeIcon,
+  Checkbox,
 } from "@mantine/core";
 import {
   IconDotsVertical,
   IconEdit,
   IconTrash,
   IconBed,
+  IconCalendarPlus,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +25,9 @@ interface BedCardProps {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onBook?: () => void;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
 export function BedCard({
@@ -31,6 +36,9 @@ export function BedCard({
   onClick,
   onEdit,
   onDelete,
+  onBook,
+  selected,
+  onSelect,
 }: BedCardProps) {
   const { t } = useTranslation();
 
@@ -40,8 +48,33 @@ export function BedCard({
       padding="md"
       radius="md"
       onClick={onClick}
-      style={{ cursor: "pointer", position: "relative" }}
+      style={{
+        cursor: "pointer",
+        position: "relative",
+        borderColor: selected ? "var(--mantine-color-blue-filled)" : undefined,
+        backgroundColor: selected
+          ? "var(--mantine-color-blue-light)"
+          : "transparent",
+      }}
     >
+      <Box
+        style={{
+          position: "absolute",
+          top: 5,
+          left: 5,
+          zIndex: 2,
+        }}
+      >
+        <Checkbox
+          checked={selected}
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelect?.();
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </Box>
+
       <Box
         style={{
           position: "absolute",
@@ -61,6 +94,18 @@ export function BedCard({
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
+            {onBook && status === "available" && (
+              <Menu.Item
+                leftSection={<IconCalendarPlus size={14} />}
+                color="green"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBook();
+                }}
+              >
+                {t("create_booking")}
+              </Menu.Item>
+            )}
             <Menu.Item
               leftSection={<IconEdit size={14} />}
               onClick={(e) => {

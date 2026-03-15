@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 interface HierarchicalBedSelectorProps {
   studentId?: string;
   value?: number;
+  initialLocationId?: number;
   onChange: (bedId: number) => void;
   error?: any;
 }
@@ -21,6 +22,7 @@ interface SelectionLevel {
 export function HierarchicalBedSelector({
   studentId,
   value,
+  initialLocationId,
   onChange,
   error,
 }: HierarchicalBedSelectorProps) {
@@ -31,17 +33,18 @@ export function HierarchicalBedSelector({
   const [eligibleBeds, setEligibleBeds] = useState<Bed[]>([]);
   const [loadingBeds, setLoadingBeds] = useState(false);
 
-  // 1. Initial Load: Start by showing the University level
+  // 1. Initial Load & Hydration
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       try {
+        // Fetch roots for the first level
         const result = await locations.findAll({ limit: 100 });
         const roots = result.data.filter(
           (l) => l.type === LocationType.UNIVERSITY,
         );
 
-        setLevels([
+        const initialLevels: SelectionLevel[] = [
           {
             label: t("location_type.university", "University"),
             type: LocationType.UNIVERSITY,
@@ -51,15 +54,88 @@ export function HierarchicalBedSelector({
               label: r.name,
             })),
           },
-        ]);
+        ];
+
+        // HYDRATION LOGIC
+        let targetLocationId = initialLocationId;
+
+        // If we have a bed ID (value), we need to find its room first
+        if (value && !targetLocationId) {
+          try {
+            const bed = await bedsApi.findOne(value);
+            if (bed) targetLocationId = bed.locationId;
+          } catch (e) {
+            console.error("Failed to fetch bed for hydration", e);
+          }
+        }
+
+        if (targetLocationId) {
+          // Fetch the path of ancestors
+          const path = await locations.findWithAncestors(targetLocationId);
+          // path is sorted from root to leaf
+
+          const newSelectedIds: Record<number, string> = {};
+          const newLevels: SelectionLevel[] = [...initialLevels];
+
+          for (let i = 0; i < path.length; i++) {
+            const currentLoc = path[i];
+            newSelectedIds[i] = currentLoc.id.toString();
+
+            // If not the last one in path, fetch children for the NEXT level
+            if (i < path.length) {
+              const children = await locations.findChildren(currentLoc.id);
+              if (children.length > 0) {
+                const nextType = children[0].type;
+                newLevels.push({
+                  label: t(`location_type.${nextType}`, {
+                    defaultValue: nextType,
+                  }),
+                  type: nextType,
+                  parentId: currentLoc.id,
+                  options: children.map((c) => ({
+                    value: c.id.toString(),
+                    label: c.name,
+                  })),
+                });
+              }
+            }
+          }
+
+          setLevels(newLevels);
+          setSelectedIds(newSelectedIds);
+
+          // If the last location in path is a room, fetch eligible beds
+          const lastLoc = path[path.length - 1];
+          if (
+            lastLoc.type === LocationType.ROOM ||
+            lastLoc.type === LocationType.BED
+          ) {
+            // FindEligible already handles the heavy lifting
+            if (studentId) {
+              setLoadingBeds(true);
+              const eligible = await bedsApi.findEligible(studentId);
+              const filtered = eligible.filter(
+                (b) => b.locationId === lastLoc.id,
+              );
+              setEligibleBeds(filtered);
+              setLoadingBeds(false);
+            } else {
+              // Fallback to all beds in room if no student selected yet
+              const allRoomBeds = await bedsApi.findByLocation(lastLoc.id);
+              setEligibleBeds(allRoomBeds);
+            }
+          }
+        } else {
+          setLevels(initialLevels);
+        }
       } catch (e) {
-        // Silently handle error or show notification
+        console.error("Hierarchy hydration error", e);
       } finally {
         setLoading(false);
       }
     };
     init();
-  }, [t]);
+  }, [value, initialLocationId, studentId, t]);
 
   const handleLocationChange = async (val: string | null, levelIdx: number) => {
     // A. Clean up state for everything below the current level

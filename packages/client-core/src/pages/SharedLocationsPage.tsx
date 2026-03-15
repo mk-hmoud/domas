@@ -44,6 +44,10 @@ import {
   FindAllLocationsDto,
   ApplyInventoryTemplateDto,
   InventoryTemplate,
+  Student,
+  Semester,
+  CreateBookingDto,
+  CreateStudentDto,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -63,10 +67,18 @@ import {
   LocationRegistryTable,
   LocationRegistryFilters,
   ApplyTemplateModal,
+  CreateBookingModal,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
-import { locations, inventory, beds } from "@domas/api-client";
+import {
+  locations,
+  inventory,
+  beds,
+  students,
+  semesters,
+  bookings,
+} from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
 import { findLocationPath } from "../utils/location-utils";
@@ -199,6 +211,11 @@ function LocationsContent() {
   const [templateTargetType, setTemplateTargetType] = useState<
     "location" | "bed"
   >("location");
+
+  // Booking State
+  const [bookingModalOpened, setBookingModalOpened] = useState(false);
+  const [studentList, setStudentList] = useState<Student[]>([]);
+  const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
 
   // Bed Management
   const {
@@ -476,10 +493,14 @@ function LocationsContent() {
     const childIds = children.map((c) =>
       c.type === LocationType.BED ? `bed-${c.id}` : `loc-${c.id}`,
     );
-    const allSelected = childIds.every((id) => selectedIds.includes(id));
+    const allSelected = childIds.every((id) =>
+      (selectedIds as any[]).includes(id),
+    );
 
     if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !childIds.includes(id)));
+      setSelectedIds((prev) =>
+        prev.filter((id) => !childIds.includes(id as any)),
+      );
     } else {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...childIds])));
     }
@@ -489,10 +510,14 @@ function LocationsContent() {
     const allIds = registryData.map((item) =>
       item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`,
     );
-    const allSelected = allIds.every((id) => selectedIds.includes(id));
+    const allSelected = allIds.every((id) =>
+      (selectedIds as any[]).includes(id),
+    );
 
     if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !allIds.includes(id)));
+      setSelectedIds((prev) =>
+        prev.filter((id) => !allIds.includes(id as any)),
+      );
     } else {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...allIds])));
     }
@@ -576,7 +601,61 @@ function LocationsContent() {
 
   useEffect(() => {
     fetchTemplates();
+    fetchBookingData();
   }, []);
+
+  const fetchBookingData = async () => {
+    try {
+      const [studentsRes, semestersRes] = await Promise.all([
+        students.findAll({ limit: 1000 }),
+        semesters.findAll({ limit: 1000 }),
+      ]);
+      setStudentList(studentsRes.data);
+      setAllSemesters(semestersRes.data);
+    } catch (error) {
+      console.error("Failed to fetch booking data:", error);
+    }
+  };
+
+  const handleCreateBooking = async (values: CreateBookingDto) => {
+    try {
+      await bookings.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("booking_created", "Booking created successfully"),
+        color: "green",
+      });
+      setBookingModalOpened(false);
+      // Refresh tree to reflect new occupancy if needed
+      await refreshTree();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_create_booking", "Failed to create booking"),
+        color: "red",
+      });
+    }
+  };
+
+  const handleCreateStudent = async (values: CreateStudentDto) => {
+    try {
+      await students.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("student_created", "Student created successfully"),
+        color: "green",
+      });
+      // Refresh student list
+      const studentsRes = await students.findAll({ limit: 1000 });
+      setStudentList(studentsRes.data);
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_create_student", "Failed to create student"),
+        color: "red",
+      });
+    }
+  };
 
   const handleOpenApplyTemplate = (item: any) => {
     // If it's a single item from the table row
@@ -842,6 +921,17 @@ function LocationsContent() {
                       </Button>
                     </>
                   )}
+                  {(selectedNode.type === LocationType.ROOM ||
+                    selectedNode.type === LocationType.BED) && (
+                    <Button
+                      variant="filled"
+                      color="green"
+                      leftSection={<IconPlus size={16} />}
+                      onClick={() => setBookingModalOpened(true)}
+                    >
+                      {t("create_booking")}
+                    </Button>
+                  )}
                   {selectedNode.type === LocationType.ROOM ? (
                     <>
                       <Button
@@ -988,6 +1078,17 @@ function LocationsContent() {
                           onSelect={() => handleToggleSelection(globalId)}
                           onEdit={() => {}}
                           onDelete={() => handleDeleteBed(bed)}
+                          onBook={() => {
+                            // First select the node so the modal gets the right initialBedId
+                            selectNode({
+                              children: [],
+                              ...bed,
+                              id: globalId,
+                              name: bed.label,
+                              type: LocationType.BED,
+                            });
+                            setBookingModalOpened(true);
+                          }}
                         />
                       );
                     })}
@@ -1253,6 +1354,33 @@ function LocationsContent() {
         targetType={templateTargetType}
         count={selectedIds.length || 1}
         loading={inventoryLoading}
+      />
+
+      <CreateBookingModal
+        opened={bookingModalOpened}
+        onClose={() => setBookingModalOpened(false)}
+        onSubmit={handleCreateBooking}
+        onCreateStudent={handleCreateStudent}
+        students={studentList.map((s) => ({
+          value: s.id,
+          label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+        }))}
+        semesters={allSemesters}
+        initialBedId={
+          selectedNode?.type === LocationType.BED
+            ? typeof selectedNode.id === "string"
+              ? Number(selectedNode.id.replace("bed-", ""))
+              : Number(selectedNode.id)
+            : null
+        }
+        initialLocationId={
+          selectedNode?.type !== LocationType.BED && selectedNode?.id
+            ? typeof selectedNode.id === "string" &&
+              selectedNode.id.startsWith("loc-")
+              ? Number(selectedNode.id.replace("loc-", ""))
+              : Number(selectedNode.id)
+            : null
+        }
       />
 
       <Drawer
