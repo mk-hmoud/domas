@@ -35,9 +35,12 @@ export enum UndoActionType {
   CREATE_INVENTORY_CATALOG = 'create_inventory_catalog',
   UPDATE_INVENTORY_CATALOG = 'update_inventory_catalog',
   DELETE_INVENTORY_CATALOG = 'delete_inventory_catalog',
+  UPDATE_INVENTORY_TEMPLATE = 'update_inventory_template',
+  DELETE_INVENTORY_TEMPLATE = 'delete_inventory_template',
   CREATE_INVENTORY_ASSIGNMENT = 'create_inventory_assignment',
   UPDATE_INVENTORY_ASSIGNMENT = 'update_inventory_assignment',
   DELETE_INVENTORY_ASSIGNMENT = 'delete_inventory_assignment',
+  APPLY_INVENTORY_TEMPLATE = 'apply_inventory_template',
 
   // Access Cards
   CREATE_CARD_BATCH = 'create_card_batch',
@@ -48,4 +51,7 @@ export enum UndoActionType {
   CREATE_DAMAGE_REPORT = 'create_damage_report',
   APPROVE_DAMAGE_REPORT = 'approve_damage_report',
   REJECT_DAMAGE_REPORT = 'reject_damage_report',
+
+  // Bulk Import
+  BULK_IMPORT_STUDENT = 'bulk_import_student',
 }

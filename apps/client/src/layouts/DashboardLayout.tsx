@@ -81,6 +81,11 @@ export function DashboardLayout() {
             requiredPermission: 'bookings.view',
           },
           {
+            label: t('nav.transfers'),
+            link: '/dashboard/transfers',
+            requiredPermission: 'bookings.view',
+          },
+          {
             label: t('nav.check_in'),
             link: '/dashboard/check-in',
             requiredPermission: 'bookings.check_in',
@@ -120,6 +125,11 @@ export function DashboardLayout() {
           {
             label: t('nav.inventory_catalog'),
             link: '/dashboard/inventory/catalog',
+            requiredPermission: 'inventory.manage',
+          },
+          {
+            label: t('nav.inventory_templates'),
+            link: '/dashboard/inventory/templates',
             requiredPermission: 'inventory.manage',
           },
           {
@@ -207,7 +217,7 @@ export function DashboardLayout() {
               DOMAS
             </Text>
             <Code fw={700} ml="xs">
-              v1.0.0
+              v{import.meta.env.APP_VERSION}
             </Code>
           </Group>
         }

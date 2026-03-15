@@ -9,10 +9,15 @@ import {
 import { InventoryRepository } from '../repositories/inventory.repository';
 import { InventoryCatalog } from '../entities/inventory-catalog.entity';
 import { InventoryAssignment } from '../entities/inventory-assignment.entity';
+import { InventoryTemplate } from '../entities/inventory-template.entity';
 import { CreateInventoryCatalogDto } from '../dto/create-inventory-catalog.dto';
 import { UpdateInventoryCatalogDto } from '../dto/update-inventory-catalog.dto';
 import { CreateInventoryAssignmentDto } from '../dto/create-inventory-assignment.dto';
 import { UpdateInventoryAssignmentDto } from '../dto/update-inventory-assignment.dto';
+import {
+  CreateInventoryTemplateDto,
+  ApplyInventoryTemplateDto,
+} from '../dto/inventory-template.dto';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PoolClient } from 'pg';
@@ -22,6 +27,7 @@ import { StudentsRepository } from '../../students/repositories/students.reposit
 import { BookingsRepository } from '../../bookings/repositories/bookings.repository';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import { InventoryScope } from '../../../common/enums/inventory-scope.enum';
 
 @Injectable()
 export class InventoryService {
@@ -314,5 +320,196 @@ export class InventoryService {
 
   async getMixedInventory(locationId: number) {
     return this.inventoryRepository.findMixedInventoryByLocation(locationId);
+  }
+
+  // --- Templates ---
+
+  async createTemplate(
+    data: CreateInventoryTemplateDto,
+    context: AuditUserContext,
+  ): Promise<InventoryTemplate> {
+    this.logger.log({ name: data.name, scope: data.scope }, 'Creating inventory template');
+    return this.db.transaction(async (client) => {
+      return this.inventoryRepository.createTemplate(
+        { ...data, createdBy: context.userId },
+        client,
+      );
+    }, context);
+  }
+
+  async findAllTemplates(filters: { scope?: string } = {}): Promise<InventoryTemplate[]> {
+    return this.inventoryRepository.findAllTemplates(filters);
+  }
+
+  async findTemplateById(id: number): Promise<InventoryTemplate> {
+    const template = await this.inventoryRepository.findTemplateById(id);
+    if (!template) throw new NotFoundException(`Inventory template with ID ${id} not found`);
+    return template;
+  }
+
+  async updateTemplate(
+    id: number,
+    data: Partial<CreateInventoryTemplateDto>,
+    context: AuditUserContext,
+  ): Promise<InventoryTemplate> {
+    this.logger.log({ templateId: id }, 'Updating inventory template');
+    const existing = await this.findTemplateById(id);
+
+    return this.db.transaction(async (client) => {
+      const updated = await this.inventoryRepository.updateTemplate(id, data, client);
+      if (!updated) throw new NotFoundException(`Inventory template with ID ${id} not found`);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_INVENTORY_TEMPLATE,
+          entityType: 'inventory_template',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Updated inventory template ${existing.name}`,
+        },
+        client,
+      );
+
+      return updated;
+    }, context);
+  }
+
+  async deleteTemplate(id: number, context: AuditUserContext): Promise<void> {
+    this.logger.log({ templateId: id }, 'Deleting inventory template');
+    const existing = await this.findTemplateById(id);
+
+    await this.db.transaction(async (client) => {
+      await this.inventoryRepository.deleteTemplate(id, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.DELETE_INVENTORY_TEMPLATE,
+          entityType: 'inventory_template',
+          entityId: id.toString(),
+          undoData: existing,
+          description: `Deleted inventory template ${existing.name}`,
+        },
+        client,
+      );
+    }, context);
+  }
+
+  async applyTemplate(dto: ApplyInventoryTemplateDto, context: AuditUserContext): Promise<void> {
+    this.logger.log({ templateId: dto.templateId }, 'Applying inventory template (Robust)');
+
+    const template = await this.findTemplateById(dto.templateId);
+    if (!template.items || template.items.length === 0) {
+      throw new BadRequestException('Cannot apply an empty template');
+    }
+
+    // 1. Pre-check existence of all targets
+    if (dto.locationIds?.length) {
+      for (const id of dto.locationIds) {
+        const loc = await this.locationsRepository.findById(id);
+        if (!loc) throw new NotFoundException(`Location ${id} not found`);
+      }
+    }
+    if (dto.bedIds?.length) {
+      for (const id of dto.bedIds) {
+        const bed = await this.bedsRepository.findById(id);
+        if (!bed) throw new NotFoundException(`Bed ${id} not found`);
+      }
+    }
+
+    await this.db.transaction(async (client) => {
+      const deletedAssignments: any[] = [];
+      const createdIds: string[] = [];
+
+      // HELPER: Track deletions for undo
+      const captureDeletions = async (targetCol: string, targetIds: number[]) => {
+        if (!dto.replace) return;
+        const res = await client.query(
+          `SELECT * FROM inventory_assignments WHERE ${targetCol} = ANY($1)`,
+          [targetIds],
+        );
+        deletedAssignments.push(...res.rows);
+        await client.query(`DELETE FROM inventory_assignments WHERE ${targetCol} = ANY($1)`, [
+          targetIds,
+        ]);
+      };
+
+      // 2. Handle Locations
+      if (dto.locationIds?.length) {
+        if (template.scope === InventoryScope.BED) {
+          throw new BadRequestException('Cannot apply a bed-scope template to a location');
+        }
+
+        await captureDeletions('location_id', dto.locationIds);
+
+        const values: any[] = [];
+        const rows: string[] = [];
+        let pIdx = 1;
+
+        for (const locId of dto.locationIds) {
+          for (const item of template.items!) {
+            rows.push(`($${pIdx++}, $${pIdx++}, $${pIdx++})`);
+            values.push(item.catalogId, locId, item.quantity);
+          }
+        }
+
+        const res = await client.query(
+          `INSERT INTO inventory_assignments (catalog_id, location_id, quantity) 
+           VALUES ${rows.join(', ')}
+           ON CONFLICT (location_id, catalog_id) WHERE location_id IS NOT NULL 
+           DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = NOW()
+           RETURNING id`,
+          values,
+        );
+        createdIds.push(...res.rows.map((r) => r.id));
+      }
+
+      // 3. Handle Beds
+      if (dto.bedIds?.length) {
+        if (template.scope !== InventoryScope.BED) {
+          throw new BadRequestException('Can only apply bed-scope templates to beds');
+        }
+
+        await captureDeletions('bed_id', dto.bedIds);
+
+        const values: any[] = [];
+        const rows: string[] = [];
+        let pIdx = 1;
+
+        for (const bedId of dto.bedIds) {
+          for (const item of template.items!) {
+            rows.push(`($${pIdx++}, $${pIdx++}, $${pIdx++})`);
+            values.push(item.catalogId, bedId, item.quantity);
+          }
+        }
+
+        const res = await client.query(
+          `INSERT INTO inventory_assignments (catalog_id, bed_id, quantity) 
+           VALUES ${rows.join(', ')}
+           ON CONFLICT (bed_id, catalog_id) WHERE bed_id IS NOT NULL 
+           DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = NOW()
+           RETURNING id`,
+          values,
+        );
+        createdIds.push(...res.rows.map((r) => r.id));
+      }
+
+      // 4. Register Undo
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.APPLY_INVENTORY_TEMPLATE,
+          entityType: 'inventory_template',
+          entityId: dto.templateId.toString(),
+          undoData: {
+            createdIds,
+            deletedAssignments,
+          },
+          description: `Applied template ${template.name} to multiple targets`,
+        },
+        client,
+      );
+    }, context);
   }
 }

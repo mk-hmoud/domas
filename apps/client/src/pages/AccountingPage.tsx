@@ -374,7 +374,10 @@ export function AccountingPage() {
                 color={
                   selectedPayment.status === BookingOpsStatus.PENDING_ACCOUNTING
                     ? 'yellow'
-                    : 'green'
+                    : selectedPayment.status === BookingOpsStatus.REJECTED ||
+                        selectedPayment.status === BookingOpsStatus.CANCELLED
+                      ? 'red'
+                      : 'green'
                 }
               >
                 {selectedPayment.status.replace(/_/g, ' ')}

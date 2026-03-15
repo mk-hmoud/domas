@@ -31,6 +31,7 @@ import {
   IconX,
   IconHierarchy,
   IconTable,
+  IconFiles,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -41,6 +42,12 @@ import {
   CreateInventoryAssignmentDto,
   InventoryScope,
   FindAllLocationsDto,
+  ApplyInventoryTemplateDto,
+  InventoryTemplate,
+  Student,
+  Semester,
+  CreateBookingDto,
+  CreateStudentDto,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -59,10 +66,19 @@ import {
   AssignInventoryModal,
   LocationRegistryTable,
   LocationRegistryFilters,
+  ApplyTemplateModal,
+  CreateBookingModal,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
-import { locations, inventory, beds } from "@domas/api-client";
+import {
+  locations,
+  inventory,
+  beds,
+  students,
+  semesters,
+  bookings,
+} from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
 import { findLocationPath } from "../utils/location-utils";
@@ -188,6 +204,19 @@ function LocationsContent() {
   const [assignModalOpened, setAssignModalOpened] = useState(false);
   const [inventoryLoading, setInventoryLoading] = useState(false);
 
+  // Template State
+  const [templates, setTemplates] = useState<InventoryTemplate[]>([]);
+  const [applyTemplateModalOpened, setApplyTemplateModalOpened] =
+    useState(false);
+  const [templateTargetType, setTemplateTargetType] = useState<
+    "location" | "bed"
+  >("location");
+
+  // Booking State
+  const [bookingModalOpened, setBookingModalOpened] = useState(false);
+  const [studentList, setStudentList] = useState<Student[]>([]);
+  const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
+
   // Bed Management
   const {
     roomBeds,
@@ -274,27 +303,12 @@ function LocationsContent() {
   }, [selectedNode]);
 
   const handleToggleSelection = (id: number | string) => {
-    // Handle prefixed IDs from tree (e.g. "bed-123")
-    const numericId =
-      typeof id === "string" && id.startsWith("bed-")
-        ? Number(id.replace("bed-", ""))
-        : Number(id);
-
-    if (!isNaN(numericId)) {
-      toggleSelection(numericId);
-    }
+    // Keep the ID exactly as it is (prefixed)
+    toggleSelection(id);
   };
 
   const handleSelectBranch = (ids: (number | string)[]) => {
-    const numericIds = ids
-      .map((id) =>
-        typeof id === "string" && id.startsWith("bed-")
-          ? Number(id.replace("bed-", ""))
-          : Number(id),
-      )
-      .filter((id) => !isNaN(id));
-
-    setSelectedIds((prev) => Array.from(new Set([...prev, ...numericIds])));
+    setSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
   };
 
   const handleBulkDelete = () => {
@@ -309,7 +323,22 @@ function LocationsContent() {
       confirmProps: { color: "red" },
       onConfirm: async () => {
         try {
-          await locations.deleteMany({ ids: selectedIds });
+          const locationIds = selectedIds
+            .filter((id) => typeof id === "string" && id.startsWith("loc-"))
+            .map((id) => Number((id as string).replace("loc-", "")));
+
+          const bedIds = selectedIds
+            .filter((id) => typeof id === "string" && id.startsWith("bed-"))
+            .map((id) => Number((id as string).replace("bed-", "")));
+
+          const promises: Promise<any>[] = [];
+          if (locationIds.length > 0)
+            promises.push(locations.deleteMany({ ids: locationIds }));
+          if (bedIds.length > 0)
+            promises.push(beds.deleteMany({ ids: bedIds }));
+
+          await Promise.all(promises);
+
           notifications.show({
             title: t("success"),
             message: t("location_delete_success"),
@@ -335,7 +364,61 @@ function LocationsContent() {
 
   const handleSubmitBulkEdit = async (values: UpdateLocationDto) => {
     try {
-      await locations.updateMany({ ids: selectedIds, data: values });
+      const locationIds = selectedIds
+        .filter((id) => typeof id === "string" && id.startsWith("loc-"))
+        .map((id) => Number((id as string).replace("loc-", "")));
+
+      const bedIds = selectedIds
+        .filter((id) => typeof id === "string" && id.startsWith("bed-"))
+        .map((id) => Number((id as string).replace("bed-", "")));
+
+      const promises: Promise<any>[] = [];
+
+      if (locationIds.length > 0) {
+        promises.push(locations.updateMany({ ids: locationIds, data: values }));
+      }
+
+      if (bedIds.length > 0) {
+        // Handle bed-specific updates from the shared DTO
+        const bedPromises: Promise<any>[] = [];
+        if (values.status)
+          bedPromises.push(
+            beds.updateStatusMany({
+              ids: bedIds,
+              status: values.status as any,
+            }),
+          );
+        if (values.isTrOnly !== undefined)
+          bedPromises.push(
+            beds.updateTrOnlyMany({ ids: bedIds, isTrOnly: values.isTrOnly }),
+          );
+        if (values.isForeignerOnly !== undefined)
+          bedPromises.push(
+            beds.updateForeignerOnlyMany({
+              ids: bedIds,
+              isForeignerOnly: values.isForeignerOnly,
+            }),
+          );
+        if (values.ownership)
+          bedPromises.push(
+            beds.updateOwnershipMany({
+              ids: bedIds,
+              ownership: values.ownership,
+            }),
+          );
+        if (values.isGuestZone !== undefined)
+          bedPromises.push(
+            beds.updateGuestZoneMany({
+              ids: bedIds,
+              isGuestZone: values.isGuestZone,
+            }),
+          );
+
+        if (bedPromises.length > 0) promises.push(Promise.all(bedPromises));
+      }
+
+      await Promise.all(promises);
+
       notifications.show({
         title: t("success"),
         message: t("locations_updated", "Locations updated successfully"),
@@ -407,22 +490,34 @@ function LocationsContent() {
   };
 
   const handleToggleSelectAllChildren = () => {
-    const childIds = children.map((c) => Number(c.id));
-    const allSelected = childIds.every((id) => selectedIds.includes(id));
+    const childIds = children.map((c) =>
+      c.type === LocationType.BED ? `bed-${c.id}` : `loc-${c.id}`,
+    );
+    const allSelected = childIds.every((id) =>
+      (selectedIds as any[]).includes(id),
+    );
 
     if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !childIds.includes(id)));
+      setSelectedIds((prev) =>
+        prev.filter((id) => !childIds.includes(id as any)),
+      );
     } else {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...childIds])));
     }
   };
 
   const handleToggleSelectAllRegistry = () => {
-    const allIds = registryData.map((l) => l.id);
-    const allSelected = allIds.every((id) => selectedIds.includes(id));
+    const allIds = registryData.map((item) =>
+      item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`,
+    );
+    const allSelected = allIds.every((id) =>
+      (selectedIds as any[]).includes(id),
+    );
 
     if (allSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !allIds.includes(id)));
+      setSelectedIds((prev) =>
+        prev.filter((id) => !allIds.includes(id as any)),
+      );
     } else {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...allIds])));
     }
@@ -493,6 +588,136 @@ function LocationsContent() {
 
     setCreateModalOpened(false);
     setLocationToEdit(null);
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await inventory.findAllTemplates();
+      setTemplates(res);
+    } catch (error) {
+      console.error("Failed to fetch templates:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+    fetchBookingData();
+  }, []);
+
+  const fetchBookingData = async () => {
+    try {
+      const [studentsRes, semestersRes] = await Promise.all([
+        students.findAll({ limit: 1000 }),
+        semesters.findAll({ limit: 1000 }),
+      ]);
+      setStudentList(studentsRes.data);
+      setAllSemesters(semestersRes.data);
+    } catch (error) {
+      console.error("Failed to fetch booking data:", error);
+    }
+  };
+
+  const handleCreateBooking = async (values: CreateBookingDto) => {
+    try {
+      await bookings.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("booking_created", "Booking created successfully"),
+        color: "green",
+      });
+      setBookingModalOpened(false);
+      // Refresh tree to reflect new occupancy if needed
+      await refreshTree();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_create_booking", "Failed to create booking"),
+        color: "red",
+      });
+    }
+  };
+
+  const handleCreateStudent = async (values: CreateStudentDto) => {
+    try {
+      await students.create(values);
+      notifications.show({
+        title: t("success"),
+        message: t("student_created", "Student created successfully"),
+        color: "green",
+      });
+      // Refresh student list
+      const studentsRes = await students.findAll({ limit: 1000 });
+      setStudentList(studentsRes.data);
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_create_student", "Failed to create student"),
+        color: "red",
+      });
+    }
+  };
+
+  const handleOpenApplyTemplate = (item: any) => {
+    // If it's a single item from the table row
+    if (item) {
+      setTemplateTargetType(item.type === "bed" ? "bed" : "location");
+      // Pre-set the selection to just this one item
+      setSelectedIds([item.id]);
+    } else {
+      // For bulk, use the active tab
+      setTemplateTargetType(activeTab === "beds" ? "bed" : "location");
+    }
+    setApplyTemplateModalOpened(true);
+  };
+
+  const handleApplyTemplate = async (values: ApplyInventoryTemplateDto) => {
+    setInventoryLoading(true);
+    try {
+      // Determine targets based on current selection or single view
+      let payload = { ...values };
+
+      if (selectedIds.length > 0) {
+        const locationIds = selectedIds
+          .filter((id) => typeof id === "string" && id.startsWith("loc-"))
+          .map((id) => Number((id as string).replace("loc-", "")));
+
+        const bedIds = selectedIds
+          .filter((id) => typeof id === "string" && id.startsWith("bed-"))
+          .map((id) => Number((id as string).replace("bed-", "")));
+
+        payload.locationIds = locationIds.length > 0 ? locationIds : undefined;
+        payload.bedIds = bedIds.length > 0 ? bedIds : undefined;
+      } else if (selectedNode) {
+        if (selectedNode.type === LocationType.BED) {
+          const bid =
+            typeof selectedNode.id === "string"
+              ? Number(selectedNode.id.replace("bed-", ""))
+              : Number(selectedNode.id);
+          payload.bedIds = [bid];
+        } else {
+          payload.locationIds = [Number(selectedNode.id)];
+        }
+      }
+
+      await inventory.applyTemplate(payload);
+      notifications.show({
+        title: t("success"),
+        message: t("template_applied_success", {
+          defaultValue: "Blueprint applied successfully",
+        }),
+        color: "green",
+      });
+      if (selectedNode) fetchInventory();
+      clearSelection();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_apply_template"),
+        color: "red",
+      });
+    } finally {
+      setInventoryLoading(false);
+    }
   };
 
   const handleShowSelection = () => {
@@ -585,12 +810,12 @@ function LocationsContent() {
     const found: any[] = [];
     const findRecursively = (nodes: LocationNode[]) => {
       for (const node of nodes) {
-        const numericId =
+        const globalId =
           typeof node.id === "string" && node.id.startsWith("bed-")
-            ? Number(node.id.replace("bed-", ""))
-            : Number(node.id);
+            ? node.id
+            : `loc-${node.id}`;
 
-        if (selectedIds.includes(numericId)) {
+        if (selectedIds.includes(globalId)) {
           found.push(node);
         }
         if (node.children) {
@@ -603,9 +828,14 @@ function LocationsContent() {
     // Also check registry data for selected items not in the currently loaded tree structure
     // (though tree usually has everything, it might be collapsed)
     registryData.forEach((item) => {
+      const globalId =
+        item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`;
       if (
-        selectedIds.includes(item.id) &&
-        !found.find((f) => f.id === item.id)
+        selectedIds.includes(globalId) &&
+        !found.find((f) => {
+          const fGlobalId = f.type === "bed" ? `bed-${f.id}` : `loc-${f.id}`;
+          return fGlobalId === globalId;
+        })
       ) {
         found.push(item);
       }
@@ -691,13 +921,38 @@ function LocationsContent() {
                       </Button>
                     </>
                   )}
-                  {selectedNode.type === LocationType.ROOM ? (
+                  {(selectedNode.type === LocationType.ROOM ||
+                    selectedNode.type === LocationType.BED) && (
                     <Button
+                      variant="filled"
+                      color="green"
                       leftSection={<IconPlus size={16} />}
-                      onClick={() => setCreateBedModalOpened(true)}
+                      onClick={() => setBookingModalOpened(true)}
                     >
-                      {t("create_bed", { defaultValue: "Create Bed" })}
+                      {t("create_booking")}
                     </Button>
+                  )}
+                  {selectedNode.type === LocationType.ROOM ? (
+                    <>
+                      <Button
+                        variant="light"
+                        leftSection={<IconPlus size={16} />}
+                        onClick={() => setCreateBedModalOpened(true)}
+                      >
+                        {t("create_bed", { defaultValue: "Create Bed" })}
+                      </Button>
+                      <Button
+                        variant="light"
+                        color="blue"
+                        leftSection={<IconFiles size={16} />}
+                        onClick={() => {
+                          setTemplateTargetType("location");
+                          setApplyTemplateModalOpened(true);
+                        }}
+                      >
+                        {t("apply_blueprint")}
+                      </Button>
+                    </>
                   ) : (
                     <Button
                       leftSection={<IconPlus size={16} />}
@@ -802,25 +1057,41 @@ function LocationsContent() {
               ) : selectedNode.type === LocationType.ROOM ? (
                 <>
                   <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
-                    {roomBeds.map((bed) => (
-                      <BedCard
-                        key={bed.id}
-                        id={bed.id}
-                        label={bed.label}
-                        status={bed.status}
-                        onClick={() =>
-                          selectNode({
-                            children: [],
-                            ...bed,
-                            id: `bed-${bed.id}`,
-                            name: bed.label,
-                            type: LocationType.BED,
-                          })
-                        }
-                        onEdit={() => {}}
-                        onDelete={() => handleDeleteBed(bed)}
-                      />
-                    ))}
+                    {roomBeds.map((bed) => {
+                      const globalId = `bed-${bed.id}`;
+                      return (
+                        <BedCard
+                          key={bed.id}
+                          id={bed.id}
+                          label={bed.label}
+                          status={bed.status}
+                          selected={selectedIds.includes(globalId)}
+                          onClick={() =>
+                            selectNode({
+                              children: [],
+                              ...bed,
+                              id: globalId,
+                              name: bed.label,
+                              type: LocationType.BED,
+                            })
+                          }
+                          onSelect={() => handleToggleSelection(globalId)}
+                          onEdit={() => {}}
+                          onDelete={() => handleDeleteBed(bed)}
+                          onBook={() => {
+                            // First select the node so the modal gets the right initialBedId
+                            selectNode({
+                              children: [],
+                              ...bed,
+                              id: globalId,
+                              name: bed.label,
+                              type: LocationType.BED,
+                            });
+                            setBookingModalOpened(true);
+                          }}
+                        />
+                      );
+                    })}
                   </SimpleGrid>
                   {roomBeds.length === 0 && (
                     <Text c="dimmed" ta="center" py="md">
@@ -867,18 +1138,20 @@ function LocationsContent() {
                   )}
                   {children.length > 0 ? (
                     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                      {children.map((child) =>
-                        selectedNode.type === LocationType.FLOOR ? (
+                      {children.map((child) => {
+                        const globalId =
+                          child.type === LocationType.BED
+                            ? `bed-${child.id}`
+                            : `loc-${child.id}`;
+                        return selectedNode.type === LocationType.FLOOR ? (
                           <RoomCard
                             key={child.id}
                             id={Number(child.id)}
                             name={child.name}
                             genderLock={child.genderLock || undefined}
-                            selected={selectedIds.includes(Number(child.id))}
+                            selected={selectedIds.includes(globalId)}
                             onClick={() => selectNode(child as any)}
-                            onSelect={() =>
-                              handleToggleSelection(Number(child.id))
-                            }
+                            onSelect={() => handleToggleSelection(globalId)}
                             onEdit={() => handleEditChild(child as any)}
                             onDelete={() => handleDeleteChild(child as any)}
                           />
@@ -888,16 +1161,14 @@ function LocationsContent() {
                             id={Number(child.id)}
                             name={child.name}
                             icon={<LocationIcon type={child.type} />}
-                            selected={selectedIds.includes(Number(child.id))}
+                            selected={selectedIds.includes(globalId)}
                             onClick={() => selectNode(child as any)}
-                            onSelect={() =>
-                              handleToggleSelection(Number(child.id))
-                            }
+                            onSelect={() => handleToggleSelection(globalId)}
                             onEdit={() => handleEditChild(child as any)}
                             onDelete={() => handleDeleteChild(child as any)}
                           />
-                        ),
-                      )}
+                        );
+                      })}
                     </SimpleGrid>
                   ) : (
                     <Text c="dimmed" ta="center" py="xl">
@@ -959,8 +1230,6 @@ function LocationsContent() {
                       setActiveView("structure");
                       selectNode(loc as any);
                     }}
-                    onEdit={handleEditChild}
-                    onDelete={confirmDeleteLocation}
                     selectedIds={selectedIds}
                     onToggleSelection={handleToggleSelection}
                     onToggleSelectAll={handleToggleSelectAllRegistry}
@@ -989,24 +1258,6 @@ function LocationsContent() {
                         id: targetId,
                         type: LocationType.BED,
                       } as any);
-                    }}
-                    onEdit={(bed) => {
-                      setBedToEdit(bed);
-                      setEditBedModalOpened(true);
-                    }}
-                    onDelete={(bed) => {
-                      modals.openConfirmModal({
-                        title: t("delete_bed"),
-                        children: (
-                          <Text size="sm">{t("confirm_delete_message")}</Text>
-                        ),
-                        labels: { confirm: t("confirm"), cancel: t("cancel") },
-                        confirmProps: { color: "red" },
-                        onConfirm: async () => {
-                          await beds.remove(bed.id);
-                          fetchRegistryData();
-                        },
-                      });
                     }}
                     selectedIds={selectedIds}
                     onToggleSelection={handleToggleSelection}
@@ -1083,6 +1334,7 @@ function LocationsContent() {
         selectedCount={selectedIds.length}
         onDelete={handleBulkDelete}
         onEdit={handleBulkEdit}
+        onApplyTemplate={() => handleOpenApplyTemplate(null)}
         onClear={clearSelection}
         onShowSelection={handleShowSelection}
       />
@@ -1094,6 +1346,43 @@ function LocationsContent() {
         count={selectedIds.length}
       />
 
+      <ApplyTemplateModal
+        opened={applyTemplateModalOpened}
+        onClose={() => setApplyTemplateModalOpened(false)}
+        onSubmit={handleApplyTemplate}
+        templates={templates}
+        targetType={templateTargetType}
+        count={selectedIds.length || 1}
+        loading={inventoryLoading}
+      />
+
+      <CreateBookingModal
+        opened={bookingModalOpened}
+        onClose={() => setBookingModalOpened(false)}
+        onSubmit={handleCreateBooking}
+        onCreateStudent={handleCreateStudent}
+        students={studentList.map((s) => ({
+          value: s.id,
+          label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+        }))}
+        semesters={allSemesters}
+        initialBedId={
+          selectedNode?.type === LocationType.BED
+            ? typeof selectedNode.id === "string"
+              ? Number(selectedNode.id.replace("bed-", ""))
+              : Number(selectedNode.id)
+            : null
+        }
+        initialLocationId={
+          selectedNode?.type !== LocationType.BED && selectedNode?.id
+            ? typeof selectedNode.id === "string" &&
+              selectedNode.id.startsWith("loc-")
+              ? Number(selectedNode.id.replace("loc-", ""))
+              : Number(selectedNode.id)
+            : null
+        }
+      />
+
       <Drawer
         opened={viewSelectionDrawerOpened}
         onClose={() => setViewSelectionDrawerOpened(false)}
@@ -1101,25 +1390,36 @@ function LocationsContent() {
         position="right"
       >
         <Stack gap="xs">
-          {selectedNodesList.map((node) => (
-            <Paper key={node.id} withBorder p="xs">
-              <Group justify="space-between">
-                <Group gap="xs">
-                  <LocationIcon type={node.type} />
-                  <Text size="sm" fw={500}>
-                    {node.name}
-                  </Text>
+          {selectedNodesList.map((node) => {
+            const globalId =
+              node.type === LocationType.BED || node.type === "bed"
+                ? typeof node.id === "string" && node.id.startsWith("bed-")
+                  ? node.id
+                  : `bed-${node.id}`
+                : `loc-${node.id}`;
+
+            return (
+              <Paper key={globalId} withBorder p="xs">
+                <Group justify="space-between">
+                  <Group gap="xs">
+                    <LocationIcon type={node.type} />
+                    <Text size="sm" fw={500}>
+                      {node.type === LocationType.BED || node.type === "bed"
+                        ? `${node.locationName || ""} - ${node.label || node.name}`
+                        : node.name}
+                    </Text>
+                  </Group>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    onClick={() => handleToggleSelection(globalId)}
+                  >
+                    <IconX size={16} />
+                  </ActionIcon>
                 </Group>
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => handleToggleSelection(node.id)}
-                >
-                  <IconX size={16} />
-                </ActionIcon>
-              </Group>
-            </Paper>
-          ))}
+              </Paper>
+            );
+          })}
           {selectedNodesList.length === 0 && (
             <Text c="dimmed" ta="center">
               {t("no_selection", { defaultValue: "No items selected" })}

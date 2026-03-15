@@ -43,6 +43,13 @@ export const beds = {
     return response.data;
   },
 
+  findByLocation: async (locationId: number): Promise<Bed[]> => {
+    const response = await apiClient.get<PaginatedResult<Bed>>("/beds", {
+      params: { locationId, limit: 1000 },
+    });
+    return response.data.data;
+  },
+
   update: async (id: number, data: UpdateBedDto): Promise<Bed> => {
     const response = await apiClient.patch<Bed>(`/beds/${id}`, data);
     return response.data;

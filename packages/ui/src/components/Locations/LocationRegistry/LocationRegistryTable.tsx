@@ -8,8 +8,9 @@ import {
   Progress,
   Stack,
   Checkbox,
+  Button,
 } from "@mantine/core";
-import { IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconHierarchy } from "@tabler/icons-react";
 import { Location, GenderType, Bed } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { LocationIcon } from "../LocationIcon";
@@ -17,18 +18,14 @@ import { LocationIcon } from "../LocationIcon";
 interface LocationRegistryTableProps {
   data: (Location | Bed)[];
   onView: (item: any) => void;
-  onEdit: (item: any) => void;
-  onDelete: (item: any) => void;
-  selectedIds: number[];
-  onToggleSelection: (id: number) => void;
+  selectedIds: (number | string)[];
+  onToggleSelection: (id: number | string) => void;
   onToggleSelectAll: () => void;
 }
 
 export function LocationRegistryTable({
   data,
   onView,
-  onEdit,
-  onDelete,
   selectedIds,
   onToggleSelection,
   onToggleSelectAll,
@@ -60,26 +57,36 @@ export function LocationRegistryTable({
   };
 
   const allSelected =
-    data.length > 0 && data.every((l) => selectedIds.includes(l.id));
+    data.length > 0 &&
+    data.every((item) => {
+      const globalId =
+        item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`;
+      return (selectedIds as any[]).includes(globalId);
+    });
   const someSelected =
-    data.some((l) => selectedIds.includes(l.id)) && !allSelected;
+    data.some((item) => {
+      const globalId =
+        item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`;
+      return (selectedIds as any[]).includes(globalId);
+    }) && !allSelected;
 
   const rows = data.map((item: any) => {
     const total = item.totalBeds || 0;
     const occupied = item.occupiedBeds || 0;
     const occupancyRate = total > 0 ? (occupied / total) * 100 : 0;
     const isBed = item.type === "bed";
+    const globalId = isBed ? `bed-${item.id}` : `loc-${item.id}`;
 
     return (
       <Table.Tr
-        key={item.id}
+        key={globalId}
         style={{ cursor: "pointer" }}
         onClick={() => onView(item)}
       >
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Checkbox
-            checked={selectedIds.includes(item.id)}
-            onChange={() => onToggleSelection(item.id)}
+            checked={selectedIds.includes(globalId)}
+            onChange={() => onToggleSelection(globalId)}
           />
         </Table.Td>
         <Table.Td>
@@ -163,23 +170,19 @@ export function LocationRegistryTable({
         </Table.Td>
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Group gap={4} justify="flex-end">
-            <Tooltip label={t("edit")}>
-              <ActionIcon
+            <Tooltip
+              label={t("locate_in_structure", {
+                defaultValue: "Locate in Structure",
+              })}
+            >
+              <Button
                 variant="subtle"
-                color="gray"
-                onClick={() => onEdit(item)}
+                size="compact-xs"
+                leftSection={<IconHierarchy size={14} />}
+                onClick={() => onView(item)}
               >
-                <IconPencil size={16} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label={t("delete")}>
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                onClick={() => onDelete(item)}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
+                {t("view")}
+              </Button>
             </Tooltip>
           </Group>
         </Table.Td>

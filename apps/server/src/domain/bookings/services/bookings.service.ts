@@ -5,6 +5,7 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { BookingsRepository } from '../repositories/bookings.repository';
@@ -14,6 +15,7 @@ import { UpdateBookingDatesDto } from '../dto/update-booking-dates.dto';
 import { TransferBookingDto } from '../dto/transfer-booking.dto';
 import { BulkTransferBookingDto } from '../dto/bulk-transfer-booking.dto';
 import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
+import { FindAllBookingsDto } from '../dto/find-all-bookings.dto';
 import { Booking } from '../entities/booking.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
@@ -31,6 +33,7 @@ import { CheckInBookingDto } from '../dto/check-in-booking.dto';
 import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 import { Inject, forwardRef } from '@nestjs/common';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
+import { PoolClient } from 'pg';
 
 @Injectable()
 export class BookingsService {
@@ -50,61 +53,62 @@ export class BookingsService {
     private readonly db: DatabaseService,
   ) {}
 
-  async create(data: CreateBookingDto, context: AuditUserContext): Promise<Booking> {
-    this.logger.log({ studentId: data.studentId, bedId: data.bedId }, 'Creating new booking');
+  async create(
+    data: CreateBookingDto,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Booking> {
+    const operation = async (client: PoolClient) => {
+      this.logger.log({ studentId: data.studentId, bedId: data.bedId }, 'Creating new booking');
 
-    // 1. Fetch Constraints Data
-    const student = await this.studentsRepository.findById(data.studentId);
-    if (!student) throw new NotFoundException(`Student with ID ${data.studentId} not found`);
+      // 1. Fetch Constraints Data
+      const student = await this.studentsRepository.findById(data.studentId, client);
+      if (!student) throw new NotFoundException(`Student with ID ${data.studentId} not found`);
 
-    const bed = await this.bedsRepository.findById(data.bedId);
-    if (!bed) throw new NotFoundException(`Bed with ID ${data.bedId} not found`);
+      const bed = await this.bedsRepository.findById(data.bedId, client);
+      if (!bed) throw new NotFoundException(`Bed with ID ${data.bedId} not found`);
 
-    const room = await this.locationsRepository.findById(bed.locationId);
-    if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
+      const room = await this.locationsRepository.findById(bed.locationId, client);
+      if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
 
-    // 2. Check TR Only Constraint (Explicit)
-    // Check both room and bed level
-    const isTrOnly = room.isTrOnly || bed.isTrOnly;
-    if (isTrOnly && student.nationalityCode !== 'TR') {
-      throw new BadRequestException('This location is reserved for Turkish citizens only');
-    }
-
-    // 2.1 Check Foreigner Only Constraint (Explicit)
-    const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
-    if (isForeignerOnly && student.nationalityCode === 'TR') {
-      throw new BadRequestException('This location is reserved for foreign students only');
-    }
-
-    // 3. Check Ownership Constraint (Rectorate - Explicit)
-    const isRectorate =
-      room.ownership === LocationOwnership.RECTORATE ||
-      bed.ownership === LocationOwnership.RECTORATE;
-
-    if (isRectorate) {
-      // Check if user is Admin
-      const user = await this.usersService.findById(context.userId);
-      if (!user || !user.isRecoveryAdmin) {
-        throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
+      // 2. Constraints Check
+      const isTrOnly = room.isTrOnly || bed.isTrOnly;
+      if (isTrOnly && student.nationalityCode !== 'TR') {
+        throw new BadRequestException('This location is reserved for Turkish citizens only');
       }
-    }
 
-    // 4. Fetch Semester for Default Dates
-    const semesterRes = await this.db.query(
-      'SELECT start_date, end_date FROM semesters WHERE id = $1',
-      [data.semesterId],
-    );
-    if (semesterRes.rowCount === 0) throw new NotFoundException('Semester not found');
-    const semester = semesterRes.rows[0];
+      const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
+      if (isForeignerOnly && student.nationalityCode === 'TR') {
+        throw new BadRequestException('This location is reserved for foreign students only');
+      }
 
-    const finalStartDate = data.startDate || semester.start_date;
-    const finalEndDate = data.endDate || semester.end_date;
+      const isRectorate =
+        room.ownership === LocationOwnership.RECTORATE ||
+        bed.ownership === LocationOwnership.RECTORATE;
 
-    if (new Date(finalStartDate) >= new Date(finalEndDate)) {
-      throw new BadRequestException('Start date must be before end date.');
-    }
+      if (isRectorate) {
+        const user = await this.usersService.findById(context.userId, context, client);
+        if (!user || !user.isRecoveryAdmin) {
+          throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
+        }
+      }
 
-    return this.db.transaction(async (client) => {
+      // 3. Fetch Semester & Dates
+      const semesterRes = await client.query(
+        'SELECT start_date, end_date FROM semesters WHERE id = $1',
+        [data.semesterId],
+      );
+      if (semesterRes.rowCount === 0) throw new NotFoundException('Semester not found');
+      const semester = semesterRes.rows[0];
+
+      const finalStartDate = data.startDate || semester.start_date;
+      const finalEndDate = data.endDate || semester.end_date;
+
+      if (new Date(finalStartDate) >= new Date(finalEndDate)) {
+        throw new BadRequestException('Start date must be before end date.');
+      }
+
+      // 4. Persist
       const booking = await this.bookingsRepository.create(
         {
           ...data,
@@ -114,10 +118,10 @@ export class BookingsService {
         client,
       );
 
-      // Lock gender if currently NULL (Dynamic Lock)
-      // student and bed are already fetched above the transaction
-      await this.locationsRepository.lockGenderIfNull(bed!.locationId, student!.gender, client);
+      // 5. Dynamic Lock
+      await this.locationsRepository.lockGenderIfNull(bed.locationId, student.gender, client);
 
+      // 6. Audit
       await this.undoService.registerUndo(
         {
           userId: context.userId,
@@ -129,9 +133,13 @@ export class BookingsService {
         },
         client,
       );
+
       this.logger.log({ bookingId: booking.id }, 'Booking created successfully');
       return booking;
-    }, context);
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
   }
 
   async findById(id: string): Promise<Booking> {
@@ -187,10 +195,15 @@ export class BookingsService {
         return updated!;
       }
 
+      const targetStatus = booking.previousBookingId
+        ? BookingOpsStatus.CONFIRMED
+        : BookingOpsStatus.READY_FOR_CHECKIN;
+
       const updated = await this.bookingsRepository.approveFinancials(
         id,
         context.userId,
         data.paymentStatus,
+        targetStatus,
         client,
       );
 
@@ -656,6 +669,101 @@ export class BookingsService {
       );
 
       return updated!;
+    }, context);
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleAutomaticTransitions() {
+    this.logger.log('Checking for automatic booking transitions (Rollovers)...');
+    const context: AuditUserContext = {
+      userId: '00000000-0000-0000-0000-000000000000',
+      username: 'system_cron',
+      ipAddress: '127.0.0.1',
+    };
+
+    const results = await this.processSemesterTransitions(context);
+    if (results.length > 0) {
+      this.logger.log(
+        `Automatically flipped ${results.length} bookings to ACTIVE for new semester`,
+      );
+    }
+  }
+
+  /**
+   * THE FLIP: Atomic transition from Old Semester (ACTIVE -> TRANSFERRED)
+   * to New Semester (CONFIRMED -> ACTIVE).
+   */
+  async processSemesterTransitions(context: AuditUserContext): Promise<Booking[]> {
+    return this.db.transaction(async (client) => {
+      // 1. Find ACTIVE bookings in semesters that have ALREADY ENDED
+      const expiredBookingsRes = await client.query(`
+        SELECT b.* 
+        FROM bookings b
+        JOIN semesters s ON b.semester_id = s.id
+        WHERE b.status = 'active'
+          AND s.end_date <= CURRENT_DATE
+      `);
+
+      const flipped: Booking[] = [];
+
+      for (const oldBooking of expiredBookingsRes.rows) {
+        // 2. Check if this student has a CONFIRMED booking for the NEXT term
+        const nextBookingRes = await client.query(
+          `SELECT * FROM bookings 
+           WHERE previous_booking_id = $1 
+             AND status = 'confirmed' 
+           LIMIT 1`,
+          [oldBooking.id],
+        );
+
+        if (nextBookingRes.rowCount === 0) {
+          // No renewal found. Standard checkout logic would go here if automated,
+          // but for now we only handle the Renewal Flip.
+          continue;
+        }
+
+        const nextBooking = nextBookingRes.rows[0];
+
+        // 3. PERFORM THE ATOMIC FLIP
+
+        // A. Set Old -> TRANSFERRED
+        await client.query(
+          "UPDATE bookings SET status = 'transferred', checked_out_at = NOW(), updated_at = NOW() WHERE id = $1",
+          [oldBooking.id],
+        );
+
+        // B. Set New -> ACTIVE
+        const updatedNewRes = await client.query(
+          "UPDATE bookings SET status = 'active', checked_in_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *",
+          [nextBooking.id],
+        );
+
+        // C. Relink Access Card
+        await this.accessCardsService.relinkCardForTransfer(
+          oldBooking.id,
+          nextBooking.id,
+          oldBooking.student_id,
+          context,
+          client,
+        );
+
+        // D. Undo/Audit log
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: UndoActionType.UPDATE_BOOKING,
+            entityType: 'booking',
+            entityId: nextBooking.id,
+            undoData: { previousStatus: 'confirmed', oldBookingId: oldBooking.id },
+            description: `Automatic rollover flip: ${oldBooking.id} (Transferred) -> ${nextBooking.id} (Active)`,
+          },
+          client,
+        );
+
+        flipped.push(new Booking(updatedNewRes.rows[0]));
+      }
+
+      return flipped;
     }, context);
   }
 }

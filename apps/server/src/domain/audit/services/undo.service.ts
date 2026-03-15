@@ -10,6 +10,7 @@ import {
 import { UndoRepository } from '../repositories/undo.repository';
 import { UsersRepository } from '../../users/repositories/users.repository';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
+import { InventoryRepository } from '../../inventory/repositories/inventory.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { UndoLog } from '../entities/undo-log.entity';
@@ -27,6 +28,8 @@ export class UndoService {
     private readonly usersRepository: UsersRepository,
     @Inject(forwardRef(() => LocationsRepository))
     private readonly locationsRepository: LocationsRepository,
+    @Inject(forwardRef(() => InventoryRepository))
+    private readonly inventoryRepository: InventoryRepository,
     private readonly db: DatabaseService,
   ) {}
 
@@ -234,6 +237,12 @@ export class UndoService {
       case UndoActionType.DELETE_INVENTORY_CATALOG:
         return this.undoDeleteInventoryCatalog(log, client);
 
+      // Inventory Templates
+      case UndoActionType.UPDATE_INVENTORY_TEMPLATE:
+        return this.undoUpdateTemplate(log, client);
+      case UndoActionType.DELETE_INVENTORY_TEMPLATE:
+        return this.undoDeleteTemplate(log, client);
+
       // Inventory Assignments
       case UndoActionType.CREATE_INVENTORY_ASSIGNMENT:
         return this.undoCreateInventoryAssignment(log, client);
@@ -241,6 +250,8 @@ export class UndoService {
         return this.undoUpdateInventoryAssignment(log, client);
       case UndoActionType.DELETE_INVENTORY_ASSIGNMENT:
         return this.undoDeleteInventoryAssignment(log, client);
+      case UndoActionType.APPLY_INVENTORY_TEMPLATE:
+        return this.undoApplyInventoryTemplate(log, client);
 
       // Access Cards
       case UndoActionType.CREATE_CARD_BATCH:
@@ -257,6 +268,10 @@ export class UndoService {
         return this.undoApproveDamageReport(log, client);
       case UndoActionType.REJECT_DAMAGE_REPORT:
         return this.undoRejectDamageReport(log, client);
+
+      // Bulk Import
+      case UndoActionType.BULK_IMPORT_STUDENT:
+        return this.undoBulkImport(log, client);
 
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
@@ -1039,9 +1054,44 @@ export class UndoService {
     if (res.rowCount === 0) throw new BadRequestException('Catalog item not found');
   }
 
+  private async undoUpdateTemplate(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = parseInt(log.entityId, 10);
+    const { items, ...data } = log.undoData;
+
+    // Use repository to restore both main fields and items
+    await this.inventoryRepository.updateTemplate(
+      id,
+      {
+        ...data,
+        items: items.map((i: any) => ({ catalogId: i.catalogId, quantity: i.quantity })),
+      },
+      client,
+    );
+  }
+
+  private async undoDeleteTemplate(log: UndoLog, client: PoolClient): Promise<void> {
+    const id = parseInt(log.entityId, 10);
+    await client.query('UPDATE inventory_templates SET deleted_at = NULL WHERE id = $1', [id]);
+  }
+
   private async undoCreateInventoryAssignment(log: UndoLog, client: PoolClient): Promise<void> {
     const id = log.entityId;
-    await client.query('DELETE FROM inventory_assignments WHERE id = $1', [id]);
+    const { bulk, locationIds, bedIds, templateId } = log.undoData;
+
+    if (bulk) {
+      // Bulk reversal: Find all assignments created by this template apply operation
+      // Since assignments don't have a direct link to the template, we use the IDs and time correlation or just trust the IDs
+      if (locationIds && locationIds.length > 0) {
+        await client.query('DELETE FROM inventory_assignments WHERE location_id = ANY($1)', [
+          locationIds,
+        ]);
+      }
+      if (bedIds && bedIds.length > 0) {
+        await client.query('DELETE FROM inventory_assignments WHERE bed_id = ANY($1)', [bedIds]);
+      }
+    } else {
+      await client.query('DELETE FROM inventory_assignments WHERE id = $1', [id]);
+    }
   }
 
   private async undoDeleteInventoryAssignment(log: UndoLog, client: PoolClient): Promise<void> {
@@ -1061,6 +1111,44 @@ export class UndoService {
       'UPDATE inventory_assignments SET quantity = $1, notes = $2, updated_at = NOW() WHERE id = $3',
       [quantity, notes, id],
     );
+  }
+
+  private async undoApplyInventoryTemplate(log: UndoLog, client: PoolClient): Promise<void> {
+    const { createdIds, deletedAssignments } = log.undoData;
+
+    // 1. Remove newly created assignments
+    if (createdIds && createdIds.length > 0) {
+      await client.query('DELETE FROM inventory_assignments WHERE id = ANY($1)', [createdIds]);
+    }
+
+    // 2. Restore deleted assignments
+    if (deletedAssignments && deletedAssignments.length > 0) {
+      const values: any[] = [];
+      const rows: string[] = [];
+      let pIdx = 1;
+
+      for (const a of deletedAssignments) {
+        rows.push(
+          `($${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++})`,
+        );
+        values.push(
+          a.id,
+          a.catalog_id,
+          a.location_id || null,
+          a.bed_id || null,
+          a.quantity,
+          a.notes || null,
+          a.created_at,
+          a.updated_at,
+        );
+      }
+
+      await client.query(
+        `INSERT INTO inventory_assignments (id, catalog_id, location_id, bed_id, quantity, notes, created_at, updated_at)
+         VALUES ${rows.join(', ')}`,
+        values,
+      );
+    }
   }
 
   // ===========================================================================
@@ -1157,6 +1245,61 @@ export class UndoService {
     await client.query(
       'UPDATE damage_reports SET status = $1, reviewed_by = NULL, reviewed_at = NULL WHERE id = $2',
       [previousStatus, reportId],
+    );
+  }
+
+  // ===========================================================================
+  // Bulk Import Handlers
+  // ===========================================================================
+
+  private async undoBulkImport(log: UndoLog, client: PoolClient): Promise<void> {
+    const { batchId, createdStudentIds, createdBookingIds } = log.undoData;
+    if (!batchId) throw new BadRequestException('Missing batchId in undo data');
+
+    // 1. SAFETY CHECK: Check if any bookings have been paid for
+    if (createdBookingIds && createdBookingIds.length > 0) {
+      const paidCheck = await client.query(
+        `SELECT id FROM bookings 
+         WHERE id = ANY($1) 
+           AND payment_status != 'pending'`,
+        [createdBookingIds],
+      );
+
+      if (paidCheck.rowCount! > 0) {
+        throw new BadRequestException(
+          'Cannot undo import: Some students have already made payments or have active financial records.',
+        );
+      }
+    }
+
+    // 2. GENDER LOCK CLEANUP: Find locations affected by these bookings
+    if (createdBookingIds && createdBookingIds.length > 0) {
+      const locationRes = await client.query(
+        `SELECT DISTINCT bd.location_id 
+         FROM bookings b 
+         JOIN beds bd ON b.bed_id = bd.id 
+         WHERE b.id = ANY($1)`,
+        [createdBookingIds],
+      );
+
+      // 3. ATOMIC DELETION: Bookings first
+      await client.query('DELETE FROM bookings WHERE id = ANY($1)', [createdBookingIds]);
+
+      // 4. CLEAR GENDER LOCKS if rooms are now empty
+      for (const row of locationRes.rows) {
+        await this.locationsRepository.clearGenderLockIfEmpty(row.location_id, client);
+      }
+    }
+
+    // 5. ATOMIC DELETION: Students
+    if (createdStudentIds && createdStudentIds.length > 0) {
+      await client.query('DELETE FROM students WHERE id = ANY($1)', [createdStudentIds]);
+    }
+
+    // 6. Update batch status
+    await client.query(
+      "UPDATE import_batches SET status = 'failed', notes = 'Import undone by user' WHERE id = $1",
+      [batchId],
     );
   }
 }

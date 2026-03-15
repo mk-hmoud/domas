@@ -55,7 +55,12 @@ interface TreeItemProps {
 }
 
 function getAllDescendantIds(node: LocationNode): (number | string)[] {
-  let ids = [node.id];
+  const globalId =
+    typeof node.id === "string" && node.id.startsWith("bed-")
+      ? node.id
+      : `loc-${node.id}`;
+
+  let ids = [globalId];
   if (node.children) {
     for (const child of node.children) {
       ids = [...ids, ...getAllDescendantIds(child)];
@@ -82,12 +87,12 @@ function TreeItem({
   // Handle string vs number ID comparison safely
   const isSelected = String(node.id) === String(selectedId);
 
-  const normalizedNodeId =
+  const globalId =
     typeof node.id === "string" && node.id.startsWith("bed-")
-      ? Number(node.id.replace("bed-", ""))
-      : Number(node.id);
+      ? node.id
+      : `loc-${node.id}`;
 
-  const isChecked = selectedIds?.some((id) => Number(id) === normalizedNodeId);
+  const isChecked = selectedIds?.includes(globalId);
 
   useEffect(() => {
     if (forceExpand) {
@@ -106,7 +111,7 @@ function TreeItem({
 
   const handleCheckboxChange = () => {
     if (onToggleSelection) {
-      onToggleSelection(node.id);
+      onToggleSelection(globalId);
     }
   };
 

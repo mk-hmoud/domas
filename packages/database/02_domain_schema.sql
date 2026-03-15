@@ -3,46 +3,6 @@
 -- =============================================
 
 -- =============================================
--- 1. ENUM DEFINITIONS
--- =============================================
-
-CREATE TYPE gender_type AS ENUM ('male', 'female');
-CREATE TYPE bed_status AS ENUM ('available', 'occupied', 'maintenance');
-
--- Booking Statuses
-CREATE TYPE booking_status_enum AS ENUM (
-    'draft',
-    'pending_accounting',
-    'ready_for_checkin',
-    'active',
-    'completed',
-    'cancelled',
-    'rejected'
-);
-
-CREATE TYPE payment_status_enum AS ENUM (
-    'pending',
-    'partial',
-    'paid',
-    'failed',
-    'refunded'
-);
-
-CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room');
-CREATE TYPE location_ownership_type AS ENUM ('dorm', 'rectorate');
-
--- Semester Statuses
-CREATE TYPE semester_status_enum AS ENUM (
-    'planned',
-    'open',
-    'active',
-    'closed',
-    'archived'
-);
-
-CREATE TYPE semester_type_enum AS ENUM ('fall', 'spring', 'summer');
-
--- =============================================
 -- 2. PHYSICAL HIERARCHY (The Assets)
 -- =============================================
 
@@ -253,9 +213,102 @@ CREATE TABLE beds (
 
 CREATE INDEX idx_beds_deleted_at ON beds(deleted_at) WHERE deleted_at IS NULL;
 
+-- 1. Inventory Catalog (Base items)
+CREATE TABLE inventory_catalog (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    -- Names
+    name_tr TEXT NOT NULL,
+    name_en TEXT NOT NULL,
+    
+    -- Descriptions
+    description_tr TEXT,
+    description_en TEXT,
+    
+    -- Scope
+    scope inventory_scope NOT NULL,
+    
+    -- Pricing
+    base_price_try NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    base_price_foreign NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    foreign_currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
+    
+    -- Visibility
+    is_active BOOLEAN DEFAULT TRUE,
+    is_optional BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_inventory_catalog_active ON inventory_catalog(is_active) 
+    WHERE deleted_at IS NULL;
+CREATE INDEX idx_inventory_catalog_scope ON inventory_catalog(scope) 
+    WHERE deleted_at IS NULL AND is_active = TRUE;
+
+-- 2. Inventory Templates (Blueprints)
+CREATE TABLE inventory_templates (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    name VARCHAR(100) NOT NULL, -- e.g., "Standard Single Bed"
+    description TEXT,
+    
+    -- Target scope (CRITICAL for UI filtering and backend validation)
+    scope inventory_scope NOT NULL, -- 'bed', 'room', 'shared'
+    
+    -- Metadata
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    deleted_at TIMESTAMPTZ
+);
+
+-- Template Items (Lean and fast)
+CREATE TABLE inventory_template_items (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    template_id INT NOT NULL REFERENCES inventory_templates(id) ON DELETE CASCADE,
+    catalog_id INT NOT NULL REFERENCES inventory_catalog(id),
+    quantity INT NOT NULL DEFAULT 1,
+    
+    UNIQUE (template_id, catalog_id),
+    CONSTRAINT quantity_positive CHECK (quantity > 0)
+);
+
+CREATE INDEX idx_template_items_template ON inventory_template_items(template_id);
+CREATE INDEX idx_template_items_catalog ON inventory_template_items(catalog_id);
+
+-- 3. Inventory Assignments (What items exist where)
+CREATE TABLE inventory_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    catalog_id INT NOT NULL REFERENCES inventory_catalog(id) ON DELETE CASCADE,
+    
+    -- Targets
+    location_id INT REFERENCES locations(id) ON DELETE CASCADE,
+    bed_id INT REFERENCES beds(id) ON DELETE CASCADE,
+    
+    quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    notes TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT check_inventory_target CHECK (
+        (location_id IS NOT NULL AND bed_id IS NULL) OR
+        (location_id IS NULL AND bed_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_inventory_assignment_location ON inventory_assignments(location_id) WHERE location_id IS NOT NULL;
+CREATE INDEX idx_inventory_assignment_bed ON inventory_assignments(bed_id) WHERE bed_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_bed_catalog ON inventory_assignments(bed_id, catalog_id) WHERE bed_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_location_catalog ON inventory_assignments(location_id, catalog_id) WHERE location_id IS NOT NULL;
 
 -- =============================================
--- 5. BOOKING & FINANCE
+-- BOOKINGS & CONTRACTS
 -- =============================================
 CREATE TABLE bookings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -351,81 +404,6 @@ CREATE INDEX idx_transactions_pending ON transactions(is_approved, created_at)
 CREATE INDEX idx_transactions_booking ON transactions(booking_id);
 CREATE INDEX idx_locations_gender_lock ON locations(gender_lock) 
     WHERE gender_lock IS NOT NULL;
-
--- =============================================
--- INVENTORY SYSTEM
--- =============================================
-
--- Inventory scope
-CREATE TYPE inventory_scope AS ENUM ('bed', 'room', 'shared');
-
--- 1. Inventory Catalog (Templates)
-CREATE TABLE inventory_catalog (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    
-    -- Names
-    name_tr TEXT NOT NULL,
-    name_en TEXT NOT NULL,
-    
-    -- Descriptions
-    description_tr TEXT,
-    description_en TEXT,
-    
-    -- Scope
-    scope inventory_scope NOT NULL,
-    
-    -- Pricing
-    base_price_try NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    base_price_foreign NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    foreign_currency_code CHAR(3) NOT NULL DEFAULT 'EUR',
-    
-    -- Visibility
-    is_active BOOLEAN DEFAULT TRUE,
-
-    is_optional BOOLEAN DEFAULT FALSE,
-
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_inventory_catalog_active ON inventory_catalog(is_active) 
-    WHERE deleted_at IS NULL;
-CREATE INDEX idx_inventory_catalog_scope ON inventory_catalog(scope) 
-    WHERE deleted_at IS NULL AND is_active = TRUE;
-
--- 2. Inventory Assignments (What items exist where)
-CREATE TABLE inventory_assignments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    catalog_id INT NOT NULL REFERENCES inventory_catalog(id) ON DELETE CASCADE,
-    
-    -- Targets (exactly one must be set)
-    location_id INT REFERENCES locations(id) ON DELETE CASCADE,
-    bed_id INT REFERENCES beds(id) ON DELETE CASCADE,
-    
-    quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
-    notes TEXT,
-
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-
-    -- Ensure exactly one target AND respect scope rules
-    CONSTRAINT check_inventory_target CHECK (
-        (location_id IS NOT NULL AND bed_id IS NULL) OR
-        (location_id IS NULL AND bed_id IS NOT NULL)
-    )
-);
-
-CREATE INDEX idx_inventory_assignment_location ON inventory_assignments(location_id) 
-    WHERE location_id IS NOT NULL;
-CREATE INDEX idx_inventory_assignment_bed ON inventory_assignments(bed_id) 
-    WHERE bed_id IS NOT NULL;
-
--- Prevent duplicate assignments (e.g. assigning "Desk" to "Bed A" twice)
-CREATE UNIQUE INDEX uq_bed_catalog ON inventory_assignments(bed_id, catalog_id) 
-    WHERE bed_id IS NOT NULL;
-CREATE UNIQUE INDEX uq_location_catalog ON inventory_assignments(location_id, catalog_id) 
-    WHERE location_id IS NOT NULL;
 
 -- 3. Contract Snapshots (Frozen inventory list)
 CREATE TABLE booking_inventory_snapshots (
@@ -592,8 +570,7 @@ CREATE TABLE access_card_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     card_id INT NOT NULL REFERENCES access_cards(id),
     student_id UUID REFERENCES students(id),
-    booking_id UUID REFERENCES bookings(id),
-    
+    booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
     action_type VARCHAR(20) CHECK (action_type IN ('issued', 'returned', 'lost', 'void')),
     
     performed_by UUID REFERENCES users(id),
@@ -601,3 +578,33 @@ CREATE TABLE access_card_logs (
     
     notes TEXT
 );
+
+-- =============================================
+-- BULK IMPORT SYSTEM
+-- =============================================
+
+CREATE TABLE import_batches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    filename VARCHAR(255) NOT NULL,
+    uploaded_by UUID NOT NULL REFERENCES users(id),
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    total_rows INT NOT NULL,
+    successful_rows INT DEFAULT 0,
+    failed_rows INT DEFAULT 0,
+    
+    status VARCHAR(20) DEFAULT 'processing' CHECK (status IN ('processing', 'completed', 'failed')),
+    
+    -- Store full results for UI feedback
+    -- Array of { index: number, status: 'success' | 'error', error?: string, studentId?: string, bookingId?: string, data: any }
+    results JSONB, 
+    notes TEXT,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_import_batches_uploaded_by ON import_batches(uploaded_by);
+CREATE INDEX idx_import_batches_uploaded_at ON import_batches(uploaded_at);

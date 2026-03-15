@@ -190,8 +190,12 @@ export class UsersService {
     return user;
   }
 
-  async findById(id: string, context?: AuditUserContext): Promise<User | null> {
-    const user = await this.usersRepository.findById(id, undefined, false, context);
+  async findById(
+    id: string,
+    context?: AuditUserContext,
+    client?: PoolClient,
+  ): Promise<User | null> {
+    const user = await this.usersRepository.findById(id, client, false, context);
     if (user) {
       user.roles = await this.accessRepository.getRolesForUser(user.id);
       user.permissions = await this.accessRepository.getPermissionsForUser(user.id);

@@ -11,4 +11,5 @@ export interface UpdateLocationDto {
   isForeignerOnly?: boolean;
   ownership?: LocationOwnership;
   basePrice?: number;
+  status?: string;
 }

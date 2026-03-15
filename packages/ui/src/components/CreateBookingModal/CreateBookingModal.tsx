@@ -35,6 +35,7 @@ interface CreateBookingModalProps {
   semesters: Semester[];
   initialStudentId?: string | null;
   initialBedId?: number | null;
+  initialLocationId?: number | null;
   isEdit?: boolean;
 }
 
@@ -47,6 +48,7 @@ export function CreateBookingModal({
   semesters,
   initialStudentId,
   initialBedId,
+  initialLocationId,
   isEdit,
 }: CreateBookingModalProps) {
   const { t } = useTranslation();
@@ -234,6 +236,7 @@ export function CreateBookingModal({
           <HierarchicalBedSelector
             studentId={form.values.studentId}
             value={form.values.bedId}
+            initialLocationId={initialLocationId || undefined}
             onChange={(val) => form.setFieldValue("bedId", val)}
             error={form.errors.bedId}
           />

@@ -9,9 +9,11 @@ import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { RolesPage } from './pages/RolesPage';
+import { TransfersPage } from './pages/TransfersPage';
 import { AccountingPage } from './pages/AccountingPage';
 import { AccountPage } from './pages/AccountPage';
 import { InventoryCatalogPage } from './pages/InventoryCatalogPage';
+import { InventoryTemplatesPage } from './pages/InventoryTemplatesPage';
 import { CheckInPage } from './pages/CheckInPage';
 import { CheckOutPage } from './pages/CheckOutPage';
 import { AccessCardsPage } from './pages/AccessCardsPage';
@@ -57,6 +59,14 @@ function App() {
             }
           />
           <Route
+            path="transfers"
+            element={
+              <PermissionRoute permission="bookings.view">
+                <TransfersPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
             path="check-in"
             element={
               <PermissionRoute permission="bookings.check_in">
@@ -86,6 +96,14 @@ function App() {
             element={
               <PermissionRoute permission="inventory.manage">
                 <InventoryCatalogPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="inventory/templates"
+            element={
+              <PermissionRoute permission="inventory.manage">
+                <InventoryTemplatesPage />
               </PermissionRoute>
             }
           />
