@@ -41,25 +41,7 @@ services:
       - db
 
   # ------------------------------------
-  # 3. STUDENT CLIENT
-  # ------------------------------------
-  client-student:
-    container_name: domas_student
-    build:
-      context: .
-      dockerfile: apps/client-student/Dockerfile
-      args:
-        VITE_API_URL: "http://34.7.213.46:3000"
-    restart: always
-    ports:
-      - "8081:80"
-    networks:
-      - domas_net
-    depends_on:
-      - server
-
-  # ------------------------------------
-  # 4. MAIN CLIENT (ADMIN)
+  # 3. MAIN CLIENT (ADMIN)
   # ------------------------------------
   client:
     container_name: domas_client
