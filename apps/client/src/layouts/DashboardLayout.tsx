@@ -217,7 +217,7 @@ export function DashboardLayout() {
               DOMAS
             </Text>
             <Code fw={700} ml="xs">
-              v1.0.0
+              v{import.meta.env.APP_VERSION}
             </Code>
           </Group>
         }
