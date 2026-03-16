@@ -60,7 +60,7 @@ function getAllDescendantIds(node: LocationNode): (number | string)[] {
       ? node.id
       : `loc-${node.id}`;
 
-  let ids = [globalId];
+  let ids: (string | number)[] = [globalId];
   if (node.children) {
     for (const child of node.children) {
       ids = [...ids, ...getAllDescendantIds(child)];
