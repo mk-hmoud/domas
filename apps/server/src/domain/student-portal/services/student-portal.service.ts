@@ -9,6 +9,10 @@ import {
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { StudentPortalRepository } from '../repositories/student-portal.repository';
 import { DatabaseService } from '../../../core/database/database.service';
+import {
+  NotificationsService,
+  NotificationType,
+} from '../../notifications/services/notifications.service';
 import { Student } from '../../students/entities/student.entity';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
@@ -21,6 +25,7 @@ export class StudentPortalService {
     private readonly studentsRepository: StudentsRepository,
     private readonly portalRepository: StudentPortalRepository,
     private readonly db: DatabaseService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -168,6 +173,17 @@ export class StudentPortalService {
 
       // 6. Lock room gender if not yet set
       await this.portalRepository.lockGenderIfNull(bed.locationId, student.gender, client);
+
+      // 7. Notify the student (fire-and-forget after commit)
+      setImmediate(() =>
+        this.notificationsService.create(
+          studentId,
+          NotificationType.BOOKING_SUBMITTED,
+          'Application Submitted',
+          'Your accommodation application has been submitted and is under review.',
+          { bookingId: booking.id, semesterId: dto.semesterId },
+        ),
+      );
 
       return booking;
     });

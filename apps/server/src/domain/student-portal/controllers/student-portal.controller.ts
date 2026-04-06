@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { StudentPortalService } from '../services/student-portal.service';
-import { StudentAuthGuard } from '../guards/student-auth.guard';
+import { StudentAuthGuard } from '../../../common/guards/student-auth.guard';
 import { StudentLoginDto } from '../dto/student-login.dto';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
