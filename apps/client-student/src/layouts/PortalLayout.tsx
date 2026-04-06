@@ -13,7 +13,6 @@ import {
   ThemeIcon,
   Title,
   UnstyledButton,
-  useMantineColorScheme,
 } from '@domas/ui';
 import { ThemeToggle, LanguageSwitcher } from '@domas/ui';
 import {
@@ -191,7 +190,6 @@ function TopBar() {
   const { student, logout } = useStudentAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
-  const { colorScheme } = useMantineColorScheme();
 
   const handleLogout = async () => {
     await logout();
