@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedStudentRoute } from './components/ProtectedStudentRoute';
+import { PortalLayout } from './layouts/PortalLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ApplyPage } from './pages/ApplyPage';
@@ -15,13 +16,12 @@ function App() {
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected portal — layout added in Phase 1 Batch 2 */}
+        {/* Protected portal */}
         <Route
           path="/"
           element={
             <ProtectedStudentRoute>
-              {/* PortalLayout will wrap here; for now renders Outlet directly */}
-              <PortalShell />
+              <PortalLayout />
             </ProtectedStudentRoute>
           }
         >
@@ -38,12 +38,6 @@ function App() {
       </Routes>
     </BrowserRouter>
   );
-}
-
-/** Temporary shell — will be replaced by PortalLayout in Batch 2. */
-import { Outlet } from 'react-router-dom';
-function PortalShell() {
-  return <Outlet />;
 }
 
 export default App;
