@@ -4,17 +4,20 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Patch,
+  Param,
+  ParseIntPipe,
   Post,
   Request,
   Res,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { StudentPortalService } from '../services/student-portal.service';
 import { StudentAuthGuard } from '../guards/student-auth.guard';
 import { StudentLoginDto } from '../dto/student-login.dto';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
+import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
 
 @Controller('portal')
 export class StudentPortalController {
@@ -58,5 +61,66 @@ export class StudentPortalController {
   @Patch('me')
   async updateContact(@Request() req: ExpressRequest, @Body() dto: UpdateStudentContactDto) {
     return this.studentPortalService.updateContact(req.session.studentId!, dto);
+  }
+
+  // ─── Semesters ───────────────────────────────────────────────────────────────
+
+  @UseGuards(StudentAuthGuard)
+  @Get('semesters')
+  async getBookableSemesters() {
+    return this.studentPortalService.getBookableSemesters();
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('semesters/:id/available-beds')
+  async getAvailableBeds(
+    @Param('id', ParseIntPipe) semesterId: number,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.studentPortalService.getAvailableBedsForSemester(
+      semesterId,
+      req.session.studentId!,
+    );
+  }
+
+  // ─── Bookings ─────────────────────────────────────────────────────────────────
+
+  @UseGuards(StudentAuthGuard)
+  @Get('bookings')
+  async getMyBookings(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getMyBookings(req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('bookings/current')
+  async getCurrentBooking(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getCurrentBooking(req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('bookings/:id')
+  async getBookingById(@Param('id') bookingId: string, @Request() req: ExpressRequest) {
+    return this.studentPortalService.getBookingById(bookingId, req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Post('bookings')
+  @HttpCode(HttpStatus.CREATED)
+  async createBooking(@Body() dto: StudentCreateBookingDto, @Request() req: ExpressRequest) {
+    return this.studentPortalService.createBooking(req.session.studentId!, dto);
+  }
+
+  // ─── Financial ───────────────────────────────────────────────────────────────
+
+  @UseGuards(StudentAuthGuard)
+  @Get('transactions')
+  async getMyTransactions(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getMyTransactions(req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('damages')
+  async getMyDamageLiabilities(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getMyDamageLiabilities(req.session.studentId!);
   }
 }
