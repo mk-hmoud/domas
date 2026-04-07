@@ -59,6 +59,24 @@ services:
     depends_on:
       - server
 
+  # ------------------------------------
+  # 4. STUDENT CLIENT
+  # ------------------------------------
+  client-student:
+    container_name: domas_student
+    build:
+      context: .
+      dockerfile: apps/client-student/Dockerfile
+      args:
+        VITE_API_URL: "/api"
+    restart: always
+    ports:
+      - "8081:80"
+    networks:
+      - domas_net
+    depends_on:
+      - server
+
 networks:
   domas_net:
     driver: bridge
