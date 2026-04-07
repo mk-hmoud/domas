@@ -5,8 +5,10 @@ import {
   Box,
   Button,
   Card,
+  Grid,
   Group,
   Paper,
+  SimpleGrid,
   Skeleton,
   Stack,
   Text,
@@ -21,6 +23,7 @@ import {
   IconCreditCard,
   IconDoor,
   IconFileDownload,
+  IconKey,
 } from '@tabler/icons-react';
 import {
   BookingOpsStatus,
@@ -41,7 +44,7 @@ function statusLabel(status: BookingOpsStatus): string {
       return 'Under Review';
     case BookingOpsStatus.READY_FOR_CHECKIN:
     case BookingOpsStatus.CONFIRMED:
-      return 'Approved — Ready for Check-In';
+      return 'Ready for Check-In';
     case BookingOpsStatus.ACTIVE:
       return 'Active';
     case BookingOpsStatus.REJECTED:
@@ -65,6 +68,99 @@ function statusColor(status: BookingOpsStatus): string {
   }
 }
 
+// ─── Stats band — shown when a booking exists ─────────────────────────────────
+
+function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
+  const navigate = useNavigate();
+  const paymentPending =
+    booking.paymentStatus === PaymentStatus.PENDING ||
+    booking.paymentStatus === PaymentStatus.PARTIAL;
+
+  const daysRemaining = Math.ceil(
+    (new Date(booking.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+
+  const stats = [
+    {
+      label: 'Status',
+      value: statusLabel(booking.status),
+      color: statusColor(booking.status),
+      icon: IconDoor,
+      onClick: () => navigate('/booking'),
+    },
+    {
+      label: 'Payment',
+      value: paymentPending ? 'Pending' : 'Paid',
+      color: paymentPending ? 'orange' : 'green',
+      icon: IconCreditCard,
+      onClick: () => navigate('/financial'),
+    },
+    {
+      label: 'Room',
+      value: `${booking.roomName} · Bed ${booking.bedLabel}`,
+      color: 'blue',
+      icon: IconBed,
+      onClick: () => navigate('/booking'),
+    },
+    ...(booking.accessCardNumber
+      ? [
+          {
+            label: 'Access Card',
+            value: `#${booking.accessCardNumber}`,
+            color: 'grape',
+            icon: IconKey,
+            onClick: () => navigate('/booking'),
+          },
+        ]
+      : daysRemaining > 0
+        ? [
+            {
+              label: 'Days Remaining',
+              value: String(daysRemaining),
+              color: daysRemaining < 30 ? 'orange' : 'teal',
+              icon: IconCalendarPlus,
+              onClick: () => navigate('/booking'),
+            },
+          ]
+        : []),
+  ];
+
+  return (
+    <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
+      {stats.map((s) => (
+        <Card
+          key={s.label}
+          withBorder
+          radius="md"
+          p="sm"
+          style={{ cursor: 'pointer' }}
+          onClick={s.onClick}
+        >
+          <Group gap="xs" wrap="nowrap">
+            <ThemeIcon
+              size={32}
+              radius="xl"
+              variant="light"
+              color={s.color}
+              style={{ flexShrink: 0 }}
+            >
+              <s.icon size={16} />
+            </ThemeIcon>
+            <Box style={{ minWidth: 0 }}>
+              <Text size="xs" c="dimmed" truncate>
+                {s.label}
+              </Text>
+              <Text size="sm" fw={600} c={s.color} truncate>
+                {s.value}
+              </Text>
+            </Box>
+          </Group>
+        </Card>
+      ))}
+    </SimpleGrid>
+  );
+}
+
 // ─── State A — No booking ─────────────────────────────────────────────────────
 
 function NoBookingCard({
@@ -76,13 +172,15 @@ function NoBookingCard({
 }) {
   if (semesters.length === 0) {
     return (
-      <Paper withBorder radius="md" p="lg">
+      <Paper withBorder radius="md" p="xl">
         <Stack align="center" gap="xs" py="md">
-          <ThemeIcon size={48} radius="xl" variant="light" color="gray">
-            <IconBed size={24} />
+          <ThemeIcon size={52} radius="xl" variant="light" color="gray">
+            <IconBed size={26} />
           </ThemeIcon>
-          <Text fw={500}>No open semesters</Text>
-          <Text size="sm" c="dimmed" ta="center">
+          <Text fw={500} size="lg">
+            No open semesters
+          </Text>
+          <Text size="sm" c="dimmed" ta="center" maw={360}>
             There are no accommodation periods currently open for applications. Check back later.
           </Text>
         </Stack>
@@ -92,56 +190,54 @@ function NoBookingCard({
 
   const next = semesters[0];
   return (
-    <Paper withBorder radius="md" p="lg" style={{ borderColor: 'var(--mantine-color-blue-4)' }}>
-      <Stack gap="sm">
-        <Group gap="sm">
-          <ThemeIcon size={40} radius="xl" variant="light" color="blue">
-            <IconCalendarPlus size={20} />
-          </ThemeIcon>
-          <Box>
-            <Text fw={600}>{next.displayName}</Text>
-            <Text size="xs" c="dimmed">
-              Accommodation applications are open
-            </Text>
-          </Box>
-        </Group>
-
-        <Stack gap={4}>
-          <Group gap="xs">
-            <Text size="sm" c="dimmed">
-              Semester period:
-            </Text>
-            <Text size="sm">
-              {new Date(next.startDate).toLocaleDateString()} –{' '}
-              {new Date(next.endDate).toLocaleDateString()}
-            </Text>
-          </Group>
-          {next.bookingEndDate && (
+    <Paper withBorder radius="md" p="xl" style={{ borderColor: 'var(--mantine-color-blue-4)' }}>
+      <Group gap="lg" align="flex-start" wrap="nowrap">
+        <ThemeIcon size={52} radius="xl" variant="light" color="blue" style={{ flexShrink: 0 }}>
+          <IconCalendarPlus size={26} />
+        </ThemeIcon>
+        <Box style={{ flex: 1 }}>
+          <Text fw={700} size="lg" mb={4}>
+            {next.displayName}
+          </Text>
+          <Text size="sm" c="dimmed" mb="sm">
+            Accommodation applications are open
+          </Text>
+          <Stack gap={4} mb="md">
             <Group gap="xs">
-              <Text size="sm" c="dimmed">
-                Apply by:
+              <Text size="sm" c="dimmed" w={110}>
+                Semester period:
               </Text>
-              <Text size="sm" fw={500} c="orange">
-                {new Date(next.bookingEndDate).toLocaleDateString()}
+              <Text size="sm">
+                {new Date(next.startDate).toLocaleDateString()} –{' '}
+                {new Date(next.endDate).toLocaleDateString()}
               </Text>
             </Group>
-          )}
-          <Group gap="xs">
-            <Text size="sm" c="dimmed">
-              Deposit:
-            </Text>
-            <Text size="sm">
-              {next.depositAmountTry > 0
-                ? `₺${next.depositAmountTry.toLocaleString()}`
-                : `${next.depositAmountForeign} ${next.foreignCurrencyCode}`}
-            </Text>
-          </Group>
-        </Stack>
-
-        <Button leftSection={<IconCalendarPlus size={16} />} onClick={onApply} mt="xs">
-          Apply Now
-        </Button>
-      </Stack>
+            {next.bookingEndDate && (
+              <Group gap="xs">
+                <Text size="sm" c="dimmed" w={110}>
+                  Apply by:
+                </Text>
+                <Text size="sm" fw={500} c="orange">
+                  {new Date(next.bookingEndDate).toLocaleDateString()}
+                </Text>
+              </Group>
+            )}
+            <Group gap="xs">
+              <Text size="sm" c="dimmed" w={110}>
+                Deposit:
+              </Text>
+              <Text size="sm">
+                {next.depositAmountTry > 0
+                  ? `₺${next.depositAmountTry.toLocaleString()}`
+                  : `${next.depositAmountForeign} ${next.foreignCurrencyCode}`}
+              </Text>
+            </Group>
+          </Stack>
+          <Button leftSection={<IconCalendarPlus size={16} />} onClick={onApply}>
+            Apply Now
+          </Button>
+        </Box>
+      </Group>
     </Paper>
   );
 }
@@ -150,16 +246,18 @@ function NoBookingCard({
 
 function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
   return (
-    <Paper withBorder radius="md" p="lg">
-      <Stack gap="md">
+    <Paper withBorder radius="md" p="xl">
+      <Stack gap="lg">
         <Group justify="space-between" align="flex-start">
           <Box>
-            <Text fw={600}>Your Application</Text>
-            <Text size="xs" c="dimmed">
+            <Text fw={700} size="lg">
+              Your Application
+            </Text>
+            <Text size="sm" c="dimmed">
               {booking.semesterDisplayName}
             </Text>
           </Box>
-          <Badge color={statusColor(booking.status)} variant="light" radius="sm">
+          <Badge color={statusColor(booking.status)} variant="light" radius="sm" size="lg">
             {statusLabel(booking.status)}
           </Badge>
         </Group>
@@ -211,23 +309,25 @@ function ActiveResidentCard({
   onViewBooking: () => void;
 }) {
   return (
-    <Paper withBorder radius="md" p="lg" style={{ borderColor: 'var(--mantine-color-green-4)' }}>
-      <Stack gap="md">
+    <Paper withBorder radius="md" p="xl" style={{ borderColor: 'var(--mantine-color-green-4)' }}>
+      <Stack gap="lg">
         <Group gap="sm">
-          <ThemeIcon size={40} radius="xl" variant="light" color="green">
-            <IconDoor size={20} />
+          <ThemeIcon size={48} radius="xl" variant="light" color="green">
+            <IconDoor size={24} />
           </ThemeIcon>
           <Box>
-            <Text fw={600}>You are checked in</Text>
-            <Text size="xs" c="dimmed">
+            <Text fw={700} size="lg">
+              You are checked in
+            </Text>
+            <Text size="sm" c="dimmed">
               {booking.semesterDisplayName}
             </Text>
           </Box>
         </Group>
 
-        <Stack gap={6}>
+        <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
           <Group gap="xs">
-            <Text size="sm" c="dimmed" w={100}>
+            <Text size="sm" c="dimmed" w={90}>
               Location:
             </Text>
             <Text size="sm" fw={500}>
@@ -235,7 +335,7 @@ function ActiveResidentCard({
             </Text>
           </Group>
           <Group gap="xs">
-            <Text size="sm" c="dimmed" w={100}>
+            <Text size="sm" c="dimmed" w={90}>
               Room / Bed:
             </Text>
             <Text size="sm" fw={500}>
@@ -244,7 +344,7 @@ function ActiveResidentCard({
           </Group>
           {booking.accessCardNumber && (
             <Group gap="xs">
-              <Text size="sm" c="dimmed" w={100}>
+              <Text size="sm" c="dimmed" w={90}>
                 Access card:
               </Text>
               <Text size="sm" fw={500}>
@@ -253,7 +353,7 @@ function ActiveResidentCard({
             </Group>
           )}
           <Group gap="xs">
-            <Text size="sm" c="dimmed" w={100}>
+            <Text size="sm" c="dimmed" w={90}>
               Check-in:
             </Text>
             <Text size="sm">
@@ -261,12 +361,12 @@ function ActiveResidentCard({
             </Text>
           </Group>
           <Group gap="xs">
-            <Text size="sm" c="dimmed" w={100}>
-              Check-out:
+            <Text size="sm" c="dimmed" w={90}>
+              Semester end:
             </Text>
             <Text size="sm">{new Date(booking.endDate).toLocaleDateString()}</Text>
           </Group>
-        </Stack>
+        </SimpleGrid>
 
         <Group gap="sm">
           <Button
@@ -274,16 +374,14 @@ function ActiveResidentCard({
             color="green"
             leftSection={<IconDoor size={16} />}
             onClick={onViewBooking}
-            style={{ flex: 1 }}
           >
-            View Booking
+            View Full Details
           </Button>
           {booking.contractSigned && (
             <Button
               variant="subtle"
               leftSection={<IconFileDownload size={16} />}
               onClick={() => portalBookings.downloadContract(booking.id)}
-              style={{ flex: 1 }}
             >
               Contract
             </Button>
@@ -294,103 +392,80 @@ function ActiveResidentCard({
   );
 }
 
-// ─── Recent notifications strip ───────────────────────────────────────────────
+// ─── Notifications panel ──────────────────────────────────────────────────────
 
-function RecentNotificationsStrip() {
+function NotificationsPanel({ limit = 5 }: { limit?: number }) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<StudentNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     portalNotifications
-      .getAll({ limit: 3 })
+      .getAll({ limit })
       .then(setItems)
-      .catch(() => {});
-  }, []);
-
-  if (items.length === 0) return null;
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [limit]);
 
   return (
-    <Stack gap="xs">
-      <Group justify="space-between">
-        <Text size="sm" fw={600}>
+    <Paper withBorder radius="md" p="md" style={{ height: '100%' }}>
+      <Group justify="space-between" mb="sm">
+        <Text fw={600} size="sm">
           Recent Notifications
         </Text>
+        <Text
+          size="xs"
+          c="blue"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/notifications')}
+        >
+          View all
+        </Text>
       </Group>
-      {items.map((n) => (
-        <Card key={n.id} withBorder radius="md" p="sm">
-          <Group gap="sm" align="flex-start">
-            <ThemeIcon size={28} radius="xl" variant="light" color={n.readAt ? 'gray' : 'blue'}>
-              <IconBell size={14} />
+
+      <Stack gap="xs">
+        {isLoading ? (
+          <>
+            <Skeleton height={56} radius="sm" />
+            <Skeleton height={56} radius="sm" />
+            <Skeleton height={56} radius="sm" />
+          </>
+        ) : items.length === 0 ? (
+          <Box py="xl" style={{ textAlign: 'center' }}>
+            <ThemeIcon size={36} radius="xl" variant="light" color="gray" mx="auto" mb="xs">
+              <IconBell size={18} />
             </ThemeIcon>
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text size="sm" fw={n.readAt ? 400 : 600} truncate>
+            <Text size="sm" c="dimmed">
+              No notifications yet
+            </Text>
+          </Box>
+        ) : (
+          items.map((n) => (
+            <Box
+              key={n.id}
+              p="xs"
+              style={{
+                borderRadius: 8,
+                background: !n.readAt ? 'var(--mantine-color-blue-0)' : undefined,
+                borderLeft: !n.readAt
+                  ? '3px solid var(--mantine-color-blue-4)'
+                  : '3px solid transparent',
+              }}
+            >
+              <Text size="sm" fw={!n.readAt ? 600 : 400} lineClamp={1}>
                 {n.title}
               </Text>
-              <Text size="xs" c="dimmed" truncate>
+              <Text size="xs" c="dimmed" lineClamp={1}>
                 {n.body}
               </Text>
+              <Text size="xs" c="dimmed" mt={2}>
+                {new Date(n.createdAt).toLocaleString()}
+              </Text>
             </Box>
-          </Group>
-        </Card>
-      ))}
-    </Stack>
-  );
-}
-
-// ─── Quick stats strip ────────────────────────────────────────────────────────
-
-function QuickStats({ booking }: { booking: StudentCurrentBooking }) {
-  const navigate = useNavigate();
-  const paymentPending =
-    booking.paymentStatus === PaymentStatus.PENDING ||
-    booking.paymentStatus === PaymentStatus.PARTIAL;
-
-  return (
-    <Group grow gap="sm">
-      <Card
-        withBorder
-        radius="md"
-        p="sm"
-        style={{ cursor: 'pointer' }}
-        onClick={() => navigate('/financial')}
-      >
-        <Stack gap={4} align="center">
-          <ThemeIcon
-            size={32}
-            radius="xl"
-            variant="light"
-            color={paymentPending ? 'orange' : 'green'}
-          >
-            <IconCreditCard size={16} />
-          </ThemeIcon>
-          <Text size="xs" c="dimmed" ta="center">
-            Payment
-          </Text>
-          <Text size="xs" fw={600} c={paymentPending ? 'orange' : 'green'}>
-            {paymentPending ? 'Pending' : 'Paid'}
-          </Text>
-        </Stack>
-      </Card>
-
-      <Card
-        withBorder
-        radius="md"
-        p="sm"
-        style={{ cursor: 'pointer' }}
-        onClick={() => navigate('/booking')}
-      >
-        <Stack gap={4} align="center">
-          <ThemeIcon size={32} radius="xl" variant="light" color="blue">
-            <IconBed size={16} />
-          </ThemeIcon>
-          <Text size="xs" c="dimmed" ta="center">
-            Room
-          </Text>
-          <Text size="xs" fw={600}>
-            {booking.roomName}
-          </Text>
-        </Stack>
-      </Card>
-    </Group>
+          ))
+        )}
+      </Stack>
+    </Paper>
   );
 }
 
@@ -425,10 +500,10 @@ export function DashboardPage() {
     ].includes(booking.status);
 
   return (
-    <Stack p="md" gap="md" maw={640} mx="auto">
+    <Stack gap="lg">
       {/* Greeting */}
       <Box>
-        <Title order={4}>Hello, {student?.firstName ?? 'Student'} 👋</Title>
+        <Title order={3}>Hello, {student?.firstName ?? 'Student'} 👋</Title>
         <Text size="sm" c="dimmed">
           {new Date().toLocaleDateString(undefined, {
             weekday: 'long',
@@ -439,27 +514,43 @@ export function DashboardPage() {
       </Box>
 
       {isLoading ? (
-        <Stack gap="sm">
-          <Skeleton height={140} radius="md" />
-          <Skeleton height={80} radius="md" />
-          <Skeleton height={80} radius="md" />
-        </Stack>
+        <>
+          <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
+            <Skeleton height={60} radius="md" />
+            <Skeleton height={60} radius="md" />
+            <Skeleton height={60} radius="md" />
+            <Skeleton height={60} radius="md" />
+          </SimpleGrid>
+          <Grid gutter="lg">
+            <Grid.Col span={{ base: 12, md: 7 }}>
+              <Skeleton height={240} radius="md" />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 5 }}>
+              <Skeleton height={240} radius="md" />
+            </Grid.Col>
+          </Grid>
+        </>
       ) : (
         <>
-          {/* Primary card — based on booking state */}
-          {isActive ? (
-            <>
-              <ActiveResidentCard booking={booking!} onViewBooking={() => navigate('/booking')} />
-              <QuickStats booking={booking!} />
-            </>
-          ) : hasPending ? (
-            <PendingBookingCard booking={booking!} />
-          ) : (
-            <NoBookingCard semesters={semesters} onApply={() => navigate('/apply')} />
-          )}
+          {/* Stats band — only when a booking exists */}
+          {booking && <StatsBand booking={booking} />}
 
-          {/* Recent notifications */}
-          <RecentNotificationsStrip />
+          {/* Main grid */}
+          <Grid gutter="lg" align="flex-start">
+            <Grid.Col span={{ base: 12, md: 7 }}>
+              {isActive ? (
+                <ActiveResidentCard booking={booking!} onViewBooking={() => navigate('/booking')} />
+              ) : hasPending ? (
+                <PendingBookingCard booking={booking!} />
+              ) : (
+                <NoBookingCard semesters={semesters} onApply={() => navigate('/apply')} />
+              )}
+            </Grid.Col>
+
+            <Grid.Col span={{ base: 12, md: 5 }}>
+              <NotificationsPanel limit={6} />
+            </Grid.Col>
+          </Grid>
         </>
       )}
     </Stack>

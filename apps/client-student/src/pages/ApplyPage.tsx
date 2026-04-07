@@ -25,6 +25,9 @@ import {
   IconBuilding,
   IconCalendar,
   IconCheck,
+  IconCircle,
+  IconCircleCheck,
+  IconCircleDot,
   IconInfoCircle,
   IconX,
 } from '@tabler/icons-react';
@@ -32,7 +35,7 @@ import { AvailableBed, PortalSemester } from '@domas/ts-types';
 import { portalBookings, portalSemesters } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
 
-// ─── Step 1 — Semester picker ─────────────────────────────────────────────────
+// ─── Step content: Semester picker ───────────────────────────────────────────
 
 function SemesterStep({
   semesters,
@@ -79,7 +82,6 @@ function SemesterStep({
                   label={<Text fw={600}>{s.displayName}</Text>}
                 />
               </Group>
-
               <Stack gap={2} pl={28}>
                 <Group gap="xs">
                   <Text size="xs" c="dimmed">
@@ -90,7 +92,6 @@ function SemesterStep({
                     {new Date(s.endDate).toLocaleDateString()}
                   </Text>
                 </Group>
-
                 {s.bookingEndDate && (
                   <Group gap="xs">
                     <Text size="xs" c="dimmed">
@@ -101,7 +102,6 @@ function SemesterStep({
                     </Text>
                   </Group>
                 )}
-
                 <Group gap="xs">
                   <Text size="xs" c="dimmed">
                     Deposit:
@@ -121,7 +121,7 @@ function SemesterStep({
   );
 }
 
-// ─── Step 2 — Bed picker ──────────────────────────────────────────────────────
+// ─── Step content: Bed picker ─────────────────────────────────────────────────
 
 function BedStep({
   semesterId,
@@ -172,7 +172,6 @@ function BedStep({
     );
   }
 
-  // Group by location
   const grouped = beds.reduce<Record<string, AvailableBed[]>>((acc, bed) => {
     const key = bed.locationPath;
     if (!acc[key]) acc[key] = [];
@@ -185,7 +184,6 @@ function BedStep({
       <Text size="sm" c="dimmed">
         Choose a bed from the available options.
       </Text>
-
       {Object.entries(grouped).map(([location, locationBeds]) => (
         <Stack key={location} gap="xs">
           <Group gap="xs">
@@ -196,7 +194,6 @@ function BedStep({
               {location}
             </Text>
           </Group>
-
           {locationBeds.map((bed) => {
             const isSelected = selected?.id === bed.id;
             return (
@@ -238,7 +235,6 @@ function BedStep({
                       </Group>
                     </Box>
                   </Group>
-
                   {bed.basePrice != null && (
                     <Text size="sm" fw={600} c="blue">
                       ₺{bed.basePrice.toLocaleString()}
@@ -254,7 +250,7 @@ function BedStep({
   );
 }
 
-// ─── Step 3 — Review & confirm ────────────────────────────────────────────────
+// ─── Step content: Review ─────────────────────────────────────────────────────
 
 function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: AvailableBed }) {
   return (
@@ -262,7 +258,6 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
       <Text size="sm" c="dimmed">
         Review your selection before submitting.
       </Text>
-
       <Paper withBorder radius="md" p="md">
         <Stack gap="sm">
           <Group gap="sm">
@@ -278,9 +273,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
               </Text>
             </Box>
           </Group>
-
           <Divider />
-
           <Group gap="sm">
             <ThemeIcon size={32} radius="xl" variant="light" color="teal">
               <IconBed size={16} />
@@ -297,9 +290,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
               </Text>
             </Box>
           </Group>
-
           <Divider />
-
           <Stack gap={4}>
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
@@ -333,12 +324,66 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
           </Stack>
         </Stack>
       </Paper>
-
       <Alert icon={<IconInfoCircle size={14} />} color="blue" radius="md" variant="light">
         By submitting, your application will be sent for review by the accounting office. You will
         be notified once it is processed.
       </Alert>
     </Stack>
+  );
+}
+
+// ─── Desktop step sidebar ─────────────────────────────────────────────────────
+
+const STEPS = [
+  { label: 'Semester', description: 'Choose period' },
+  { label: 'Bed', description: 'Choose room' },
+  { label: 'Confirm', description: 'Review & submit' },
+];
+
+function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
+  return (
+    <Paper withBorder radius="md" p="lg" style={{ height: '100%' }}>
+      <Text fw={700} size="sm" mb="lg">
+        Application Steps
+      </Text>
+      <Stack gap="lg">
+        {STEPS.map((s, i) => {
+          const isDone = i < activeStep;
+          const isActive = i === activeStep;
+          return (
+            <Group key={s.label} gap="sm" align="flex-start">
+              <ThemeIcon
+                size={28}
+                radius="xl"
+                variant={isDone ? 'filled' : isActive ? 'filled' : 'light'}
+                color={isDone ? 'green' : isActive ? 'blue' : 'gray'}
+                style={{ flexShrink: 0, marginTop: 2 }}
+              >
+                {isDone ? (
+                  <IconCircleCheck size={16} />
+                ) : isActive ? (
+                  <IconCircleDot size={16} />
+                ) : (
+                  <IconCircle size={16} />
+                )}
+              </ThemeIcon>
+              <Box>
+                <Text
+                  size="sm"
+                  fw={isActive ? 700 : isDone ? 500 : 400}
+                  c={isActive ? undefined : isDone ? undefined : 'dimmed'}
+                >
+                  {s.label}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {s.description}
+                </Text>
+              </Box>
+            </Group>
+          );
+        })}
+      </Stack>
+    </Paper>
   );
 }
 
@@ -356,20 +401,17 @@ export function ApplyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Load bookable semesters on mount
   useEffect(() => {
     portalSemesters
       .getBookable()
       .then((data) => {
         setSemesters(data);
-        // Auto-select if only one semester
         if (data.length === 1) setSelectedSemester(data[0]);
       })
       .catch(() => {})
       .finally(() => setIsLoadingSemesters(false));
   }, []);
 
-  // Already has an active/pending booking — redirect to dashboard
   const hasActiveBooking = booking !== null;
 
   const handleNext = () => {
@@ -402,10 +444,61 @@ export function ApplyPage() {
   const canAdvance =
     (step === 0 && selectedSemester !== null) || (step === 1 && selectedBed !== null);
 
+  const stepContent = isLoadingSemesters ? (
+    <Stack gap="sm">
+      <Skeleton height={80} radius="md" />
+      <Skeleton height={80} radius="md" />
+    </Stack>
+  ) : step === 0 ? (
+    <SemesterStep
+      semesters={semesters}
+      selected={selectedSemester}
+      onSelect={(s) => {
+        setSelectedSemester(s);
+        setSelectedBed(null);
+      }}
+    />
+  ) : step === 1 && selectedSemester ? (
+    <BedStep semesterId={selectedSemester.id} selected={selectedBed} onSelect={setSelectedBed} />
+  ) : step === 2 && selectedSemester && selectedBed ? (
+    <ReviewStep semester={selectedSemester} bed={selectedBed} />
+  ) : null;
+
+  const navButtons = (
+    <Group justify="space-between">
+      <Button
+        variant="subtle"
+        leftSection={<IconArrowLeft size={16} />}
+        onClick={step === 0 ? () => navigate('/dashboard') : handleBack}
+        disabled={isSubmitting}
+      >
+        {step === 0 ? 'Cancel' : 'Back'}
+      </Button>
+      {step < 2 ? (
+        <Button
+          rightSection={<IconArrowRight size={16} />}
+          onClick={handleNext}
+          disabled={!canAdvance}
+        >
+          Next
+        </Button>
+      ) : (
+        <Button
+          leftSection={isSubmitting ? <Loader size={14} color="white" /> : <IconCheck size={16} />}
+          onClick={handleSubmit}
+          disabled={isSubmitting || hasActiveBooking}
+          color="green"
+        >
+          {isSubmitting ? 'Submitting…' : 'Submit Application'}
+        </Button>
+      )}
+    </Group>
+  );
+
   return (
-    <Stack p="md" gap="md" maw={640} mx="auto">
+    <Stack gap="lg">
       <Box>
-        <Title order={4}>Apply for Accommodation</Title>
+        <Title order={3}>Apply for Accommodation</Title>
         <Text size="sm" c="dimmed">
           Complete the steps below to submit your application.
         </Text>
@@ -427,85 +520,67 @@ export function ApplyPage() {
         </Alert>
       )}
 
-      {/* Stepper header */}
-      <Stepper active={step} size="sm" radius="md">
-        <Stepper.Step label="Semester" description="Choose period" />
-        <Stepper.Step label="Bed" description="Choose room" />
-        <Stepper.Step label="Confirm" description="Review & submit" />
-      </Stepper>
+      {/* ── Desktop layout: step sidebar + content panel ── */}
+      <Box visibleFrom="sm">
+        <Group align="flex-start" gap="lg" wrap="nowrap">
+          {/* Left: step list */}
+          <Box style={{ width: 220, flexShrink: 0 }}>
+            <DesktopStepsSidebar activeStep={step} />
+          </Box>
 
-      {/* Step content */}
-      <Card withBorder radius="md" p="md">
-        {isLoadingSemesters ? (
-          <Stack gap="sm">
-            <Skeleton height={80} radius="md" />
-            <Skeleton height={80} radius="md" />
-          </Stack>
-        ) : step === 0 ? (
-          <SemesterStep
-            semesters={semesters}
-            selected={selectedSemester}
-            onSelect={(s) => {
-              setSelectedSemester(s);
-              setSelectedBed(null); // reset bed when semester changes
-            }}
-          />
-        ) : step === 1 && selectedSemester ? (
-          <BedStep
-            semesterId={selectedSemester.id}
-            selected={selectedBed}
-            onSelect={setSelectedBed}
-          />
-        ) : step === 2 && selectedSemester && selectedBed ? (
-          <ReviewStep semester={selectedSemester} bed={selectedBed} />
-        ) : null}
-      </Card>
+          {/* Right: active step content */}
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Stack gap="md">
+              <Card withBorder radius="md" p="lg" style={{ minHeight: 320 }}>
+                {stepContent}
+              </Card>
 
-      {/* Error */}
-      {submitError && (
-        <Alert
-          icon={<IconX size={16} />}
-          color="red"
-          radius="md"
-          onClose={() => setSubmitError(null)}
-          withCloseButton
-        >
-          {submitError}
-        </Alert>
-      )}
+              {submitError && (
+                <Alert
+                  icon={<IconX size={16} />}
+                  color="red"
+                  radius="md"
+                  onClose={() => setSubmitError(null)}
+                  withCloseButton
+                >
+                  {submitError}
+                </Alert>
+              )}
 
-      {/* Navigation */}
-      <Group justify="space-between">
-        <Button
-          variant="subtle"
-          leftSection={<IconArrowLeft size={16} />}
-          onClick={step === 0 ? () => navigate('/dashboard') : handleBack}
-          disabled={isSubmitting}
-        >
-          {step === 0 ? 'Cancel' : 'Back'}
-        </Button>
+              {navButtons}
+            </Stack>
+          </Box>
+        </Group>
+      </Box>
 
-        {step < 2 ? (
-          <Button
-            rightSection={<IconArrowRight size={16} />}
-            onClick={handleNext}
-            disabled={!canAdvance}
-          >
-            Next
-          </Button>
-        ) : (
-          <Button
-            leftSection={
-              isSubmitting ? <Loader size={14} color="white" /> : <IconCheck size={16} />
-            }
-            onClick={handleSubmit}
-            disabled={isSubmitting || hasActiveBooking}
-            color="green"
-          >
-            {isSubmitting ? 'Submitting…' : 'Submit Application'}
-          </Button>
-        )}
-      </Group>
+      {/* ── Mobile layout: horizontal stepper + content card ── */}
+      <Box hiddenFrom="sm">
+        <Stack gap="md">
+          <Stepper active={step} size="sm" radius="md">
+            <Stepper.Step label="Semester" description="Choose period" />
+            <Stepper.Step label="Bed" description="Choose room" />
+            <Stepper.Step label="Confirm" description="Review & submit" />
+          </Stepper>
+
+          <Card withBorder radius="md" p="md">
+            {stepContent}
+          </Card>
+
+          {submitError && (
+            <Alert
+              icon={<IconX size={16} />}
+              color="red"
+              radius="md"
+              onClose={() => setSubmitError(null)}
+              withCloseButton
+            >
+              {submitError}
+            </Alert>
+          )}
+
+          {navButtons}
+        </Stack>
+      </Box>
     </Stack>
   );
 }

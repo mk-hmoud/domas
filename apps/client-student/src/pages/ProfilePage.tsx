@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Divider,
+  Grid,
   Group,
   Stack,
   Text,
@@ -53,7 +54,7 @@ export function ProfilePage() {
   };
 
   return (
-    <Stack p="md" gap="md" maw={560} mx="auto">
+    <Stack gap="md">
       <Box>
         <Title order={4}>Profile</Title>
         <Text size="sm" c="dimmed">
@@ -61,134 +62,143 @@ export function ProfilePage() {
         </Text>
       </Box>
 
-      {/* Identity card */}
-      <Card withBorder radius="md" p="md">
-        <Group gap="md" mb="md">
-          <Avatar size={56} radius="xl" color="blue">
-            {initials}
-          </Avatar>
-          <Box>
-            <Text fw={700} size="md">
-              {fullName}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {student.studentNumber}
-            </Text>
-          </Box>
-        </Group>
+      <Grid gutter="md" align="flex-start">
+        {/* Left — identity (read-only) */}
+        <Grid.Col span={{ base: 12, sm: 5 }}>
+          <Card withBorder radius="md" p="md">
+            <Group gap="md" mb="md">
+              <Avatar size={56} radius="xl" color="blue">
+                {initials}
+              </Avatar>
+              <Box>
+                <Text fw={700} size="md">
+                  {fullName}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  {student.studentNumber}
+                </Text>
+              </Box>
+            </Group>
 
-        <Divider mb="md" />
+            <Divider mb="md" />
 
-        <Stack gap="xs">
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Department
-            </Text>
-            <Text size="sm">{student.department}</Text>
-          </Group>
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Gender
-            </Text>
-            <Text size="sm" tt="capitalize">
-              {student.gender}
-            </Text>
-          </Group>
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Nationality
-            </Text>
-            <Text size="sm">{student.nationalityCode}</Text>
-          </Group>
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Date of Birth
-            </Text>
-            <Text size="sm">{new Date(student.birthDate).toLocaleDateString()}</Text>
-          </Group>
-        </Stack>
-      </Card>
+            <Stack gap="xs">
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Department
+                </Text>
+                <Text size="sm" ta="right" style={{ maxWidth: '60%' }}>
+                  {student.department}
+                </Text>
+              </Group>
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Gender
+                </Text>
+                <Text size="sm" tt="capitalize">
+                  {student.gender}
+                </Text>
+              </Group>
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Nationality
+                </Text>
+                <Text size="sm">{student.nationalityCode}</Text>
+              </Group>
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Date of Birth
+                </Text>
+                <Text size="sm">{new Date(student.birthDate).toLocaleDateString()}</Text>
+              </Group>
+            </Stack>
+          </Card>
+        </Grid.Col>
 
-      {/* Editable contact info */}
-      <Card withBorder radius="md" p="md">
-        <Stack gap="md">
-          <Group gap="xs">
-            <IconUser size={16} />
-            <Text fw={600} size="sm">
-              Contact Information
-            </Text>
-          </Group>
+        {/* Right — editable contact + session */}
+        <Grid.Col span={{ base: 12, sm: 7 }}>
+          <Stack gap="md">
+            <Card withBorder radius="md" p="md">
+              <Stack gap="md">
+                <Group gap="xs">
+                  <IconUser size={16} />
+                  <Text fw={600} size="sm">
+                    Contact Information
+                  </Text>
+                </Group>
 
-          <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="md">
-            Keep your contact details up to date so the dormitory office can reach you.
-          </Alert>
+                <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="md">
+                  Keep your contact details up to date so the dormitory office can reach you.
+                </Alert>
 
-          <TextInput
-            label="Email"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.currentTarget.value)}
-            inputMode="email"
-            autoComplete="email"
-          />
+                <TextInput
+                  label="Email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.currentTarget.value)}
+                  inputMode="email"
+                  autoComplete="email"
+                />
 
-          <TextInput
-            label="Phone Number"
-            placeholder="+90 5XX XXX XX XX"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.currentTarget.value)}
-            inputMode="tel"
-            autoComplete="tel"
-          />
+                <TextInput
+                  label="Phone Number"
+                  placeholder="+90 5XX XXX XX XX"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.currentTarget.value)}
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
 
-          {saveError && (
-            <Alert
-              color="red"
-              radius="md"
-              variant="light"
-              withCloseButton
-              onClose={() => setSaveError(null)}
-            >
-              {saveError}
-            </Alert>
-          )}
+                {saveError && (
+                  <Alert
+                    color="red"
+                    radius="md"
+                    variant="light"
+                    withCloseButton
+                    onClose={() => setSaveError(null)}
+                  >
+                    {saveError}
+                  </Alert>
+                )}
 
-          {saveSuccess && (
-            <Alert icon={<IconCheck size={14} />} color="green" radius="md" variant="light">
-              Contact information saved successfully.
-            </Alert>
-          )}
+                {saveSuccess && (
+                  <Alert icon={<IconCheck size={14} />} color="green" radius="md" variant="light">
+                    Contact information saved successfully.
+                  </Alert>
+                )}
 
-          <Button
-            leftSection={<IconDeviceFloppy size={16} />}
-            onClick={handleSave}
-            loading={isSaving}
-            disabled={!hasChanges || isSaving}
-          >
-            Save Changes
-          </Button>
-        </Stack>
-      </Card>
+                <Button
+                  leftSection={<IconDeviceFloppy size={16} />}
+                  onClick={handleSave}
+                  loading={isSaving}
+                  disabled={!hasChanges || isSaving}
+                >
+                  Save Changes
+                </Button>
+              </Stack>
+            </Card>
 
-      {/* Logout */}
-      <Card withBorder radius="md" p="md">
-        <Stack gap="xs">
-          <Text fw={600} size="sm">
-            Session
-          </Text>
-          <Text size="xs" c="dimmed">
-            Signed in as student {student.studentNumber}
-          </Text>
-          <Button
-            variant="outline"
-            color="red"
-            onClick={logout}
-            style={{ alignSelf: 'flex-start' }}
-          >
-            Sign Out
-          </Button>
-        </Stack>
-      </Card>
+            <Card withBorder radius="md" p="md">
+              <Stack gap="xs">
+                <Text fw={600} size="sm">
+                  Session
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Signed in as student {student.studentNumber}
+                </Text>
+                <Button
+                  variant="outline"
+                  color="red"
+                  onClick={logout}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  Sign Out
+                </Button>
+              </Stack>
+            </Card>
+          </Stack>
+        </Grid.Col>
+      </Grid>
     </Stack>
   );
 }

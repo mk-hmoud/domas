@@ -4,6 +4,7 @@ import {
   AppShell,
   Avatar,
   Box,
+  Divider,
   Group,
   Indicator,
   Menu,
@@ -51,8 +52,11 @@ function SidebarNav() {
   };
 
   return (
-    <Stack h="100%" justify="space-between" p="sm">
-      <Stack gap={4}>
+    <Stack h="100%" justify="space-between" py="sm" px="xs">
+      <Stack gap={2}>
+        <Text size="xs" fw={600} c="dimmed" px="xs" mb={4} tt="uppercase">
+          Menu
+        </Text>
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const isNotif = path === '/notifications';
           const active = location.pathname === path;
@@ -86,6 +90,9 @@ function SidebarNav() {
             />
           );
         })}
+
+        <Divider my="xs" />
+
         <NavLink
           component={RouterNavLink}
           to="/profile"
@@ -100,23 +107,29 @@ function SidebarNav() {
         />
       </Stack>
 
-      {/* Bottom user strip */}
-      <UnstyledButton onClick={handleLogout} style={{ borderRadius: 8, padding: 8 }}>
-        <Group gap="sm">
-          <Avatar size={32} radius="xl" color="blue">
-            {student?.firstName?.[0] ?? '?'}
-          </Avatar>
-          <Box style={{ flex: 1, minWidth: 0 }}>
-            <Text size="sm" fw={500} truncate>
-              {student?.firstName} {student?.lastName}
-            </Text>
-            <Text size="xs" c="dimmed" truncate>
-              {student?.studentNumber}
-            </Text>
-          </Box>
-          <IconLogout size={16} />
-        </Group>
-      </UnstyledButton>
+      {/* User strip with logout */}
+      <Box px="xs">
+        <Divider mb="sm" />
+        <UnstyledButton
+          onClick={handleLogout}
+          style={{ borderRadius: 8, padding: '8px 6px', width: '100%' }}
+        >
+          <Group gap="sm">
+            <Avatar size={34} radius="xl" color="blue">
+              {student?.firstName?.[0] ?? '?'}
+            </Avatar>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text size="sm" fw={500} truncate>
+                {student?.firstName} {student?.lastName}
+              </Text>
+              <Text size="xs" c="dimmed" truncate>
+                {student?.studentNumber}
+              </Text>
+            </Box>
+            <IconLogout size={15} color="var(--mantine-color-dimmed)" />
+          </Group>
+        </UnstyledButton>
+      </Box>
     </Stack>
   );
 }
@@ -129,6 +142,7 @@ function BottomTabBar() {
 
   return (
     <Box
+      hiddenFrom="sm"
       style={{
         position: 'fixed',
         bottom: 0,
@@ -140,6 +154,7 @@ function BottomTabBar() {
         backgroundColor: 'var(--mantine-color-body)',
         display: 'flex',
         alignItems: 'stretch',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
@@ -198,13 +213,12 @@ function TopBar() {
 
   return (
     <Group h="100%" px="md" justify="space-between">
-      {/* Logo */}
       <Title order={4} style={{ cursor: 'default', userSelect: 'none', letterSpacing: -0.5 }}>
         DOMAS
       </Title>
 
       <Group gap="xs">
-        {/* Notification bell — mobile only (bottom tab handles it on desktop) */}
+        {/* Notification bell — mobile only */}
         <ActionIcon
           component={RouterNavLink}
           to="/notifications"
@@ -224,21 +238,26 @@ function TopBar() {
           </Indicator>
         </ActionIcon>
 
-        {/* Desktop extras */}
+        {/* Desktop: language + theme + user menu */}
         <Box visibleFrom="sm">
           <Group gap="xs">
             <LanguageSwitcher />
             <ThemeToggle />
-            <Menu shadow="md" width={180}>
+            <Menu shadow="md" width={200} position="bottom-end">
               <Menu.Target>
                 <UnstyledButton>
                   <Group gap="xs">
-                    <Avatar size={28} radius="xl" color="blue">
+                    <Avatar size={30} radius="xl" color="blue">
                       {student?.firstName?.[0] ?? '?'}
                     </Avatar>
-                    <Text size="sm" fw={500} visibleFrom="md">
-                      {student?.firstName}
-                    </Text>
+                    <Box visibleFrom="md">
+                      <Text size="sm" fw={500} lh={1.2}>
+                        {student?.firstName} {student?.lastName}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {student?.studentNumber}
+                      </Text>
+                    </Box>
                   </Group>
                 </UnstyledButton>
               </Menu.Target>
@@ -278,11 +297,11 @@ export function PortalLayout() {
   return (
     <>
       <AppShell
-        header={{ height: 56 }}
+        header={{ height: 60 }}
         navbar={{
-          width: 240,
+          width: 260,
           breakpoint: 'sm',
-          collapsed: { mobile: true }, // sidebar hidden on mobile; bottom tab handles it
+          collapsed: { mobile: true },
         }}
         padding={0}
       >
@@ -294,31 +313,19 @@ export function PortalLayout() {
           <SidebarNav />
         </AppShell.Navbar>
 
-        <AppShell.Main
-          style={{
-            // On mobile: leave room for the fixed bottom tab bar
-            paddingBottom: 'var(--app-shell-footer-height, 0)',
-          }}
-        >
+        <AppShell.Main>
           <Box
-            style={{
-              minHeight: 'calc(100dvh - 56px)',
-              paddingBottom: 80, // clearance above bottom nav on mobile
-            }}
-            hiddenFrom="sm"
+            px={{ base: 'md', sm: 'xl', lg: '2xl' }}
+            pt={{ base: 'md', sm: 'lg' }}
+            pb={{ base: 80, sm: 'xl' }}
+            style={{ minHeight: 'calc(100dvh - 60px)' }}
           >
-            <Outlet />
-          </Box>
-          <Box visibleFrom="sm">
             <Outlet />
           </Box>
         </AppShell.Main>
       </AppShell>
 
-      {/* Mobile bottom tab bar */}
-      <Box hiddenFrom="sm">
-        <BottomTabBar />
-      </Box>
+      <BottomTabBar />
     </>
   );
 }
