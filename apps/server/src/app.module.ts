@@ -17,6 +17,8 @@ import { AccessCardsModule } from './domain/access-cards/access-cards.module';
 import { ContractsModule } from './domain/contracts/contracts.module';
 import { DamagesModule } from './domain/damages/damages.module';
 import { ImportsModule } from './domain/imports/imports.module';
+import { StudentPortalModule } from './domain/student-portal/student-portal.module';
+import { NotificationsModule } from './domain/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { ImportsModule } from './domain/imports/imports.module';
     ContractsModule,
     DamagesModule,
     ImportsModule,
+    StudentPortalModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

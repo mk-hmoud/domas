@@ -34,6 +34,10 @@ import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 import { Inject, forwardRef } from '@nestjs/common';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PoolClient } from 'pg';
+import {
+  NotificationsService,
+  NotificationType,
+} from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class BookingsService {
@@ -51,6 +55,7 @@ export class BookingsService {
     @Inject(forwardRef(() => ContractsService))
     private readonly contractsService: ContractsService,
     private readonly db: DatabaseService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(
@@ -192,6 +197,16 @@ export class BookingsService {
           client,
         );
         this.logger.warn({ bookingId: id }, 'Booking rejected by accounting');
+        // Notify student (fire-and-forget after commit)
+        setImmediate(() =>
+          this.notificationsService.create(
+            booking.studentId,
+            NotificationType.BOOKING_REJECTED,
+            'Application Not Approved',
+            'Your accommodation application was not approved by the accounting office.',
+            { bookingId: id },
+          ),
+        );
         return updated!;
       }
 
@@ -224,6 +239,16 @@ export class BookingsService {
       );
 
       this.logger.log({ bookingId: id }, 'Financials approved successfully');
+      // Notify student (fire-and-forget after commit)
+      setImmediate(() =>
+        this.notificationsService.create(
+          booking.studentId,
+          NotificationType.BOOKING_APPROVED,
+          'Accommodation Approved',
+          'Your accommodation application has been approved. Please proceed with check-in.',
+          { bookingId: id },
+        ),
+      );
       return updated!;
     }, context);
   }
@@ -306,6 +331,16 @@ export class BookingsService {
       );
 
       this.logger.log({ bookingId: id, assignedCardNumber }, 'Check-in completed');
+      // Notify student (fire-and-forget after commit)
+      setImmediate(() =>
+        this.notificationsService.create(
+          booking.studentId,
+          NotificationType.CHECKIN_CONFIRMED,
+          'Check-In Confirmed',
+          'Welcome! Your check-in has been confirmed. You can view your room details in your booking.',
+          { bookingId: id, assignedCardNumber },
+        ),
+      );
       return {
         ...updated!,
         assignedCardNumber,
@@ -388,6 +423,16 @@ export class BookingsService {
       );
 
       this.logger.log({ bookingId: id }, 'Check-out completed');
+      // Notify student (fire-and-forget after commit)
+      setImmediate(() =>
+        this.notificationsService.create(
+          booking.studentId,
+          NotificationType.CHECKOUT_PROCESSED,
+          'Check-Out Processed',
+          'Your check-out has been processed. Thank you for staying with us.',
+          { bookingId: id },
+        ),
+      );
       return updated!;
     }, context);
   }

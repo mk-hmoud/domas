@@ -9,6 +9,7 @@ import { AuditModule } from '../audit/audit.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { AccessCardsModule } from '../access-cards/access-cards.module';
 import { ContractsModule } from '../contracts/contracts.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ContractsModule } from '../contracts/contracts.module';
     forwardRef(() => InventoryModule),
     AccessCardsModule,
     forwardRef(() => ContractsModule),
+    NotificationsModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService, BookingsRepository],

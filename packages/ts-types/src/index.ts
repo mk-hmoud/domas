@@ -93,3 +93,4 @@ export * from "./dtos/inventory.dto";
 export * from "./dtos/access-card.dto";
 export * from "./dtos/damage.dto";
 export * from "./enums/undo-action-type.enum";
+export * from "./interfaces/portal.interface";
