@@ -18,6 +18,8 @@ RUN npm ci --ignore-scripts
 # 5. Build
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_BASE_URL
+ENV VITE_BASE_URL=$VITE_BASE_URL
 RUN npm run build -w apps/client-student
 
 # STAGE 2: Serve with Nginx

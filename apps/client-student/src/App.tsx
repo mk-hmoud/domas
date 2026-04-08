@@ -11,7 +11,7 @@ import { ProfilePage } from './pages/ProfilePage';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />

@@ -41,7 +41,7 @@ services:
       - db
 
   # ------------------------------------
-  # 3. MAIN CLIENT (ADMIN)
+  # 3. ADMIN CLIENT
   # ------------------------------------
   client:
     container_name: domas_client
@@ -49,11 +49,8 @@ services:
       context: .
       dockerfile: apps/client/Dockerfile
       args:
-        # CHANGED: Use relative path to hit the Nginx proxy
         VITE_API_URL: "/api"
     restart: always
-    ports:
-      - "80:80"
     networks:
       - domas_net
     depends_on:
@@ -69,12 +66,29 @@ services:
       dockerfile: apps/client-student/Dockerfile
       args:
         VITE_API_URL: "/api"
+        VITE_BASE_URL: "/student/"
     restart: always
-    ports:
-      - "8081:80"
     networks:
       - domas_net
     depends_on:
+      - server
+
+  # ------------------------------------
+  # 5. REVERSE PROXY  (single entry point)
+  # ------------------------------------
+  proxy:
+    container_name: domas_proxy
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - domas_net
+    depends_on:
+      - client
+      - client-student
       - server
 
 networks:
