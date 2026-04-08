@@ -63,17 +63,23 @@ async function run() {
     logger.info('Connecting to database...');
     await client.connect();
 
+    // Use absolute paths relative to the project root in Docker/Prod
+    const baseDir =
+      process.env.NODE_ENV === 'production'
+        ? '/app/packages/database'
+        : path.join(__dirname, '../../../packages/database');
+
     const files = [
-      '../../../packages/database/00_roles.sql',
-      '../../../packages/database/01_infrastructure.sql',
-      '../../../packages/database/02_domain_schema.sql',
-      '../../../packages/database/03_triggers.sql',
-      '../../../packages/database/04_apply_triggers.sql',
-      '../../../packages/database/05_session_store.sql',
+      '00_roles.sql',
+      '01_infrastructure.sql',
+      '02_domain_schema.sql',
+      '03_triggers.sql',
+      '04_apply_triggers.sql',
+      '05_session_store.sql',
     ];
 
     for (const file of files) {
-      const filePath = path.join(__dirname, file);
+      const filePath = path.join(baseDir, file);
       logger.info(`Processing ${path.basename(filePath)}...`);
 
       let sql = fs.readFileSync(filePath, 'utf8');

@@ -40,9 +40,9 @@ RUN npm ci --omit=dev --ignore-scripts
 
 # Copy built artifacts from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
-
+COPY packages/database ./packages/database
 # Expose API Port
 EXPOSE 3000
 
 # Start the server
-CMD ["node", "apps/server/dist/src/main"]
+CMD ["node", "apps/server/dist/apps/server/src/main.js"]
