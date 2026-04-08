@@ -74,7 +74,11 @@ export const portalBookings = {
     const response = await apiClient.get<StudentCurrentBooking | null>(
       "/portal/bookings/current",
     );
-    return response.data;
+    // NestJS serializes null as an empty body rather than JSON null;
+    // normalize any non-object value to null so callers get a clean null.
+    return response.data && typeof response.data === "object"
+      ? response.data
+      : null;
   },
 
   getById: async (id: string): Promise<StudentCurrentBooking> => {

@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -94,7 +95,9 @@ export class StudentPortalController {
   @UseGuards(StudentAuthGuard)
   @Get('bookings/current')
   async getCurrentBooking(@Request() req: ExpressRequest) {
-    return this.studentPortalService.getCurrentBooking(req.session.studentId!);
+    const booking = await this.studentPortalService.getCurrentBooking(req.session.studentId!);
+    if (!booking) throw new NotFoundException('No active booking found');
+    return booking;
   }
 
   @UseGuards(StudentAuthGuard)
