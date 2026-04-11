@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 
 export interface CreateNotificationData {
@@ -8,6 +9,7 @@ export interface CreateNotificationData {
   title: string;
   body: string;
   metadata?: Record<string, any>;
+  sourceUndoLogId?: string | null;
 }
 
 export interface Notification {
@@ -28,8 +30,8 @@ export class NotificationsRepository {
 
   async create(data: CreateNotificationData): Promise<Notification> {
     const query = `
-      INSERT INTO notifications (recipient_type, recipient_id, type, title, body, metadata)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO notifications (recipient_type, recipient_id, type, title, body, metadata, source_undo_log_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING
         id,
         recipient_type  AS "recipientType",
@@ -50,8 +52,15 @@ export class NotificationsRepository {
         data.title,
         data.body,
         JSON.stringify(data.metadata ?? {}),
+        data.sourceUndoLogId ?? null,
       ]);
     return result.rows[0];
+  }
+
+  async deleteByUndoLogId(undoLogId: string | number, client?: PoolClient): Promise<number> {
+    const query = `DELETE FROM notifications WHERE source_undo_log_id = $1`;
+    const result = await (client ?? this.db.getPool()).query(query, [undoLogId]);
+    return result.rowCount ?? 0;
   }
 
   async findByRecipient(

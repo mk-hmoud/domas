@@ -21,6 +21,10 @@ CREATE TABLE notifications (
     -- State
     read_at     TIMESTAMPTZ  DEFAULT NULL,
 
+    -- Link back to the undo log entry that can revert this notification.
+    -- No FK constraint: audit.undo_log is a partitioned table with a composite PK.
+    source_undo_log_id  BIGINT  DEFAULT NULL,
+
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 

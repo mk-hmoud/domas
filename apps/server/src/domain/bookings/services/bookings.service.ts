@@ -185,7 +185,7 @@ export class BookingsService {
           { status: BookingOpsStatus.REJECTED },
           client,
         );
-        await this.undoService.registerUndo(
+        const rejectUndoLog = await this.undoService.registerUndo(
           {
             userId: context.userId,
             actionType: UndoActionType.REJECT_BOOKING,
@@ -205,6 +205,7 @@ export class BookingsService {
             'Application Not Approved',
             'Your accommodation application was not approved by the accounting office.',
             { bookingId: id },
+            rejectUndoLog.id,
           ),
         );
         return updated!;
@@ -222,7 +223,7 @@ export class BookingsService {
         client,
       );
 
-      await this.undoService.registerUndo(
+      const approveUndoLog = await this.undoService.registerUndo(
         {
           userId: context.userId,
           actionType: UndoActionType.APPROVE_BOOKING_FINANCIALS,
@@ -247,6 +248,7 @@ export class BookingsService {
           'Accommodation Approved',
           'Your accommodation application has been approved. Please proceed with check-in.',
           { bookingId: id },
+          approveUndoLog.id,
         ),
       );
       return updated!;
@@ -314,7 +316,7 @@ export class BookingsService {
         );
       }
 
-      await this.undoService.registerUndo(
+      const checkInUndoLog = await this.undoService.registerUndo(
         {
           userId: context.userId,
           actionType: UndoActionType.CHECK_IN_BOOKING,
@@ -339,6 +341,7 @@ export class BookingsService {
           'Check-In Confirmed',
           'Welcome! Your check-in has been confirmed. You can view your room details in your booking.',
           { bookingId: id, assignedCardNumber },
+          checkInUndoLog.id,
         ),
       );
       return {
@@ -405,7 +408,7 @@ export class BookingsService {
         );
       }
 
-      await this.undoService.registerUndo(
+      const checkOutUndoLog = await this.undoService.registerUndo(
         {
           userId: context.userId,
           actionType: UndoActionType.CHECK_OUT_BOOKING,
@@ -431,6 +434,7 @@ export class BookingsService {
           'Check-Out Processed',
           'Your check-out has been processed. Thank you for staying with us.',
           { bookingId: id },
+          checkOutUndoLog.id,
         ),
       );
       return updated!;

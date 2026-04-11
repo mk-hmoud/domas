@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Subject } from 'rxjs';
+import { PoolClient } from 'pg';
 import { NotificationsRepository, Notification } from '../repositories/notifications.repository';
 
 export const NotificationType = {
@@ -33,6 +34,7 @@ export class NotificationsService {
     title: string,
     body: string,
     metadata: Record<string, any> = {},
+    sourceUndoLogId?: string | null,
   ): Promise<Notification> {
     try {
       const notification = await this.notificationsRepository.create({
@@ -42,6 +44,7 @@ export class NotificationsService {
         title,
         body,
         metadata,
+        sourceUndoLogId,
       });
 
       // Push to live SSE stream if the student has an active connection
@@ -91,5 +94,9 @@ export class NotificationsService {
 
   async markAllAsRead(studentId: string): Promise<void> {
     return this.notificationsRepository.markAllAsRead('student', studentId);
+  }
+
+  async deleteByUndoLogId(undoLogId: string | number, client?: PoolClient): Promise<number> {
+    return this.notificationsRepository.deleteByUndoLogId(undoLogId, client);
   }
 }

@@ -9,12 +9,14 @@ import { UndoController } from './controllers/undo.controller';
 import { UsersModule } from '../users/users.module';
 import { LocationsModule } from '../locations/locations.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     forwardRef(() => UsersModule),
     forwardRef(() => LocationsModule),
     forwardRef(() => InventoryModule),
+    NotificationsModule,
   ],
   controllers: [AuditController, UndoController],
   providers: [
