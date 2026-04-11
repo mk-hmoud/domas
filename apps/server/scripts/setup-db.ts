@@ -60,6 +60,7 @@ async function run() {
       '../../../packages/database/03_triggers.sql',
       '../../../packages/database/04_apply_triggers.sql',
       '../../../packages/database/05_session_store.sql',
+      '../../../packages/database/06_notifications.sql',
     ];
 
     for (const file of files) {

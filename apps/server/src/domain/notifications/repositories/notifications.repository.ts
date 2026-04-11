@@ -2,16 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../core/database/database.service';
 
 export interface CreateNotificationData {
-  studentId: string;
+  recipientType: string;
+  recipientId: string;
   type: string;
   title: string;
   body: string;
   metadata?: Record<string, any>;
 }
 
-export interface StudentNotification {
+export interface Notification {
   id: string;
-  studentId: string;
+  recipientType: string;
+  recipientId: string;
   type: string;
   title: string;
   body: string;
@@ -24,24 +26,26 @@ export interface StudentNotification {
 export class NotificationsRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  async create(data: CreateNotificationData): Promise<StudentNotification> {
+  async create(data: CreateNotificationData): Promise<Notification> {
     const query = `
-      INSERT INTO student_notifications (student_id, type, title, body, metadata)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO notifications (recipient_type, recipient_id, type, title, body, metadata)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING
         id,
-        student_id  AS "studentId",
+        recipient_type  AS "recipientType",
+        recipient_id    AS "recipientId",
         type,
         title,
         body,
         metadata,
-        read_at     AS "readAt",
-        created_at  AS "createdAt"
+        read_at         AS "readAt",
+        created_at      AS "createdAt"
     `;
     const result = await this.db
       .getPool()
       .query(query, [
-        data.studentId,
+        data.recipientType,
+        data.recipientId,
         data.type,
         data.title,
         data.body,
@@ -50,51 +54,61 @@ export class NotificationsRepository {
     return result.rows[0];
   }
 
-  async findByStudent(studentId: string, limit = 30, offset = 0): Promise<StudentNotification[]> {
+  async findByRecipient(
+    recipientType: string,
+    recipientId: string,
+    limit = 30,
+    offset = 0,
+  ): Promise<Notification[]> {
     const query = `
       SELECT
         id,
-        student_id  AS "studentId",
+        recipient_type  AS "recipientType",
+        recipient_id    AS "recipientId",
         type,
         title,
         body,
         metadata,
-        read_at     AS "readAt",
-        created_at  AS "createdAt"
-      FROM student_notifications
-      WHERE student_id = $1
+        read_at         AS "readAt",
+        created_at      AS "createdAt"
+      FROM notifications
+      WHERE recipient_type = $1 AND recipient_id = $2
       ORDER BY created_at DESC
-      LIMIT $2 OFFSET $3
+      LIMIT $3 OFFSET $4
     `;
-    const result = await this.db.getPool().query(query, [studentId, limit, offset]);
+    const result = await this.db
+      .getPool()
+      .query(query, [recipientType, recipientId, limit, offset]);
     return result.rows;
   }
 
-  async countUnread(studentId: string): Promise<number> {
+  async countUnread(recipientType: string, recipientId: string): Promise<number> {
     const query = `
-      SELECT COUNT(*) FROM student_notifications
-      WHERE student_id = $1 AND read_at IS NULL
+      SELECT COUNT(*) FROM notifications
+      WHERE recipient_type = $1 AND recipient_id = $2 AND read_at IS NULL
     `;
-    const result = await this.db.getPool().query<{ count: string }>(query, [studentId]);
+    const result = await this.db
+      .getPool()
+      .query<{ count: string }>(query, [recipientType, recipientId]);
     return parseInt(result.rows[0].count, 10);
   }
 
-  async markAsRead(id: string, studentId: string): Promise<boolean> {
+  async markAsRead(id: string, recipientType: string, recipientId: string): Promise<boolean> {
     const query = `
-      UPDATE student_notifications
+      UPDATE notifications
       SET read_at = NOW()
-      WHERE id = $1 AND student_id = $2 AND read_at IS NULL
+      WHERE id = $1 AND recipient_type = $2 AND recipient_id = $3 AND read_at IS NULL
     `;
-    const result = await this.db.getPool().query(query, [id, studentId]);
+    const result = await this.db.getPool().query(query, [id, recipientType, recipientId]);
     return (result.rowCount ?? 0) > 0;
   }
 
-  async markAllAsRead(studentId: string): Promise<void> {
+  async markAllAsRead(recipientType: string, recipientId: string): Promise<void> {
     const query = `
-      UPDATE student_notifications
+      UPDATE notifications
       SET read_at = NOW()
-      WHERE student_id = $1 AND read_at IS NULL
+      WHERE recipient_type = $1 AND recipient_id = $2 AND read_at IS NULL
     `;
-    await this.db.getPool().query(query, [studentId]);
+    await this.db.getPool().query(query, [recipientType, recipientId]);
   }
 }

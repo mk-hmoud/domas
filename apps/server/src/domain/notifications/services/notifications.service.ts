@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Subject } from 'rxjs';
-import {
-  NotificationsRepository,
-  StudentNotification,
-} from '../repositories/notifications.repository';
+import { NotificationsRepository, Notification } from '../repositories/notifications.repository';
 
 export const NotificationType = {
   BOOKING_SUBMITTED: 'booking_submitted',
@@ -24,7 +21,7 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   /** In-process SSE subjects keyed by studentId. */
-  private readonly subjects = new Map<string, Subject<StudentNotification>>();
+  private readonly subjects = new Map<string, Subject<Notification>>();
 
   constructor(private readonly notificationsRepository: NotificationsRepository) {}
 
@@ -36,10 +33,11 @@ export class NotificationsService {
     title: string,
     body: string,
     metadata: Record<string, any> = {},
-  ): Promise<StudentNotification> {
+  ): Promise<Notification> {
     try {
       const notification = await this.notificationsRepository.create({
-        studentId,
+        recipientType: 'student',
+        recipientId: studentId,
         type,
         title,
         body,
@@ -62,9 +60,9 @@ export class NotificationsService {
 
   // ─── SSE ─────────────────────────────────────────────────────────────────────
 
-  getOrCreateSubject(studentId: string): Subject<StudentNotification> {
+  getOrCreateSubject(studentId: string): Subject<Notification> {
     if (!this.subjects.has(studentId)) {
-      this.subjects.set(studentId, new Subject<StudentNotification>());
+      this.subjects.set(studentId, new Subject<Notification>());
     }
     return this.subjects.get(studentId)!;
   }
@@ -79,23 +77,19 @@ export class NotificationsService {
 
   // ─── Queries ─────────────────────────────────────────────────────────────────
 
-  async findByStudent(
-    studentId: string,
-    limit?: number,
-    offset?: number,
-  ): Promise<StudentNotification[]> {
-    return this.notificationsRepository.findByStudent(studentId, limit, offset);
+  async findByStudent(studentId: string, limit?: number, offset?: number): Promise<Notification[]> {
+    return this.notificationsRepository.findByRecipient('student', studentId, limit, offset);
   }
 
   async countUnread(studentId: string): Promise<number> {
-    return this.notificationsRepository.countUnread(studentId);
+    return this.notificationsRepository.countUnread('student', studentId);
   }
 
   async markAsRead(id: string, studentId: string): Promise<boolean> {
-    return this.notificationsRepository.markAsRead(id, studentId);
+    return this.notificationsRepository.markAsRead(id, 'student', studentId);
   }
 
   async markAllAsRead(studentId: string): Promise<void> {
-    return this.notificationsRepository.markAllAsRead(studentId);
+    return this.notificationsRepository.markAllAsRead('student', studentId);
   }
 }
