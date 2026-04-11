@@ -530,7 +530,8 @@ function LocationsContent() {
     try {
       if (Array.isArray(values)) {
         // Bulk create mode
-        if (createBedsCount && createBedsCount > 0) {
+        const isRoomBulk = values.every((v) => v.type === LocationType.ROOM);
+        if (createBedsCount && createBedsCount > 0 && isRoomBulk) {
           // Use specialized bulk endpoint for rooms with beds
           const roomsWithBeds = values.map((v) => ({
             ...v,
@@ -558,14 +559,19 @@ function LocationsContent() {
         });
       } else {
         // Single create mode
-        if (createBedsCount && createBedsCount > 0) {
+        const dto = values as CreateLocationDto;
+        if (
+          createBedsCount &&
+          createBedsCount > 0 &&
+          dto.type === LocationType.ROOM
+        ) {
           // Use specialized endpoint for single room with beds
           await locations.createRoomWithBeds({
-            ...(values as CreateLocationDto),
+            ...dto,
             bedCount: createBedsCount,
           });
         } else {
-          await locations.create(values as CreateLocationDto);
+          await locations.create(dto);
         }
 
         notifications.show({
