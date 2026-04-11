@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -11,6 +11,7 @@ import {
   Loader,
   Paper,
   Radio,
+  SimpleGrid,
   Skeleton,
   Stack,
   Stepper,
@@ -25,10 +26,13 @@ import {
   IconBuilding,
   IconCalendar,
   IconCheck,
+  IconChevronRight,
   IconCircle,
   IconCircleCheck,
   IconCircleDot,
   IconInfoCircle,
+  IconMapPin,
+  IconStack2,
   IconX,
 } from '@tabler/icons-react';
 import { AvailableBed, PortalSemester } from '@domas/ts-types';
@@ -68,7 +72,7 @@ function SemesterStep({
           style={{
             cursor: 'pointer',
             borderColor: selected?.id === s.id ? 'var(--mantine-color-blue-5)' : undefined,
-            background: selected?.id === s.id ? 'var(--mantine-color-blue-0)' : undefined,
+            background: selected?.id === s.id ? 'var(--mantine-color-blue-light)' : undefined,
           }}
           onClick={() => onSelect(s)}
         >
@@ -121,7 +125,9 @@ function SemesterStep({
   );
 }
 
-// ─── Step content: Bed picker ─────────────────────────────────────────────────
+// ─── Step content: Bed picker (drilldown) ─────────────────────────────────────
+
+const LEVEL_ICONS = [IconMapPin, IconBuilding, IconStack2] as const;
 
 function BedStep({
   semesterId,
@@ -135,16 +141,48 @@ function BedStep({
   const [beds, setBeds] = useState<AvailableBed[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [path, setPath] = useState<string[]>([]);
 
   useEffect(() => {
     setIsLoading(true);
     setError(false);
+    setPath([]);
     portalSemesters
       .getAvailableBeds(semesterId)
       .then(setBeds)
       .catch(() => setError(true))
       .finally(() => setIsLoading(false));
   }, [semesterId]);
+
+  // Remove the root node ("University") — it adds no navigation value
+  const parsedBeds = useMemo(
+    () => beds.map((b) => ({ ...b, segments: b.locationPath.split(' > ').slice(1) })),
+    [beds],
+  );
+
+  // Beds that match the current drill path
+  const filteredBeds = useMemo(
+    () => parsedBeds.filter((b) => path.every((seg, i) => b.segments[i] === seg)),
+    [parsedBeds, path],
+  );
+
+  // Group by the next path segment
+  const groups = useMemo(() => {
+    const map = new Map<string, number>();
+    filteredBeds.forEach((b) => {
+      const key = b.segments[path.length];
+      if (key == null) return;
+      map.set(key, (map.get(key) ?? 0) + 1);
+    });
+    return [...map.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [filteredBeds, path.length]);
+
+  // No further grouping → we're at the bed level
+  const showBeds = groups.length === 0;
+
+  const LevelIcon = LEVEL_ICONS[Math.min(path.length, LEVEL_ICONS.length - 1)];
 
   if (isLoading) {
     return (
@@ -172,80 +210,162 @@ function BedStep({
     );
   }
 
-  const grouped = beds.reduce<Record<string, AvailableBed[]>>((acc, bed) => {
-    const key = bed.locationPath;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(bed);
-    return acc;
-  }, {});
-
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        Choose a bed from the available options.
+        Browse available beds by location.
       </Text>
-      {Object.entries(grouped).map(([location, locationBeds]) => (
-        <Stack key={location} gap="xs">
-          <Group gap="xs">
-            <ThemeIcon size={20} variant="transparent" c="dimmed">
-              <IconBuilding size={14} />
-            </ThemeIcon>
-            <Text size="xs" fw={600} c="dimmed" tt="uppercase">
-              {location}
+
+      {/* Breadcrumb */}
+      <Group gap={4} wrap="wrap" align="center">
+        <Text
+          size="xs"
+          c={path.length === 0 ? 'blue' : 'dimmed'}
+          fw={path.length === 0 ? 600 : 400}
+          style={{ cursor: 'pointer' }}
+          onClick={() => setPath([])}
+        >
+          All Locations
+        </Text>
+        {path.map((seg, i) => (
+          <Group key={i} gap={4} wrap="nowrap">
+            <IconChevronRight size={11} style={{ color: 'var(--mantine-color-dimmed)' }} />
+            <Text
+              size="xs"
+              c={i === path.length - 1 ? 'blue' : 'dimmed'}
+              fw={i === path.length - 1 ? 600 : 400}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setPath((p) => p.slice(0, i + 1))}
+            >
+              {seg}
             </Text>
           </Group>
-          {locationBeds.map((bed) => {
-            const isSelected = selected?.id === bed.id;
-            return (
-              <Paper
-                key={bed.id}
-                withBorder
-                radius="md"
-                p="sm"
-                style={{
-                  cursor: 'pointer',
-                  borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
-                  background: isSelected ? 'var(--mantine-color-blue-0)' : undefined,
-                }}
-                onClick={() => onSelect(bed)}
-              >
-                <Group justify="space-between" align="center">
-                  <Group gap="sm">
-                    <Radio checked={isSelected} onChange={() => onSelect(bed)} size="sm" />
-                    <Box>
-                      <Text size="sm" fw={500}>
-                        {bed.roomName} — Bed {bed.label}
-                      </Text>
-                      <Group gap={4} mt={2}>
-                        {bed.genderLock && (
-                          <Badge size="xs" variant="light" color="grape">
-                            {bed.genderLock === 'male' ? 'Male' : 'Female'}
-                          </Badge>
-                        )}
-                        {bed.isTrOnly && (
-                          <Badge size="xs" variant="light" color="teal">
-                            TR Citizens
-                          </Badge>
-                        )}
-                        {bed.isForeignerOnly && (
-                          <Badge size="xs" variant="light" color="orange">
-                            International
-                          </Badge>
-                        )}
-                      </Group>
-                    </Box>
-                  </Group>
-                  {bed.basePrice != null && (
-                    <Text size="sm" fw={600} c="blue">
-                      ₺{bed.basePrice.toLocaleString()}
+        ))}
+      </Group>
+
+      {/* Back button */}
+      {path.length > 0 && (
+        <Box>
+          <Button
+            variant="subtle"
+            size="xs"
+            color="gray"
+            leftSection={<IconArrowLeft size={14} />}
+            onClick={() => setPath((p) => p.slice(0, -1))}
+          >
+            Back
+          </Button>
+        </Box>
+      )}
+
+      {/* Navigation cards */}
+      {!showBeds && (
+        <SimpleGrid cols={2} spacing="sm">
+          {groups.map(({ name, count }) => (
+            <Paper
+              key={name}
+              withBorder
+              radius="md"
+              p="md"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setPath((p) => [...p, name])}
+            >
+              <Group justify="space-between" wrap="nowrap">
+                <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+                  <ThemeIcon
+                    size={36}
+                    radius="xl"
+                    variant="light"
+                    color="blue"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <LevelIcon size={18} />
+                  </ThemeIcon>
+                  <Box style={{ minWidth: 0 }}>
+                    <Text size="sm" fw={600} lineClamp={1}>
+                      {name}
                     </Text>
-                  )}
+                    <Text size="xs" c="dimmed">
+                      {count} bed{count !== 1 ? 's' : ''}
+                    </Text>
+                  </Box>
                 </Group>
-              </Paper>
-            );
-          })}
+                <IconChevronRight
+                  size={16}
+                  style={{ color: 'var(--mantine-color-dimmed)', flexShrink: 0 }}
+                />
+              </Group>
+            </Paper>
+          ))}
+        </SimpleGrid>
+      )}
+
+      {/* Bed cards */}
+      {showBeds && (
+        <Stack gap="xs">
+          {filteredBeds.length === 0 ? (
+            <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
+              No beds available at this location.
+            </Alert>
+          ) : (
+            <>
+              <Text size="xs" c="dimmed">
+                {filteredBeds.length} bed{filteredBeds.length !== 1 ? 's' : ''} available
+              </Text>
+              {filteredBeds.map((bed) => {
+                const isSelected = selected?.id === bed.id;
+                return (
+                  <Paper
+                    key={bed.id}
+                    withBorder
+                    radius="md"
+                    p="sm"
+                    style={{
+                      cursor: 'pointer',
+                      borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
+                      background: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
+                    }}
+                    onClick={() => onSelect(bed)}
+                  >
+                    <Group justify="space-between" align="center">
+                      <Group gap="sm">
+                        <Radio checked={isSelected} onChange={() => onSelect(bed)} size="sm" />
+                        <Box>
+                          <Text size="sm" fw={500}>
+                            Bed {bed.label}
+                          </Text>
+                          <Group gap={4} mt={2}>
+                            {bed.genderLock && (
+                              <Badge size="xs" variant="light" color="grape">
+                                {bed.genderLock === 'male' ? 'Male' : 'Female'}
+                              </Badge>
+                            )}
+                            {bed.isTrOnly && (
+                              <Badge size="xs" variant="light" color="teal">
+                                TR Citizens
+                              </Badge>
+                            )}
+                            {bed.isForeignerOnly && (
+                              <Badge size="xs" variant="light" color="orange">
+                                International
+                              </Badge>
+                            )}
+                          </Group>
+                        </Box>
+                      </Group>
+                      {bed.basePrice != null && (
+                        <Text size="sm" fw={600} c="blue">
+                          ₺{bed.basePrice.toLocaleString()}
+                        </Text>
+                      )}
+                    </Group>
+                  </Paper>
+                );
+              })}
+            </>
+          )}
         </Stack>
-      ))}
+      )}
     </Stack>
   );
 }
