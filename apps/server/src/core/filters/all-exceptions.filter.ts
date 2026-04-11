@@ -125,21 +125,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       user_message: userMessage,
     };
 
+    const errMessage =
+      exception instanceof Error
+        ? exception.message
+        : ((exception as any)?.message ?? String(exception));
+    const errStack = exception instanceof Error ? exception.stack : undefined;
+
     if (httpStatus >= 500) {
-      this.logger.error(
-        {
-          err: exception,
-          req: responseBody,
-        },
-        '💥 Unhandled Exception',
-      );
+      this.logger.error(`💥 Unhandled Exception: ${errMessage}`, errStack);
     } else {
-      this.logger.warn(
-        {
-          res: responseBody,
-        },
-        '⚠️ Client Error',
-      );
+      this.logger.warn(`⚠️ Client Error [${code}]: ${errMessage}`);
     }
 
     httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);

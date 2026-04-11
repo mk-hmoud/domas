@@ -113,7 +113,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       return result;
     } catch (error) {
       await client.query('ROLLBACK');
-      this.logger.error('Transaction failed, rolled back.', error);
+      this.logger.error(
+        `Transaction failed, rolled back: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw error;
     } finally {
       client.release();
