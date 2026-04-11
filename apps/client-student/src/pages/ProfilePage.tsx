@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Avatar,
@@ -19,6 +20,7 @@ import { useStudentAuth } from '../contexts/StudentAuthContext';
 
 export function ProfilePage() {
   const { student, logout } = useStudentAuth();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState(student?.email ?? '');
   const [phoneNumber, setPhoneNumber] = useState(student?.phoneNumber ?? '');
@@ -46,7 +48,7 @@ export function ProfilePage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Failed to save changes.';
+      const msg = err?.response?.data?.message ?? t('portal.contact_save_error');
       setSaveError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setIsSaving(false);
@@ -56,9 +58,9 @@ export function ProfilePage() {
   return (
     <Stack gap="md">
       <Box>
-        <Title order={4}>Profile</Title>
+        <Title order={4}>{t('portal.profile_title')}</Title>
         <Text size="sm" c="dimmed">
-          Your account information
+          {t('portal.profile_subtitle')}
         </Text>
       </Box>
 
@@ -85,7 +87,7 @@ export function ProfilePage() {
             <Stack gap="xs">
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
-                  Department
+                  {t('department')}
                 </Text>
                 <Text size="sm" ta="right" style={{ maxWidth: '60%' }}>
                   {student.department}
@@ -93,7 +95,7 @@ export function ProfilePage() {
               </Group>
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
-                  Gender
+                  {t('gender')}
                 </Text>
                 <Text size="sm" tt="capitalize">
                   {student.gender}
@@ -101,13 +103,13 @@ export function ProfilePage() {
               </Group>
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
-                  Nationality
+                  {t('nationality')}
                 </Text>
                 <Text size="sm">{student.nationalityCode}</Text>
               </Group>
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
-                  Date of Birth
+                  {t('portal.date_of_birth')}
                 </Text>
                 <Text size="sm">{new Date(student.birthDate).toLocaleDateString()}</Text>
               </Group>
@@ -123,16 +125,16 @@ export function ProfilePage() {
                 <Group gap="xs">
                   <IconUser size={16} />
                   <Text fw={600} size="sm">
-                    Contact Information
+                    {t('portal.contact_information')}
                   </Text>
                 </Group>
 
                 <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="md">
-                  Keep your contact details up to date so the dormitory office can reach you.
+                  {t('portal.contact_info_hint')}
                 </Alert>
 
                 <TextInput
-                  label="Email"
+                  label={t('email')}
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.currentTarget.value)}
@@ -141,7 +143,7 @@ export function ProfilePage() {
                 />
 
                 <TextInput
-                  label="Phone Number"
+                  label={t('phone_number')}
                   placeholder="+90 5XX XXX XX XX"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.currentTarget.value)}
@@ -163,7 +165,7 @@ export function ProfilePage() {
 
                 {saveSuccess && (
                   <Alert icon={<IconCheck size={14} />} color="green" radius="md" variant="light">
-                    Contact information saved successfully.
+                    {t('portal.contact_saved')}
                   </Alert>
                 )}
 
@@ -173,7 +175,7 @@ export function ProfilePage() {
                   loading={isSaving}
                   disabled={!hasChanges || isSaving}
                 >
-                  Save Changes
+                  {t('save_changes')}
                 </Button>
               </Stack>
             </Card>
@@ -181,10 +183,10 @@ export function ProfilePage() {
             <Card withBorder radius="md" p="md">
               <Stack gap="xs">
                 <Text fw={600} size="sm">
-                  Session
+                  {t('portal.session')}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  Signed in as student {student.studentNumber}
+                  {t('portal.signed_in_as', { number: student.studentNumber })}
                 </Text>
                 <Button
                   variant="outline"
@@ -192,7 +194,7 @@ export function ProfilePage() {
                   onClick={logout}
                   style={{ alignSelf: 'flex-start' }}
                 >
-                  Sign Out
+                  {t('portal.sign_out')}
                 </Button>
               </Stack>
             </Card>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActionIcon,
   Box,
@@ -18,16 +19,19 @@ import { useNotifications } from '../contexts/NotificationsContext';
 
 const PAGE_SIZE = 20;
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+function useTimeAgo() {
+  const { t } = useTranslation();
+  return (dateStr: string): string => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t('portal.time_just_now');
+    if (mins < 60) return t('portal.time_minutes_ago', { count: mins });
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return t('portal.time_hours_ago', { count: hrs });
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return t('portal.time_days_ago', { count: days });
+    return new Date(dateStr).toLocaleDateString();
+  };
 }
 
 // ─── Mobile card ──────────────────────────────────────────────────────────────
@@ -39,6 +43,8 @@ function NotificationCard({
   notification: StudentNotification;
   onMarkRead: (id: string) => void;
 }) {
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
   const isUnread = !notification.readAt;
   return (
     <Card
@@ -65,7 +71,7 @@ function NotificationCard({
                 size="sm"
                 color="blue"
                 onClick={() => onMarkRead(notification.id)}
-                title="Mark as read"
+                title={t('portal.mark_as_read')}
               >
                 <IconCheck size={14} />
               </ActionIcon>
@@ -92,15 +98,18 @@ function NotificationsTable({
   items: StudentNotification[];
   onMarkRead: (id: string) => void;
 }) {
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
+
   if (items.length === 0) {
     return (
       <Stack align="center" gap="xs" py="xl">
         <ThemeIcon size={48} radius="xl" variant="light" color="gray">
           <IconBell size={24} />
         </ThemeIcon>
-        <Text fw={500}>No notifications yet</Text>
+        <Text fw={500}>{t('portal.no_notifications')}</Text>
         <Text size="sm" c="dimmed" ta="center">
-          You will be notified here about your booking status and other updates.
+          {t('portal.no_notifications_description')}
         </Text>
       </Stack>
     );
@@ -111,9 +120,9 @@ function NotificationsTable({
       <Table.Thead>
         <Table.Tr>
           <Table.Th w={16} />
-          <Table.Th>Notification</Table.Th>
-          <Table.Th>Message</Table.Th>
-          <Table.Th w={100}>When</Table.Th>
+          <Table.Th>{t('portal.col_notification')}</Table.Th>
+          <Table.Th>{t('portal.col_message')}</Table.Th>
+          <Table.Th w={100}>{t('portal.col_when')}</Table.Th>
           <Table.Th w={40} />
         </Table.Tr>
       </Table.Thead>
@@ -158,7 +167,7 @@ function NotificationsTable({
                     size="sm"
                     color="blue"
                     onClick={() => onMarkRead(n.id)}
-                    title="Mark as read"
+                    title={t('portal.mark_as_read')}
                   >
                     <IconCheck size={14} />
                   </ActionIcon>
@@ -176,6 +185,8 @@ function NotificationsTable({
 
 export function NotificationsPage() {
   const { markAsRead, markAllAsRead } = useNotifications();
+  const { t } = useTranslation();
+  const timeAgo = useTimeAgo();
   const [items, setItems] = useState<StudentNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -217,10 +228,12 @@ export function NotificationsPage() {
   const header = (
     <Group justify="space-between" align="center">
       <Box>
-        <Title order={3}>Notifications</Title>
+        <Title order={3}>{t('portal.notifications_title')}</Title>
         {unreadCount > 0 && (
           <Text size="sm" c="dimmed">
-            {unreadCount} unread
+            {unreadCount === 1
+              ? t('portal.unread_count_singular')
+              : t('portal.unread_count_plural', { count: unreadCount })}
           </Text>
         )}
       </Box>
@@ -231,7 +244,7 @@ export function NotificationsPage() {
           leftSection={<IconBellOff size={14} />}
           onClick={handleMarkAllRead}
         >
-          Mark all read
+          {t('portal.mark_all_read')}
         </Button>
       )}
     </Group>
@@ -307,7 +320,7 @@ export function NotificationsPage() {
       mx="auto"
       display="block"
     >
-      Load more
+      {t('portal.load_more')}
     </Button>
   );
 
@@ -322,9 +335,9 @@ export function NotificationsPage() {
             <ThemeIcon size={48} radius="xl" variant="light" color="gray">
               <IconBell size={24} />
             </ThemeIcon>
-            <Text fw={500}>No notifications yet</Text>
+            <Text fw={500}>{t('portal.no_notifications')}</Text>
             <Text size="sm" c="dimmed" ta="center">
-              You will be notified here about your booking status and other updates.
+              {t('portal.no_notifications_description')}
             </Text>
           </Stack>
         ) : (
@@ -350,9 +363,9 @@ export function NotificationsPage() {
             <ThemeIcon size={48} radius="xl" variant="light" color="gray">
               <IconBell size={24} />
             </ThemeIcon>
-            <Text fw={500}>No notifications yet</Text>
+            <Text fw={500}>{t('portal.no_notifications')}</Text>
             <Text size="sm" c="dimmed" ta="center">
-              You will be notified here about your booking status and other updates.
+              {t('portal.no_notifications_description')}
             </Text>
           </Stack>
         ) : (

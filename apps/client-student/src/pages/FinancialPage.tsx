@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Badge,
@@ -23,25 +24,28 @@ import {
 import { StudentDamageLiability, StudentTransaction } from '@domas/ts-types';
 import { portalFinancial } from '@domas/api-client';
 
-function transactionTypeLabel(type: StudentTransaction['transactionType']): {
-  label: string;
-  color: string;
-} {
-  switch (type) {
-    case 'deposit':
-      return { label: 'Deposit', color: 'blue' };
-    case 'rent':
-      return { label: 'Rent', color: 'teal' };
-    case 'fine':
-      return { label: 'Fine', color: 'red' };
-    default:
-      return { label: type, color: 'gray' };
-  }
+function useTransactionTypeLabel() {
+  const { t } = useTranslation();
+  return (type: StudentTransaction['transactionType']): { label: string; color: string } => {
+    switch (type) {
+      case 'deposit':
+        return { label: t('portal.tx_deposit'), color: 'blue' };
+      case 'rent':
+        return { label: t('portal.tx_rent'), color: 'teal' };
+      case 'fine':
+        return { label: t('portal.tx_fine'), color: 'red' };
+      default:
+        return { label: type, color: 'gray' };
+    }
+  };
 }
 
 // ─── Transactions: desktop table ──────────────────────────────────────────────
 
 function TransactionsTable({ items }: { items: StudentTransaction[] }) {
+  const { t } = useTranslation();
+  const transactionTypeLabel = useTransactionTypeLabel();
+
   if (items.length === 0) {
     return (
       <Stack align="center" gap="xs" py="xl">
@@ -49,7 +53,7 @@ function TransactionsTable({ items }: { items: StudentTransaction[] }) {
           <IconReceipt size={20} />
         </ThemeIcon>
         <Text size="sm" c="dimmed">
-          No transactions recorded yet.
+          {t('portal.no_transactions')}
         </Text>
       </Stack>
     );
@@ -66,11 +70,11 @@ function TransactionsTable({ items }: { items: StudentTransaction[] }) {
       <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Date</Table.Th>
-            <Table.Th>Type</Table.Th>
-            <Table.Th>Semester</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th style={{ textAlign: 'right' }}>Amount</Table.Th>
+            <Table.Th>{t('portal.col_date')}</Table.Th>
+            <Table.Th>{t('portal.col_type')}</Table.Th>
+            <Table.Th>{t('portal.col_semester')}</Table.Th>
+            <Table.Th>{t('portal.col_status')}</Table.Th>
+            <Table.Th style={{ textAlign: 'right' }}>{t('portal.col_amount')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -94,11 +98,11 @@ function TransactionsTable({ items }: { items: StudentTransaction[] }) {
                 <Table.Td>
                   {tx.isApproved ? (
                     <Badge size="sm" variant="dot" color="green">
-                      Approved
+                      {t('portal.approved_label')}
                     </Badge>
                   ) : (
                     <Badge size="sm" variant="dot" color="gray">
-                      Pending
+                      {t('portal.payment_pending')}
                     </Badge>
                   )}
                 </Table.Td>
@@ -119,6 +123,9 @@ function TransactionsTable({ items }: { items: StudentTransaction[] }) {
 // ─── Transactions: mobile cards ───────────────────────────────────────────────
 
 function TransactionCards({ items }: { items: StudentTransaction[] }) {
+  const { t } = useTranslation();
+  const transactionTypeLabel = useTransactionTypeLabel();
+
   if (items.length === 0) {
     return (
       <Stack align="center" gap="xs" py="xl">
@@ -126,7 +133,7 @@ function TransactionCards({ items }: { items: StudentTransaction[] }) {
           <IconReceipt size={20} />
         </ThemeIcon>
         <Text size="sm" c="dimmed">
-          No transactions recorded yet.
+          {t('portal.no_transactions')}
         </Text>
       </Stack>
     );
@@ -146,11 +153,11 @@ function TransactionCards({ items }: { items: StudentTransaction[] }) {
                   </Badge>
                   {tx.isApproved ? (
                     <Badge size="xs" variant="dot" color="green">
-                      Approved
+                      {t('portal.approved_label')}
                     </Badge>
                   ) : (
                     <Badge size="xs" variant="dot" color="gray">
-                      Pending
+                      {t('portal.payment_pending')}
                     </Badge>
                   )}
                 </Group>
@@ -175,6 +182,8 @@ function TransactionCards({ items }: { items: StudentTransaction[] }) {
 // ─── Damages: desktop table ───────────────────────────────────────────────────
 
 function DamagesTable({ items }: { items: StudentDamageLiability[] }) {
+  const { t } = useTranslation();
+
   if (items.length === 0) {
     return (
       <Stack align="center" gap="xs" py="xl">
@@ -182,7 +191,7 @@ function DamagesTable({ items }: { items: StudentDamageLiability[] }) {
           <IconAlertTriangle size={20} />
         </ThemeIcon>
         <Text size="sm" c="dimmed">
-          No damage liabilities on your account.
+          {t('portal.no_damage_liabilities')}
         </Text>
       </Stack>
     );
@@ -199,10 +208,10 @@ function DamagesTable({ items }: { items: StudentDamageLiability[] }) {
       <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Reported</Table.Th>
-            <Table.Th>Description</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th style={{ textAlign: 'right' }}>Amount</Table.Th>
+            <Table.Th>{t('portal.col_reported')}</Table.Th>
+            <Table.Th>{t('portal.col_description')}</Table.Th>
+            <Table.Th>{t('portal.col_status')}</Table.Th>
+            <Table.Th style={{ textAlign: 'right' }}>{t('portal.col_amount')}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -243,6 +252,8 @@ function DamagesTable({ items }: { items: StudentDamageLiability[] }) {
 // ─── Damages: mobile cards ────────────────────────────────────────────────────
 
 function DamageCards({ items }: { items: StudentDamageLiability[] }) {
+  const { t } = useTranslation();
+
   if (items.length === 0) {
     return (
       <Stack align="center" gap="xs" py="xl">
@@ -250,7 +261,7 @@ function DamageCards({ items }: { items: StudentDamageLiability[] }) {
           <IconAlertTriangle size={20} />
         </ThemeIcon>
         <Text size="sm" c="dimmed">
-          No damage liabilities on your account.
+          {t('portal.no_damage_liabilities')}
         </Text>
       </Stack>
     );
@@ -272,7 +283,7 @@ function DamageCards({ items }: { items: StudentDamageLiability[] }) {
                   {d.description}
                 </Text>
                 <Text size="xs" c="dimmed" mt={2}>
-                  Reported: {new Date(d.reportedAt).toLocaleDateString()}
+                  {t('portal.reported_prefix')} {new Date(d.reportedAt).toLocaleDateString()}
                 </Text>
               </Box>
               <Text size="sm" fw={700} c="red">
@@ -289,6 +300,7 @@ function DamageCards({ items }: { items: StudentDamageLiability[] }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function FinancialPage() {
+  const { t } = useTranslation();
   const [transactions, setTransactions] = useState<StudentTransaction[]>([]);
   const [damages, setDamages] = useState<StudentDamageLiability[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -315,9 +327,9 @@ export function FinancialPage() {
   return (
     <Stack gap="lg">
       <Box>
-        <Title order={3}>Financial</Title>
+        <Title order={3}>{t('portal.financial_title')}</Title>
         <Text size="sm" c="dimmed">
-          Your payments and charges
+          {t('portal.financial_subtitle')}
         </Text>
       </Box>
 
@@ -347,7 +359,7 @@ export function FinancialPage() {
                 </ThemeIcon>
                 <Box>
                   <Text size="xs" c="dimmed">
-                    Total Paid
+                    {t('portal.stat_total_paid')}
                   </Text>
                   <Text size="lg" fw={700} c="teal">
                     ₺{totalPaid.toLocaleString()}
@@ -369,7 +381,7 @@ export function FinancialPage() {
                 </ThemeIcon>
                 <Box>
                   <Text size="xs" c="dimmed">
-                    Pending Transactions
+                    {t('portal.stat_pending_transactions')}
                   </Text>
                   <Text size="lg" fw={700} c={pendingTransactions > 0 ? 'orange' : 'dimmed'}>
                     {pendingTransactions}
@@ -391,10 +403,10 @@ export function FinancialPage() {
                 </ThemeIcon>
                 <Box>
                   <Text size="xs" c="dimmed">
-                    Damage Charges
+                    {t('portal.stat_damage_charges')}
                   </Text>
                   <Text size="lg" fw={700} c={pendingDamages > 0 ? 'red' : 'dimmed'}>
-                    {pendingDamages > 0 ? `₺${pendingDamages.toLocaleString()}` : 'None'}
+                    {pendingDamages > 0 ? `₺${pendingDamages.toLocaleString()}` : t('portal.none')}
                   </Text>
                 </Box>
               </Group>
@@ -403,7 +415,7 @@ export function FinancialPage() {
 
           {pendingDamages > 0 && (
             <Alert icon={<IconInfoCircle size={14} />} color="orange" radius="md" variant="light">
-              You have outstanding damage charges. Please visit the dormitory office to settle them.
+              {t('portal.damage_charges_warning')}
             </Alert>
           )}
 
@@ -411,10 +423,10 @@ export function FinancialPage() {
           <Tabs defaultValue="transactions" radius="md">
             <Tabs.List>
               <Tabs.Tab value="transactions" leftSection={<IconReceipt size={14} />}>
-                Transactions ({transactions.length})
+                {t('portal.tab_transactions')} ({transactions.length})
               </Tabs.Tab>
               <Tabs.Tab value="damages" leftSection={<IconAlertTriangle size={14} />}>
-                Damage Reports ({damages.length})
+                {t('portal.tab_damage_reports')} ({damages.length})
               </Tabs.Tab>
             </Tabs.List>
 

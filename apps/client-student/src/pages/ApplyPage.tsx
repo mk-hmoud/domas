@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Badge,
@@ -50,10 +51,12 @@ function SemesterStep({
   selected: PortalSemester | null;
   onSelect: (s: PortalSemester) => void;
 }) {
+  const { t } = useTranslation();
+
   if (semesters.length === 0) {
     return (
       <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
-        There are no accommodation periods currently open for applications. Check back later.
+        {t('portal.no_semesters_description')}
       </Alert>
     );
   }
@@ -61,7 +64,7 @@ function SemesterStep({
   return (
     <Stack gap="sm">
       <Text size="sm" c="dimmed">
-        Select the semester you want to apply for.
+        {t('portal.select_semester_hint')}
       </Text>
       {semesters.map((s) => (
         <Paper
@@ -89,7 +92,7 @@ function SemesterStep({
               <Stack gap={2} pl={28}>
                 <Group gap="xs">
                   <Text size="xs" c="dimmed">
-                    Period:
+                    {t('portal.period_label')}
                   </Text>
                   <Text size="xs">
                     {new Date(s.startDate).toLocaleDateString()} –{' '}
@@ -99,7 +102,7 @@ function SemesterStep({
                 {s.bookingEndDate && (
                   <Group gap="xs">
                     <Text size="xs" c="dimmed">
-                      Apply by:
+                      {t('portal.apply_by')}
                     </Text>
                     <Text size="xs" fw={500} c="orange">
                       {new Date(s.bookingEndDate).toLocaleDateString()}
@@ -108,7 +111,7 @@ function SemesterStep({
                 )}
                 <Group gap="xs">
                   <Text size="xs" c="dimmed">
-                    Deposit:
+                    {t('portal.deposit_label')}
                   </Text>
                   <Text size="xs">
                     {s.depositAmountTry > 0
@@ -138,6 +141,7 @@ function BedStep({
   selected: AvailableBed | null;
   onSelect: (b: AvailableBed) => void;
 }) {
+  const { t } = useTranslation();
   const [beds, setBeds] = useState<AvailableBed[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -197,7 +201,7 @@ function BedStep({
   if (error) {
     return (
       <Alert icon={<IconX size={16} />} color="red" radius="md">
-        Failed to load available beds. Please go back and try again.
+        {t('portal.beds_load_error')}
       </Alert>
     );
   }
@@ -205,7 +209,7 @@ function BedStep({
   if (beds.length === 0) {
     return (
       <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
-        No beds are available for this semester at the moment.
+        {t('portal.no_beds_for_semester')}
       </Alert>
     );
   }
@@ -213,7 +217,7 @@ function BedStep({
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        Browse available beds by location.
+        {t('portal.browse_beds_hint')}
       </Text>
 
       {/* Breadcrumb */}
@@ -225,7 +229,7 @@ function BedStep({
           style={{ cursor: 'pointer' }}
           onClick={() => setPath([])}
         >
-          All Locations
+          {t('portal.all_locations')}
         </Text>
         {path.map((seg, i) => (
           <Group key={i} gap={4} wrap="nowrap">
@@ -253,7 +257,7 @@ function BedStep({
             leftSection={<IconArrowLeft size={14} />}
             onClick={() => setPath((p) => p.slice(0, -1))}
           >
-            Back
+            {t('back')}
           </Button>
         </Box>
       )}
@@ -286,7 +290,9 @@ function BedStep({
                       {name}
                     </Text>
                     <Text size="xs" c="dimmed">
-                      {count} bed{count !== 1 ? 's' : ''}
+                      {count === 1
+                        ? t('portal.bed_count_singular', { count })
+                        : t('portal.bed_count_plural', { count })}
                     </Text>
                   </Box>
                 </Group>
@@ -305,12 +311,14 @@ function BedStep({
         <Stack gap="xs">
           {filteredBeds.length === 0 ? (
             <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
-              No beds available at this location.
+              {t('portal.no_beds_at_location')}
             </Alert>
           ) : (
             <>
               <Text size="xs" c="dimmed">
-                {filteredBeds.length} bed{filteredBeds.length !== 1 ? 's' : ''} available
+                {filteredBeds.length === 1
+                  ? t('portal.beds_available_singular', { count: filteredBeds.length })
+                  : t('portal.beds_available_plural', { count: filteredBeds.length })}
               </Text>
               {filteredBeds.map((bed) => {
                 const isSelected = selected?.id === bed.id;
@@ -332,22 +340,22 @@ function BedStep({
                         <Radio checked={isSelected} onChange={() => onSelect(bed)} size="sm" />
                         <Box>
                           <Text size="sm" fw={500}>
-                            Bed {bed.label}
+                            {t('portal.bed_label', { label: bed.label })}
                           </Text>
                           <Group gap={4} mt={2}>
                             {bed.genderLock && (
                               <Badge size="xs" variant="light" color="grape">
-                                {bed.genderLock === 'male' ? 'Male' : 'Female'}
+                                {bed.genderLock === 'male' ? t('male') : t('female')}
                               </Badge>
                             )}
                             {bed.isTrOnly && (
                               <Badge size="xs" variant="light" color="teal">
-                                TR Citizens
+                                {t('portal.tr_citizens')}
                               </Badge>
                             )}
                             {bed.isForeignerOnly && (
                               <Badge size="xs" variant="light" color="orange">
-                                International
+                                {t('portal.international')}
                               </Badge>
                             )}
                           </Group>
@@ -373,10 +381,11 @@ function BedStep({
 // ─── Step content: Review ─────────────────────────────────────────────────────
 
 function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: AvailableBed }) {
+  const { t } = useTranslation();
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        Review your selection before submitting.
+        {t('portal.review_hint')}
       </Text>
       <Paper withBorder radius="md" p="md">
         <Stack gap="sm">
@@ -386,7 +395,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
             </ThemeIcon>
             <Box>
               <Text size="xs" c="dimmed">
-                Semester
+                {t('portal.step_semester_label')}
               </Text>
               <Text size="sm" fw={600}>
                 {semester.displayName}
@@ -400,10 +409,10 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
             </ThemeIcon>
             <Box>
               <Text size="xs" c="dimmed">
-                Accommodation
+                {t('portal.accommodation_label')}
               </Text>
               <Text size="sm" fw={600}>
-                {bed.roomName} — Bed {bed.label}
+                {bed.roomName} — {t('portal.bed_label', { label: bed.label })}
               </Text>
               <Text size="xs" c="dimmed">
                 {bed.locationPath}
@@ -414,7 +423,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
           <Stack gap={4}>
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
-                Period:
+                {t('portal.period_label')}
               </Text>
               <Text size="sm">
                 {new Date(semester.startDate).toLocaleDateString()} –{' '}
@@ -423,7 +432,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
             </Group>
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
-                Deposit due:
+                {t('portal.deposit_due_label')}
               </Text>
               <Text size="sm" fw={500}>
                 {semester.depositAmountTry > 0
@@ -434,7 +443,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
             {semester.paymentDeadlineDate && (
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
-                  Payment deadline:
+                  {t('portal.payment_deadline_label')}
                 </Text>
                 <Text size="sm" c="orange">
                   {new Date(semester.paymentDeadlineDate).toLocaleDateString()}
@@ -445,8 +454,7 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
         </Stack>
       </Paper>
       <Alert icon={<IconInfoCircle size={14} />} color="blue" radius="md" variant="light">
-        By submitting, your application will be sent for review by the accounting office. You will
-        be notified once it is processed.
+        {t('portal.submit_notice')}
       </Alert>
     </Stack>
   );
@@ -454,17 +462,18 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
 
 // ─── Desktop step sidebar ─────────────────────────────────────────────────────
 
-const STEPS = [
-  { label: 'Semester', description: 'Choose period' },
-  { label: 'Bed', description: 'Choose room' },
-  { label: 'Confirm', description: 'Review & submit' },
-];
-
 function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
+  const { t } = useTranslation();
+  const STEPS = [
+    { label: t('portal.step_semester_label'), description: t('portal.step_semester_desc') },
+    { label: t('portal.step_bed_label'), description: t('portal.step_bed_desc') },
+    { label: t('portal.step_confirm_label'), description: t('portal.step_confirm_desc') },
+  ];
+
   return (
     <Paper withBorder radius="md" p="lg" style={{ height: '100%' }}>
       <Text fw={700} size="sm" mb="lg">
-        Application Steps
+        {t('portal.application_steps')}
       </Text>
       <Stack gap="lg">
         {STEPS.map((s, i) => {
@@ -511,6 +520,7 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
 
 export function ApplyPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { booking } = useCurrentBooking();
 
   const [step, setStep] = useState(0);
@@ -554,7 +564,7 @@ export function ApplyPage() {
       await portalBookings.create({ semesterId: selectedSemester.id, bedId: selectedBed.id });
       navigate('/dashboard');
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Failed to submit application. Please try again.';
+      const msg = err?.response?.data?.message ?? t('portal.submit_error');
       setSubmitError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setIsSubmitting(false);
@@ -592,7 +602,7 @@ export function ApplyPage() {
         onClick={step === 0 ? () => navigate('/dashboard') : handleBack}
         disabled={isSubmitting}
       >
-        {step === 0 ? 'Cancel' : 'Back'}
+        {step === 0 ? t('cancel') : t('back')}
       </Button>
       {step < 2 ? (
         <Button
@@ -600,7 +610,7 @@ export function ApplyPage() {
           onClick={handleNext}
           disabled={!canAdvance}
         >
-          Next
+          {t('next')}
         </Button>
       ) : (
         <Button
@@ -609,7 +619,7 @@ export function ApplyPage() {
           disabled={isSubmitting || hasActiveBooking}
           color="green"
         >
-          {isSubmitting ? 'Submitting…' : 'Submit Application'}
+          {isSubmitting ? t('portal.submitting') : t('portal.submit_application')}
         </Button>
       )}
     </Group>
@@ -618,15 +628,15 @@ export function ApplyPage() {
   return (
     <Stack gap="lg">
       <Box>
-        <Title order={3}>Apply for Accommodation</Title>
+        <Title order={3}>{t('portal.apply_title')}</Title>
         <Text size="sm" c="dimmed">
-          Complete the steps below to submit your application.
+          {t('portal.apply_subtitle')}
         </Text>
       </Box>
 
       {hasActiveBooking && (
         <Alert icon={<IconInfoCircle size={16} />} color="orange" radius="md">
-          You already have an active or pending booking. Visit{' '}
+          {t('portal.already_has_booking_part1')}{' '}
           <Text
             component="span"
             size="sm"
@@ -634,9 +644,9 @@ export function ApplyPage() {
             style={{ cursor: 'pointer' }}
             onClick={() => navigate('/booking')}
           >
-            My Room
+            {t('portal.nav_my_room')}
           </Text>{' '}
-          to view it.
+          {t('portal.already_has_booking_part2')}
         </Alert>
       )}
 
@@ -677,9 +687,18 @@ export function ApplyPage() {
       <Box hiddenFrom="sm">
         <Stack gap="md">
           <Stepper active={step} size="sm" radius="md">
-            <Stepper.Step label="Semester" description="Choose period" />
-            <Stepper.Step label="Bed" description="Choose room" />
-            <Stepper.Step label="Confirm" description="Review & submit" />
+            <Stepper.Step
+              label={t('portal.step_semester_label')}
+              description={t('portal.step_semester_desc')}
+            />
+            <Stepper.Step
+              label={t('portal.step_bed_label')}
+              description={t('portal.step_bed_desc')}
+            />
+            <Stepper.Step
+              label={t('portal.step_confirm_label')}
+              description={t('portal.step_confirm_desc')}
+            />
           </Stepper>
 
           <Card withBorder radius="md" p="md">
