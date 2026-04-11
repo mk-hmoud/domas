@@ -118,8 +118,9 @@ CREATE TABLE students (
     department VARCHAR(100) NOT NULL,
     
     -- 4. Contact (Might differ from User email)
-    email VARCHAR(150), 
+    email VARCHAR(150),
     phone_number VARCHAR(50),
+    whatsapp_number VARCHAR(50),
     
     -- 5. Profile Data (Height, weight, habits - strictly domain data)
     profile_data JSONB DEFAULT '{}'::jsonb,

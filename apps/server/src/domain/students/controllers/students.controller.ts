@@ -17,6 +17,7 @@ import { UpdateStudentDto } from '../dto/update-student.dto';
 import { UpdateStudentStatusDto } from '../dto/update-student-status.dto';
 import { BulkDeleteStudentsDto, BulkUpdateStudentStatusDto } from '../dto/bulk-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
+import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
@@ -33,6 +34,12 @@ export class StudentsController {
   @RequirePermissions(PERMISSIONS.STUDENTS_CREATE)
   create(@Body() createStudentDto: CreateStudentDto, @UserContext() context: AuditUserContext) {
     return this.studentsService.create(createStudentDto, context);
+  }
+
+  @Post('resolve-contacts')
+  @RequirePermissions(PERMISSIONS.MESSAGING_SEND)
+  resolveContacts(@Body() dto: ResolveContactsDto) {
+    return this.studentsService.resolveContacts(dto);
   }
 
   @Post('bulk-delete')

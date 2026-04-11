@@ -14,6 +14,7 @@ export interface Student {
   department: string;
   email?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
   profileData?: any;
   isActive: boolean;
   createdAt: string;

@@ -5,7 +5,16 @@ import { Student } from '../entities/student.entity';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
+import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+
+export interface ResolvedContact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  whatsappNumber?: string;
+}
 
 @Injectable()
 export class StudentsRepository {
@@ -30,6 +39,7 @@ export class StudentsRepository {
       department: row.department,
       email: row.email,
       phoneNumber: row.phone_number,
+      whatsappNumber: row.whatsapp_number,
       profileData: row.profile_data,
       isActive: row.is_active,
       createdAt: row.created_at,
@@ -45,11 +55,11 @@ export class StudentsRepository {
   ): Promise<Student> {
     const query = `
       INSERT INTO students (
-        student_number, first_name, last_name, gender, nationality_code, national_id, 
+        student_number, first_name, last_name, gender, nationality_code, national_id,
         birth_date, birth_place, department,
-        email, phone_number, user_id, created_by_user_id
+        email, phone_number, whatsapp_number, user_id, created_by_user_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
     const values = [
@@ -64,6 +74,7 @@ export class StudentsRepository {
       data.department,
       data.email || null,
       data.phoneNumber || null,
+      data.whatsappNumber || null,
       data.userId || null,
       createdByUserId,
     ];
@@ -92,6 +103,7 @@ export class StudentsRepository {
     if (data.department !== undefined) addUpdate('department', data.department);
     if (data.email !== undefined) addUpdate('email', data.email);
     if (data.phoneNumber !== undefined) addUpdate('phone_number', data.phoneNumber);
+    if (data.whatsappNumber !== undefined) addUpdate('whatsapp_number', data.whatsappNumber);
     if (data.userId !== undefined) addUpdate('user_id', data.userId);
     if (data.isActive !== undefined) addUpdate('is_active', data.isActive);
 
@@ -183,6 +195,56 @@ export class StudentsRepository {
   async updateStatusMany(ids: string[], isActive: boolean, client?: PoolClient): Promise<void> {
     const query = `UPDATE students SET is_active = $1 WHERE id = ANY($2) AND deleted_at IS NULL`;
     await this.getClient(client).query(query, [isActive, ids]);
+  }
+
+  async resolveContacts(dto: ResolveContactsDto, client?: PoolClient): Promise<ResolvedContact[]> {
+    let query: string;
+    let params: any[];
+
+    if (dto.scope === 'all') {
+      query = `
+        SELECT id,
+               first_name AS "firstName",
+               last_name  AS "lastName",
+               email,
+               whatsapp_number AS "whatsappNumber"
+        FROM students
+        WHERE is_active = true AND deleted_at IS NULL
+        ORDER BY last_name, first_name
+      `;
+      params = [];
+    } else if (dto.scope === 'location') {
+      query = `
+        SELECT DISTINCT s.id,
+               s.first_name AS "firstName",
+               s.last_name  AS "lastName",
+               s.email,
+               s.whatsapp_number AS "whatsappNumber"
+        FROM students s
+        JOIN bookings b ON s.id = b.student_id
+        JOIN beds bd ON b.bed_id = bd.id
+        JOIN locations l ON bd.location_id = l.id
+        WHERE b.status = 'active'
+          AND l.tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+        ORDER BY s.last_name, s.first_name
+      `;
+      params = [dto.locationId];
+    } else {
+      query = `
+        SELECT id,
+               first_name AS "firstName",
+               last_name  AS "lastName",
+               email,
+               whatsapp_number AS "whatsappNumber"
+        FROM students
+        WHERE id = ANY($1) AND deleted_at IS NULL
+        ORDER BY last_name, first_name
+      `;
+      params = [dto.studentIds];
+    }
+
+    const result = await this.getClient(client).query(query, params);
+    return result.rows;
   }
 
   async findActiveResidentsByLocation(locationId: number, client?: PoolClient): Promise<any[]> {

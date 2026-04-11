@@ -59,6 +59,10 @@ export class CreateStudentDto {
   @IsOptional()
   phoneNumber?: string;
 
+  @IsString()
+  @IsOptional()
+  whatsappNumber?: string;
+
   @IsUUID()
   @IsOptional()
   userId?: string; // If linking to existing user immediately

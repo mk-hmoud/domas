@@ -14,6 +14,7 @@ export class Student {
   department!: string;
   email?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
   profileData?: any; // JSONB
   isActive!: boolean;
   createdAt!: Date;
