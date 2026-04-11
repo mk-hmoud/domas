@@ -46,8 +46,8 @@ function NotificationCard({
       radius="md"
       p="sm"
       style={{
-        background: isUnread ? 'var(--mantine-color-blue-0)' : undefined,
-        borderColor: isUnread ? 'var(--mantine-color-blue-2)' : undefined,
+        background: isUnread ? 'var(--mantine-color-blue-light)' : undefined,
+        borderColor: isUnread ? 'var(--mantine-color-blue-4)' : undefined,
       }}
     >
       <Group gap="sm" align="flex-start">
@@ -124,7 +124,7 @@ function NotificationsTable({
             <Table.Tr
               key={n.id}
               style={{
-                background: isUnread ? 'var(--mantine-color-blue-0)' : undefined,
+                background: isUnread ? 'var(--mantine-color-blue-light)' : undefined,
               }}
             >
               <Table.Td>

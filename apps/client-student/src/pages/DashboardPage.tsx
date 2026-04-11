@@ -263,8 +263,13 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
         </Group>
 
         {booking.status === BookingOpsStatus.REJECTED && (
-          <Paper withBorder p="sm" radius="sm" bg="red.0">
-            <Text size="sm" c="red.8">
+          <Paper
+            withBorder
+            p="sm"
+            radius="sm"
+            style={{ background: 'var(--mantine-color-red-light)' }}
+          >
+            <Text size="sm" c="red">
               Your application was not approved. Please contact the dormitory office for more
               information.
             </Text>
@@ -275,10 +280,15 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
 
         {(booking.status === BookingOpsStatus.READY_FOR_CHECKIN ||
           booking.status === BookingOpsStatus.CONFIRMED) && (
-          <Paper withBorder p="sm" radius="sm" bg="teal.0">
+          <Paper
+            withBorder
+            p="sm"
+            radius="sm"
+            style={{ background: 'var(--mantine-color-teal-light)' }}
+          >
             <Group gap="xs">
-              <IconCheck size={16} color="var(--mantine-color-teal-7)" />
-              <Text size="sm" c="teal.8" fw={500}>
+              <IconCheck size={16} color="var(--mantine-color-teal-filled)" />
+              <Text size="sm" c="teal" fw={500}>
                 Your accommodation is approved. Present yourself at the dormitory office to check
                 in.
               </Text>
@@ -446,7 +456,7 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
               p="xs"
               style={{
                 borderRadius: 8,
-                background: !n.readAt ? 'var(--mantine-color-blue-0)' : undefined,
+                background: !n.readAt ? 'var(--mantine-color-blue-light)' : undefined,
                 borderLeft: !n.readAt
                   ? '3px solid var(--mantine-color-blue-4)'
                   : '3px solid transparent',
