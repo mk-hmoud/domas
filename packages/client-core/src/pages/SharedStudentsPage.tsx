@@ -16,7 +16,13 @@ import {
   Code,
   Badge,
 } from "@mantine/core";
-import { IconPlus, IconSearch, IconEdit } from "@tabler/icons-react";
+import {
+  IconPlus,
+  IconSearch,
+  IconEdit,
+  IconBrandWhatsapp,
+  IconMail,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students } from "@domas/api-client";
 import {
@@ -25,7 +31,12 @@ import {
   PaginatedResult,
   COUNTRIES,
 } from "@domas/ts-types";
-import { StudentModal, StudentsTable, BulkActionsBar } from "@domas/ui";
+import {
+  StudentModal,
+  StudentsTable,
+  BulkActionsBar,
+  ComposeEmailModal,
+} from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
 
@@ -45,6 +56,7 @@ export function SharedStudentsPage() {
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [composeEmailOpened, setComposeEmailOpened] = useState(false);
 
   // Filter states
   const [page, setPage] = useState(1);
@@ -330,6 +342,7 @@ export function SharedStudentsPage() {
         onDelete={handleBulkDelete}
         onActivate={() => handleBulkStatusUpdate(true)}
         onDeactivate={() => handleBulkStatusUpdate(false)}
+        onSendEmail={() => setComposeEmailOpened(true)}
         onClear={() => setSelectedIds([])}
       />
 
@@ -401,12 +414,40 @@ export function SharedStudentsPage() {
               <Text>{selectedStudent.email || "-"}</Text>
             </Box>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("phone_number")}
-              </Text>
-              <Text>{selectedStudent.phoneNumber || "-"}</Text>
-            </Box>
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("phone_number")}
+                </Text>
+                <Text>{selectedStudent.phoneNumber || "-"}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("whatsapp_number", { defaultValue: "WhatsApp" })}
+                </Text>
+                {selectedStudent.whatsappNumber ? (
+                  <Group gap="xs">
+                    <Text>{selectedStudent.whatsappNumber}</Text>
+                    <Button
+                      size="compact-xs"
+                      color="green"
+                      variant="light"
+                      leftSection={<IconBrandWhatsapp size={12} />}
+                      onClick={() =>
+                        window.open(
+                          `https://wa.me/${selectedStudent.whatsappNumber!.replace(/\D/g, "")}`,
+                          "_blank",
+                        )
+                      }
+                    >
+                      {t("open", { defaultValue: "Open" })}
+                    </Button>
+                  </Group>
+                ) : (
+                  <Text c="dimmed">-</Text>
+                )}
+              </Box>
+            </Group>
 
             <Group grow>
               <Box>
@@ -432,20 +473,39 @@ export function SharedStudentsPage() {
               </Box>
             )}
 
-            <Button
-              variant="light"
-              leftSection={<IconEdit size={16} />}
-              onClick={() => {
-                setEditingStudent(selectedStudent);
-                setEditModalOpened(true);
-                // setSelectedStudent(null); // Optional: close drawer when editing
-              }}
-            >
-              {t("edit")}
-            </Button>
+            <Group grow>
+              <Button
+                variant="light"
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  setEditingStudent(selectedStudent);
+                  setEditModalOpened(true);
+                }}
+              >
+                {t("edit")}
+              </Button>
+              {selectedStudent.email && (
+                <Button
+                  variant="light"
+                  color="blue"
+                  leftSection={<IconMail size={16} />}
+                  onClick={() => {
+                    window.open(`mailto:${selectedStudent.email}`, "_blank");
+                  }}
+                >
+                  {t("email_verb", { defaultValue: "Email" })}
+                </Button>
+              )}
+            </Group>
           </Stack>
         )}
       </Drawer>
+
+      <ComposeEmailModal
+        opened={composeEmailOpened}
+        onClose={() => setComposeEmailOpened(false)}
+        resolveDto={{ scope: "list", studentIds: selectedIds }}
+      />
     </Container>
   );
 }

@@ -20,6 +20,7 @@ import {
   IconUserOff,
   IconEye,
   IconFiles,
+  IconMail,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +32,7 @@ interface BulkActionsBarProps {
   onActivate?: () => void;
   onDeactivate?: () => void;
   onApplyTemplate?: () => void;
+  onSendEmail?: () => void;
   onClear: () => void;
   onShowSelection?: () => void;
 }
@@ -43,6 +45,7 @@ export function BulkActionsBar({
   onActivate,
   onDeactivate,
   onApplyTemplate,
+  onSendEmail,
   onClear,
   onShowSelection,
 }: BulkActionsBarProps) {
@@ -196,6 +199,24 @@ export function BulkActionsBar({
                       }}
                     />
                     {t("apply_blueprint", { defaultValue: "Apply Blueprint" })}
+                  </Button>
+                )}
+                {onSendEmail && (
+                  <Button
+                    variant="subtle"
+                    color="blue"
+                    size="xs"
+                    onClick={onSendEmail}
+                    c="blue.3"
+                  >
+                    <IconMail
+                      style={{
+                        width: rem(14),
+                        height: rem(14),
+                        marginRight: 6,
+                      }}
+                    />
+                    {t("send_email", { defaultValue: "Send Email" })}
                   </Button>
                 )}
                 <Button
