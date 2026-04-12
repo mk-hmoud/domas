@@ -15,6 +15,7 @@ import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
 import {
   CreateDamageReportDto,
+  GuestStay,
   Student,
   InventoryAssignment,
 } from "@domas/ts-types";
@@ -28,6 +29,7 @@ interface CreateDamageModalProps {
   onClose: () => void;
   onSubmit: (values: CreateDamageReportDto) => Promise<void>;
   students: Student[];
+  guestStays?: GuestStay[];
   loading?: boolean;
   initialValues?: Partial<CreateDamageReportDto>;
 }
@@ -37,6 +39,7 @@ export function CreateDamageModal({
   onClose,
   onSubmit,
   students,
+  guestStays = [],
   loading,
   initialValues,
 }: CreateDamageModalProps) {
@@ -54,6 +57,7 @@ export function CreateDamageModal({
       catalogId: undefined,
       description: "",
       culpritIds: [],
+      culpritGuestStayIds: [],
       manualCostTry: undefined,
       manualCostForeign: undefined,
       manualCurrencyCode: "USD",
@@ -212,7 +216,9 @@ export function CreateDamageModal({
           />
 
           <MultiSelect
-            label={t("culprits")}
+            label={t("culprits_students", {
+              defaultValue: "Culprits — Students",
+            })}
             placeholder={t("pick_one_or_more")}
             data={students.map((s) => ({
               value: s.id,
@@ -222,6 +228,29 @@ export function CreateDamageModal({
             clearable
             {...form.getInputProps("culpritIds")}
           />
+
+          {guestStays.length > 0 && (
+            <MultiSelect
+              label={t("culprits_guests", {
+                defaultValue: "Culprits — Guests",
+              })}
+              placeholder={t("pick_one_or_more")}
+              data={guestStays.map((gs) => ({
+                value: gs.id,
+                label: [
+                  `${gs.guest.firstName} ${gs.guest.lastName}`,
+                  gs.guest.idNumber ? `#${gs.guest.idNumber}` : null,
+                  `${gs.roomName}, ${t("bed_label", { defaultValue: "Bed {{label}}", label: gs.bedLabel })}`,
+                  `${new Date(gs.checkInDate).toLocaleDateString()} – ${new Date(gs.checkOutDate).toLocaleDateString()}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              }))}
+              searchable
+              clearable
+              {...form.getInputProps("culpritGuestStayIds")}
+            />
+          )}
 
           <Divider label={t("manual_cost")} labelPosition="center" />
 
