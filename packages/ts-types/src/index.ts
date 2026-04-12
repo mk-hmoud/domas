@@ -100,3 +100,4 @@ export * from "./dtos/damage.dto";
 export * from "./dtos/guest.dto";
 export * from "./enums/undo-action-type.enum";
 export * from "./interfaces/portal.interface";
+export * from "./interfaces/stats.interface";
