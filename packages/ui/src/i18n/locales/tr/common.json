@@ -454,7 +454,23 @@
   "dashboard": {
     "welcome_user": "Hoş geldiniz, {{email}}!",
     "staff_portal_intro": "Personel portalına hoş geldiniz. Öğrencileri, personeli ve odaları buradan yönetin.",
-    "staff_dashboard_title": "Personel Paneli"
+    "staff_dashboard_title": "Personel Paneli",
+    "stat_pending_approval": "Onay Bekleyen",
+    "stat_active_residents": "Aktif Sakinler",
+    "stat_check_ins_today": "Bugünkü Girişler",
+    "stat_check_outs_today": "Bugünkü Çıkışlar",
+    "stat_pending_damage_reports": "Bekleyen Hasar Raporları",
+    "stat_active_guest_stays": "Aktif Misafir Konaklamaları",
+    "stat_guest_check_ins_today": "Bugünkü Misafir Girişleri",
+    "stat_total_students": "Toplam Öğrenci",
+    "stat_students_without_booking": "Rezervasyonsuz Öğrenciler",
+    "stat_pending_payments": "Bekleyen Ödemeler",
+    "stat_overdue_payments": "Gecikmiş Ödemeler",
+    "section_bookings": "Rezervasyonlar",
+    "section_damages": "Hasarlar",
+    "section_guests": "Misafir Konaklamaları",
+    "section_students": "Öğrenciler",
+    "section_finances": "Finans"
   },
   "audit": {
     "search_logs": "Kayıtları Ara",

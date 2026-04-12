@@ -456,7 +456,23 @@
   "dashboard": {
     "welcome_user": "Welcome, {{email}}!",
     "staff_portal_intro": "Welcome to the staff portal. Manage students, staff and rooms here.",
-    "staff_dashboard_title": "Staff Dashboard"
+    "staff_dashboard_title": "Staff Dashboard",
+    "stat_pending_approval": "Pending Approval",
+    "stat_active_residents": "Active Residents",
+    "stat_check_ins_today": "Check-ins Today",
+    "stat_check_outs_today": "Check-outs Today",
+    "stat_pending_damage_reports": "Pending Damage Reports",
+    "stat_active_guest_stays": "Active Guest Stays",
+    "stat_guest_check_ins_today": "Guest Check-ins Today",
+    "stat_total_students": "Total Students",
+    "stat_students_without_booking": "Unassigned Students",
+    "stat_pending_payments": "Pending Payments",
+    "stat_overdue_payments": "Overdue Payments",
+    "section_bookings": "Bookings",
+    "section_damages": "Damages",
+    "section_guests": "Guest Stays",
+    "section_students": "Students",
+    "section_finances": "Finances"
   },
   "audit": {
     "search_logs": "Search Logs",
