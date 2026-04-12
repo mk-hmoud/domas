@@ -470,7 +470,9 @@
     "section_damages": "Hasarlar",
     "section_guests": "Misafir Konaklamaları",
     "section_students": "Öğrenciler",
-    "section_finances": "Finans"
+    "section_finances": "Finans",
+    "pending_bookings_list": "Finansal Onay Bekleyenler",
+    "pending_damages_list": "Bekleyen Hasar Raporları"
   },
   "audit": {
     "search_logs": "Kayıtları Ara",

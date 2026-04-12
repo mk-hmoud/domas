@@ -472,7 +472,9 @@
     "section_damages": "Damages",
     "section_guests": "Guest Stays",
     "section_students": "Students",
-    "section_finances": "Finances"
+    "section_finances": "Finances",
+    "pending_bookings_list": "Pending Financial Approval",
+    "pending_damages_list": "Pending Damage Reports"
   },
   "audit": {
     "search_logs": "Search Logs",

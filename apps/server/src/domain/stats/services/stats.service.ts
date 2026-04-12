@@ -45,6 +45,38 @@ export class StatsService {
             };
           }),
       );
+
+      queries.push(
+        pool
+          .query(
+            `
+            SELECT
+              b.id,
+              s.first_name || ' ' || s.last_name AS student_name,
+              s.student_number,
+              l.name AS location_name,
+              b.start_date,
+              b.end_date
+            FROM bookings b
+            JOIN students s ON s.id = b.student_id
+            JOIN beds bd ON bd.id = b.bed_id
+            JOIN locations l ON l.id = bd.location_id
+            WHERE b.status = 'pending_accounting'
+            ORDER BY b.created_at ASC
+            LIMIT 5
+          `,
+          )
+          .then((r) => {
+            result.pendingBookings = r.rows.map((row) => ({
+              id: row.id,
+              studentName: row.student_name,
+              studentNumber: row.student_number,
+              locationPath: row.location_name,
+              startDate: row.start_date,
+              endDate: row.end_date,
+            }));
+          }),
+      );
     }
 
     if (has(PERMISSIONS.DAMAGES_VIEW)) {
@@ -61,6 +93,32 @@ export class StatsService {
             result.damages = {
               pendingReports: parseInt(r.rows[0].pending_reports, 10),
             };
+          }),
+      );
+
+      queries.push(
+        pool
+          .query(
+            `
+            SELECT
+              dr.id,
+              l.name AS location_name,
+              dr.description,
+              dr.reported_at
+            FROM damage_reports dr
+            JOIN locations l ON l.id = dr.location_id
+            WHERE dr.status = 'pending'
+            ORDER BY dr.reported_at ASC
+            LIMIT 5
+          `,
+          )
+          .then((r) => {
+            result.pendingDamages = r.rows.map((row) => ({
+              id: row.id,
+              locationName: row.location_name,
+              description: row.description,
+              reportedAt: row.reported_at,
+            }));
           }),
       );
     }

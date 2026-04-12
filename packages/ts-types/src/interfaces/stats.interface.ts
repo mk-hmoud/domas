@@ -24,10 +24,28 @@ export interface FinanceStats {
   overdueCount: number;
 }
 
+export interface PendingBookingRow {
+  id: string;
+  studentName: string;
+  studentNumber: string;
+  locationPath: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface PendingDamageRow {
+  id: string;
+  locationName: string;
+  description: string;
+  reportedAt: string;
+}
+
 export interface DashboardStats {
   bookings?: BookingStats;
   damages?: DamageStats;
   guests?: GuestStats;
   students?: StudentStats;
   finances?: FinanceStats;
+  pendingBookings?: PendingBookingRow[];
+  pendingDamages?: PendingDamageRow[];
 }
