@@ -68,6 +68,7 @@ import {
   LocationRegistryFilters,
   ApplyTemplateModal,
   CreateBookingModal,
+  ComposeEmailModal,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
@@ -104,6 +105,7 @@ function LocationsContent() {
   // Registry View State
   const [registryData, setRegistryData] = useState<any[]>([]);
   const [registryLoading, setRegistryLoading] = useState(false);
+  const [emailLocationId, setEmailLocationId] = useState<number | null>(null);
   const [registryFilters, setRegistryFilters] = useState<FindAllLocationsDto>({
     page: 1,
     limit: 10,
@@ -1236,6 +1238,9 @@ function LocationsContent() {
                       setActiveView("structure");
                       selectNode(loc as any);
                     }}
+                    onEmailResidents={(locationId) =>
+                      setEmailLocationId(locationId)
+                    }
                     selectedIds={selectedIds}
                     onToggleSelection={handleToggleSelection}
                     onToggleSelectAll={handleToggleSelectAllRegistry}
@@ -1433,6 +1438,12 @@ function LocationsContent() {
           )}
         </Stack>
       </Drawer>
+
+      <ComposeEmailModal
+        opened={emailLocationId !== null}
+        onClose={() => setEmailLocationId(null)}
+        resolveDto={{ scope: "location", locationId: emailLocationId ?? 0 }}
+      />
     </Container>
   );
 }

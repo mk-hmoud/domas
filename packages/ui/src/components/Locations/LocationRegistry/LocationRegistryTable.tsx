@@ -9,7 +9,7 @@ import {
   Checkbox,
   Button,
 } from "@mantine/core";
-import { IconHierarchy } from "@tabler/icons-react";
+import { IconHierarchy, IconMail } from "@tabler/icons-react";
 import { Location, GenderType, Bed } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { LocationIcon } from "../LocationIcon";
@@ -17,6 +17,7 @@ import { LocationIcon } from "../LocationIcon";
 interface LocationRegistryTableProps {
   data: (Location | Bed)[];
   onView: (item: any) => void;
+  onEmailResidents?: (locationId: number) => void;
   selectedIds: (number | string)[];
   onToggleSelection: (id: number | string) => void;
   onToggleSelectAll: () => void;
@@ -25,6 +26,7 @@ interface LocationRegistryTableProps {
 export function LocationRegistryTable({
   data,
   onView,
+  onEmailResidents,
   selectedIds,
   onToggleSelection,
   onToggleSelectAll,
@@ -169,6 +171,23 @@ export function LocationRegistryTable({
         </Table.Td>
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Group gap={4} justify="flex-end">
+            {!isBed && onEmailResidents && (
+              <Tooltip
+                label={t("email_residents", {
+                  defaultValue: "Email Residents",
+                })}
+              >
+                <Button
+                  variant="subtle"
+                  size="compact-xs"
+                  color="blue"
+                  leftSection={<IconMail size={14} />}
+                  onClick={() => onEmailResidents(item.id as number)}
+                >
+                  {t("email_verb", { defaultValue: "Email" })}
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip
               label={t("locate_in_structure", {
                 defaultValue: "Locate in Structure",
