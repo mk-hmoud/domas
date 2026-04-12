@@ -182,6 +182,8 @@ async function bootstrap() {
           birthPlace: 'Lefkoşa',
           department: 'Software Engineering',
           email: 'mehmet@example.com',
+          phoneNumber: '+905551234567',
+          whatsappNumber: '+905551234567',
         },
         seedContext,
       );
@@ -201,6 +203,8 @@ async function bootstrap() {
           birthPlace: 'London',
           department: 'Cyber Security',
           email: 'sarah.c@example.com',
+          phoneNumber: '+447700900123',
+          whatsappNumber: '+447700900123',
         },
         seedContext,
       );
