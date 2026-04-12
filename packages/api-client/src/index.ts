@@ -15,3 +15,4 @@ export * from "./endpoints/contracts";
 export * from "./endpoints/damages";
 export * from "./endpoints/imports";
 export * from "./endpoints/portal";
+export * from "./endpoints/announcements";

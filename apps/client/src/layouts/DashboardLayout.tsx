@@ -144,6 +144,11 @@ export function DashboardLayout() {
         icon: IconSettings,
         links: [
           {
+            label: t('nav.announcements'),
+            link: '/dashboard/announcements',
+            requiredPermission: 'announcements.manage',
+          },
+          {
             label: t('nav.locations'),
             link: '/dashboard/locations',
             requiredPermission: 'locations.view',

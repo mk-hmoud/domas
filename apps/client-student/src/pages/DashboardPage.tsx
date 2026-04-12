@@ -25,14 +25,21 @@ import {
   IconDoor,
   IconFileDownload,
   IconKey,
+  IconPin,
 } from '@tabler/icons-react';
 import {
+  Announcement,
   BookingOpsStatus,
   PaymentStatus,
   PortalSemester,
   StudentCurrentBooking,
 } from '@domas/ts-types';
-import { portalBookings, portalNotifications, portalSemesters } from '@domas/api-client';
+import {
+  portalAnnouncements,
+  portalBookings,
+  portalNotifications,
+  portalSemesters,
+} from '@domas/api-client';
 import { StudentNotification } from '@domas/ts-types';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
@@ -412,6 +419,80 @@ function ActiveResidentCard({
   );
 }
 
+// ─── Announcements panel ──────────────────────────────────────────────────────
+
+function AnnouncementsPanel({ limit = 3 }: { limit?: number }) {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    portalAnnouncements
+      .getAll()
+      .then((all) => setItems(all.slice(0, limit)))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [limit]);
+
+  if (!isLoading && items.length === 0) return null;
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Group justify="space-between" mb="sm">
+        <Text fw={600} size="sm">
+          {t('portal.nav_announcements', { defaultValue: 'Announcements' })}
+        </Text>
+        <Text
+          size="xs"
+          c="blue"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/announcements')}
+        >
+          {t('portal.view_all')}
+        </Text>
+      </Group>
+
+      <Stack gap="xs">
+        {isLoading ? (
+          <>
+            <Skeleton height={56} radius="sm" />
+            <Skeleton height={56} radius="sm" />
+          </>
+        ) : (
+          items.map((item) => (
+            <Box
+              key={item.id}
+              p="xs"
+              style={{
+                borderRadius: 8,
+                background: item.pinned ? 'var(--mantine-color-orange-light)' : undefined,
+                borderLeft: item.pinned
+                  ? '3px solid var(--mantine-color-orange-4)'
+                  : '3px solid transparent',
+              }}
+            >
+              <Group gap={4} mb={2}>
+                {item.pinned && <IconPin size={11} color="var(--mantine-color-orange-filled)" />}
+                <Text size="sm" fw={600} lineClamp={1}>
+                  {item.title}
+                </Text>
+              </Group>
+              <Text size="xs" c="dimmed" lineClamp={2}>
+                {item.body}
+              </Text>
+              <Text size="xs" c="dimmed" mt={2}>
+                {item.createdByName && `${item.createdByName} · `}
+                {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : ''}
+              </Text>
+            </Box>
+          ))
+        )}
+      </Stack>
+    </Paper>
+  );
+}
+
 // ─── Notifications panel ──────────────────────────────────────────────────────
 
 function NotificationsPanel({ limit = 5 }: { limit?: number }) {
@@ -572,7 +653,10 @@ export function DashboardPage() {
             </Grid.Col>
 
             <Grid.Col span={{ base: 12, md: 5 }}>
-              <NotificationsPanel limit={6} />
+              <Stack gap="lg">
+                <AnnouncementsPanel limit={3} />
+                <NotificationsPanel limit={5} />
+              </Stack>
             </Grid.Col>
           </Grid>
         </>

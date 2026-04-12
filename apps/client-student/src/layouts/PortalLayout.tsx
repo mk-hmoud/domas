@@ -24,6 +24,7 @@ import {
   IconCreditCard,
   IconHome2,
   IconLogout,
+  IconSpeakerphone,
   IconUser,
 } from '@tabler/icons-react';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
@@ -35,6 +36,7 @@ const NAV_ITEM_KEYS = [
   { path: '/dashboard', labelKey: 'portal.nav_home', icon: IconHome2 },
   { path: '/booking', labelKey: 'portal.nav_my_room', icon: IconBed },
   { path: '/apply', labelKey: 'portal.nav_apply', icon: IconCalendarPlus },
+  { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
   { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
   { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
 ];

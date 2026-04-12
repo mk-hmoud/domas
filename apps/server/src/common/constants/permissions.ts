@@ -59,6 +59,9 @@ export const PERMISSIONS = {
 
   // Messaging
   MESSAGING_SEND: 'messaging.send',
+
+  // Announcements
+  ANNOUNCEMENTS_MANAGE: 'announcements.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

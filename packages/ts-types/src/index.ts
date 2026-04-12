@@ -65,6 +65,8 @@ export * from "./dtos/bulk-import.dto";
 export * from "./dtos/bulk-student.dto";
 export * from "./dtos/update-student-status.dto";
 export * from "./dtos/resolve-contacts.dto";
+export * from "./interfaces/announcement.interface";
+export * from "./dtos/announcement.dto";
 export type {
   UpdateGenderLockDto,
   UpdateGuestZoneDto,

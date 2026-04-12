@@ -30,3 +30,33 @@ CREATE TABLE notifications (
 
 CREATE INDEX idx_notif_recipient_created ON notifications(recipient_type, recipient_id, created_at DESC);
 CREATE INDEX idx_notif_unread            ON notifications(recipient_type, recipient_id) WHERE read_at IS NULL;
+
+-- =============================================
+-- ANNOUNCEMENTS
+-- =============================================
+-- Management posts announcements visible to all students in the portal.
+-- Separate from event-driven notifications — this is a bulletin board.
+
+CREATE TABLE announcements (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    title        VARCHAR(200) NOT NULL,
+    body         TEXT         NOT NULL,
+
+    -- Pinned announcements float to the top of the portal feed
+    pinned       BOOLEAN      NOT NULL DEFAULT FALSE,
+
+    -- Lifecycle
+    is_published BOOLEAN      NOT NULL DEFAULT FALSE,
+    published_at TIMESTAMPTZ,
+    expires_at   TIMESTAMPTZ,  -- NULL = never expires
+
+    -- Audit
+    created_by   UUID         NOT NULL REFERENCES users(id),
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_announcements_portal
+    ON announcements(is_published, pinned DESC, published_at DESC)
+    WHERE is_published = TRUE;
