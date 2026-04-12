@@ -20,6 +20,7 @@ import { ImportsModule } from './domain/imports/imports.module';
 import { StudentPortalModule } from './domain/student-portal/student-portal.module';
 import { NotificationsModule } from './domain/notifications/notifications.module';
 import { AnnouncementsModule } from './domain/announcements/announcements.module';
+import { GuestsModule } from './domain/guests/guests.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AnnouncementsModule } from './domain/announcements/announcements.module
     StudentPortalModule,
     NotificationsModule,
     AnnouncementsModule,
+    GuestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

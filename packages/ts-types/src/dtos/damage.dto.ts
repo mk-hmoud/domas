@@ -9,6 +9,7 @@ export interface CreateDamageReportDto {
   manualCurrencyCode?: string;
   description: string;
   culpritIds?: string[]; // Array of student IDs
+  culpritGuestStayIds?: string[]; // Array of guest stay IDs
   autoApprove?: boolean;
 }
 

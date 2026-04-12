@@ -62,6 +62,9 @@ export const PERMISSIONS = {
 
   // Announcements
   ANNOUNCEMENTS_MANAGE: 'announcements.manage',
+
+  // Guests
+  GUESTS_MANAGE: 'guests.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

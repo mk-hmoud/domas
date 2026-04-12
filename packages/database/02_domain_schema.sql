@@ -609,3 +609,72 @@ CREATE TABLE import_batches (
 
 CREATE INDEX idx_import_batches_uploaded_by ON import_batches(uploaded_by);
 CREATE INDEX idx_import_batches_uploaded_at ON import_batches(uploaded_at);
+-- =============================================
+-- GUEST STAYS
+-- =============================================
+
+CREATE TABLE guests (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name  VARCHAR(100) NOT NULL,
+    last_name   VARCHAR(100) NOT NULL,
+    id_number   VARCHAR(100),
+    email       VARCHAR(255),
+    phone       VARCHAR(50),
+    notes       TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE guest_stays (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    guest_id         UUID NOT NULL REFERENCES guests(id),
+    bed_id           INT  NOT NULL REFERENCES beds(id),
+
+    check_in_date    DATE NOT NULL,
+    check_out_date   DATE NOT NULL,
+    actual_check_in  TIMESTAMPTZ,
+    actual_check_out TIMESTAMPTZ,
+    status           guest_stay_status NOT NULL DEFAULT 'confirmed',
+
+    payment_required BOOLEAN      NOT NULL DEFAULT FALSE,
+    amount_due       NUMERIC(10,2),
+    amount_paid      NUMERIC(10,2) DEFAULT 0,
+    currency         VARCHAR(10)   DEFAULT 'TRY',
+    payment_notes    TEXT,
+
+    notes            TEXT,
+    created_by       UUID NOT NULL REFERENCES users(id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_guest_stay_dates CHECK (check_out_date > check_in_date),
+    CONSTRAINT no_overlapping_guest_stay_for_bed
+        EXCLUDE USING GIST (
+            bed_id WITH =,
+            daterange(check_in_date, check_out_date, '[)') WITH &&
+        )
+        WHERE (status <> 'cancelled')
+);
+
+CREATE INDEX idx_guest_stays_bed    ON guest_stays(bed_id);
+CREATE INDEX idx_guest_stays_guest  ON guest_stays(guest_id);
+CREATE INDEX idx_guest_stays_active ON guest_stays(status, check_in_date, check_out_date)
+    WHERE status IN ('confirmed', 'active');
+
+-- =============================================
+-- EXTEND DAMAGE TABLES FOR GUEST ACCOUNTABILITY
+-- =============================================
+
+ALTER TABLE damage_reports
+    ADD COLUMN IF NOT EXISTS culprit_guest_stay_ids UUID[] DEFAULT '{}';
+
+ALTER TABLE damage_liabilities
+    ADD COLUMN IF NOT EXISTS guest_stay_id UUID REFERENCES guest_stays(id) ON DELETE SET NULL;
+
+-- Drop the implicit NOT NULL on student_id so either student or guest can be the liable party
+ALTER TABLE damage_liabilities
+    ALTER COLUMN student_id DROP NOT NULL;
+
+ALTER TABLE damage_liabilities
+    ADD CONSTRAINT chk_liability_culprit CHECK (
+        (student_id IS NOT NULL)::int + (guest_stay_id IS NOT NULL)::int = 1
+    );
