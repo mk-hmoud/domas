@@ -436,6 +436,7 @@
     "semesters": "Semesters",
     "locations": "Locations",
     "announcements": "Announcements",
+    "guest_stays": "Guest Stays",
     "system": "System",
     "audit_logs": "Audit Logs"
   },

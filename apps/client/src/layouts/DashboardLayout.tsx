@@ -100,6 +100,11 @@ export function DashboardLayout() {
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',
           },
+          {
+            label: t('nav.guest_stays'),
+            link: '/dashboard/guest-stays',
+            requiredPermission: 'guests.manage',
+          },
         ],
       },
       {

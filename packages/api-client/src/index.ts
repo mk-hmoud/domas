@@ -16,3 +16,4 @@ export * from "./endpoints/damages";
 export * from "./endpoints/imports";
 export * from "./endpoints/portal";
 export * from "./endpoints/announcements";
+export * from "./endpoints/guests";

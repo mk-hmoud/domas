@@ -19,6 +19,7 @@ import { CheckOutPage } from './pages/CheckOutPage';
 import { AccessCardsPage } from './pages/AccessCardsPage';
 import { DamagesPage } from './pages/DamagesPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { GuestStaysPage } from './pages/GuestStaysPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -153,6 +154,14 @@ function App() {
             element={
               <PermissionRoute permission="announcements.manage">
                 <AnnouncementsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="guest-stays"
+            element={
+              <PermissionRoute permission="guests.manage">
+                <GuestStaysPage />
               </PermissionRoute>
             }
           />
