@@ -6,6 +6,7 @@ import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingDto } from '../dto/update-booking.dto';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
 import { PaymentStatus } from '../../../common/enums/payment-status.enum';
+import { FindAllBookingsDto } from '../dto/find-all-bookings.dto';
 
 @Injectable()
 export class BookingsRepository {
@@ -150,28 +151,46 @@ export class BookingsRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
-  async findAll(
-    filters: { studentId?: string; status?: BookingOpsStatus },
-    client?: PoolClient,
-  ): Promise<Booking[]> {
-    let query = `SELECT * FROM bookings`;
+  async findAll(filters: FindAllBookingsDto, client?: PoolClient): Promise<Booking[]> {
+    const needsBedJoin = !!(filters.locationId || filters.bedId);
+
+    let query = needsBedJoin
+      ? `SELECT b.* FROM bookings b JOIN beds bd ON bd.id = b.bed_id`
+      : `SELECT b.* FROM bookings b`;
+
     const values: any[] = [];
     const conditions: string[] = [];
 
     if (filters.studentId) {
-      conditions.push(`student_id = $${values.length + 1}`);
+      conditions.push(`b.student_id = $${values.length + 1}`);
       values.push(filters.studentId);
     }
+    if (filters.semesterId) {
+      conditions.push(`b.semester_id = $${values.length + 1}`);
+      values.push(filters.semesterId);
+    }
     if (filters.status) {
-      conditions.push(`status = $${values.length + 1}`);
+      conditions.push(`b.status = $${values.length + 1}`);
       values.push(filters.status);
+    }
+    if (filters.paymentStatus) {
+      conditions.push(`b.payment_status = $${values.length + 1}`);
+      values.push(filters.paymentStatus);
+    }
+    if (filters.locationId) {
+      conditions.push(`bd.location_id = $${values.length + 1}`);
+      values.push(filters.locationId);
+    }
+    if (filters.bedId) {
+      conditions.push(`b.bed_id = $${values.length + 1}`);
+      values.push(filters.bedId);
     }
 
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    query += ` ORDER BY created_at DESC`;
+    query += ` ORDER BY b.created_at DESC`;
     const result = await this.getClient(client).query(query, values);
     return result.rows.map((row) => this.mapRowToEntity(row));
   }

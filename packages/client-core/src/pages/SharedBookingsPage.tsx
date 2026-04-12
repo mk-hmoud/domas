@@ -17,18 +17,22 @@ import {
   Divider,
   SimpleGrid,
   Alert,
+  Select,
 } from "@mantine/core";
 import {
   IconPlus,
   IconSearch,
   IconEdit,
   IconInfoCircle,
+  IconX,
 } from "@tabler/icons-react";
 import { bookings, students, beds, semesters } from "@domas/api-client";
 import {
   Booking,
   Student,
   Semester,
+  BookingOpsStatus,
+  PaymentStatus,
   CreateBookingDto,
   CreateStudentDto,
 } from "@domas/ts-types";
@@ -48,9 +52,16 @@ export function SharedBookingsPage() {
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
-  // Search
+  // Text search (client-side, on student name / bed name)
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300);
+
+  // Server-side filters
+  const [filterSemesterId, setFilterSemesterId] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string | null>(
+    null,
+  );
 
   // Date Editing State (Inline Drawer)
   const [isEditingDates, setIsEditingDates] = useState(false);
@@ -69,10 +80,14 @@ export function SharedBookingsPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (filters?: {
+    semesterId?: number;
+    status?: BookingOpsStatus;
+    paymentStatus?: PaymentStatus;
+  }) => {
     setLoading(true);
     try {
-      const result = await bookings.findAll();
+      const result = await bookings.findAll(filters);
       setData(result);
     } catch (error) {
       notifications.show({
@@ -121,9 +136,17 @@ export function SharedBookingsPage() {
   };
 
   useEffect(() => {
-    fetchBookings();
-    fetchModalData(); // Initial fetch for mappings
+    fetchModalData();
   }, []);
+
+  // Re-fetch when server-side filters change
+  useEffect(() => {
+    fetchBookings({
+      semesterId: filterSemesterId ? parseInt(filterSemesterId, 10) : undefined,
+      status: (filterStatus as BookingOpsStatus) || undefined,
+      paymentStatus: (filterPaymentStatus as PaymentStatus) || undefined,
+    });
+  }, [filterSemesterId, filterStatus, filterPaymentStatus]);
 
   useEffect(() => {
     if (modalOpened) {
@@ -160,7 +183,13 @@ export function SharedBookingsPage() {
         message: t("stay_period_updated", "Stay period updated successfully"),
         color: "green",
       });
-      await fetchBookings();
+      await fetchBookings({
+        semesterId: filterSemesterId
+          ? parseInt(filterSemesterId, 10)
+          : undefined,
+        status: (filterStatus as BookingOpsStatus) || undefined,
+        paymentStatus: (filterPaymentStatus as PaymentStatus) || undefined,
+      });
       setIsEditingDates(false);
       // Update local selection to reflect new dates
       setSelectedBooking((prev) =>
@@ -206,7 +235,13 @@ export function SharedBookingsPage() {
           color: "green",
         });
       }
-      await fetchBookings();
+      await fetchBookings({
+        semesterId: filterSemesterId
+          ? parseInt(filterSemesterId, 10)
+          : undefined,
+        status: (filterStatus as BookingOpsStatus) || undefined,
+        paymentStatus: (filterPaymentStatus as PaymentStatus) || undefined,
+      });
       setModalOpened(false);
     } catch (error) {
       notifications.show({
@@ -237,6 +272,15 @@ export function SharedBookingsPage() {
     }
   };
 
+  const hasActiveFilters =
+    !!filterSemesterId || !!filterStatus || !!filterPaymentStatus;
+
+  const clearFilters = () => {
+    setFilterSemesterId(null);
+    setFilterStatus(null);
+    setFilterPaymentStatus(null);
+  };
+
   const filteredData = useMemo(() => {
     if (!debouncedSearch) return data;
     const lowerQuery = debouncedSearch.toLowerCase();
@@ -245,13 +289,8 @@ export function SharedBookingsPage() {
       const studentName =
         studentsMap.get(booking.studentId)?.toLowerCase() || "";
       const bedName = bedsMap.get(booking.bedId)?.toLowerCase() || "";
-      const status = booking.status.toLowerCase();
 
-      return (
-        studentName.includes(lowerQuery) ||
-        bedName.includes(lowerQuery) ||
-        status.includes(lowerQuery)
-      );
+      return studentName.includes(lowerQuery) || bedName.includes(lowerQuery);
     });
   }, [data, debouncedSearch, studentsMap, bedsMap]);
 
@@ -269,12 +308,59 @@ export function SharedBookingsPage() {
       </Group>
 
       <Card withBorder padding="md" radius="md" mb="md">
-        <TextInput
-          placeholder={t("search_placeholder", { defaultValue: "Search..." })}
-          leftSection={<IconSearch size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-        />
+        <Stack gap="sm">
+          <TextInput
+            placeholder={t("search_placeholder", {
+              defaultValue: "Search by student or bed...",
+            })}
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          />
+          <Group grow wrap="nowrap">
+            <Select
+              placeholder={t("all_semesters", "All Semesters")}
+              data={allSemesters.map((s) => ({
+                value: String(s.id),
+                label: s.displayName,
+              }))}
+              value={filterSemesterId}
+              onChange={setFilterSemesterId}
+              clearable
+            />
+            <Select
+              placeholder={t("all_statuses", "All Statuses")}
+              data={Object.values(BookingOpsStatus).map((s) => ({
+                value: s,
+                label: t(`booking_status.${s}`, { defaultValue: s }),
+              }))}
+              value={filterStatus}
+              onChange={setFilterStatus}
+              clearable
+            />
+            <Select
+              placeholder={t("all_payment_statuses", "All Payment Statuses")}
+              data={Object.values(PaymentStatus).map((s) => ({
+                value: s,
+                label: t(`portal.payment_${s}`, { defaultValue: s }),
+              }))}
+              value={filterPaymentStatus}
+              onChange={setFilterPaymentStatus}
+              clearable
+            />
+            {hasActiveFilters && (
+              <Button
+                variant="subtle"
+                color="gray"
+                leftSection={<IconX size={14} />}
+                onClick={clearFilters}
+                style={{ flexShrink: 0 }}
+              >
+                {t("clear_filters", "Clear")}
+              </Button>
+            )}
+          </Group>
+        </Stack>
       </Card>
 
       <Paper withBorder radius="md">

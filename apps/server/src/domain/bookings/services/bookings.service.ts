@@ -155,7 +155,7 @@ export class BookingsService {
     return booking;
   }
 
-  async findAll(filters: { studentId?: string; status?: BookingOpsStatus }): Promise<Booking[]> {
+  async findAll(filters: FindAllBookingsDto): Promise<Booking[]> {
     return this.bookingsRepository.findAll(filters);
   }
 
