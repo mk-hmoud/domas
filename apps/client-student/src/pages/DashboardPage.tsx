@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Badge,
   Box,
@@ -24,34 +25,44 @@ import {
   IconDoor,
   IconFileDownload,
   IconKey,
+  IconPin,
 } from '@tabler/icons-react';
 import {
+  Announcement,
   BookingOpsStatus,
   PaymentStatus,
   PortalSemester,
   StudentCurrentBooking,
 } from '@domas/ts-types';
-import { portalBookings, portalNotifications, portalSemesters } from '@domas/api-client';
+import {
+  portalAnnouncements,
+  portalBookings,
+  portalNotifications,
+  portalSemesters,
+} from '@domas/api-client';
 import { StudentNotification } from '@domas/ts-types';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
-function statusLabel(status: BookingOpsStatus): string {
-  switch (status) {
-    case BookingOpsStatus.PENDING_ACCOUNTING:
-      return 'Under Review';
-    case BookingOpsStatus.READY_FOR_CHECKIN:
-    case BookingOpsStatus.CONFIRMED:
-      return 'Ready for Check-In';
-    case BookingOpsStatus.ACTIVE:
-      return 'Active';
-    case BookingOpsStatus.REJECTED:
-      return 'Not Approved';
-    default:
-      return status;
-  }
+function useStatusLabel() {
+  const { t } = useTranslation();
+  return (status: BookingOpsStatus): string => {
+    switch (status) {
+      case BookingOpsStatus.PENDING_ACCOUNTING:
+        return t('portal.status_under_review');
+      case BookingOpsStatus.READY_FOR_CHECKIN:
+      case BookingOpsStatus.CONFIRMED:
+        return t('portal.status_ready_checkin');
+      case BookingOpsStatus.ACTIVE:
+        return t('portal.status_active');
+      case BookingOpsStatus.REJECTED:
+        return t('portal.status_not_approved');
+      default:
+        return status;
+    }
+  };
 }
 
 function statusColor(status: BookingOpsStatus): string {
@@ -72,6 +83,8 @@ function statusColor(status: BookingOpsStatus): string {
 
 function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const statusLabel = useStatusLabel();
   const paymentPending =
     booking.paymentStatus === PaymentStatus.PENDING ||
     booking.paymentStatus === PaymentStatus.PARTIAL;
@@ -82,22 +95,22 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
 
   const stats = [
     {
-      label: 'Status',
+      label: t('portal.stat_status'),
       value: statusLabel(booking.status),
       color: statusColor(booking.status),
       icon: IconDoor,
       onClick: () => navigate('/booking'),
     },
     {
-      label: 'Payment',
-      value: paymentPending ? 'Pending' : 'Paid',
+      label: t('portal.stat_payment'),
+      value: paymentPending ? t('portal.payment_pending') : t('portal.payment_paid'),
       color: paymentPending ? 'orange' : 'green',
       icon: IconCreditCard,
       onClick: () => navigate('/financial'),
     },
     {
-      label: 'Room',
-      value: `${booking.roomName} · Bed ${booking.bedLabel}`,
+      label: t('portal.stat_room'),
+      value: `${booking.roomName} · ${t('portal.bed_label', { label: booking.bedLabel })}`,
       color: 'blue',
       icon: IconBed,
       onClick: () => navigate('/booking'),
@@ -105,7 +118,7 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
     ...(booking.accessCardNumber
       ? [
           {
-            label: 'Access Card',
+            label: t('portal.stat_access_card'),
             value: `#${booking.accessCardNumber}`,
             color: 'grape',
             icon: IconKey,
@@ -115,7 +128,7 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
       : daysRemaining > 0
         ? [
             {
-              label: 'Days Remaining',
+              label: t('portal.stat_days_remaining'),
               value: String(daysRemaining),
               color: daysRemaining < 30 ? 'orange' : 'teal',
               icon: IconCalendarPlus,
@@ -170,6 +183,8 @@ function NoBookingCard({
   semesters: PortalSemester[];
   onApply: () => void;
 }) {
+  const { t } = useTranslation();
+
   if (semesters.length === 0) {
     return (
       <Paper withBorder radius="md" p="xl">
@@ -178,10 +193,10 @@ function NoBookingCard({
             <IconBed size={26} />
           </ThemeIcon>
           <Text fw={500} size="lg">
-            No open semesters
+            {t('portal.no_open_semesters')}
           </Text>
           <Text size="sm" c="dimmed" ta="center" maw={360}>
-            There are no accommodation periods currently open for applications. Check back later.
+            {t('portal.no_semesters_description')}
           </Text>
         </Stack>
       </Paper>
@@ -200,12 +215,12 @@ function NoBookingCard({
             {next.displayName}
           </Text>
           <Text size="sm" c="dimmed" mb="sm">
-            Accommodation applications are open
+            {t('portal.applications_open')}
           </Text>
           <Stack gap={4} mb="md">
             <Group gap="xs">
               <Text size="sm" c="dimmed" w={110}>
-                Semester period:
+                {t('portal.semester_period')}
               </Text>
               <Text size="sm">
                 {new Date(next.startDate).toLocaleDateString()} –{' '}
@@ -215,7 +230,7 @@ function NoBookingCard({
             {next.bookingEndDate && (
               <Group gap="xs">
                 <Text size="sm" c="dimmed" w={110}>
-                  Apply by:
+                  {t('portal.apply_by')}
                 </Text>
                 <Text size="sm" fw={500} c="orange">
                   {new Date(next.bookingEndDate).toLocaleDateString()}
@@ -224,7 +239,7 @@ function NoBookingCard({
             )}
             <Group gap="xs">
               <Text size="sm" c="dimmed" w={110}>
-                Deposit:
+                {t('portal.deposit_label')}
               </Text>
               <Text size="sm">
                 {next.depositAmountTry > 0
@@ -234,7 +249,7 @@ function NoBookingCard({
             </Group>
           </Stack>
           <Button leftSection={<IconCalendarPlus size={16} />} onClick={onApply}>
-            Apply Now
+            {t('portal.apply_now')}
           </Button>
         </Box>
       </Group>
@@ -245,13 +260,15 @@ function NoBookingCard({
 // ─── State B — Pending booking ────────────────────────────────────────────────
 
 function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
+  const { t } = useTranslation();
+  const statusLabel = useStatusLabel();
   return (
     <Paper withBorder radius="md" p="xl">
       <Stack gap="lg">
         <Group justify="space-between" align="flex-start">
           <Box>
             <Text fw={700} size="lg">
-              Your Application
+              {t('portal.your_application')}
             </Text>
             <Text size="sm" c="dimmed">
               {booking.semesterDisplayName}
@@ -263,10 +280,14 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
         </Group>
 
         {booking.status === BookingOpsStatus.REJECTED && (
-          <Paper withBorder p="sm" radius="sm" bg="red.0">
-            <Text size="sm" c="red.8">
-              Your application was not approved. Please contact the dormitory office for more
-              information.
+          <Paper
+            withBorder
+            p="sm"
+            radius="sm"
+            style={{ background: 'var(--mantine-color-red-light)' }}
+          >
+            <Text size="sm" c="red">
+              {t('portal.application_rejected_message')}
             </Text>
           </Paper>
         )}
@@ -275,12 +296,16 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
 
         {(booking.status === BookingOpsStatus.READY_FOR_CHECKIN ||
           booking.status === BookingOpsStatus.CONFIRMED) && (
-          <Paper withBorder p="sm" radius="sm" bg="teal.0">
+          <Paper
+            withBorder
+            p="sm"
+            radius="sm"
+            style={{ background: 'var(--mantine-color-teal-light)' }}
+          >
             <Group gap="xs">
-              <IconCheck size={16} color="var(--mantine-color-teal-7)" />
-              <Text size="sm" c="teal.8" fw={500}>
-                Your accommodation is approved. Present yourself at the dormitory office to check
-                in.
+              <IconCheck size={16} color="var(--mantine-color-teal-filled)" />
+              <Text size="sm" c="teal" fw={500}>
+                {t('portal.application_approved_message')}
               </Text>
             </Group>
           </Paper>
@@ -291,7 +316,8 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
             <IconBed size={14} />
           </ThemeIcon>
           <Text size="sm" c="dimmed">
-            {booking.locationPath} — {booking.roomName}, Bed {booking.bedLabel}
+            {booking.locationPath} — {booking.roomName},{' '}
+            {t('portal.bed_label', { label: booking.bedLabel })}
           </Text>
         </Group>
       </Stack>
@@ -308,6 +334,7 @@ function ActiveResidentCard({
   booking: StudentCurrentBooking;
   onViewBooking: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Paper withBorder radius="md" p="xl" style={{ borderColor: 'var(--mantine-color-green-4)' }}>
       <Stack gap="lg">
@@ -317,7 +344,7 @@ function ActiveResidentCard({
           </ThemeIcon>
           <Box>
             <Text fw={700} size="lg">
-              You are checked in
+              {t('portal.active_resident_title')}
             </Text>
             <Text size="sm" c="dimmed">
               {booking.semesterDisplayName}
@@ -328,7 +355,7 @@ function ActiveResidentCard({
         <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
           <Group gap="xs">
             <Text size="sm" c="dimmed" w={90}>
-              Location:
+              {t('portal.location_label')}
             </Text>
             <Text size="sm" fw={500}>
               {booking.locationPath}
@@ -336,16 +363,16 @@ function ActiveResidentCard({
           </Group>
           <Group gap="xs">
             <Text size="sm" c="dimmed" w={90}>
-              Room / Bed:
+              {t('portal.room_bed_label')}
             </Text>
             <Text size="sm" fw={500}>
-              {booking.roomName}, Bed {booking.bedLabel}
+              {booking.roomName}, {t('portal.bed_label', { label: booking.bedLabel })}
             </Text>
           </Group>
           {booking.accessCardNumber && (
             <Group gap="xs">
               <Text size="sm" c="dimmed" w={90}>
-                Access card:
+                {t('portal.access_card_label')}
               </Text>
               <Text size="sm" fw={500}>
                 #{booking.accessCardNumber}
@@ -354,7 +381,7 @@ function ActiveResidentCard({
           )}
           <Group gap="xs">
             <Text size="sm" c="dimmed" w={90}>
-              Check-in:
+              {t('portal.check_in_date_label')}
             </Text>
             <Text size="sm">
               {booking.checkedInAt ? new Date(booking.checkedInAt).toLocaleDateString() : '—'}
@@ -362,7 +389,7 @@ function ActiveResidentCard({
           </Group>
           <Group gap="xs">
             <Text size="sm" c="dimmed" w={90}>
-              Semester end:
+              {t('portal.semester_end_label')}
             </Text>
             <Text size="sm">{new Date(booking.endDate).toLocaleDateString()}</Text>
           </Group>
@@ -375,7 +402,7 @@ function ActiveResidentCard({
             leftSection={<IconDoor size={16} />}
             onClick={onViewBooking}
           >
-            View Full Details
+            {t('portal.view_full_details')}
           </Button>
           {booking.contractSigned && (
             <Button
@@ -383,10 +410,84 @@ function ActiveResidentCard({
               leftSection={<IconFileDownload size={16} />}
               onClick={() => portalBookings.downloadContract(booking.id)}
             >
-              Contract
+              {t('portal.contract')}
             </Button>
           )}
         </Group>
+      </Stack>
+    </Paper>
+  );
+}
+
+// ─── Announcements panel ──────────────────────────────────────────────────────
+
+function AnnouncementsPanel({ limit = 3 }: { limit?: number }) {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    portalAnnouncements
+      .getAll()
+      .then((all) => setItems(all.slice(0, limit)))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [limit]);
+
+  if (!isLoading && items.length === 0) return null;
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Group justify="space-between" mb="sm">
+        <Text fw={600} size="sm">
+          {t('portal.nav_announcements', { defaultValue: 'Announcements' })}
+        </Text>
+        <Text
+          size="xs"
+          c="blue"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate('/announcements')}
+        >
+          {t('portal.view_all')}
+        </Text>
+      </Group>
+
+      <Stack gap="xs">
+        {isLoading ? (
+          <>
+            <Skeleton height={56} radius="sm" />
+            <Skeleton height={56} radius="sm" />
+          </>
+        ) : (
+          items.map((item) => (
+            <Box
+              key={item.id}
+              p="xs"
+              style={{
+                borderRadius: 8,
+                background: item.pinned ? 'var(--mantine-color-orange-light)' : undefined,
+                borderLeft: item.pinned
+                  ? '3px solid var(--mantine-color-orange-4)'
+                  : '3px solid transparent',
+              }}
+            >
+              <Group gap={4} mb={2}>
+                {item.pinned && <IconPin size={11} color="var(--mantine-color-orange-filled)" />}
+                <Text size="sm" fw={600} lineClamp={1}>
+                  {item.title}
+                </Text>
+              </Group>
+              <Text size="xs" c="dimmed" lineClamp={2}>
+                {item.body}
+              </Text>
+              <Text size="xs" c="dimmed" mt={2}>
+                {item.createdByName && `${item.createdByName} · `}
+                {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString() : ''}
+              </Text>
+            </Box>
+          ))
+        )}
       </Stack>
     </Paper>
   );
@@ -396,6 +497,7 @@ function ActiveResidentCard({
 
 function NotificationsPanel({ limit = 5 }: { limit?: number }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [items, setItems] = useState<StudentNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -411,7 +513,7 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
     <Paper withBorder radius="md" p="md" style={{ height: '100%' }}>
       <Group justify="space-between" mb="sm">
         <Text fw={600} size="sm">
-          Recent Notifications
+          {t('portal.recent_notifications')}
         </Text>
         <Text
           size="xs"
@@ -419,7 +521,7 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
           style={{ cursor: 'pointer' }}
           onClick={() => navigate('/notifications')}
         >
-          View all
+          {t('portal.view_all')}
         </Text>
       </Group>
 
@@ -436,7 +538,7 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
               <IconBell size={18} />
             </ThemeIcon>
             <Text size="sm" c="dimmed">
-              No notifications yet
+              {t('portal.no_notifications')}
             </Text>
           </Box>
         ) : (
@@ -446,7 +548,7 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
               p="xs"
               style={{
                 borderRadius: 8,
-                background: !n.readAt ? 'var(--mantine-color-blue-0)' : undefined,
+                background: !n.readAt ? 'var(--mantine-color-blue-light)' : undefined,
                 borderLeft: !n.readAt
                   ? '3px solid var(--mantine-color-blue-4)'
                   : '3px solid transparent',
@@ -474,6 +576,7 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
 export function DashboardPage() {
   const { student } = useStudentAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [booking, setBooking] = useState<StudentCurrentBooking | null>(null);
   const [semesters, setSemesters] = useState<PortalSemester[]>([]);
@@ -503,7 +606,9 @@ export function DashboardPage() {
     <Stack gap="lg">
       {/* Greeting */}
       <Box>
-        <Title order={3}>Hello, {student?.firstName ?? 'Student'} 👋</Title>
+        <Title order={3}>
+          {t('portal.greeting', { name: student?.firstName ?? t('student') })}
+        </Title>
         <Text size="sm" c="dimmed">
           {new Date().toLocaleDateString(undefined, {
             weekday: 'long',
@@ -548,7 +653,10 @@ export function DashboardPage() {
             </Grid.Col>
 
             <Grid.Col span={{ base: 12, md: 5 }}>
-              <NotificationsPanel limit={6} />
+              <Stack gap="lg">
+                <AnnouncementsPanel limit={3} />
+                <NotificationsPanel limit={5} />
+              </Stack>
             </Grid.Col>
           </Grid>
         </>

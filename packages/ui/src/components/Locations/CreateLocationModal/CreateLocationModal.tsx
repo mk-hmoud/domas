@@ -101,6 +101,8 @@ export function CreateLocationModal({
   // Suggest next type based on parent or set initial values
   useEffect(() => {
     if (opened) {
+      setAutoCreateBeds(false);
+      setBedCount(3);
       if (initialValues) {
         form.setValues({
           name: initialValues.name,

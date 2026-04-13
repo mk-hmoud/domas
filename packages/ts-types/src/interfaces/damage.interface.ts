@@ -10,6 +10,7 @@ export interface DamageReport {
   manualCurrencyCode?: string;
   description: string;
   culpritIds?: string[];
+  culpritGuestStayIds?: string[];
   status: DamageStatus;
   reportedBy: string;
   reportedAt: string;
@@ -22,7 +23,8 @@ export interface DamageReport {
 export interface DamageLiability {
   id: string;
   damageReportId: string;
-  studentId: string;
+  studentId?: string;
+  guestStayId?: string;
   amount: number;
   currency: string;
   transactionId?: string;

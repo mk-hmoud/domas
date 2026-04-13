@@ -159,14 +159,33 @@ export function DamageDetailsDrawer({
                 <Table striped>
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>{t("student")}</Table.Th>
+                      <Table.Th>
+                        {t("culprit", { defaultValue: "Culprit" })}
+                      </Table.Th>
                       <Table.Th>{t("amount")}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {report.liabilities?.map((l) => (
                       <Table.Tr key={l.id}>
-                        <Table.Td>{l.studentName || l.studentId}</Table.Td>
+                        <Table.Td>
+                          {l.studentName || l.guestName ? (
+                            <>
+                              {l.studentName || l.guestName}
+                              {l.guestName && (
+                                <Text span size="xs" c="dimmed" ml={4}>
+                                  ({t("guest", { defaultValue: "Guest" })}
+                                  {l.guestStayCheckIn
+                                    ? ` · ${new Date(l.guestStayCheckIn).toLocaleDateString()}`
+                                    : ""}
+                                  )
+                                </Text>
+                              )}
+                            </>
+                          ) : (
+                            l.studentId || l.guestStayId
+                          )}
+                        </Table.Td>
                         <Table.Td>
                           {l.amount} {l.currency}
                         </Table.Td>

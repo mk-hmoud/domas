@@ -14,6 +14,7 @@ export * from "./enums/inventory-scope.enum";
 export * from "./enums/card-status.enum";
 export * from "./enums/card-action-type.enum";
 export * from "./enums/damage-status.enum";
+export * from "./enums/guest-stay-status.enum";
 export * from "./enums/contract-type.enum";
 
 export * from "./interfaces/user.interface";
@@ -30,6 +31,7 @@ export * from "./interfaces/inventory.interface";
 export * from "./interfaces/inventory-template.interface";
 export * from "./interfaces/access-card.interface";
 export * from "./interfaces/damage.interface";
+export * from "./interfaces/guest.interface";
 export * from "./interfaces/contract.interface";
 
 export * from "./dtos/login-credentials.dto";
@@ -64,6 +66,9 @@ export * from "./dtos/find-all-bookings.dto";
 export * from "./dtos/bulk-import.dto";
 export * from "./dtos/bulk-student.dto";
 export * from "./dtos/update-student-status.dto";
+export * from "./dtos/resolve-contacts.dto";
+export * from "./interfaces/announcement.interface";
+export * from "./dtos/announcement.dto";
 export type {
   UpdateGenderLockDto,
   UpdateGuestZoneDto,
@@ -92,5 +97,7 @@ export * from "./dtos/account.dto";
 export * from "./dtos/inventory.dto";
 export * from "./dtos/access-card.dto";
 export * from "./dtos/damage.dto";
+export * from "./dtos/guest.dto";
 export * from "./enums/undo-action-type.enum";
 export * from "./interfaces/portal.interface";
+export * from "./interfaces/stats.interface";

@@ -64,7 +64,7 @@ export class DamagesService {
         );
       }
 
-      // Validate Culprits
+      // Validate student culprits
       if (data.culpritIds && data.culpritIds.length > 0) {
         for (const studentId of data.culpritIds) {
           const student = await client.query(
@@ -79,6 +79,18 @@ export class DamagesService {
           );
           if (booking.rowCount === 0)
             throw new BadRequestException(`Student ${studentId} does not have an active booking`);
+        }
+      }
+
+      // Validate guest culprits
+      if (data.culpritGuestStayIds && data.culpritGuestStayIds.length > 0) {
+        for (const stayId of data.culpritGuestStayIds) {
+          const stay = await client.query(
+            "SELECT 1 FROM guest_stays WHERE id = $1 AND status IN ('confirmed', 'active')",
+            [stayId],
+          );
+          if (stay.rowCount === 0)
+            throw new NotFoundException(`Guest stay ${stayId} not found or not active`);
         }
       }
 
@@ -209,15 +221,26 @@ export class DamagesService {
       targetBookings = res.rows;
     }
 
+    // 1b. Resolve guest culprits
+    let targetGuestStays: any[] = [];
+    if (report.culpritGuestStayIds && report.culpritGuestStayIds.length > 0) {
+      const res = await client.query(`SELECT id FROM guest_stays WHERE id = ANY($1)`, [
+        report.culpritGuestStayIds,
+      ]);
+      targetGuestStays = res.rows;
+    }
+
     this.logger.log(
-      { reportId: report.id, studentCount: targetBookings.length },
-      'Target students identified',
+      {
+        reportId: report.id,
+        studentCount: targetBookings.length,
+        guestCount: targetGuestStays.length,
+      },
+      'Target culprits identified',
     );
 
-    if (targetBookings.length === 0) {
-      throw new BadRequestException(
-        'No active students found at this location to attribute damage to.',
-      );
+    if (targetBookings.length === 0 && targetGuestStays.length === 0) {
+      throw new BadRequestException('No active students or guests found to attribute damage to.');
     }
 
     // 2. Fetch LIVE Pricing from Catalog or Report
@@ -259,7 +282,7 @@ export class DamagesService {
     );
 
     // 4. Create Liabilities
-    const splitDivisor = targetBookings.length;
+    const splitDivisor = targetBookings.length + targetGuestStays.length;
 
     for (const b of targetBookings) {
       const isTR = b.nationality_code === 'TR';
@@ -274,6 +297,18 @@ export class DamagesService {
           studentId: b.student_id,
           amount: studentAmount,
           currency: studentCurrency,
+        },
+        client,
+      );
+    }
+
+    for (const gs of targetGuestStays) {
+      await this.repository.createLiability(
+        {
+          damageReportId: report.id,
+          guestStayId: gs.id,
+          amount: currentPriceTry / splitDivisor,
+          currency: 'TRY',
         },
         client,
       );

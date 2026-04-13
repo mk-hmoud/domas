@@ -8,6 +8,7 @@ import {
   BulkTransferBookingDto,
   ApproveFinancialsDto,
   BookingOpsStatus,
+  PaymentStatus,
   CheckInBookingDto,
   CheckOutBookingDto,
 } from "@domas/ts-types";
@@ -21,6 +22,10 @@ export const bookings = {
   findAll: async (filters?: {
     studentId?: string;
     status?: BookingOpsStatus;
+    semesterId?: number;
+    paymentStatus?: PaymentStatus;
+    locationId?: number;
+    bedId?: number;
   }): Promise<Booking[]> => {
     const response = await apiClient.get<Booking[]>("/bookings", {
       params: filters,

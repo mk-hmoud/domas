@@ -10,6 +10,7 @@ export class DamageReport {
   manualCurrencyCode?: string;
   description!: string;
   culpritIds?: string[];
+  culpritGuestStayIds?: string[];
   status!: DamageStatus;
   reportedBy!: string;
   reportedAt!: Date;

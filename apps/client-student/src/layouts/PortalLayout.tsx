@@ -16,6 +16,7 @@ import {
   UnstyledButton,
 } from '@domas/ui';
 import { ThemeToggle, LanguageSwitcher } from '@domas/ui';
+import { useTranslation } from 'react-i18next';
 import {
   IconBell,
   IconBed,
@@ -23,6 +24,7 @@ import {
   IconCreditCard,
   IconHome2,
   IconLogout,
+  IconSpeakerphone,
   IconUser,
 } from '@tabler/icons-react';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
@@ -30,12 +32,13 @@ import { useNotifications } from '../contexts/NotificationsContext';
 
 // ─── Navigation items ─────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Home', icon: IconHome2 },
-  { path: '/booking', label: 'My Room', icon: IconBed },
-  { path: '/apply', label: 'Apply', icon: IconCalendarPlus },
-  { path: '/notifications', label: 'Notifications', icon: IconBell },
-  { path: '/financial', label: 'Financial', icon: IconCreditCard },
+const NAV_ITEM_KEYS = [
+  { path: '/dashboard', labelKey: 'portal.nav_home', icon: IconHome2 },
+  { path: '/booking', labelKey: 'portal.nav_my_room', icon: IconBed },
+  { path: '/apply', labelKey: 'portal.nav_apply', icon: IconCalendarPlus },
+  { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
+  { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
+  { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
 ];
 
 // ─── Desktop sidebar nav ──────────────────────────────────────────────────────
@@ -45,6 +48,7 @@ function SidebarNav() {
   const { student, logout } = useStudentAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await logout();
@@ -55,9 +59,9 @@ function SidebarNav() {
     <Stack h="100%" justify="space-between" py="sm" px="xs">
       <Stack gap={2}>
         <Text size="xs" fw={600} c="dimmed" px="xs" mb={4} tt="uppercase">
-          Menu
+          {t('portal.nav_menu')}
         </Text>
-        {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+        {NAV_ITEM_KEYS.map(({ path, labelKey, icon: Icon }) => {
           const isNotif = path === '/notifications';
           const active = location.pathname === path;
           return (
@@ -65,7 +69,7 @@ function SidebarNav() {
               key={path}
               component={RouterNavLink}
               to={path}
-              label={label}
+              label={t(labelKey)}
               active={active}
               leftSection={
                 isNotif && unreadCount > 0 ? (
@@ -96,7 +100,7 @@ function SidebarNav() {
         <NavLink
           component={RouterNavLink}
           to="/profile"
-          label="Profile"
+          label={t('portal.nav_profile')}
           active={location.pathname === '/profile'}
           leftSection={
             <ThemeIcon variant="transparent" size="sm">
@@ -139,6 +143,7 @@ function SidebarNav() {
 function BottomTabBar() {
   const location = useLocation();
   const { unreadCount } = useNotifications();
+  const { t } = useTranslation();
 
   return (
     <Box
@@ -157,7 +162,7 @@ function BottomTabBar() {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+      {NAV_ITEM_KEYS.map(({ path, labelKey, icon: Icon }) => {
         const isNotif = path === '/notifications';
         const active = location.pathname === path;
         return (
@@ -191,7 +196,7 @@ function BottomTabBar() {
             ) : (
               <Icon size={22} />
             )}
-            <span>{label}</span>
+            <span>{t(labelKey)}</span>
           </RouterNavLink>
         );
       })}
@@ -205,6 +210,7 @@ function TopBar() {
   const { student, logout } = useStudentAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await logout();
@@ -267,7 +273,7 @@ function TopBar() {
                   to="/profile"
                   leftSection={<IconUser size={14} />}
                 >
-                  Profile
+                  {t('portal.nav_profile')}
                 </Menu.Item>
                 <Menu.Divider />
                 <Menu.Item
@@ -275,7 +281,7 @@ function TopBar() {
                   leftSection={<IconLogout size={14} />}
                   onClick={handleLogout}
                 >
-                  Sign out
+                  {t('portal.sign_out')}
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>

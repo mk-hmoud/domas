@@ -12,6 +12,7 @@ export interface UpdateStudentDto {
   department?: string;
   email?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
   userId?: string;
   isActive?: boolean;
 }

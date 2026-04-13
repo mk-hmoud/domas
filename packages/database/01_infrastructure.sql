@@ -42,6 +42,10 @@ DO $$ BEGIN
     CREATE TYPE inventory_scope AS ENUM ('bed', 'room', 'shared');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+    CREATE TYPE guest_stay_status AS ENUM ('confirmed', 'active', 'completed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- =============================================
 -- EXTENSIONS
 -- =============================================

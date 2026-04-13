@@ -18,3 +18,5 @@ export * from "./pages/SharedCheckInPage";
 export * from "./pages/SharedCheckOutPage";
 export * from "./pages/SharedAccessCardsPage";
 export * from "./pages/SharedDamagesPage";
+export * from "./pages/SharedAnnouncementsPage";
+export * from "./pages/SharedGuestStaysPage";

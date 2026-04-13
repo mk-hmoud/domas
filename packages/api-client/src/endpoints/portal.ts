@@ -11,6 +11,7 @@ import {
   StudentLoginDto,
   UpdateStudentContactDto,
   StudentCreateBookingDto,
+  Announcement,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -74,7 +75,11 @@ export const portalBookings = {
     const response = await apiClient.get<StudentCurrentBooking | null>(
       "/portal/bookings/current",
     );
-    return response.data;
+    // NestJS serializes null as an empty body rather than JSON null;
+    // normalize any non-object value to null so callers get a clean null.
+    return response.data && typeof response.data === "object"
+      ? response.data
+      : null;
   },
 
   getById: async (id: string): Promise<StudentCurrentBooking> => {
@@ -159,10 +164,10 @@ export const portalNotifications = {
    * Returns the EventSource instance — caller is responsible for closing it.
    */
   stream: (
-    baseUrl: string,
+    baseURL: string,
     onMessage: (notification: StudentNotification) => void,
   ): EventSource => {
-    const es = new EventSource(`${baseUrl}/portal/notifications/stream`, {
+    const es = new EventSource(`${baseURL}/portal/notifications/stream`, {
       withCredentials: true,
     });
     es.onmessage = (event) => {
@@ -174,5 +179,16 @@ export const portalNotifications = {
       }
     };
     return es;
+  },
+};
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+
+export const portalAnnouncements = {
+  getAll: async (): Promise<Announcement[]> => {
+    const response = await apiClient.get<Announcement[]>(
+      "/portal/announcements",
+    );
+    return response.data;
   },
 };

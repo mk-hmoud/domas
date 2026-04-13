@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Badge,
@@ -32,25 +33,30 @@ import { portalBookings } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
 
-function paymentLabel(status: PaymentStatus): { label: string; color: string } {
-  switch (status) {
-    case PaymentStatus.PAID:
-      return { label: 'Paid', color: 'green' };
-    case PaymentStatus.PARTIAL:
-      return { label: 'Partially Paid', color: 'orange' };
-    case PaymentStatus.PENDING:
-      return { label: 'Pending', color: 'red' };
-    case PaymentStatus.FAILED:
-      return { label: 'Failed', color: 'red' };
-    case PaymentStatus.REFUNDED:
-      return { label: 'Refunded', color: 'gray' };
-    default:
-      return { label: status, color: 'gray' };
-  }
+function usePaymentLabel() {
+  const { t } = useTranslation();
+  return (status: PaymentStatus): { label: string; color: string } => {
+    switch (status) {
+      case PaymentStatus.PAID:
+        return { label: t('portal.payment_paid'), color: 'green' };
+      case PaymentStatus.PARTIAL:
+        return { label: t('portal.payment_partial'), color: 'orange' };
+      case PaymentStatus.PENDING:
+        return { label: t('portal.payment_pending'), color: 'red' };
+      case PaymentStatus.FAILED:
+        return { label: t('portal.payment_failed'), color: 'red' };
+      case PaymentStatus.REFUNDED:
+        return { label: t('portal.payment_refunded'), color: 'gray' };
+      default:
+        return { label: status, color: 'gray' };
+    }
+  };
 }
 
 export function BookingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const paymentLabel = usePaymentLabel();
   const { booking, isLoading } = useCurrentBooking();
 
   useEffect(() => {
@@ -82,10 +88,19 @@ export function BookingPage() {
   const isRejected = booking.status === BookingOpsStatus.REJECTED;
   const pmtInfo = paymentLabel(booking.paymentStatus);
 
+  const statusBadgeLabel = isActive
+    ? t('portal.status_active')
+    : isRejected
+      ? t('portal.status_not_approved')
+      : booking.status === BookingOpsStatus.READY_FOR_CHECKIN ||
+          booking.status === BookingOpsStatus.CONFIRMED
+        ? t('portal.status_ready_checkin')
+        : t('portal.status_under_review');
+
   return (
     <Stack gap="lg">
       <Box>
-        <Title order={3}>My Booking</Title>
+        <Title order={3}>{t('portal.my_booking')}</Title>
         <Text size="sm" c="dimmed">
           {booking.semesterDisplayName}
         </Text>
@@ -98,21 +113,14 @@ export function BookingPage() {
             <Stack gap="md">
               <Group justify="space-between">
                 <Text fw={700} size="sm">
-                  Application Status
+                  {t('portal.application_status')}
                 </Text>
                 <Badge
                   color={isRejected ? 'red' : isActive ? 'green' : 'blue'}
                   variant="light"
                   radius="sm"
                 >
-                  {isActive
-                    ? 'Active'
-                    : isRejected
-                      ? 'Not Approved'
-                      : booking.status === BookingOpsStatus.READY_FOR_CHECKIN ||
-                          booking.status === BookingOpsStatus.CONFIRMED
-                        ? 'Ready for Check-In'
-                        : 'Under Review'}
+                  {statusBadgeLabel}
                 </Badge>
               </Group>
               <BookingStatusStepper status={booking.status} />
@@ -125,8 +133,7 @@ export function BookingPage() {
           <Stack gap="md">
             {isRejected && (
               <Alert icon={<IconInfoCircle size={16} />} color="red" radius="md">
-                Your application was not approved. Please contact the dormitory office for more
-                information.
+                {t('portal.application_rejected_message')}
               </Alert>
             )}
 
@@ -135,10 +142,10 @@ export function BookingPage() {
                 <Tabs defaultValue="details" radius={0}>
                   <Tabs.List px="md" pt="xs">
                     <Tabs.Tab value="details" leftSection={<IconBed size={14} />}>
-                      Details
+                      {t('portal.details_tab')}
                     </Tabs.Tab>
                     <Tabs.Tab value="financial" leftSection={<IconReceipt size={14} />}>
-                      Financial
+                      {t('portal.financial_tab')}
                     </Tabs.Tab>
                   </Tabs.List>
 
@@ -158,10 +165,11 @@ export function BookingPage() {
                           </ThemeIcon>
                           <Box>
                             <Text size="xs" c="dimmed">
-                              Room / Bed
+                              {t('portal.room_bed')}
                             </Text>
                             <Text size="sm" fw={500}>
-                              {booking.roomName} — Bed {booking.bedLabel}
+                              {booking.roomName} —{' '}
+                              {t('portal.bed_label', { label: booking.bedLabel })}
                             </Text>
                             <Text size="xs" c="dimmed">
                               {booking.locationPath}
@@ -181,7 +189,7 @@ export function BookingPage() {
                           </ThemeIcon>
                           <Box>
                             <Text size="xs" c="dimmed">
-                              Period
+                              {t('portal.period')}
                             </Text>
                             <Text size="sm">
                               {new Date(booking.startDate).toLocaleDateString()} –{' '}
@@ -205,7 +213,7 @@ export function BookingPage() {
                             </ThemeIcon>
                             <Box>
                               <Text size="xs" c="dimmed">
-                                Access Card
+                                {t('portal.access_card')}
                               </Text>
                               <Text size="sm" fw={500}>
                                 #{booking.accessCardNumber}
@@ -227,7 +235,7 @@ export function BookingPage() {
                             </ThemeIcon>
                             <Box>
                               <Text size="xs" c="dimmed">
-                                Checked In
+                                {t('portal.checked_in_label')}
                               </Text>
                               <Text size="sm">
                                 {new Date(booking.checkedInAt).toLocaleDateString()}
@@ -239,7 +247,9 @@ export function BookingPage() {
                         {booking.checkedOutAt && (
                           <Alert icon={<IconDoor size={14} />} color="gray" radius="md" p="xs">
                             <Text size="xs">
-                              Checked out: {new Date(booking.checkedOutAt).toLocaleDateString()}
+                              {t('portal.checked_out_label', {
+                                date: new Date(booking.checkedOutAt).toLocaleDateString(),
+                              })}
                             </Text>
                           </Alert>
                         )}
@@ -256,7 +266,7 @@ export function BookingPage() {
                             <IconCreditCard size={12} />
                           </ThemeIcon>
                           <Text fw={600} size="sm">
-                            Payment Status
+                            {t('portal.payment_status')}
                           </Text>
                         </Group>
                         <Badge color={pmtInfo.color} variant="light" radius="sm">
@@ -268,7 +278,7 @@ export function BookingPage() {
 
                       <Group justify="space-between">
                         <Text size="sm" c="dimmed">
-                          Deposit:
+                          {t('portal.deposit')}
                         </Text>
                         <Text size="sm" fw={500}>
                           {booking.depositAmountTry > 0
@@ -280,7 +290,7 @@ export function BookingPage() {
                       {booking.paymentDeadlineDate && (
                         <Group justify="space-between">
                           <Text size="sm" c="dimmed">
-                            Payment deadline:
+                            {t('portal.payment_deadline')}
                           </Text>
                           <Text size="sm" c="orange">
                             {new Date(booking.paymentDeadlineDate).toLocaleDateString()}
@@ -297,7 +307,7 @@ export function BookingPage() {
                           leftSection={<IconCreditCard size={14} />}
                           onClick={() => navigate('/financial')}
                         >
-                          View all transactions
+                          {t('portal.view_all_transactions')}
                         </Button>
                         {booking.contractSigned && (
                           <Button
@@ -306,7 +316,7 @@ export function BookingPage() {
                             leftSection={<IconFileDownload size={14} />}
                             onClick={() => portalBookings.downloadContract(booking.id)}
                           >
-                            Download Contract
+                            {t('download_contract')}
                           </Button>
                         )}
                       </Group>

@@ -19,6 +19,9 @@ import { DamagesModule } from './domain/damages/damages.module';
 import { ImportsModule } from './domain/imports/imports.module';
 import { StudentPortalModule } from './domain/student-portal/student-portal.module';
 import { NotificationsModule } from './domain/notifications/notifications.module';
+import { AnnouncementsModule } from './domain/announcements/announcements.module';
+import { GuestsModule } from './domain/guests/guests.module';
+import { StatsModule } from './domain/stats/stats.module';
 
 @Module({
   imports: [
@@ -42,6 +45,9 @@ import { NotificationsModule } from './domain/notifications/notifications.module
     ImportsModule,
     StudentPortalModule,
     NotificationsModule,
+    AnnouncementsModule,
+    GuestsModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

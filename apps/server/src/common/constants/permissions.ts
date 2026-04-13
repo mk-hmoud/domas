@@ -56,6 +56,15 @@ export const PERMISSIONS = {
   // Undo
   UNDO_ALL: 'undo.all',
   UNDO_OWN: 'undo.own',
+
+  // Messaging
+  MESSAGING_SEND: 'messaging.send',
+
+  // Announcements
+  ANNOUNCEMENTS_MANAGE: 'announcements.manage',
+
+  // Guests
+  GUESTS_MANAGE: 'guests.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

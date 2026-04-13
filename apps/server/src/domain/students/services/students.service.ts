@@ -14,7 +14,9 @@ import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
+import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { Student } from '../entities/student.entity';
+import { ResolvedContact } from '../repositories/students.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
@@ -161,6 +163,10 @@ export class StudentsService {
     await this.db.transaction(async (client) => {
       await this.studentsRepository.updateStatusMany(ids, isActive, client);
     }, context);
+  }
+
+  async resolveContacts(dto: ResolveContactsDto): Promise<ResolvedContact[]> {
+    return this.studentsRepository.resolveContacts(dto);
   }
 
   async updateStatus(id: string, isActive: boolean, context: AuditUserContext): Promise<Student> {

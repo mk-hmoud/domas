@@ -1,6 +1,7 @@
 import { Box, Group, Stack, Text, ThemeIcon } from '@domas/ui';
 import { IconCheck, IconClockHour4, IconDoor, IconFileText, IconX } from '@tabler/icons-react';
 import { BookingOpsStatus } from '@domas/ts-types';
+import { useTranslation } from 'react-i18next';
 
 type StepStatus = 'done' | 'active' | 'pending' | 'error';
 
@@ -72,8 +73,13 @@ function StepItem({ step, isLast }: { step: Step; isLast: boolean }) {
   );
 }
 
-function buildSteps(status: BookingOpsStatus): Step[] {
-  // Simple ordered state machine
+interface BookingStatusStepperProps {
+  status: BookingOpsStatus;
+}
+
+export function BookingStatusStepper({ status }: BookingStatusStepperProps) {
+  const { t } = useTranslation();
+
   const order: BookingOpsStatus[] = [
     BookingOpsStatus.PENDING_ACCOUNTING,
     BookingOpsStatus.READY_FOR_CHECKIN,
@@ -86,13 +92,13 @@ function buildSteps(status: BookingOpsStatus): Step[] {
 
   const steps: Step[] = [
     {
-      label: 'Application Submitted',
-      description: 'Your request has been received.',
-      status: 'done', // always done once a booking exists
+      label: t('portal.stepper_submitted'),
+      description: t('portal.stepper_submitted_desc'),
+      status: 'done',
     },
     {
-      label: 'Under Review',
-      description: 'Accounting office is reviewing your application.',
+      label: t('portal.stepper_under_review'),
+      description: t('portal.stepper_under_review_desc'),
       status:
         status === BookingOpsStatus.REJECTED
           ? 'error'
@@ -103,8 +109,8 @@ function buildSteps(status: BookingOpsStatus): Step[] {
               : 'pending',
     },
     {
-      label: 'Approved',
-      description: 'Your accommodation has been approved. Proceed to check-in.',
+      label: t('portal.stepper_approved'),
+      description: t('portal.stepper_approved_desc'),
       status:
         status === BookingOpsStatus.REJECTED
           ? 'pending'
@@ -115,8 +121,8 @@ function buildSteps(status: BookingOpsStatus): Step[] {
               : 'pending',
     },
     {
-      label: 'Checked In',
-      description: 'You are a current resident.',
+      label: t('portal.stepper_checked_in'),
+      description: t('portal.stepper_checked_in_desc'),
       status:
         status === BookingOpsStatus.REJECTED
           ? 'pending'
@@ -128,15 +134,6 @@ function buildSteps(status: BookingOpsStatus): Step[] {
     },
   ];
 
-  return steps;
-}
-
-interface BookingStatusStepperProps {
-  status: BookingOpsStatus;
-}
-
-export function BookingStatusStepper({ status }: BookingStatusStepperProps) {
-  const steps = buildSteps(status);
   return (
     <Stack gap={0}>
       {steps.map((step, i) => (

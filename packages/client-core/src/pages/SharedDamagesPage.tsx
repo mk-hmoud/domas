@@ -12,11 +12,17 @@ import {
 } from "@mantine/core";
 import { IconPlus, IconListSearch, IconHistory } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { damages, locations, students } from "@domas/api-client";
+import {
+  damages,
+  guestStays as guestStaysApi,
+  locations,
+  students,
+} from "@domas/api-client";
 import {
   DamageReport,
   CreateDamageReportDto,
   DamageStatus,
+  GuestStay,
   Location,
   Student,
 } from "@domas/ts-types";
@@ -54,16 +60,21 @@ export function SharedDamagesPage() {
   // Lists for mapping
   const [locationList, setLocationList] = useState<Location[]>([]);
   const [studentList, setStudentList] = useState<Student[]>([]);
+  const [activeGuestStays, setActiveGuestStays] = useState<GuestStay[]>([]);
 
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [locationsRes, studentsRes] = await Promise.all([
-        locations.findAll({ limit: 1000 }),
-        students.findAll({ limit: 1000 }),
-      ]);
+      const [locationsRes, studentsRes, activeStays, confirmedStays] =
+        await Promise.all([
+          locations.findAll({ limit: 1000 }),
+          students.findAll({ limit: 1000 }),
+          guestStaysApi.findAll({ status: "active" }),
+          guestStaysApi.findAll({ status: "confirmed" }),
+        ]);
       setLocationList(locationsRes.data);
       setStudentList(studentsRes.data);
+      setActiveGuestStays([...activeStays, ...confirmedStays]);
       await fetchReports(locationsRes.data, studentsRes.data);
     } catch (error) {
       notifications.show({
@@ -87,13 +98,23 @@ export function SharedDamagesPage() {
       // Note: We might need to handle cases where damage is linked to a bed ID via snapshot
       // but for basic listing we enrich locationName.
 
-      const enriched = res.map((r) => ({
-        ...r,
-        locationName: locMap.get(r.locationId) || r.locationId,
-        culpritNames: r.culpritIds
-          ?.map((id: string) => studMap.get(id) || id)
-          .join(", "),
-      }));
+      const enriched = res.map((r) => {
+        const studentNames = (r.culpritIds ?? []).map(
+          (id: string) => studMap.get(id) || id,
+        );
+        const guestNames = (r.culpritGuestStayIds ?? []).map((id: string) => {
+          const stay = activeGuestStays.find((gs) => gs.id === id);
+          return stay
+            ? `${stay.guest.firstName} ${stay.guest.lastName} (guest)`
+            : id;
+        });
+        const allNames = [...studentNames, ...guestNames];
+        return {
+          ...r,
+          locationName: locMap.get(r.locationId) || r.locationId,
+          culpritNames: allNames.length > 0 ? allNames.join(", ") : undefined,
+        };
+      });
 
       setReports(enriched);
     } catch (error) {
@@ -140,8 +161,24 @@ export function SharedDamagesPage() {
 
       const enrichedLiabilities = details.liabilities.map((l) => ({
         ...l,
-        studentName: studMap.get(l.studentId) || l.studentId,
+        studentName: l.studentId
+          ? studMap.get(l.studentId) || l.studentId
+          : undefined,
+        // guestName, guestStayCheckIn, guestStayCheckOut already returned by the server
       }));
+
+      const studentCulpritNames = (details.culpritIds ?? []).map(
+        (id: string) => studMap.get(id) || id,
+      );
+      const guestCulpritNames = (details.culpritGuestStayIds ?? []).map(
+        (id: string) => {
+          const stay = activeGuestStays.find((gs) => gs.id === id);
+          return stay
+            ? `${stay.guest.firstName} ${stay.guest.lastName} (guest)`
+            : id;
+        },
+      );
+      const allCulpritNames = [...studentCulpritNames, ...guestCulpritNames];
 
       setSelectedReport({
         ...details,
@@ -149,11 +186,7 @@ export function SharedDamagesPage() {
         locationName:
           locMap.get(details.locationId) || details.locationId.toString(),
         culpritNames:
-          details.culpritIds && details.culpritIds.length > 0
-            ? details.culpritIds
-                .map((id: string) => studMap.get(id) || id)
-                .join(", ")
-            : undefined,
+          allCulpritNames.length > 0 ? allCulpritNames.join(", ") : undefined,
       });
       setDrawerOpened(true);
     } catch (error) {
@@ -276,6 +309,7 @@ export function SharedDamagesPage() {
         onClose={() => setModalOpened(false)}
         onSubmit={handleCreateReport}
         students={studentList}
+        guestStays={activeGuestStays}
         loading={actionLoading}
       />
 

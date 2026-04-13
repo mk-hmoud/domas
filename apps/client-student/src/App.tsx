@@ -8,6 +8,7 @@ import { BookingPage } from './pages/BookingPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { FinancialPage } from './pages/FinancialPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { AnnouncementsPage } from './pages/AnnouncementsPage';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="apply" element={<ApplyPage />} />
           <Route path="booking" element={<BookingPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="financial" element={<FinancialPage />} />
           <Route path="profile" element={<ProfilePage />} />

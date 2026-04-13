@@ -115,7 +115,6 @@ export type NotificationTypeValue =
 
 export interface StudentNotification {
   id: string;
-  studentId: string;
   type: NotificationTypeValue;
   title: string;
   body: string;

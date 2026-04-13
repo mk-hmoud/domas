@@ -20,14 +20,16 @@ export class DamagesRepository {
   ): Promise<DamageReport> {
     const query = `
       INSERT INTO damage_reports (
-        location_id, snapshot_id, catalog_id, manual_cost_try, manual_cost_foreign, manual_currency_code, description, reported_by, culprit_ids, status
+        location_id, snapshot_id, catalog_id, manual_cost_try, manual_cost_foreign, manual_currency_code,
+        description, reported_by, culprit_ids, culprit_guest_stay_ids, status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
       RETURNING id, location_id as "locationId", snapshot_id as "snapshotId", catalog_id as "catalogId",
                 manual_cost_try as "manualCostTry", manual_cost_foreign as "manualCostForeign",
                 manual_currency_code as "manualCurrencyCode",
                 description, status, reported_by as "reportedBy", reported_at as "reportedAt",
-                culprit_ids as "culpritIds", created_at as "createdAt", updated_at as "updatedAt"
+                culprit_ids as "culpritIds", culprit_guest_stay_ids as "culpritGuestStayIds",
+                created_at as "createdAt", updated_at as "updatedAt"
     `;
     const values = [
       data.locationId,
@@ -39,6 +41,7 @@ export class DamagesRepository {
       data.description,
       data.reportedBy,
       data.culpritIds || null,
+      data.culpritGuestStayIds?.length ? data.culpritGuestStayIds : null,
     ];
 
     const result = await this.getClient(client).query(query, values);
@@ -46,22 +49,31 @@ export class DamagesRepository {
   }
 
   async createLiability(
-    data: {
-      damageReportId: string;
-      studentId: string;
-      amount: number;
-      currency: string;
-    },
+    data: (
+      | { damageReportId: string; studentId: string; guestStayId?: never }
+      | { damageReportId: string; guestStayId: string; studentId?: never }
+    ) & { amount: number; currency: string },
     client?: PoolClient,
   ): Promise<DamageLiability> {
-    const query = `
-      INSERT INTO damage_liabilities (damage_report_id, student_id, amount, currency)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, damage_report_id as "damageReportId", student_id as "studentId",
-                amount, currency, transaction_id as "transactionId",
-                created_at as "createdAt", updated_at as "updatedAt"
-    `;
-    const values = [data.damageReportId, data.studentId, data.amount, data.currency];
+    const isGuest = !!data.guestStayId;
+    const query = isGuest
+      ? `INSERT INTO damage_liabilities (damage_report_id, guest_stay_id, amount, currency)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, damage_report_id as "damageReportId", guest_stay_id as "guestStayId",
+                   amount, currency, transaction_id as "transactionId",
+                   created_at as "createdAt", updated_at as "updatedAt"`
+      : `INSERT INTO damage_liabilities (damage_report_id, student_id, amount, currency)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, damage_report_id as "damageReportId", student_id as "studentId",
+                   amount, currency, transaction_id as "transactionId",
+                   created_at as "createdAt", updated_at as "updatedAt"`;
+
+    const values = [
+      data.damageReportId,
+      isGuest ? data.guestStayId : data.studentId,
+      data.amount,
+      data.currency,
+    ];
 
     const result = await this.getClient(client).query(query, values);
     return new DamageLiability(result.rows[0]);
@@ -103,6 +115,7 @@ export class DamagesRepository {
              dr.reported_by as "reportedBy", dr.reported_at as "reportedAt",
              dr.reviewed_by as "reviewedBy", dr.reviewed_at as "reviewedAt",
              dr.culprit_ids as "culpritIds",
+             dr.culprit_guest_stay_ids as "culpritGuestStayIds",
              dr.created_at as "createdAt", dr.updated_at as "updatedAt",
              l.name as "locationName",
              u.first_name || ' ' || u.last_name as "reportedByName",
@@ -131,6 +144,7 @@ export class DamagesRepository {
              dr.reported_by as "reportedBy", dr.reported_at as "reportedAt",
              dr.reviewed_by as "reviewedBy", dr.reviewed_at as "reviewedAt",
              dr.culprit_ids as "culpritIds",
+             dr.culprit_guest_stay_ids as "culpritGuestStayIds",
              dr.created_at as "createdAt", dr.updated_at as "updatedAt",
              l.name as "locationName",
              u.first_name || ' ' || u.last_name as "reportedByName",
@@ -176,11 +190,25 @@ export class DamagesRepository {
 
   async findLiabilitiesByReport(reportId: string): Promise<DamageLiability[]> {
     const query = `
-      SELECT id, damage_report_id as "damageReportId", student_id as "studentId",
-             amount, currency, transaction_id as "transactionId",
-             created_at as "createdAt", updated_at as "updatedAt"
-      FROM damage_liabilities
-      WHERE damage_report_id = $1
+      SELECT
+        dl.id,
+        dl.damage_report_id    AS "damageReportId",
+        dl.student_id          AS "studentId",
+        dl.guest_stay_id       AS "guestStayId",
+        dl.amount,
+        dl.currency,
+        dl.transaction_id      AS "transactionId",
+        dl.created_at          AS "createdAt",
+        dl.updated_at          AS "updatedAt",
+        s.first_name || ' ' || s.last_name AS "studentName",
+        g.first_name || ' ' || g.last_name AS "guestName",
+        gs.check_in_date       AS "guestStayCheckIn",
+        gs.check_out_date      AS "guestStayCheckOut"
+      FROM damage_liabilities dl
+      LEFT JOIN students s  ON s.id  = dl.student_id
+      LEFT JOIN guest_stays gs ON gs.id = dl.guest_stay_id
+      LEFT JOIN guests g    ON g.id  = gs.guest_id
+      WHERE dl.damage_report_id = $1
     `;
     const result = await this.db.query(query, [reportId]);
     return result.rows.map((r) => new DamageLiability(r));

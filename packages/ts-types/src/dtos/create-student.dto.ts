@@ -12,5 +12,6 @@ export interface CreateStudentDto {
   department: string;
   email?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
   userId?: string;
 }

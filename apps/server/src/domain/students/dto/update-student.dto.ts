@@ -59,6 +59,10 @@ export class UpdateStudentDto {
   @IsOptional()
   phoneNumber?: string;
 
+  @IsString()
+  @IsOptional()
+  whatsappNumber?: string;
+
   @IsUUID()
   @IsOptional()
   userId?: string;

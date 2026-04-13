@@ -39,3 +39,4 @@ export * from "./components/Damages/DamageDetailsDrawer";
 
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";
+export * from "./components/Dashboard/StatCard";

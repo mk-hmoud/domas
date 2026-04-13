@@ -6,6 +6,7 @@ import {
   IconTrash,
   IconCheck,
   IconUserOff,
+  IconBrandWhatsapp,
 } from "@tabler/icons-react";
 import { Student, COUNTRIES } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
@@ -119,6 +120,24 @@ export function StudentsTable({
                   ? t("deactivate", { defaultValue: "Deactivate" })
                   : t("activate", { defaultValue: "Activate" })}
               </Menu.Item>
+              {student.whatsappNumber && (
+                <>
+                  <Menu.Divider />
+                  <Menu.Item
+                    color="green"
+                    leftSection={<IconBrandWhatsapp size={14} />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(
+                        `https://wa.me/${student.whatsappNumber!.replace(/\D/g, "")}`,
+                        "_blank",
+                      );
+                    }}
+                  >
+                    {t("whatsapp", { defaultValue: "WhatsApp" })}
+                  </Menu.Item>
+                </>
+              )}
               <Menu.Divider />
               <Menu.Item
                 color="red"

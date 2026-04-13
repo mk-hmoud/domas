@@ -76,7 +76,7 @@ async function run() {
       '03_triggers.sql',
       '04_apply_triggers.sql',
       '05_session_store.sql',
-      '06_student_notifications.sql',
+      '06_notifications.sql',
     ];
 
     for (const file of files) {

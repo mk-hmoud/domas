@@ -17,7 +17,7 @@ import {
   COUNTRIES,
   DEPARTMENTS,
 } from "@domas/ts-types";
-import { IconPhone } from "@tabler/icons-react";
+import { IconPhone, IconBrandWhatsapp } from "@tabler/icons-react";
 import dayjs from "dayjs";
 
 interface StudentModalProps {
@@ -59,6 +59,7 @@ export function StudentModal({
       department: "",
       email: "",
       phoneNumber: "",
+      whatsappNumber: "",
     },
     validate: {
       studentNumber: (val) => {
@@ -97,6 +98,7 @@ export function StudentModal({
           department: initialValues.department || "",
           email: initialValues.email || "",
           phoneNumber: initialValues.phoneNumber || "",
+          whatsappNumber: initialValues.whatsappNumber || "",
         });
       } else {
         form.reset();
@@ -123,6 +125,9 @@ export function StudentModal({
         email: values.email || undefined,
         phoneNumber: values.phoneNumber
           ? values.phoneNumber.replace(/\s/g, "")
+          : undefined,
+        whatsappNumber: values.whatsappNumber
+          ? values.whatsappNumber.replace(/\s/g, "")
           : undefined,
       };
 
@@ -217,6 +222,10 @@ export function StudentModal({
             required
             {...form.getInputProps("nationalityCode")}
           />
+          <TextInput label={t("email")} {...form.getInputProps("email")} />
+        </SimpleGrid>
+
+        <SimpleGrid cols={2} mt="md">
           <TextInput
             label={t("phone_number", { defaultValue: "Phone Number" })}
             placeholder="+90 5xx xxx xxxx"
@@ -224,13 +233,14 @@ export function StudentModal({
             type="tel"
             {...form.getInputProps("phoneNumber")}
           />
+          <TextInput
+            label={t("whatsapp_number", { defaultValue: "WhatsApp Number" })}
+            placeholder="+90 5xx xxx xxxx"
+            leftSection={<IconBrandWhatsapp size={16} />}
+            type="tel"
+            {...form.getInputProps("whatsappNumber")}
+          />
         </SimpleGrid>
-
-        <TextInput
-          label={t("email")}
-          mt="md"
-          {...form.getInputProps("email")}
-        />
 
         <Group justify="flex-end" mt="xl">
           <Button variant="default" onClick={onClose}>

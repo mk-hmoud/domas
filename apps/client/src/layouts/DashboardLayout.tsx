@@ -100,6 +100,11 @@ export function DashboardLayout() {
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',
           },
+          {
+            label: t('nav.guest_stays'),
+            link: '/dashboard/guest-stays',
+            requiredPermission: 'guests.manage',
+          },
         ],
       },
       {
@@ -143,6 +148,11 @@ export function DashboardLayout() {
         label: t('nav.management'),
         icon: IconSettings,
         links: [
+          {
+            label: t('nav.announcements'),
+            link: '/dashboard/announcements',
+            requiredPermission: 'announcements.manage',
+          },
           {
             label: t('nav.locations'),
             link: '/dashboard/locations',
@@ -192,9 +202,9 @@ export function DashboardLayout() {
           return null;
         }
 
-        // If item is a direct link
-        // (We didn't add requiredPermission to top-level items yet, but good to check if we did)
-        if (hasPermission((item as any).requiredPermission)) {
+        // If item is a direct link with no permission requirement, always show it
+        const requiredPermission = (item as any).requiredPermission;
+        if (!requiredPermission || hasPermission(requiredPermission)) {
           return item;
         }
         return null;

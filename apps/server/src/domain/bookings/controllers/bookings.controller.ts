@@ -24,6 +24,7 @@ import { PERMISSIONS } from '../../../common/constants/permissions';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
+import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 import { CheckInBookingDto } from '../dto/check-in-booking.dto';
 import { CheckOutBookingDto } from '../dto/check-out-booking.dto';
 
@@ -40,8 +41,22 @@ export class BookingsController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.BOOKINGS_VIEW)
-  findAll(@Query('studentId') studentId?: string, @Query('status') status?: BookingOpsStatus) {
-    return this.bookingsService.findAll({ studentId, status });
+  findAll(
+    @Query('studentId') studentId?: string,
+    @Query('status') status?: BookingOpsStatus,
+    @Query('semesterId') semesterId?: string,
+    @Query('paymentStatus') paymentStatus?: PaymentStatus,
+    @Query('locationId') locationId?: string,
+    @Query('bedId') bedId?: string,
+  ) {
+    return this.bookingsService.findAll({
+      studentId,
+      status,
+      paymentStatus,
+      semesterId: semesterId ? parseInt(semesterId, 10) : undefined,
+      locationId: locationId ? parseInt(locationId, 10) : undefined,
+      bedId: bedId ? parseInt(bedId, 10) : undefined,
+    });
   }
 
   @Get(':id')

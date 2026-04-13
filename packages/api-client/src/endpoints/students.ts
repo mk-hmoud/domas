@@ -7,6 +7,8 @@ import {
   PaginatedResult,
   BulkDeleteStudentsDto,
   BulkUpdateStudentStatusDto,
+  ResolveContactsDto,
+  ResolvedContact,
 } from "@domas/ts-types";
 
 export const students = {
@@ -52,5 +54,15 @@ export const students = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/students/${id}`);
+  },
+
+  resolveContacts: async (
+    data: ResolveContactsDto,
+  ): Promise<ResolvedContact[]> => {
+    const response = await apiClient.post<ResolvedContact[]>(
+      "/students/resolve-contacts",
+      data,
+    );
+    return response.data;
   },
 };
