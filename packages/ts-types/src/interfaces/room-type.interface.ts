@@ -4,6 +4,7 @@ export interface RoomType {
   description?: string;
   galleryUrls: string[];
   amenities: string[];
+  capacity: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -13,6 +14,7 @@ export interface CreateRoomTypeDto {
   description?: string;
   galleryUrls?: string[];
   amenities?: string[];
+  capacity?: number;
 }
 
 export interface UpdateRoomTypeDto {
@@ -20,4 +22,5 @@ export interface UpdateRoomTypeDto {
   description?: string;
   galleryUrls?: string[];
   amenities?: string[];
+  capacity?: number;
 }

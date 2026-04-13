@@ -36,7 +36,26 @@ export interface AvailableBed {
   roomName: string;
   genderLock: GenderType | null;
   basePrice: number | null;
+  roomTypeId: number | null;
   locationPath: string;
+}
+
+export interface PortalBuilding {
+  id: number;
+  name: string;
+  availableBedCount: number;
+}
+
+export interface RoomTypeCatalogItem {
+  id: number;
+  name: string;
+  description?: string;
+  galleryUrls: string[];
+  amenities: string[];
+  capacity: number;
+  availableBedCount: number;
+  minPrice: number | null;
+  maxPrice: number | null;
 }
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
