@@ -678,3 +678,22 @@ ALTER TABLE damage_liabilities
     ADD CONSTRAINT chk_liability_culprit CHECK (
         (student_id IS NOT NULL)::int + (guest_stay_id IS NOT NULL)::int = 1
     );
+
+-- =============================================
+-- ROOM TYPES (template-level display assets)
+-- =============================================
+
+CREATE TABLE room_types (
+    id           SERIAL PRIMARY KEY,
+    name         VARCHAR(100) NOT NULL,
+    description  TEXT,
+    gallery_urls TEXT[]       NOT NULL DEFAULT '{}',
+    amenities    TEXT[]       NOT NULL DEFAULT '{}',
+    created_at   TIMESTAMPTZ  DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ  DEFAULT NOW()
+);
+
+ALTER TABLE locations
+    ADD COLUMN IF NOT EXISTS room_type_id INT REFERENCES room_types(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_locations_room_type_id ON locations (room_type_id);

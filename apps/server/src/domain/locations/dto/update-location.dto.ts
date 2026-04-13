@@ -1,4 +1,12 @@
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
@@ -36,4 +44,9 @@ export class UpdateLocationDto {
   @Min(0)
   @IsOptional()
   basePrice?: number;
+
+  @ValidateIf((o) => o.roomTypeId !== null)
+  @IsNumber()
+  @IsOptional()
+  roomTypeId?: number | null;
 }

@@ -12,4 +12,5 @@ export interface UpdateLocationDto {
   ownership?: LocationOwnership;
   basePrice?: number;
   status?: string;
+  roomTypeId?: number | null;
 }

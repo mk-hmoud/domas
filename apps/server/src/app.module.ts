@@ -22,6 +22,7 @@ import { NotificationsModule } from './domain/notifications/notifications.module
 import { AnnouncementsModule } from './domain/announcements/announcements.module';
 import { GuestsModule } from './domain/guests/guests.module';
 import { StatsModule } from './domain/stats/stats.module';
+import { RoomTypesModule } from './domain/room-types/room-types.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { StatsModule } from './domain/stats/stats.module';
     AnnouncementsModule,
     GuestsModule,
     StatsModule,
+    RoomTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

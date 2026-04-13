@@ -101,3 +101,4 @@ export * from "./dtos/guest.dto";
 export * from "./enums/undo-action-type.enum";
 export * from "./interfaces/portal.interface";
 export * from "./interfaces/stats.interface";
+export * from "./interfaces/room-type.interface";

@@ -16,6 +16,7 @@ import {
   LocationType,
   GenderType,
   LocationOwnership,
+  RoomType,
 } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +30,7 @@ interface CreateLocationModalProps {
   parentId?: number | null;
   parentType?: LocationType;
   initialValues?: any;
+  roomTypes?: RoomType[];
 }
 
 export function CreateLocationModal({
@@ -38,6 +40,7 @@ export function CreateLocationModal({
   parentId,
   parentType,
   initialValues,
+  roomTypes = [],
 }: CreateLocationModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -61,6 +64,7 @@ export function CreateLocationModal({
       isForeignerOnly: false,
       ownership: LocationOwnership.DORM,
       basePrice: 0,
+      roomTypeId: null as number | null,
     },
     validate: {
       name: (val) =>
@@ -113,6 +117,7 @@ export function CreateLocationModal({
           isForeignerOnly: initialValues.isForeignerOnly || false,
           ownership: initialValues.ownership || LocationOwnership.DORM,
           basePrice: initialValues.basePrice || 0,
+          roomTypeId: initialValues.roomTypeId ?? null,
         });
       } else {
         form.reset();
@@ -127,15 +132,19 @@ export function CreateLocationModal({
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
+    const payload = {
+      ...values,
+      roomTypeId: values.roomTypeId ?? undefined,
+    };
     try {
       if (activeTab === "single") {
-        await onSubmit(values, autoCreateBeds ? bedCount : undefined);
+        await onSubmit(payload, autoCreateBeds ? bedCount : undefined);
       } else {
         // Bulk Create
         const dtos: CreateLocationDto[] = [];
         for (let i = startNumber; i <= endNumber; i++) {
           const name = `${prefix} ${i}`;
-          dtos.push({ ...values, name });
+          dtos.push({ ...payload, name });
         }
         await onSubmit(dtos, autoCreateBeds ? bedCount : undefined);
       }
@@ -282,6 +291,25 @@ export function CreateLocationModal({
             />
           )}
         </SimpleGrid>
+
+        {showPriceField && roomTypes.length > 0 && (
+          <Select
+            mt="md"
+            label={t("room_type", { defaultValue: "Room Type" })}
+            placeholder={t("none")}
+            clearable
+            data={roomTypes.map((rt) => ({
+              value: String(rt.id),
+              label: rt.name,
+            }))}
+            value={
+              form.values.roomTypeId ? String(form.values.roomTypeId) : null
+            }
+            onChange={(v) =>
+              form.setFieldValue("roomTypeId", v ? Number(v) : null)
+            }
+          />
+        )}
 
         {showRoomFields && (
           <Group pt={24}>
