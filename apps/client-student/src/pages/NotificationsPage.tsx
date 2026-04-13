@@ -186,7 +186,6 @@ function NotificationsTable({
 export function NotificationsPage() {
   const { markAsRead, markAllAsRead } = useNotifications();
   const { t } = useTranslation();
-  const timeAgo = useTimeAgo();
   const [items, setItems] = useState<StudentNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
