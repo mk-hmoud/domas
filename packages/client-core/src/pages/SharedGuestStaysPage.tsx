@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Card,
-  Checkbox,
   Container,
   Divider,
   Group,
@@ -32,7 +31,6 @@ import {
   IconDoorExit,
   IconDotsVertical,
   IconEdit,
-  IconPlus,
   IconSearch,
   IconUserPlus,
   IconX,
@@ -561,7 +559,9 @@ function StayCard({
                     t("check_in_confirm", {
                       defaultValue: "Mark guest as checked in?",
                     }),
-                    () => guestStaysApi.checkIn(stay.id),
+                    async () => {
+                      await guestStaysApi.checkIn(stay.id);
+                    },
                   )
                 }
               >
@@ -577,7 +577,9 @@ function StayCard({
                     t("check_out_confirm", {
                       defaultValue: "Mark guest as checked out?",
                     }),
-                    () => guestStaysApi.checkOut(stay.id),
+                    async () => {
+                      await guestStaysApi.checkOut(stay.id);
+                    },
                   )
                 }
               >
@@ -597,7 +599,9 @@ function StayCard({
                         defaultValue:
                           "Cancel this guest stay? This cannot be undone.",
                       }),
-                      () => guestStaysApi.cancel(stay.id),
+                      async () => {
+                        await guestStaysApi.cancel(stay.id);
+                      },
                     )
                   }
                 >
