@@ -48,6 +48,7 @@ import {
   Semester,
   CreateBookingDto,
   CreateStudentDto,
+  RoomType,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -79,6 +80,7 @@ import {
   students,
   semesters,
   bookings,
+  roomTypes as roomTypesApi,
 } from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
@@ -194,6 +196,7 @@ function LocationsContent() {
   }>({ id: null });
   const [locationToEdit, setLocationToEdit] = useState<any | null>(null);
   const [editBedModalOpened, setEditBedModalOpened] = useState(false);
+  const [roomTypesList, setRoomTypesList] = useState<RoomType[]>([]);
   const [bedToEdit, setBedToEdit] = useState<any | null>(null);
 
   // Inventory State
@@ -289,6 +292,13 @@ function LocationsContent() {
       );
     });
   }, [inventoryCatalog, selectedNode]);
+
+  useEffect(() => {
+    roomTypesApi
+      .findAll()
+      .then(setRoomTypesList)
+      .catch(() => {});
+  }, []);
 
   // Calculate breadcrumbs
   const breadcrumbs = selectedNode
@@ -1301,6 +1311,7 @@ function LocationsContent() {
         parentId={parentForCreation.id}
         parentType={parentForCreation.type}
         initialValues={locationToEdit}
+        roomTypes={roomTypesList}
       />
 
       <CreateBedModal
