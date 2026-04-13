@@ -241,6 +241,12 @@ export class StudentPortalRepository {
           WHERE  anc.tree_path @> l.tree_path
           AND    anc.deleted_at IS NULL
         ) AS "locationPath",
+        -- Room type (display assets)
+        rt.id               AS "roomTypeId",
+        rt.name             AS "roomTypeName",
+        rt.description      AS "roomTypeDescription",
+        rt.gallery_urls     AS "roomTypeGalleryUrls",
+        rt.amenities        AS "roomTypeAmenities",
         -- Access card
         ac.card_number AS "accessCardNumber",
         ac.status      AS "accessCardStatus"
@@ -248,6 +254,7 @@ export class StudentPortalRepository {
       JOIN  semesters s  ON bk.semester_id = s.id
       JOIN  beds bd      ON bk.bed_id      = bd.id
       JOIN  locations l  ON bd.location_id = l.id
+      LEFT JOIN room_types rt ON rt.id = l.room_type_id
       LEFT JOIN access_cards ac ON ac.current_booking_id = bk.id AND ac.status = 'active'
       WHERE bk.student_id = $1
         AND bk.status NOT IN ('cancelled', 'rejected', 'completed', 'transferred')

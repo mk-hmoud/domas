@@ -64,6 +64,14 @@ export interface StudentBookingView {
   locationPath: string;
 }
 
+export interface PortalRoomType {
+  id: number;
+  name: string;
+  description?: string;
+  galleryUrls: string[];
+  amenities: string[];
+}
+
 export interface StudentCurrentBooking extends StudentBookingView {
   accountingApprovedAt: string | null;
   contractUrl: string | null;
@@ -74,6 +82,12 @@ export interface StudentCurrentBooking extends StudentBookingView {
   paymentDeadlineDate: string | null;
   accessCardNumber: number | null;
   accessCardStatus: string | null;
+  // Room type display assets (null when room has no type assigned)
+  roomTypeId: number | null;
+  roomTypeName: string | null;
+  roomTypeDescription: string | null;
+  roomTypeGalleryUrls: string[];
+  roomTypeAmenities: string[];
 }
 
 // ─── Financial ────────────────────────────────────────────────────────────────
