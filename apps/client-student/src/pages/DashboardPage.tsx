@@ -26,6 +26,7 @@ import {
   IconFileDownload,
   IconKey,
   IconPin,
+  IconSparkles,
 } from '@tabler/icons-react';
 import {
   Announcement,
@@ -394,6 +395,39 @@ function ActiveResidentCard({
             <Text size="sm">{new Date(booking.endDate).toLocaleDateString()}</Text>
           </Group>
         </SimpleGrid>
+
+        {/* Room type teaser */}
+        {booking.roomTypeName && (
+          <Box
+            p="sm"
+            style={{
+              borderRadius: 8,
+              background: 'var(--mantine-color-blue-light)',
+              borderLeft: '3px solid var(--mantine-color-blue-4)',
+            }}
+          >
+            <Group gap="xs" mb={booking.roomTypeAmenities?.length ? 6 : 0}>
+              <IconSparkles size={14} color="var(--mantine-color-blue-filled)" />
+              <Text size="sm" fw={600} c="blue">
+                {booking.roomTypeName}
+              </Text>
+            </Group>
+            {booking.roomTypeAmenities && booking.roomTypeAmenities.length > 0 && (
+              <Group gap={4} wrap="wrap">
+                {booking.roomTypeAmenities.slice(0, 4).map((a) => (
+                  <Badge key={a} size="xs" variant="light" color="blue">
+                    {a}
+                  </Badge>
+                ))}
+                {booking.roomTypeAmenities.length > 4 && (
+                  <Text size="xs" c="dimmed">
+                    +{booking.roomTypeAmenities.length - 4}
+                  </Text>
+                )}
+              </Group>
+            )}
+          </Box>
+        )}
 
         <Group gap="sm">
           <Button

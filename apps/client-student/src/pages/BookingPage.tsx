@@ -24,6 +24,7 @@ import {
   IconCreditCard,
   IconDoor,
   IconFileDownload,
+  IconHome2,
   IconInfoCircle,
   IconKey,
   IconReceipt,
@@ -32,6 +33,7 @@ import { BookingOpsStatus, PaymentStatus } from '@domas/ts-types';
 import { portalBookings } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
+import { RoomShowcase } from '../components/RoomShowcase';
 
 function usePaymentLabel() {
   const { t } = useTranslation();
@@ -144,6 +146,9 @@ export function BookingPage() {
                     <Tabs.Tab value="details" leftSection={<IconBed size={14} />}>
                       {t('portal.details_tab')}
                     </Tabs.Tab>
+                    <Tabs.Tab value="room" leftSection={<IconHome2 size={14} />}>
+                      {t('portal.room_tab', { defaultValue: 'Room' })}
+                    </Tabs.Tab>
                     <Tabs.Tab value="financial" leftSection={<IconReceipt size={14} />}>
                       {t('portal.financial_tab')}
                     </Tabs.Tab>
@@ -255,6 +260,11 @@ export function BookingPage() {
                         )}
                       </Stack>
                     </SimpleGrid>
+                  </Tabs.Panel>
+
+                  {/* Room tab */}
+                  <Tabs.Panel value="room" p="lg">
+                    <RoomShowcase booking={booking} />
                   </Tabs.Panel>
 
                   {/* Financial tab */}
