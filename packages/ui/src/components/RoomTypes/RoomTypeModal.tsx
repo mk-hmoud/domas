@@ -13,6 +13,7 @@ import {
   Image,
   SimpleGrid,
   CloseButton,
+  NumberInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconPlus, IconPhoto } from "@tabler/icons-react";
@@ -46,6 +47,7 @@ export function RoomTypeModal({
       description: "",
       galleryUrls: [] as string[],
       amenities: [] as string[],
+      capacity: 1 as number,
     },
     validate: {
       name: (v) =>
@@ -64,6 +66,7 @@ export function RoomTypeModal({
           description: initialValues.description ?? "",
           galleryUrls: initialValues.galleryUrls ?? [],
           amenities: initialValues.amenities ?? [],
+          capacity: initialValues.capacity ?? 1,
         });
       } else {
         form.reset();
@@ -93,6 +96,7 @@ export function RoomTypeModal({
         description: values.description || undefined,
         galleryUrls: values.galleryUrls,
         amenities: values.amenities,
+        capacity: values.capacity,
       });
       onClose();
     } catch (e) {
@@ -130,6 +134,13 @@ export function RoomTypeModal({
             minRows={3}
             autosize
             {...form.getInputProps("description")}
+          />
+
+          <NumberInput
+            label={t("capacity", { defaultValue: "Capacity (beds per room)" })}
+            min={1}
+            max={8}
+            {...form.getInputProps("capacity")}
           />
 
           <TagsInput
