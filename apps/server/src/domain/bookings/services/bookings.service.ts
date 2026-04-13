@@ -232,7 +232,6 @@ export class BookingsService {
           undoData: {
             previousStatus: booking.status,
             previousPaymentStatus: booking.paymentStatus,
-            previousIsAccountingApproved: booking.isAccountingApproved,
           },
           description: `Approved financials for booking ${id}`,
         },
@@ -266,10 +265,6 @@ export class BookingsService {
       const booking = await this.bookingsRepository.findById(id, client);
       if (!booking) {
         throw new NotFoundException(`Booking with ID ${id} not found`);
-      }
-
-      if (!booking.isAccountingApproved) {
-        throw new ForbiddenException('Cannot check in: Financial approval required');
       }
 
       if (booking.status !== BookingOpsStatus.READY_FOR_CHECKIN) {

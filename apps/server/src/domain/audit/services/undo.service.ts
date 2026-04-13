@@ -838,7 +838,6 @@ export class UndoService {
       endDate: 'end_date',
       status: 'status',
       paymentStatus: 'payment_status',
-      isAccountingApproved: 'is_accounting_approved',
       checkedInAt: 'checked_in_at',
       checkedOutAt: 'checked_out_at',
       contractSigned: 'contract_signed',
@@ -990,11 +989,13 @@ export class UndoService {
   }
 
   private async undoApproveBookingFinancials(log: UndoLog, client: PoolClient): Promise<void> {
-    const { previousStatus, previousPaymentStatus, previousIsAccountingApproved } = log.undoData;
+    const { previousStatus, previousPaymentStatus } = log.undoData;
     const bookingId = log.entityId;
+    // is_accounting_approved is derived from status: only ready_for_checkin/confirmed means approved
+    const wasApproved = ['ready_for_checkin', 'confirmed'].includes(previousStatus);
     await client.query(
       'UPDATE bookings SET status = $1, payment_status = $2, is_accounting_approved = $3, accounting_approved_at = NULL, accounting_approved_by = NULL WHERE id = $4',
-      [previousStatus, previousPaymentStatus, previousIsAccountingApproved, bookingId],
+      [previousStatus, previousPaymentStatus, wasApproved, bookingId],
     );
   }
 
