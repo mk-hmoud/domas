@@ -4,6 +4,7 @@ export class RoomType {
   description?: string;
   galleryUrls!: string[];
   amenities!: string[];
+  capacity!: number;
   createdAt!: Date;
   updatedAt!: Date;
 

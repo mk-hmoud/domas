@@ -65,7 +65,11 @@ export class StudentPortalService {
     return this.portalRepository.findBookableSemesters();
   }
 
-  async getAvailableBedsForSemester(semesterId: number, studentId: string): Promise<any[]> {
+  async getAvailableBedsForSemester(
+    semesterId: number,
+    studentId: string,
+    roomTypeId?: number | null,
+  ): Promise<any[]> {
     const student = await this.studentsRepository.findById(studentId);
     if (!student) throw new NotFoundException('Student not found');
 
@@ -78,6 +82,42 @@ export class StudentPortalService {
       semesterId,
       student.nationalityCode,
       student.gender,
+      roomTypeId,
+    );
+  }
+
+  async getBuildings(semesterId: number, studentId: string): Promise<any[]> {
+    const student = await this.studentsRepository.findById(studentId);
+    if (!student) throw new NotFoundException('Student not found');
+
+    const semester = await this.portalRepository.findSemesterById(semesterId);
+    if (!semester || !['open', 'active'].includes(semester.status)) {
+      throw new BadRequestException('Semester is not open for bookings');
+    }
+
+    return this.portalRepository.findBuildings(semesterId, student.nationalityCode, student.gender);
+  }
+
+  async getRoomCatalog(
+    semesterId: number,
+    studentId: string,
+    buildingId?: number | null,
+    capacity?: number | null,
+  ): Promise<any[]> {
+    const student = await this.studentsRepository.findById(studentId);
+    if (!student) throw new NotFoundException('Student not found');
+
+    const semester = await this.portalRepository.findSemesterById(semesterId);
+    if (!semester || !['open', 'active'].includes(semester.status)) {
+      throw new BadRequestException('Semester is not open for bookings');
+    }
+
+    return this.portalRepository.findRoomCatalog(
+      semesterId,
+      student.nationalityCode,
+      student.gender,
+      buildingId,
+      capacity,
     );
   }
 

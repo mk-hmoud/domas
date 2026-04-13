@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Request,
   Res,
   StreamableFile,
@@ -82,11 +83,38 @@ export class StudentPortalController {
   @Get('semesters/:id/available-beds')
   async getAvailableBeds(
     @Param('id', ParseIntPipe) semesterId: number,
+    @Query('roomTypeId') roomTypeId: string | undefined,
     @Request() req: ExpressRequest,
   ) {
     return this.studentPortalService.getAvailableBedsForSemester(
       semesterId,
       req.session.studentId!,
+      roomTypeId ? parseInt(roomTypeId, 10) : null,
+    );
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('semesters/:id/buildings')
+  async getBuildings(
+    @Param('id', ParseIntPipe) semesterId: number,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.studentPortalService.getBuildings(semesterId, req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('semesters/:id/room-catalog')
+  async getRoomCatalog(
+    @Param('id', ParseIntPipe) semesterId: number,
+    @Query('buildingId') buildingId: string | undefined,
+    @Query('capacity') capacity: string | undefined,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.studentPortalService.getRoomCatalog(
+      semesterId,
+      req.session.studentId!,
+      buildingId ? parseInt(buildingId, 10) : null,
+      capacity ? parseInt(capacity, 10) : null,
     );
   }
 

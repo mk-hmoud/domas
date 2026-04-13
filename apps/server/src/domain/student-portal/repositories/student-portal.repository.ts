@@ -63,11 +63,13 @@ export class StudentPortalRepository {
   /**
    * Returns beds that are physically available for the given semester,
    * pre-filtered by the student's nationality and gender constraints.
+   * Optionally filtered to a specific room type.
    */
   async findAvailableBedsForSemester(
     semesterId: number,
     nationalityCode: string,
     gender: GenderType,
+    roomTypeId?: number | null,
   ): Promise<any[]> {
     const isTr = nationalityCode === 'TR';
 
@@ -83,6 +85,7 @@ export class StudentPortalRepository {
         l.name              AS "roomName",
         l.gender_lock       AS "genderLock",
         l.base_price::numeric AS "basePrice",
+        l.room_type_id      AS "roomTypeId",
         (
           SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
           FROM   locations anc
@@ -112,9 +115,130 @@ export class StudentPortalRepository {
           WHERE  semester_id = $3
             AND  status NOT IN ('cancelled', 'rejected')
         )
+        -- optional room type filter
+        AND ($4::int IS NULL OR l.room_type_id = $4)
       ORDER BY l.name, b.label
     `;
+    const result = await this.db
+      .getPool()
+      .query(query, [gender, isTr, semesterId, roomTypeId ?? null]);
+    return result.rows;
+  }
+
+  /**
+   * Returns buildings that have at least one available bed for the given
+   * semester and student profile, with available bed counts.
+   */
+  async findBuildings(
+    semesterId: number,
+    nationalityCode: string,
+    gender: GenderType,
+  ): Promise<any[]> {
+    const isTr = nationalityCode === 'TR';
+
+    const query = `
+      WITH avail_beds AS (
+        SELECT b.id AS bed_id, l.tree_path AS room_path
+        FROM   beds b
+        JOIN   locations l ON b.location_id = l.id
+        WHERE  b.deleted_at IS NULL
+          AND  b.status = 'available'
+          AND  b.is_guest_zone = FALSE
+          AND  l.is_guest_zone = FALSE
+          AND  b.ownership   != 'rectorate'
+          AND  l.ownership   != 'rectorate'
+          AND  (l.gender_lock IS NULL OR l.gender_lock = $1)
+          AND  NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
+          AND  NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
+          AND  NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
+          AND  NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
+          AND  b.id NOT IN (
+            SELECT bed_id FROM bookings
+            WHERE  semester_id = $3
+              AND  status NOT IN ('cancelled', 'rejected')
+          )
+      )
+      SELECT
+        bldg.id,
+        bldg.name,
+        COUNT(ab.bed_id)::int AS "availableBedCount"
+      FROM   locations bldg
+      JOIN   avail_beds ab ON ab.room_path <@ bldg.tree_path
+      WHERE  bldg.type = 'building'
+        AND  bldg.deleted_at IS NULL
+      GROUP  BY bldg.id, bldg.name
+      HAVING COUNT(ab.bed_id) > 0
+      ORDER  BY bldg.name
+    `;
     const result = await this.db.getPool().query(query, [gender, isTr, semesterId]);
+    return result.rows;
+  }
+
+  /**
+   * Returns room types that have available beds for the given semester
+   * and student profile, with available bed counts and price range.
+   * Optionally filtered by building and/or capacity.
+   */
+  async findRoomCatalog(
+    semesterId: number,
+    nationalityCode: string,
+    gender: GenderType,
+    buildingId?: number | null,
+    capacity?: number | null,
+  ): Promise<any[]> {
+    const isTr = nationalityCode === 'TR';
+
+    const query = `
+      WITH avail_beds AS (
+        SELECT
+          b.id                  AS bed_id,
+          l.room_type_id,
+          l.base_price::numeric AS base_price,
+          l.tree_path           AS room_path
+        FROM   beds b
+        JOIN   locations l ON b.location_id = l.id
+        WHERE  b.deleted_at IS NULL
+          AND  b.status = 'available'
+          AND  b.is_guest_zone = FALSE
+          AND  l.is_guest_zone = FALSE
+          AND  b.ownership   != 'rectorate'
+          AND  l.ownership   != 'rectorate'
+          AND  (l.gender_lock IS NULL OR l.gender_lock = $1)
+          AND  NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
+          AND  NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
+          AND  NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
+          AND  NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
+          AND  b.id NOT IN (
+            SELECT bed_id FROM bookings
+            WHERE  semester_id = $3
+              AND  status NOT IN ('cancelled', 'rejected')
+          )
+          AND  l.room_type_id IS NOT NULL
+          -- optional building filter
+          AND  ($4::int IS NULL OR l.tree_path <@ (
+            SELECT tree_path FROM locations WHERE id = $4
+          ))
+      )
+      SELECT
+        rt.id,
+        rt.name,
+        rt.description,
+        rt.gallery_urls     AS "galleryUrls",
+        rt.amenities,
+        rt.capacity,
+        COUNT(ab.bed_id)::int AS "availableBedCount",
+        MIN(ab.base_price)   AS "minPrice",
+        MAX(ab.base_price)   AS "maxPrice"
+      FROM   room_types rt
+      JOIN   avail_beds ab ON ab.room_type_id = rt.id
+      WHERE  ($5::int IS NULL OR rt.capacity = $5)
+      GROUP  BY rt.id, rt.name, rt.description, rt.gallery_urls, rt.amenities, rt.capacity
+      HAVING COUNT(ab.bed_id) > 0
+      ORDER  BY rt.name
+    `;
+    const result = await this.db
+      .getPool()
+      .query(query, [gender, isTr, semesterId, buildingId ?? null, capacity ?? null]);
     return result.rows;
   }
 
