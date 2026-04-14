@@ -12,6 +12,7 @@ import {
   Loader,
   Paper,
   Radio,
+  Select,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -31,16 +32,25 @@ import {
   IconCircle,
   IconCircleCheck,
   IconCircleDot,
+  IconFilter,
   IconInfoCircle,
+  IconLayoutGrid,
   IconMapPin,
   IconStack2,
   IconX,
 } from '@tabler/icons-react';
-import { AvailableBed, PortalSemester } from '@domas/ts-types';
+import { AvailableBed, PortalBuilding, PortalSemester, RoomTypeCatalogItem } from '@domas/ts-types';
 import { portalBookings, portalSemesters } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
 
-// ─── Step content: Semester picker ───────────────────────────────────────────
+// ─── Filters state type ───────────────────────────────────────────────────────
+
+interface Filters {
+  buildingId: number | null;
+  capacity: number | null;
+}
+
+// ─── Step 0: Semester picker ──────────────────────────────────────────────────
 
 function SemesterStep({
   semesters,
@@ -128,16 +138,307 @@ function SemesterStep({
   );
 }
 
-// ─── Step content: Bed picker (drilldown) ─────────────────────────────────────
+// ─── Step 1: Filters ──────────────────────────────────────────────────────────
+
+const CAPACITY_OPTIONS = [
+  { value: 1, label: 'Single' },
+  { value: 2, label: 'Double' },
+  { value: 3, label: '3-bed' },
+  { value: 4, label: '4-bed' },
+  { value: 6, label: '6-bed' },
+  { value: 8, label: '8-bed' },
+];
+
+function FiltersStep({
+  semesterId,
+  filters,
+  onChange,
+}: {
+  semesterId: number;
+  filters: Filters;
+  onChange: (f: Filters) => void;
+}) {
+  const { t } = useTranslation();
+  const [buildings, setBuildings] = useState<PortalBuilding[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    portalSemesters
+      .getBuildings(semesterId)
+      .then(setBuildings)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [semesterId]);
+
+  const buildingData = buildings.map((b) => ({
+    value: String(b.id),
+    label: `${b.name} (${b.availableBedCount} ${b.availableBedCount === 1 ? 'bed' : 'beds'})`,
+  }));
+
+  return (
+    <Stack gap="lg">
+      <Text size="sm" c="dimmed">
+        {t('portal.filters_hint', {
+          defaultValue: 'Narrow down your search. All filters are optional.',
+        })}
+      </Text>
+
+      {loading ? (
+        <Skeleton height={40} radius="md" />
+      ) : buildings.length > 0 ? (
+        <Select
+          label={t('portal.filter_building', { defaultValue: 'Building' })}
+          placeholder={t('portal.filter_building_any', { defaultValue: 'Any building' })}
+          clearable
+          data={buildingData}
+          value={filters.buildingId != null ? String(filters.buildingId) : null}
+          onChange={(v) => onChange({ ...filters, buildingId: v != null ? parseInt(v, 10) : null })}
+        />
+      ) : null}
+
+      <Box>
+        <Text size="sm" fw={500} mb={8}>
+          {t('portal.filter_capacity', { defaultValue: 'Beds per room' })}
+        </Text>
+        <Group gap="xs" wrap="wrap">
+          {CAPACITY_OPTIONS.map(({ value, label }) => (
+            <Button
+              key={value}
+              size="xs"
+              variant={filters.capacity === value ? 'filled' : 'outline'}
+              color="blue"
+              onClick={() =>
+                onChange({ ...filters, capacity: filters.capacity === value ? null : value })
+              }
+            >
+              {label}
+            </Button>
+          ))}
+        </Group>
+        {filters.capacity != null && (
+          <Text size="xs" c="dimmed" mt={6}>
+            {t('portal.filter_capacity_selected', {
+              defaultValue: 'Showing {{capacity}}-person rooms only',
+              capacity: filters.capacity,
+            })}
+          </Text>
+        )}
+      </Box>
+
+      {(filters.buildingId != null || filters.capacity != null) && (
+        <Box>
+          <Button
+            variant="subtle"
+            size="xs"
+            color="gray"
+            onClick={() => onChange({ buildingId: null, capacity: null })}
+          >
+            {t('portal.clear_filters', { defaultValue: 'Clear all filters' })}
+          </Button>
+        </Box>
+      )}
+    </Stack>
+  );
+}
+
+// ─── Step 2: Room Type Catalog ────────────────────────────────────────────────
+
+function RoomCatalogStep({
+  semesterId,
+  filters,
+  selected,
+  onSelect,
+}: {
+  semesterId: number;
+  filters: Filters;
+  selected: RoomTypeCatalogItem | null;
+  onSelect: (rt: RoomTypeCatalogItem | null) => void;
+}) {
+  const { t } = useTranslation();
+  const [catalog, setCatalog] = useState<RoomTypeCatalogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    portalSemesters
+      .getRoomCatalog(semesterId, {
+        buildingId: filters.buildingId,
+        capacity: filters.capacity,
+      })
+      .then(setCatalog)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [semesterId, filters.buildingId, filters.capacity]);
+
+  if (loading) {
+    return (
+      <SimpleGrid cols={2} spacing="sm">
+        <Skeleton height={220} radius="md" />
+        <Skeleton height={220} radius="md" />
+        <Skeleton height={220} radius="md" />
+        <Skeleton height={220} radius="md" />
+      </SimpleGrid>
+    );
+  }
+
+  if (catalog.length === 0) {
+    return (
+      <Stack gap="md">
+        <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
+          {t('portal.no_room_types_catalog', {
+            defaultValue:
+              'No room type information is available for your current filters. Click Next to browse all available beds directly.',
+          })}
+        </Alert>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack gap="md">
+      <Text size="sm" c="dimmed">
+        {t('portal.catalog_hint', {
+          defaultValue:
+            'Select a room type to pre-filter beds. You can also skip and browse all beds.',
+        })}
+      </Text>
+
+      <SimpleGrid cols={{ base: 1, xs: 2 } as any} spacing="sm">
+        {catalog.map((rt) => {
+          const isSelected = selected?.id === rt.id;
+          const heroUrl = rt.galleryUrls[0];
+
+          return (
+            <Paper
+              key={rt.id}
+              withBorder
+              radius="md"
+              style={{
+                cursor: 'pointer',
+                overflow: 'hidden',
+                borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
+                borderWidth: isSelected ? 2 : 1,
+                background: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
+              }}
+              onClick={() => onSelect(isSelected ? null : rt)}
+            >
+              {heroUrl ? (
+                <Box style={{ height: 110, overflow: 'hidden' }}>
+                  <img
+                    src={heroUrl}
+                    alt={rt.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </Box>
+              ) : (
+                <Box
+                  style={{
+                    height: 60,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--mantine-color-gray-1)',
+                  }}
+                >
+                  <IconBed size={28} color="var(--mantine-color-gray-5)" />
+                </Box>
+              )}
+
+              <Box p="sm">
+                <Group justify="space-between" mb={4} wrap="nowrap">
+                  <Text fw={700} size="sm" lineClamp={1} style={{ flex: 1 }}>
+                    {rt.name}
+                  </Text>
+                  <Badge size="xs" variant="light" color="blue" style={{ flexShrink: 0 }}>
+                    {rt.capacity === 1
+                      ? t('portal.single_room', { defaultValue: 'Single' })
+                      : rt.capacity === 2
+                        ? t('portal.double_room', { defaultValue: 'Double' })
+                        : t('portal.n_bed_room', {
+                            defaultValue: '{{n}}-bed',
+                            n: rt.capacity,
+                          })}
+                  </Badge>
+                </Group>
+
+                {rt.description && (
+                  <Text size="xs" c="dimmed" lineClamp={2} mb={6}>
+                    {rt.description}
+                  </Text>
+                )}
+
+                {rt.amenities.length > 0 && (
+                  <Group gap={4} mb={6} wrap="wrap">
+                    {rt.amenities.slice(0, 3).map((a) => (
+                      <Badge key={a} size="xs" variant="dot" color="gray">
+                        {a}
+                      </Badge>
+                    ))}
+                    {rt.amenities.length > 3 && (
+                      <Badge size="xs" variant="outline" color="gray">
+                        +{rt.amenities.length - 3}
+                      </Badge>
+                    )}
+                  </Group>
+                )}
+
+                <Group justify="space-between" wrap="nowrap">
+                  <Text size="xs" c={rt.availableBedCount > 0 ? 'teal' : 'red'} fw={500}>
+                    {rt.availableBedCount}{' '}
+                    {rt.availableBedCount === 1
+                      ? t('portal.bed_available_singular', { defaultValue: 'bed available' })
+                      : t('portal.beds_available_plural_short', {
+                          defaultValue: 'beds available',
+                        })}
+                  </Text>
+                  {rt.minPrice != null && (
+                    <Text size="xs" fw={600} c="blue">
+                      {rt.minPrice === rt.maxPrice
+                        ? `₺${Number(rt.minPrice).toLocaleString()}`
+                        : `₺${Number(rt.minPrice).toLocaleString()}+`}
+                    </Text>
+                  )}
+                </Group>
+
+                {isSelected && (
+                  <Box mt={6}>
+                    <Badge color="blue" variant="filled" size="xs" fullWidth>
+                      {t('portal.selected', { defaultValue: 'Selected' })}
+                    </Badge>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          );
+        })}
+      </SimpleGrid>
+
+      {!selected && catalog.length > 0 && (
+        <Text size="xs" c="dimmed" ta="center">
+          {t('portal.catalog_no_selection_hint', {
+            defaultValue: 'No preference? Click Next to browse all available beds.',
+          })}
+        </Text>
+      )}
+    </Stack>
+  );
+}
+
+// ─── Step 3: Bed picker (drilldown) ───────────────────────────────────────────
 
 const LEVEL_ICONS = [IconMapPin, IconBuilding, IconStack2] as const;
 
 function BedStep({
   semesterId,
+  roomTypeId,
+  roomTypeName,
   selected,
   onSelect,
 }: {
   semesterId: number;
+  roomTypeId: number | null;
+  roomTypeName: string | null;
   selected: AvailableBed | null;
   onSelect: (b: AvailableBed) => void;
 }) {
@@ -152,11 +453,11 @@ function BedStep({
     setError(false);
     setPath([]);
     portalSemesters
-      .getAvailableBeds(semesterId)
+      .getAvailableBeds(semesterId, roomTypeId)
       .then(setBeds)
       .catch(() => setError(true))
       .finally(() => setIsLoading(false));
-  }, [semesterId]);
+  }, [semesterId, roomTypeId]);
 
   // Remove the root node ("University") — it adds no navigation value
   const parsedBeds = useMemo(
@@ -216,6 +517,18 @@ function BedStep({
 
   return (
     <Stack gap="md">
+      {roomTypeName && (
+        <Group gap="xs">
+          <IconBed size={14} color="var(--mantine-color-blue-5)" />
+          <Text size="xs" c="blue" fw={500}>
+            {t('portal.bed_step_filtered_hint', {
+              defaultValue: 'Showing beds in: {{name}}',
+              name: roomTypeName,
+            })}
+          </Text>
+        </Group>
+      )}
+
       <Text size="sm" c="dimmed">
         {t('portal.browse_beds_hint')}
       </Text>
@@ -378,9 +691,17 @@ function BedStep({
   );
 }
 
-// ─── Step content: Review ─────────────────────────────────────────────────────
+// ─── Step 4: Review ───────────────────────────────────────────────────────────
 
-function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: AvailableBed }) {
+function ReviewStep({
+  semester,
+  bed,
+  roomType,
+}: {
+  semester: PortalSemester;
+  bed: AvailableBed;
+  roomType: RoomTypeCatalogItem | null;
+}) {
   const { t } = useTranslation();
   return (
     <Stack gap="md">
@@ -402,6 +723,31 @@ function ReviewStep({ semester, bed }: { semester: PortalSemester; bed: Availabl
               </Text>
             </Box>
           </Group>
+
+          {roomType && (
+            <>
+              <Divider />
+              <Group gap="sm">
+                <ThemeIcon size={32} radius="xl" variant="light" color="violet">
+                  <IconLayoutGrid size={16} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t('portal.room_type_label', { defaultValue: 'Room Type' })}
+                  </Text>
+                  <Text size="sm" fw={600}>
+                    {roomType.name}
+                  </Text>
+                  {roomType.description && (
+                    <Text size="xs" c="dimmed">
+                      {roomType.description}
+                    </Text>
+                  )}
+                </Box>
+              </Group>
+            </>
+          )}
+
           <Divider />
           <Group gap="sm">
             <ThemeIcon size={32} radius="xl" variant="light" color="teal">
@@ -466,7 +812,18 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
   const { t } = useTranslation();
   const STEPS = [
     { label: t('portal.step_semester_label'), description: t('portal.step_semester_desc') },
-    { label: t('portal.step_bed_label'), description: t('portal.step_bed_desc') },
+    {
+      label: t('portal.step_filters_label', { defaultValue: 'Preferences' }),
+      description: t('portal.step_filters_desc', { defaultValue: 'Building & room size' }),
+    },
+    {
+      label: t('portal.step_catalog_label', { defaultValue: 'Room Type' }),
+      description: t('portal.step_catalog_desc', { defaultValue: 'Choose a room style' }),
+    },
+    {
+      label: t('portal.step_bed_label'),
+      description: t('portal.step_bed_desc'),
+    },
     { label: t('portal.step_confirm_label'), description: t('portal.step_confirm_desc') },
   ];
 
@@ -527,6 +884,8 @@ export function ApplyPage() {
   const [semesters, setSemesters] = useState<PortalSemester[]>([]);
   const [isLoadingSemesters, setIsLoadingSemesters] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState<PortalSemester | null>(null);
+  const [filters, setFilters] = useState<Filters>({ buildingId: null, capacity: null });
+  const [selectedRoomType, setSelectedRoomType] = useState<RoomTypeCatalogItem | null>(null);
   const [selectedBed, setSelectedBed] = useState<AvailableBed | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -545,15 +904,17 @@ export function ApplyPage() {
   const hasActiveBooking = booking !== null;
 
   const handleNext = () => {
-    if (step === 0 && selectedSemester) setStep(1);
-    else if (step === 1 && selectedBed) setStep(2);
+    if (step < 4) setStep((s) => s + 1);
   };
 
   const handleBack = () => {
-    if (step > 0) {
-      setStep((s) => s - 1);
-      if (step === 1) setSelectedBed(null);
+    if (step === 0) {
+      navigate('/dashboard');
+      return;
     }
+    if (step === 3) setSelectedBed(null);
+    if (step === 2) setSelectedRoomType(null);
+    setStep((s) => s - 1);
   };
 
   const handleSubmit = async () => {
@@ -572,7 +933,15 @@ export function ApplyPage() {
   };
 
   const canAdvance =
-    (step === 0 && selectedSemester !== null) || (step === 1 && selectedBed !== null);
+    step === 0
+      ? selectedSemester !== null
+      : step === 1
+        ? true
+        : step === 2
+          ? true
+          : step === 3
+            ? selectedBed !== null
+            : false;
 
   const stepContent = isLoadingSemesters ? (
     <Stack gap="sm">
@@ -585,13 +954,41 @@ export function ApplyPage() {
       selected={selectedSemester}
       onSelect={(s) => {
         setSelectedSemester(s);
+        setFilters({ buildingId: null, capacity: null });
+        setSelectedRoomType(null);
         setSelectedBed(null);
       }}
     />
   ) : step === 1 && selectedSemester ? (
-    <BedStep semesterId={selectedSemester.id} selected={selectedBed} onSelect={setSelectedBed} />
-  ) : step === 2 && selectedSemester && selectedBed ? (
-    <ReviewStep semester={selectedSemester} bed={selectedBed} />
+    <FiltersStep
+      semesterId={selectedSemester.id}
+      filters={filters}
+      onChange={(f) => {
+        setFilters(f);
+        setSelectedRoomType(null);
+        setSelectedBed(null);
+      }}
+    />
+  ) : step === 2 && selectedSemester ? (
+    <RoomCatalogStep
+      semesterId={selectedSemester.id}
+      filters={filters}
+      selected={selectedRoomType}
+      onSelect={(rt) => {
+        setSelectedRoomType(rt);
+        setSelectedBed(null);
+      }}
+    />
+  ) : step === 3 && selectedSemester ? (
+    <BedStep
+      semesterId={selectedSemester.id}
+      roomTypeId={selectedRoomType?.id ?? null}
+      roomTypeName={selectedRoomType?.name ?? null}
+      selected={selectedBed}
+      onSelect={setSelectedBed}
+    />
+  ) : step === 4 && selectedSemester && selectedBed ? (
+    <ReviewStep semester={selectedSemester} bed={selectedBed} roomType={selectedRoomType} />
   ) : null;
 
   const navButtons = (
@@ -599,18 +996,20 @@ export function ApplyPage() {
       <Button
         variant="subtle"
         leftSection={<IconArrowLeft size={16} />}
-        onClick={step === 0 ? () => navigate('/dashboard') : handleBack}
+        onClick={handleBack}
         disabled={isSubmitting}
       >
         {step === 0 ? t('cancel') : t('back')}
       </Button>
-      {step < 2 ? (
+      {step < 4 ? (
         <Button
           rightSection={<IconArrowRight size={16} />}
           onClick={handleNext}
           disabled={!canAdvance}
         >
-          {t('next')}
+          {step === 2 && !selectedRoomType
+            ? t('portal.skip_to_beds', { defaultValue: 'Browse all beds' })
+            : t('next')}
         </Button>
       ) : (
         <Button
@@ -686,19 +1085,18 @@ export function ApplyPage() {
       {/* ── Mobile layout: horizontal stepper + content card ── */}
       <Box hiddenFrom="sm">
         <Stack gap="md">
-          <Stepper active={step} size="sm" radius="md">
+          <Stepper active={step} size="xs" radius="md">
+            <Stepper.Step label={t('portal.step_semester_label')} />
             <Stepper.Step
-              label={t('portal.step_semester_label')}
-              description={t('portal.step_semester_desc')}
+              label={t('portal.step_filters_label', { defaultValue: 'Filters' })}
+              icon={<IconFilter size={14} />}
             />
             <Stepper.Step
-              label={t('portal.step_bed_label')}
-              description={t('portal.step_bed_desc')}
+              label={t('portal.step_catalog_label', { defaultValue: 'Type' })}
+              icon={<IconLayoutGrid size={14} />}
             />
-            <Stepper.Step
-              label={t('portal.step_confirm_label')}
-              description={t('portal.step_confirm_desc')}
-            />
+            <Stepper.Step label={t('portal.step_bed_label')} />
+            <Stepper.Step label={t('portal.step_confirm_label')} />
           </Stepper>
 
           <Card withBorder radius="md" p="md">
