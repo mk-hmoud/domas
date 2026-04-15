@@ -47,12 +47,18 @@ export function RoomTypeModal({
       description: "",
       galleryUrls: [] as string[],
       amenities: [] as string[],
-      capacity: 1 as number,
+      capacity: undefined as number | undefined,
     },
     validate: {
       name: (v) =>
         v.trim().length < 2
           ? t("validation_name_short", { defaultValue: "Name too short" })
+          : null,
+      capacity: (v) =>
+        v == null || v < 1
+          ? t("validation_capacity_required", {
+              defaultValue: "Capacity is required",
+            })
           : null,
     },
   });
@@ -66,7 +72,7 @@ export function RoomTypeModal({
           description: initialValues.description ?? "",
           galleryUrls: initialValues.galleryUrls ?? [],
           amenities: initialValues.amenities ?? [],
-          capacity: initialValues.capacity ?? 1,
+          capacity: initialValues.capacity,
         });
       } else {
         form.reset();
@@ -138,6 +144,10 @@ export function RoomTypeModal({
 
           <NumberInput
             label={t("capacity", { defaultValue: "Capacity (beds per room)" })}
+            placeholder={t("capacity_placeholder", {
+              defaultValue: "e.g. 2",
+            })}
+            withAsterisk
             min={1}
             max={8}
             {...form.getInputProps("capacity")}

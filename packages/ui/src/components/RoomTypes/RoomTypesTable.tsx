@@ -48,6 +48,7 @@ export function RoomTypesTable({
       <Table.Thead>
         <Table.Tr>
           <Table.Th>{t("name")}</Table.Th>
+          <Table.Th>{t("capacity", { defaultValue: "Capacity" })}</Table.Th>
           <Table.Th>{t("amenities", { defaultValue: "Amenities" })}</Table.Th>
           <Table.Th>
             {t("gallery_photos", { defaultValue: "Gallery Photos" })}
@@ -58,7 +59,7 @@ export function RoomTypesTable({
       <Table.Tbody>
         {data.length === 0 ? (
           <Table.Tr>
-            <Table.Td colSpan={4}>
+            <Table.Td colSpan={5}>
               <Text c="dimmed" ta="center" size="sm" py="md">
                 {t("no_room_types", {
                   defaultValue: "No room types yet. Create one to get started.",
@@ -78,6 +79,9 @@ export function RoomTypesTable({
                     </Text>
                   )}
                 </Stack>
+              </Table.Td>
+              <Table.Td>
+                <Text size="sm">{rt.capacity}</Text>
               </Table.Td>
               <Table.Td>
                 <Group gap={4} wrap="wrap">

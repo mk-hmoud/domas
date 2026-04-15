@@ -32,6 +32,7 @@ import {
   IconHierarchy,
   IconTable,
   IconFiles,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -1020,13 +1021,24 @@ function LocationsContent() {
                       Guest Zone
                     </Badge>
                   )}
-                  {selectedNode.basePrice > 0 && (
+                  {selectedNode.type === LocationType.ROOM &&
+                    !selectedNode.roomTypeId && (
+                      <Badge
+                        variant="light"
+                        color="yellow"
+                        leftSection={<IconAlertTriangle size={14} />}
+                      >
+                        No room type
+                      </Badge>
+                    )}
+                  {selectedNode.roomTypeId && (
                     <Badge
                       variant="light"
                       color="green"
                       leftSection={<IconCurrencyDollar size={14} />}
                     >
-                      {selectedNode.basePrice}
+                      {selectedNode.roomTypeName ??
+                        `Type #${selectedNode.roomTypeId}`}
                     </Badge>
                   )}
                 </Group>

@@ -63,8 +63,7 @@ export function CreateLocationModal({
       isTrOnly: false,
       isForeignerOnly: false,
       ownership: LocationOwnership.DORM,
-      basePrice: 0,
-      roomTypeId: null as number | null,
+      roomTypeId: undefined as number | undefined,
     },
     validate: {
       name: (val) =>
@@ -72,6 +71,12 @@ export function CreateLocationModal({
           ? t("validation_name_short")
           : null,
       type: (val) => (!val ? t("validation_type_required") : null),
+      roomTypeId: (val, values) =>
+        values.type === LocationType.ROOM && !val
+          ? t("validation_room_type_required", {
+              defaultValue: "Room type is required for rooms",
+            })
+          : null,
     },
   });
 
@@ -116,8 +121,7 @@ export function CreateLocationModal({
           isTrOnly: initialValues.isTrOnly || false,
           isForeignerOnly: initialValues.isForeignerOnly || false,
           ownership: initialValues.ownership || LocationOwnership.DORM,
-          basePrice: initialValues.basePrice || 0,
-          roomTypeId: initialValues.roomTypeId ?? null,
+          roomTypeId: initialValues.roomTypeId ?? undefined,
         });
       } else {
         form.reset();
@@ -174,7 +178,7 @@ export function CreateLocationModal({
     form.values.type === LocationType.ROOM ||
     form.values.type === LocationType.BED;
 
-  const showPriceField = form.values.type === LocationType.ROOM;
+  const isRoomType = form.values.type === LocationType.ROOM;
 
   return (
     <Modal
@@ -273,14 +277,29 @@ export function CreateLocationModal({
           )}
         </SimpleGrid>
 
+        {isRoomType && (
+          <Select
+            mt="md"
+            label={t("room_type", { defaultValue: "Room Type" })}
+            placeholder={t("select_room_type", {
+              defaultValue: "Select a room type",
+            })}
+            withAsterisk
+            data={roomTypes.map((rt) => ({
+              value: String(rt.id),
+              label: `${rt.name} (${rt.capacity} ${t("beds", { defaultValue: "beds" })})`,
+            }))}
+            value={
+              form.values.roomTypeId ? String(form.values.roomTypeId) : null
+            }
+            onChange={(v) =>
+              form.setFieldValue("roomTypeId", v ? Number(v) : undefined)
+            }
+            error={form.errors.roomTypeId}
+          />
+        )}
+
         <SimpleGrid cols={2} mt="md">
-          {showPriceField && (
-            <NumberInput
-              label={t("base_price")}
-              min={0}
-              {...form.getInputProps("basePrice")}
-            />
-          )}
           {showRoomFields && (
             <Select
               label={t("gender_lock_label")}
@@ -291,25 +310,6 @@ export function CreateLocationModal({
             />
           )}
         </SimpleGrid>
-
-        {showPriceField && roomTypes.length > 0 && (
-          <Select
-            mt="md"
-            label={t("room_type", { defaultValue: "Room Type" })}
-            placeholder={t("none")}
-            clearable
-            data={roomTypes.map((rt) => ({
-              value: String(rt.id),
-              label: rt.name,
-            }))}
-            value={
-              form.values.roomTypeId ? String(form.values.roomTypeId) : null
-            }
-            onChange={(v) =>
-              form.setFieldValue("roomTypeId", v ? Number(v) : null)
-            }
-          />
-        )}
 
         {showRoomFields && (
           <Group pt={24}>
