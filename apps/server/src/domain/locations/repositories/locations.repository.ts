@@ -28,7 +28,6 @@ export class LocationsRepository implements ILocationsRepository {
       is_tr_only as "isTrOnly",
       is_foreigner_only as "isForeignerOnly",
       ownership,
-      base_price as "basePrice",
       room_type_id as "roomTypeId",
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -38,7 +37,7 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, base_price
+        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING ${this.selectColumns}
@@ -52,7 +51,7 @@ export class LocationsRepository implements ILocationsRepository {
       data.isTrOnly || false,
       data.isForeignerOnly || false,
       data.ownership || LocationOwnership.DORM,
-      data.basePrice || null,
+      data.roomTypeId || null,
     ];
     const result = await this.getClient(client).query<Location>(query, values);
     return new Location(result.rows[0]);
@@ -127,7 +126,7 @@ export class LocationsRepository implements ILocationsRepository {
       SELECT
         l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
         l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
-        l.base_price as "basePrice", l.room_type_id as "roomTypeId", rt.name as "roomTypeName",
+        l.room_type_id as "roomTypeId", rt.name as "roomTypeName",
         l.created_at as "createdAt", l.updated_at as "updatedAt",
         ${totalBedsSub} as "totalBeds",
         ${occupiedBedsSub} as "occupiedBeds",
@@ -256,7 +255,6 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.name !== undefined) addUpdate('name', data.name);
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
-    if (data.basePrice !== undefined) addUpdate('base_price', data.basePrice);
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
     if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
@@ -294,10 +292,6 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.type !== undefined) {
       updates.push(`type = $${paramIndex++}`);
       values.push(data.type);
-    }
-    if (data.basePrice !== undefined) {
-      updates.push(`base_price = $${paramIndex++}`);
-      values.push(data.basePrice);
     }
     if (data.genderLock !== undefined) {
       updates.push(`gender_lock = $${paramIndex++}`);

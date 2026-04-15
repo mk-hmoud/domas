@@ -26,9 +26,6 @@ CREATE TABLE locations (
     is_foreigner_only BOOLEAN DEFAULT FALSE,
     ownership location_ownership_type DEFAULT 'dorm',
     
-    -- Room Specifics (Only used if type = 'room')
-    base_price MONEY DEFAULT NULL,
-    
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL
@@ -690,12 +687,24 @@ CREATE TABLE room_types (
     gallery_urls TEXT[]       NOT NULL DEFAULT '{}',
     amenities    TEXT[]       NOT NULL DEFAULT '{}',
     -- 1 = Single, 2 = Double, 3 = Triple, 4 = Quad
-    capacity     SMALLINT     NOT NULL DEFAULT 1 CHECK (capacity BETWEEN 1 AND 8),
+    capacity     SMALLINT     NOT NULL CHECK (capacity BETWEEN 1 AND 8),
     created_at   TIMESTAMPTZ  DEFAULT NOW(),
     updated_at   TIMESTAMPTZ  DEFAULT NOW()
 );
 
 ALTER TABLE locations
-    ADD COLUMN IF NOT EXISTS room_type_id INT REFERENCES room_types(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS room_type_id INT REFERENCES room_types(id) ON DELETE RESTRICT;
+
+ALTER TABLE locations
+    ADD CONSTRAINT room_requires_type
+    CHECK (type != 'room' OR room_type_id IS NOT NULL);
 
 CREATE INDEX IF NOT EXISTS idx_locations_room_type_id ON locations (room_type_id);
+
+CREATE TABLE semester_room_pricing (
+    semester_id   INT REFERENCES semesters(id)   ON DELETE CASCADE,
+    room_type_id  INT REFERENCES room_types(id)  ON DELETE CASCADE,
+    price_try     NUMERIC(10,2) NOT NULL,
+    price_foreign NUMERIC(10,2),
+    PRIMARY KEY (semester_id, room_type_id)
+);

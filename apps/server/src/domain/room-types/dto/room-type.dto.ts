@@ -22,8 +22,7 @@ export class CreateRoomTypeDto {
   @IsInt()
   @Min(1)
   @Max(8)
-  @IsOptional()
-  capacity?: number = 1;
+  capacity!: number;
 }
 
 export class UpdateRoomTypeDto {

@@ -11,10 +11,10 @@ export interface RoomType {
 
 export interface CreateRoomTypeDto {
   name: string;
+  capacity: number;
   description?: string;
   galleryUrls?: string[];
   amenities?: string[];
-  capacity?: number;
 }
 
 export interface UpdateRoomTypeDto {

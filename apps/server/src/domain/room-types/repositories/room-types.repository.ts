@@ -50,7 +50,7 @@ export class RoomTypesRepository {
         data.description ?? null,
         data.galleryUrls ?? [],
         data.amenities ?? [],
-        data.capacity ?? 1,
+        data.capacity,
       ],
     );
     return new RoomType(result.rows[0]);

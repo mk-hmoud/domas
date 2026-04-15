@@ -11,5 +11,5 @@ export interface CreateLocationDto {
   isTrOnly?: boolean;
   isForeignerOnly?: boolean;
   ownership?: LocationOwnership;
-  basePrice?: number;
+  roomTypeId?: number;
 }
