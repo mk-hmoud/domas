@@ -201,7 +201,20 @@ export class StudentPortalService {
         throw new BadRequestException(`This room is reserved for ${room.genderLock} students only`);
       }
 
-      // 5. Create the booking
+      // 5. Enforce room type + semester pricing
+      if (!room.roomTypeId) {
+        throw new BadRequestException('This room does not have a room type assigned');
+      }
+      const hasPricing = await this.portalRepository.hasSemesterPricing(
+        dto.semesterId,
+        room.roomTypeId,
+        client,
+      );
+      if (!hasPricing) {
+        throw new BadRequestException('This room type has no price set for the selected semester');
+      }
+
+      // 7. Create the booking
       const booking = await this.portalRepository.createBooking(
         studentId,
         dto.bedId,
@@ -211,10 +224,10 @@ export class StudentPortalService {
         client,
       );
 
-      // 6. Lock room gender if not yet set
+      // 8. Lock room gender if not yet set
       await this.portalRepository.lockGenderIfNull(bed.locationId, student.gender, client);
 
-      // 7. Notify the student (fire-and-forget after commit)
+      // 9. Notify the student (fire-and-forget after commit)
       setImmediate(() =>
         this.notificationsService.create(
           studentId,

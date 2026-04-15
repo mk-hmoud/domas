@@ -61,9 +61,10 @@ export class StudentPortalRepository {
   // ─── Available Beds ───────────────────────────────────────────────────────────
 
   /**
-   * Returns beds that are physically available for the given semester,
-   * pre-filtered by the student's nationality and gender constraints.
-   * Optionally filtered to a specific room type.
+   * Returns beds available for the given semester, pre-filtered by the
+   * student's nationality and gender constraints.
+   * Only beds in rooms that have a room type AND a price for this semester
+   * are returned — untyped or unpriced rooms are excluded.
    */
   async findAvailableBedsForSemester(
     semesterId: number,
@@ -78,14 +79,15 @@ export class StudentPortalRepository {
         b.id,
         b.label,
         b.status,
-        b.is_tr_only        AS "isTrOnly",
-        b.is_foreigner_only AS "isForeignerOnly",
+        b.is_tr_only              AS "isTrOnly",
+        b.is_foreigner_only       AS "isForeignerOnly",
         b.ownership,
-        l.id                AS "roomId",
-        l.name              AS "roomName",
-        l.gender_lock       AS "genderLock",
-        l.base_price::numeric AS "basePrice",
-        l.room_type_id      AS "roomTypeId",
+        l.id                      AS "roomId",
+        l.name                    AS "roomName",
+        l.room_type_id            AS "roomTypeId",
+        l.gender_lock             AS "genderLock",
+        srp.price_try::numeric    AS "priceTry",
+        srp.price_foreign::numeric AS "priceForeign",
         (
           SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
           FROM   locations anc
@@ -94,28 +96,26 @@ export class StudentPortalRepository {
         ) AS "locationPath"
       FROM  beds b
       JOIN  locations l ON b.location_id = l.id
+      JOIN  room_types rt ON rt.id = l.room_type_id
+      JOIN  semester_room_pricing srp
+        ON  srp.room_type_id = l.room_type_id
+        AND srp.semester_id  = $3
       WHERE b.deleted_at IS NULL
         AND b.status = 'available'
-        -- no guest zones, no rectorate
         AND b.is_guest_zone = FALSE
         AND l.is_guest_zone = FALSE
         AND b.ownership   != 'rectorate'
         AND l.ownership   != 'rectorate'
-        -- gender lock: room must match student gender or be unlocked
         AND (l.gender_lock IS NULL OR l.gender_lock = $1)
-        -- TR-only / foreigner-only at both bed and room level
-        AND NOT (b.is_tr_only      = TRUE AND $2 = FALSE)
+        AND NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
         AND NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
-        AND NOT (l.is_tr_only      = TRUE AND $2 = FALSE)
+        AND NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
         AND NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
-        -- not already reserved for this semester
         AND b.id NOT IN (
-          SELECT bed_id
-          FROM   bookings
+          SELECT bed_id FROM bookings
           WHERE  semester_id = $3
             AND  status NOT IN ('cancelled', 'rejected')
         )
-        -- optional room type filter
         AND ($4::int IS NULL OR l.room_type_id = $4)
       ORDER BY l.name, b.label
     `;
@@ -141,6 +141,10 @@ export class StudentPortalRepository {
         SELECT b.id AS bed_id, l.tree_path AS room_path
         FROM   beds b
         JOIN   locations l ON b.location_id = l.id
+        JOIN   room_types rt ON rt.id = l.room_type_id
+        JOIN   semester_room_pricing srp
+          ON   srp.room_type_id = l.room_type_id
+          AND  srp.semester_id  = $3
         WHERE  b.deleted_at IS NULL
           AND  b.status = 'available'
           AND  b.is_guest_zone = FALSE
@@ -191,12 +195,15 @@ export class StudentPortalRepository {
     const query = `
       WITH avail_beds AS (
         SELECT
-          b.id                  AS bed_id,
-          l.room_type_id,
-          l.base_price::numeric AS base_price,
-          l.tree_path           AS room_path
+          b.id           AS bed_id,
+          l.room_type_id AS room_type_id,
+          l.tree_path    AS room_path
         FROM   beds b
         JOIN   locations l ON b.location_id = l.id
+        JOIN   room_types rt ON rt.id = l.room_type_id
+        JOIN   semester_room_pricing srp
+          ON   srp.room_type_id = l.room_type_id
+          AND  srp.semester_id  = $3
         WHERE  b.deleted_at IS NULL
           AND  b.status = 'available'
           AND  b.is_guest_zone = FALSE
@@ -213,7 +220,6 @@ export class StudentPortalRepository {
             WHERE  semester_id = $3
               AND  status NOT IN ('cancelled', 'rejected')
           )
-          AND  l.room_type_id IS NOT NULL
           -- optional building filter
           AND  ($4::int IS NULL OR l.tree_path <@ (
             SELECT tree_path FROM locations WHERE id = $4
@@ -223,16 +229,20 @@ export class StudentPortalRepository {
         rt.id,
         rt.name,
         rt.description,
-        rt.gallery_urls     AS "galleryUrls",
+        rt.gallery_urls          AS "galleryUrls",
         rt.amenities,
         rt.capacity,
-        COUNT(ab.bed_id)::int AS "availableBedCount",
-        MIN(ab.base_price)   AS "minPrice",
-        MAX(ab.base_price)   AS "maxPrice"
+        srp.price_try::numeric   AS "priceTry",
+        srp.price_foreign::numeric AS "priceForeign",
+        COUNT(ab.bed_id)::int    AS "availableBedCount"
       FROM   room_types rt
       JOIN   avail_beds ab ON ab.room_type_id = rt.id
+      JOIN   semester_room_pricing srp
+        ON   srp.room_type_id = rt.id
+        AND  srp.semester_id  = $3
       WHERE  ($5::int IS NULL OR rt.capacity = $5)
-      GROUP  BY rt.id, rt.name, rt.description, rt.gallery_urls, rt.amenities, rt.capacity
+      GROUP  BY rt.id, rt.name, rt.description, rt.gallery_urls, rt.amenities, rt.capacity,
+                srp.price_try, srp.price_foreign
       HAVING COUNT(ab.bed_id) > 0
       ORDER  BY rt.name
     `;
@@ -460,6 +470,7 @@ export class StudentPortalRepository {
         b.is_guest_zone AS "isGuestZone",
         b.ownership    AS "bedOwnership",
         l.id           AS "roomId",
+        l.room_type_id AS "roomTypeId",
         l.gender_lock  AS "genderLock",
         l.is_tr_only   AS "roomIsTrOnly",
         l.is_foreigner_only AS "roomIsForeignerOnly",
@@ -485,6 +496,7 @@ export class StudentPortalRepository {
       },
       room: {
         id: row.roomId,
+        roomTypeId: row.roomTypeId,
         genderLock: row.genderLock,
         isTrOnly: row.roomIsTrOnly,
         isForeignerOnly: row.roomIsForeignerOnly,
@@ -492,6 +504,18 @@ export class StudentPortalRepository {
         ownership: row.roomOwnership,
       },
     };
+  }
+
+  async hasSemesterPricing(
+    semesterId: number,
+    roomTypeId: number,
+    client: PoolClient,
+  ): Promise<boolean> {
+    const result = await client.query(
+      `SELECT 1 FROM semester_room_pricing WHERE semester_id = $1 AND room_type_id = $2 LIMIT 1`,
+      [semesterId, roomTypeId],
+    );
+    return (result.rowCount ?? 0) > 0;
   }
 
   // ─── Financial ───────────────────────────────────────────────────────────────
