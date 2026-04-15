@@ -392,13 +392,9 @@ function RoomCatalogStep({
                           defaultValue: 'beds available',
                         })}
                   </Text>
-                  {rt.minPrice != null && (
-                    <Text size="xs" fw={600} c="blue">
-                      {rt.minPrice === rt.maxPrice
-                        ? `₺${Number(rt.minPrice).toLocaleString()}`
-                        : `₺${Number(rt.minPrice).toLocaleString()}+`}
-                    </Text>
-                  )}
+                  <Text size="xs" fw={600} c="blue">
+                    ₺{Number(rt.priceTry).toLocaleString()}
+                  </Text>
                 </Group>
 
                 {isSelected && (
@@ -674,11 +670,9 @@ function BedStep({
                           </Group>
                         </Box>
                       </Group>
-                      {bed.basePrice != null && (
-                        <Text size="sm" fw={600} c="blue">
-                          ₺{bed.basePrice.toLocaleString()}
-                        </Text>
-                      )}
+                      <Text size="sm" fw={600} c="blue">
+                        ₺{Number(bed.priceTry).toLocaleString()}
+                      </Text>
                     </Group>
                   </Paper>
                 );
@@ -774,6 +768,20 @@ function ReviewStep({
               <Text size="sm">
                 {new Date(semester.startDate).toLocaleDateString()} –{' '}
                 {new Date(semester.endDate).toLocaleDateString()}
+              </Text>
+            </Group>
+            <Group justify="space-between">
+              <Text size="sm" c="dimmed">
+                {t('portal.accommodation_price_label', { defaultValue: 'Accommodation price' })}
+              </Text>
+              <Text size="sm" fw={500} c="blue">
+                ₺{Number(bed.priceTry).toLocaleString()}
+                {bed.priceForeign != null && (
+                  <Text span size="xs" c="dimmed">
+                    {' '}
+                    / {Number(bed.priceForeign).toLocaleString()} {semester.foreignCurrencyCode}
+                  </Text>
+                )}
               </Text>
             </Group>
             <Group justify="space-between">
