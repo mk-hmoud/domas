@@ -5,6 +5,7 @@ import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateSemesterDto } from '../dto/create-semester.dto';
 import { UpdateSemesterDto } from '../dto/update-semester.dto';
+import { SetSemesterPricingDto } from '../dto/semester-pricing.dto';
 import { Semester } from '../entities/semester.entity';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
@@ -292,5 +293,19 @@ export class SemestersService {
         client,
       );
     }, context);
+  }
+
+  // ─── Semester Room Pricing ────────────────────────────────────────────────────
+
+  async getPricing(semesterId: number): Promise<any[]> {
+    const semester = await this.semestersRepository.findById(semesterId);
+    if (!semester) throw new NotFoundException(`Semester ${semesterId} not found`);
+    return this.semestersRepository.findPricing(semesterId);
+  }
+
+  async setPricing(semesterId: number, dto: SetSemesterPricingDto): Promise<any[]> {
+    const semester = await this.semestersRepository.findById(semesterId);
+    if (!semester) throw new NotFoundException(`Semester ${semesterId} not found`);
+    return this.semestersRepository.upsertPricing(semesterId, dto.items);
   }
 }

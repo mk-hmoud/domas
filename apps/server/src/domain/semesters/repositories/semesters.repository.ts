@@ -188,4 +188,52 @@ export class SemestersRepository {
     const result = await this.getClient(client).query<Semester>(query);
     return result.rows.map((r) => new Semester(r));
   }
+
+  // ─── Semester Room Pricing ────────────────────────────────────────────────────
+
+  async findPricing(semesterId: number, client?: PoolClient): Promise<any[]> {
+    const query = `
+      SELECT
+        rt.id             AS "roomTypeId",
+        rt.name           AS "roomTypeName",
+        rt.capacity,
+        srp.price_try::numeric    AS "priceTry",
+        srp.price_foreign::numeric AS "priceForeign"
+      FROM room_types rt
+      LEFT JOIN semester_room_pricing srp
+        ON srp.room_type_id = rt.id AND srp.semester_id = $1
+      ORDER BY rt.name
+    `;
+    const result = await this.getClient(client).query(query, [semesterId]);
+    return result.rows;
+  }
+
+  async upsertPricing(
+    semesterId: number,
+    items: { roomTypeId: number; priceTry: number; priceForeign?: number | null }[],
+    client?: PoolClient,
+  ): Promise<any[]> {
+    if (items.length === 0) return this.findPricing(semesterId, client);
+
+    const dbClient = this.getClient(client);
+
+    // Delete removed entries, then upsert provided ones
+    const roomTypeIds = items.map((i) => i.roomTypeId);
+    await dbClient.query(
+      `DELETE FROM semester_room_pricing WHERE semester_id = $1 AND room_type_id != ALL($2)`,
+      [semesterId, roomTypeIds],
+    );
+
+    for (const item of items) {
+      await dbClient.query(
+        `INSERT INTO semester_room_pricing (semester_id, room_type_id, price_try, price_foreign)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (semester_id, room_type_id)
+         DO UPDATE SET price_try = EXCLUDED.price_try, price_foreign = EXCLUDED.price_foreign`,
+        [semesterId, item.roomTypeId, item.priceTry, item.priceForeign ?? null],
+      );
+    }
+
+    return this.findPricing(semesterId, client);
+  }
 }
