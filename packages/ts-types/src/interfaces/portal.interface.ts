@@ -34,9 +34,10 @@ export interface AvailableBed {
   ownership: LocationOwnership;
   roomId: number;
   roomName: string;
+  roomTypeId: number;
   genderLock: GenderType | null;
-  basePrice: number | null;
-  roomTypeId: number | null;
+  priceTry: number;
+  priceForeign: number | null;
   locationPath: string;
 }
 
@@ -53,9 +54,9 @@ export interface RoomTypeCatalogItem {
   galleryUrls: string[];
   amenities: string[];
   capacity: number;
+  priceTry: number;
+  priceForeign: number | null;
   availableBedCount: number;
-  minPrice: number | null;
-  maxPrice: number | null;
 }
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
