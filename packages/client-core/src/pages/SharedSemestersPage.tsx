@@ -15,6 +15,8 @@ import {
   Drawer,
   Stack,
   Box,
+  NumberInput,
+  Divider,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -24,11 +26,13 @@ import {
   IconCheck,
   IconX,
   IconArchive,
+  IconCurrencyLira,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { semesters } from "@domas/api-client";
 import {
   Semester,
+  SemesterRoomPricingRow,
   CreateSemesterDto,
   UpdateSemesterDto,
   SemesterStatus,
@@ -53,6 +57,82 @@ export function SharedSemestersPage() {
     null,
   );
   const [viewSemester, setViewSemester] = useState<Semester | null>(null);
+
+  // ─── Pricing matrix state ─────────────────────────────────────────────────────
+  const [pricingRows, setPricingRows] = useState<SemesterRoomPricingRow[]>([]);
+  const [pricingEdits, setPricingEdits] = useState<
+    Record<number, { priceTry: number | string; priceForeign: number | string }>
+  >({});
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
+
+  const fetchPricing = async (semesterId: number) => {
+    setPricingLoading(true);
+    try {
+      const rows = await semesters.getPricing(semesterId);
+      setPricingRows(rows);
+      const edits: typeof pricingEdits = {};
+      rows.forEach((row) => {
+        edits[row.roomTypeId] = {
+          priceTry: row.priceTry ?? "",
+          priceForeign: row.priceForeign ?? "",
+        };
+      });
+      setPricingEdits(edits);
+    } catch {
+      // silently ignore
+    } finally {
+      setPricingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewSemester) fetchPricing(viewSemester.id);
+    else {
+      setPricingRows([]);
+      setPricingEdits({});
+    }
+  }, [viewSemester?.id]);
+
+  const handleSavePricing = async () => {
+    if (!viewSemester) return;
+    setPricingSaving(true);
+    try {
+      const items = pricingRows
+        .map((row) => {
+          const edit = pricingEdits[row.roomTypeId];
+          const priceTry = Number(edit?.priceTry);
+          if (!edit || isNaN(priceTry) || priceTry < 0) return null;
+          const priceForeign =
+            edit.priceForeign !== "" && edit.priceForeign != null
+              ? Number(edit.priceForeign)
+              : null;
+          return { roomTypeId: row.roomTypeId, priceTry, priceForeign };
+        })
+        .filter(
+          (item): item is NonNullable<typeof item> =>
+            item !== null && item.priceTry > 0,
+        );
+      await semesters.setPricing(viewSemester.id, { items });
+      notifications.show({
+        title: t("success"),
+        message: t("semester.pricing_saved", {
+          defaultValue: "Pricing saved successfully",
+        }),
+        color: "green",
+      });
+      await fetchPricing(viewSemester.id);
+    } catch (error) {
+      handleApiError(
+        error,
+        t("semester.failed_to_save_pricing", {
+          defaultValue: "Failed to save pricing",
+        }),
+      );
+    } finally {
+      setPricingSaving(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -425,6 +505,113 @@ export function SharedSemestersPage() {
                 </Text>
               </Box>
             </Group>
+
+            <Divider
+              label={
+                <Group gap={6}>
+                  <IconCurrencyLira size={14} />
+                  <Text size="sm" fw={500}>
+                    {t("semester.room_pricing", {
+                      defaultValue: "Room Type Pricing",
+                    })}
+                  </Text>
+                </Group>
+              }
+              labelPosition="left"
+            />
+
+            <Box style={{ position: "relative" }}>
+              <LoadingOverlay visible={pricingLoading} />
+              {pricingRows.length === 0 && !pricingLoading ? (
+                <Text size="sm" c="dimmed">
+                  {t("semester.no_room_types", {
+                    defaultValue:
+                      "No room types defined yet. Create room types first.",
+                  })}
+                </Text>
+              ) : (
+                <Table withTableBorder withColumnBorders fz="sm">
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>
+                        {t("room_type", { defaultValue: "Room Type" })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("capacity", { defaultValue: "Cap." })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("semester.price_try", {
+                          defaultValue: "Price (TRY)",
+                        })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("semester.price_foreign", {
+                          defaultValue: `Price (${viewSemester.foreignCurrencyCode})`,
+                        })}
+                      </Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {pricingRows.map((row) => (
+                      <Table.Tr key={row.roomTypeId}>
+                        <Table.Td>{row.roomTypeName}</Table.Td>
+                        <Table.Td>{row.capacity}</Table.Td>
+                        <Table.Td>
+                          <NumberInput
+                            size="xs"
+                            min={0}
+                            placeholder="0"
+                            value={pricingEdits[row.roomTypeId]?.priceTry ?? ""}
+                            onChange={(v) =>
+                              setPricingEdits((prev) => ({
+                                ...prev,
+                                [row.roomTypeId]: {
+                                  ...prev[row.roomTypeId],
+                                  priceTry: v,
+                                },
+                              }))
+                            }
+                          />
+                        </Table.Td>
+                        <Table.Td>
+                          <NumberInput
+                            size="xs"
+                            min={0}
+                            placeholder="—"
+                            value={
+                              pricingEdits[row.roomTypeId]?.priceForeign ?? ""
+                            }
+                            onChange={(v) =>
+                              setPricingEdits((prev) => ({
+                                ...prev,
+                                [row.roomTypeId]: {
+                                  ...prev[row.roomTypeId],
+                                  priceForeign: v,
+                                },
+                              }))
+                            }
+                          />
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              )}
+            </Box>
+
+            {pricingRows.length > 0 && (
+              <Button
+                size="sm"
+                loading={pricingSaving}
+                onClick={handleSavePricing}
+              >
+                {t("semester.save_pricing", {
+                  defaultValue: "Save Pricing",
+                })}
+              </Button>
+            )}
+
+            <Divider />
 
             <Button
               variant="light"

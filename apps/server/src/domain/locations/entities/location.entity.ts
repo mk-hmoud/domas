@@ -12,7 +12,8 @@ export class Location {
   isTrOnly!: boolean;
   isForeignerOnly!: boolean;
   ownership!: LocationOwnership;
-  basePrice!: number | null;
+  roomTypeId!: number | null;
+  roomTypeName?: string;
   locationPath?: string;
   createdAt!: Date;
   updatedAt!: Date;

@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   ParseIntPipe,
@@ -23,6 +24,7 @@ import { UserContext } from '../../../core/decorators/user-context.decorator';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { FindAllSemestersDto } from '../dto/find-all-semesters.dto';
 import { UpdateStatusDto } from '../dto/update-status.dto';
+import { SetSemesterPricingDto } from '../dto/semester-pricing.dto';
 
 @Controller('semesters')
 @UseGuards(AuthenticatedGuard, PermissionsGuard)
@@ -72,5 +74,19 @@ export class SemestersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
     return this.semestersService.delete(id, context);
+  }
+
+  // ─── Semester Room Pricing ────────────────────────────────────────────────────
+
+  @Get(':id/pricing')
+  @RequirePermissions(PERMISSIONS.SEMESTERS_VIEW)
+  getPricing(@Param('id', ParseIntPipe) id: number) {
+    return this.semestersService.getPricing(id);
+  }
+
+  @Put(':id/pricing')
+  @RequirePermissions(PERMISSIONS.SEMESTERS_MANAGE)
+  setPricing(@Param('id', ParseIntPipe) id: number, @Body() dto: SetSemesterPricingDto) {
+    return this.semestersService.setPricing(id, dto);
   }
 }

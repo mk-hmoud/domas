@@ -159,6 +159,11 @@ export function DashboardLayout() {
             requiredPermission: 'locations.view',
           },
           {
+            label: t('nav.room_types', { defaultValue: 'Room Types' }),
+            link: '/dashboard/room-types',
+            requiredPermission: 'locations.update',
+          },
+          {
             label: t('nav.semesters'),
             link: '/dashboard/semesters',
             requiredPermission: 'semesters.view',

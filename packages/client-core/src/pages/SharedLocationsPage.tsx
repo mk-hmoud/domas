@@ -32,6 +32,7 @@ import {
   IconHierarchy,
   IconTable,
   IconFiles,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -48,6 +49,7 @@ import {
   Semester,
   CreateBookingDto,
   CreateStudentDto,
+  RoomType,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -79,6 +81,7 @@ import {
   students,
   semesters,
   bookings,
+  roomTypes as roomTypesApi,
 } from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
@@ -194,6 +197,7 @@ function LocationsContent() {
   }>({ id: null });
   const [locationToEdit, setLocationToEdit] = useState<any | null>(null);
   const [editBedModalOpened, setEditBedModalOpened] = useState(false);
+  const [roomTypesList, setRoomTypesList] = useState<RoomType[]>([]);
   const [bedToEdit, setBedToEdit] = useState<any | null>(null);
 
   // Inventory State
@@ -289,6 +293,13 @@ function LocationsContent() {
       );
     });
   }, [inventoryCatalog, selectedNode]);
+
+  useEffect(() => {
+    roomTypesApi
+      .findAll()
+      .then(setRoomTypesList)
+      .catch(() => {});
+  }, []);
 
   // Calculate breadcrumbs
   const breadcrumbs = selectedNode
@@ -1010,13 +1021,24 @@ function LocationsContent() {
                       Guest Zone
                     </Badge>
                   )}
-                  {selectedNode.basePrice > 0 && (
+                  {selectedNode.type === LocationType.ROOM &&
+                    !selectedNode.roomTypeId && (
+                      <Badge
+                        variant="light"
+                        color="yellow"
+                        leftSection={<IconAlertTriangle size={14} />}
+                      >
+                        No room type
+                      </Badge>
+                    )}
+                  {selectedNode.roomTypeId && (
                     <Badge
                       variant="light"
                       color="green"
                       leftSection={<IconCurrencyDollar size={14} />}
                     >
-                      {selectedNode.basePrice}
+                      {selectedNode.roomTypeName ??
+                        `Type #${selectedNode.roomTypeId}`}
                     </Badge>
                   )}
                 </Group>
@@ -1301,6 +1323,7 @@ function LocationsContent() {
         parentId={parentForCreation.id}
         parentType={parentForCreation.type}
         initialValues={locationToEdit}
+        roomTypes={roomTypesList}
       />
 
       <CreateBedModal

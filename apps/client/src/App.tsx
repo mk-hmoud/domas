@@ -20,6 +20,7 @@ import { AccessCardsPage } from './pages/AccessCardsPage';
 import { DamagesPage } from './pages/DamagesPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
+import { RoomTypesPage } from './pages/RoomTypesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -130,6 +131,14 @@ function App() {
             element={
               <PermissionRoute permission="locations.view">
                 <LocationsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="room-types"
+            element={
+              <PermissionRoute permission="locations.update">
+                <RoomTypesPage />
               </PermissionRoute>
             }
           />

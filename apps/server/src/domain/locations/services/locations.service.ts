@@ -114,6 +114,10 @@ export class LocationsService {
     context: AuditUserContext,
     externalClient?: PoolClient,
   ): Promise<Location> {
+    if (data.type === LocationType.ROOM && !data.roomTypeId) {
+      throw new BadRequestException('A room must have a room type assigned');
+    }
+
     const operation = async (client: PoolClient) => {
       let parentFlags: Partial<Location> = {};
 

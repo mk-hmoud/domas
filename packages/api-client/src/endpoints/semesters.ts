@@ -1,6 +1,8 @@
 import { apiClient } from "../client";
 import {
   Semester,
+  SemesterRoomPricingRow,
+  SetSemesterPricingDto,
   CreateSemesterDto,
   UpdateSemesterDto,
   FindAllSemestersDto,
@@ -47,5 +49,23 @@ export const semesters = {
 
   remove: async (id: number): Promise<void> => {
     await apiClient.delete(`/semesters/${id}`);
+  },
+
+  getPricing: async (id: number): Promise<SemesterRoomPricingRow[]> => {
+    const response = await apiClient.get<SemesterRoomPricingRow[]>(
+      `/semesters/${id}/pricing`,
+    );
+    return response.data;
+  },
+
+  setPricing: async (
+    id: number,
+    dto: SetSemesterPricingDto,
+  ): Promise<SemesterRoomPricingRow[]> => {
+    const response = await apiClient.put<SemesterRoomPricingRow[]>(
+      `/semesters/${id}/pricing`,
+      dto,
+    );
+    return response.data;
   },
 };

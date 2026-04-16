@@ -3,6 +3,9 @@ import {
   Student,
   PortalSemester,
   AvailableBed,
+  BedWithOccupancy,
+  PortalBuilding,
+  RoomTypeCatalogItem,
   StudentBookingView,
   StudentCurrentBooking,
   StudentTransaction,
@@ -54,9 +57,50 @@ export const portalSemesters = {
     return response.data;
   },
 
-  getAvailableBeds: async (semesterId: number): Promise<AvailableBed[]> => {
+  getAvailableBeds: async (
+    semesterId: number,
+    roomTypeId?: number | null,
+  ): Promise<AvailableBed[]> => {
+    const params: Record<string, string> = {};
+    if (roomTypeId != null) params.roomTypeId = String(roomTypeId);
     const response = await apiClient.get<AvailableBed[]>(
       `/portal/semesters/${semesterId}/available-beds`,
+      { params },
+    );
+    return response.data;
+  },
+
+  getAllBeds: async (
+    semesterId: number,
+    roomTypeId?: number | null,
+  ): Promise<BedWithOccupancy[]> => {
+    const params: Record<string, string> = {};
+    if (roomTypeId != null) params.roomTypeId = String(roomTypeId);
+    const response = await apiClient.get<BedWithOccupancy[]>(
+      `/portal/semesters/${semesterId}/all-beds`,
+      { params },
+    );
+    return response.data;
+  },
+
+  getBuildings: async (semesterId: number): Promise<PortalBuilding[]> => {
+    const response = await apiClient.get<PortalBuilding[]>(
+      `/portal/semesters/${semesterId}/buildings`,
+    );
+    return response.data;
+  },
+
+  getRoomCatalog: async (
+    semesterId: number,
+    filters?: { buildingId?: number | null; capacity?: number | null },
+  ): Promise<RoomTypeCatalogItem[]> => {
+    const params: Record<string, string> = {};
+    if (filters?.buildingId != null)
+      params.buildingId = String(filters.buildingId);
+    if (filters?.capacity != null) params.capacity = String(filters.capacity);
+    const response = await apiClient.get<RoomTypeCatalogItem[]>(
+      `/portal/semesters/${semesterId}/room-catalog`,
+      { params },
     );
     return response.data;
   },

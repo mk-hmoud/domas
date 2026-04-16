@@ -1,11 +1,12 @@
 import {
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  Min,
+  ValidateIf,
 } from 'class-validator';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
@@ -43,8 +44,8 @@ export class CreateLocationDto {
   @IsOptional()
   ownership?: LocationOwnership = LocationOwnership.DORM;
 
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  basePrice?: number;
+  @ValidateIf((o) => o.type === LocationType.ROOM)
+  @IsInt()
+  @IsNotEmpty()
+  roomTypeId?: number;
 }
