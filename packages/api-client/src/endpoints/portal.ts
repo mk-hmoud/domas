@@ -3,6 +3,7 @@ import {
   Student,
   PortalSemester,
   AvailableBed,
+  BedWithOccupancy,
   PortalBuilding,
   RoomTypeCatalogItem,
   StudentBookingView,
@@ -64,6 +65,19 @@ export const portalSemesters = {
     if (roomTypeId != null) params.roomTypeId = String(roomTypeId);
     const response = await apiClient.get<AvailableBed[]>(
       `/portal/semesters/${semesterId}/available-beds`,
+      { params },
+    );
+    return response.data;
+  },
+
+  getAllBeds: async (
+    semesterId: number,
+    roomTypeId?: number | null,
+  ): Promise<BedWithOccupancy[]> => {
+    const params: Record<string, string> = {};
+    if (roomTypeId != null) params.roomTypeId = String(roomTypeId);
+    const response = await apiClient.get<BedWithOccupancy[]>(
+      `/portal/semesters/${semesterId}/all-beds`,
       { params },
     );
     return response.data;

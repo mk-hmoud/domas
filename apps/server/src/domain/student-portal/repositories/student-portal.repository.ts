@@ -126,6 +126,72 @@ export class StudentPortalRepository {
   }
 
   /**
+   * Returns ALL beds for rooms matching the student's constraints and the
+   * semester pricing matrix — including taken beds.
+   * Taken beds include anonymised occupant info (nationality + department).
+   */
+  async findAllBedsForSemester(
+    semesterId: number,
+    nationalityCode: string,
+    gender: GenderType,
+    roomTypeId?: number | null,
+  ): Promise<any[]> {
+    const isTr = nationalityCode === 'TR';
+
+    const query = `
+      SELECT
+        b.id,
+        b.label,
+        b.status,
+        b.is_tr_only               AS "isTrOnly",
+        b.is_foreigner_only        AS "isForeignerOnly",
+        b.ownership,
+        l.id                       AS "roomId",
+        l.name                     AS "roomName",
+        l.room_type_id             AS "roomTypeId",
+        l.gender_lock              AS "genderLock",
+        srp.price_try::numeric     AS "priceTry",
+        srp.price_foreign::numeric AS "priceForeign",
+        (bk.id IS NOT NULL)        AS "isTaken",
+        st.nationality_code        AS "occupantNationality",
+        st.department              AS "occupantDepartment",
+        (
+          SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
+          FROM   locations anc
+          WHERE  anc.tree_path @> l.tree_path
+          AND    anc.deleted_at IS NULL
+        ) AS "locationPath"
+      FROM  beds b
+      JOIN  locations l ON b.location_id = l.id
+      JOIN  room_types rt ON rt.id = l.room_type_id
+      JOIN  semester_room_pricing srp
+        ON  srp.room_type_id = l.room_type_id
+        AND srp.semester_id  = $3
+      LEFT JOIN bookings bk
+        ON  bk.bed_id      = b.id
+        AND bk.semester_id = $3
+        AND bk.status NOT IN ('cancelled', 'rejected')
+      LEFT JOIN students st ON st.id = bk.student_id
+      WHERE b.deleted_at IS NULL
+        AND b.is_guest_zone = FALSE
+        AND l.is_guest_zone = FALSE
+        AND b.ownership   != 'rectorate'
+        AND l.ownership   != 'rectorate'
+        AND (l.gender_lock IS NULL OR l.gender_lock = $1)
+        AND NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
+        AND NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
+        AND NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
+        AND NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
+        AND ($4::int IS NULL OR l.room_type_id = $4)
+      ORDER BY l.name, b.label
+    `;
+    const result = await this.db
+      .getPool()
+      .query(query, [gender, isTr, semesterId, roomTypeId ?? null]);
+    return result.rows;
+  }
+
+  /**
    * Returns buildings that have at least one available bed for the given
    * semester and student profile, with available bed counts.
    */

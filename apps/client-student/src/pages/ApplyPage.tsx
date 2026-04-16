@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  ActionIcon,
   Alert,
   Badge,
   Box,
   Button,
   Card,
+  Collapse,
   Divider,
   Group,
   Loader,
@@ -20,26 +22,30 @@ import {
   Text,
   ThemeIcon,
   Title,
+  Tooltip,
 } from '@domas/ui';
 import {
   IconArrowLeft,
   IconArrowRight,
   IconBed,
-  IconBuilding,
   IconCalendar,
   IconCheck,
-  IconChevronRight,
+  IconChevronDown,
+  IconChevronUp,
   IconCircle,
   IconCircleCheck,
   IconCircleDot,
   IconFilter,
   IconInfoCircle,
   IconLayoutGrid,
-  IconMapPin,
-  IconStack2,
   IconX,
 } from '@tabler/icons-react';
-import { AvailableBed, PortalBuilding, PortalSemester, RoomTypeCatalogItem } from '@domas/ts-types';
+import {
+  BedWithOccupancy,
+  PortalBuilding,
+  PortalSemester,
+  RoomTypeCatalogItem,
+} from '@domas/ts-types';
 import { portalBookings, portalSemesters } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
 
@@ -150,26 +156,16 @@ const CAPACITY_OPTIONS = [
 ];
 
 function FiltersStep({
-  semesterId,
+  buildings,
   filters,
   onChange,
 }: {
-  semesterId: number;
+  buildings: PortalBuilding[];
   filters: Filters;
   onChange: (f: Filters) => void;
 }) {
   const { t } = useTranslation();
-  const [buildings, setBuildings] = useState<PortalBuilding[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    portalSemesters
-      .getBuildings(semesterId)
-      .then(setBuildings)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [semesterId]);
+  const loading = false; // buildings are loaded by parent
 
   const buildingData = buildings.map((b) => ({
     value: String(b.id),
@@ -421,76 +417,110 @@ function RoomCatalogStep({
   );
 }
 
-// ─── Step 3: Bed picker (drilldown) ───────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const LEVEL_ICONS = [IconMapPin, IconBuilding, IconStack2] as const;
+/** Converts a 2-letter ISO country code to its flag emoji */
+function toFlagEmoji(code: string): string {
+  return code
+    .toUpperCase()
+    .split('')
+    .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
+    .join('');
+}
+
+// ─── Step 3: Bed picker (expandable room cards) ───────────────────────────────
 
 function BedStep({
   semesterId,
   roomTypeId,
   roomTypeName,
+  buildingName,
   selected,
   onSelect,
 }: {
   semesterId: number;
   roomTypeId: number | null;
   roomTypeName: string | null;
-  selected: AvailableBed | null;
-  onSelect: (b: AvailableBed) => void;
+  buildingName: string | null;
+  selected: BedWithOccupancy | null;
+  onSelect: (b: BedWithOccupancy) => void;
 }) {
   const { t } = useTranslation();
-  const [beds, setBeds] = useState<AvailableBed[]>([]);
+  const [beds, setBeds] = useState<BedWithOccupancy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [path, setPath] = useState<string[]>([]);
+  const [expandedRooms, setExpandedRooms] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setIsLoading(true);
     setError(false);
-    setPath([]);
+    setExpandedRooms(new Set());
     portalSemesters
-      .getAvailableBeds(semesterId, roomTypeId)
+      .getAllBeds(semesterId, roomTypeId)
       .then(setBeds)
       .catch(() => setError(true))
       .finally(() => setIsLoading(false));
   }, [semesterId, roomTypeId]);
 
-  // Remove the root node ("University") — it adds no navigation value
-  const parsedBeds = useMemo(
-    () => beds.map((b) => ({ ...b, segments: b.locationPath.split(' > ').slice(1) })),
-    [beds],
-  );
+  // Auto-expand the room containing the selected bed
+  useEffect(() => {
+    if (selected) {
+      setExpandedRooms((prev) => new Set([...prev, selected.roomId]));
+    }
+  }, [selected?.roomId]);
 
-  // Beds that match the current drill path
-  const filteredBeds = useMemo(
-    () => parsedBeds.filter((b) => path.every((seg, i) => b.segments[i] === seg)),
-    [parsedBeds, path],
-  );
+  // Client-side building filter
+  const visibleBeds = useMemo(() => {
+    if (!buildingName) return beds;
+    return beds.filter((b) => b.locationPath.split(' > ').includes(buildingName));
+  }, [beds, buildingName]);
 
-  // Group by the next path segment
-  const groups = useMemo(() => {
-    const map = new Map<string, number>();
-    filteredBeds.forEach((b) => {
-      const key = b.segments[path.length];
-      if (key == null) return;
-      map.set(key, (map.get(key) ?? 0) + 1);
+  // Group by room
+  const rooms = useMemo(() => {
+    const map = new Map<
+      number,
+      {
+        roomId: number;
+        roomName: string;
+        locationPath: string;
+        beds: BedWithOccupancy[];
+        availableCount: number;
+      }
+    >();
+    visibleBeds.forEach((bed) => {
+      const entry = map.get(bed.roomId);
+      if (entry) {
+        entry.beds.push(bed);
+        if (!bed.isTaken) entry.availableCount++;
+      } else {
+        const segments = bed.locationPath.split(' > ');
+        const contextPath = segments.slice(1, -1).join(' › ');
+        map.set(bed.roomId, {
+          roomId: bed.roomId,
+          roomName: bed.roomName,
+          locationPath: contextPath,
+          beds: [bed],
+          availableCount: bed.isTaken ? 0 : 1,
+        });
+      }
     });
-    return [...map.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [filteredBeds, path.length]);
+    return [...map.values()].sort((a, b) => a.roomName.localeCompare(b.roomName));
+  }, [visibleBeds]);
 
-  // No further grouping → we're at the bed level
-  const showBeds = groups.length === 0;
-
-  const LevelIcon = LEVEL_ICONS[Math.min(path.length, LEVEL_ICONS.length - 1)];
+  const toggleRoom = (roomId: number) => {
+    setExpandedRooms((prev) => {
+      const next = new Set(prev);
+      next.has(roomId) ? next.delete(roomId) : next.add(roomId);
+      return next;
+    });
+  };
 
   if (isLoading) {
     return (
       <Stack gap="sm">
-        <Skeleton height={72} radius="md" />
-        <Skeleton height={72} radius="md" />
-        <Skeleton height={72} radius="md" />
+        <Skeleton height={64} radius="md" />
+        <Skeleton height={64} radius="md" />
+        <Skeleton height={64} radius="md" />
       </Stack>
     );
   }
@@ -503,7 +533,7 @@ function BedStep({
     );
   }
 
-  if (beds.length === 0) {
+  if (rooms.length === 0) {
     return (
       <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
         {t('portal.no_beds_for_semester')}
@@ -512,175 +542,178 @@ function BedStep({
   }
 
   return (
-    <Stack gap="md">
-      {roomTypeName && (
-        <Group gap="xs">
-          <IconBed size={14} color="var(--mantine-color-blue-5)" />
-          <Text size="xs" c="blue" fw={500}>
-            {t('portal.bed_step_filtered_hint', {
-              defaultValue: 'Showing beds in: {{name}}',
-              name: roomTypeName,
-            })}
-          </Text>
-        </Group>
-      )}
-
-      <Text size="sm" c="dimmed">
-        {t('portal.browse_beds_hint')}
-      </Text>
-
-      {/* Breadcrumb */}
-      <Group gap={4} wrap="wrap" align="center">
-        <Text
-          size="xs"
-          c={path.length === 0 ? 'blue' : 'dimmed'}
-          fw={path.length === 0 ? 600 : 400}
-          style={{ cursor: 'pointer' }}
-          onClick={() => setPath([])}
-        >
-          {t('portal.all_locations')}
+    <Stack gap="sm">
+      <Group justify="space-between" align="center">
+        <Text size="xs" c="dimmed">
+          {rooms.length === 1
+            ? t('portal.room_count_singular', { defaultValue: '1 room' })
+            : t('portal.room_count_plural', {
+                defaultValue: '{{count}} rooms',
+                count: rooms.length,
+              })}
         </Text>
-        {path.map((seg, i) => (
-          <Group key={i} gap={4} wrap="nowrap">
-            <IconChevronRight size={11} style={{ color: 'var(--mantine-color-dimmed)' }} />
-            <Text
-              size="xs"
-              c={i === path.length - 1 ? 'blue' : 'dimmed'}
-              fw={i === path.length - 1 ? 600 : 400}
-              style={{ cursor: 'pointer' }}
-              onClick={() => setPath((p) => p.slice(0, i + 1))}
-            >
-              {seg}
-            </Text>
-          </Group>
-        ))}
+        {roomTypeName && (
+          <Badge size="sm" variant="light" color="blue" leftSection={<IconBed size={11} />}>
+            {roomTypeName}
+          </Badge>
+        )}
       </Group>
 
-      {/* Back button */}
-      {path.length > 0 && (
-        <Box>
-          <Button
-            variant="subtle"
-            size="xs"
-            color="gray"
-            leftSection={<IconArrowLeft size={14} />}
-            onClick={() => setPath((p) => p.slice(0, -1))}
+      {rooms.map((room) => {
+        const isExpanded = expandedRooms.has(room.roomId);
+        const hasSelected = room.beds.some((b) => b.id === selected?.id);
+        const isFull = room.availableCount === 0;
+
+        return (
+          <Paper
+            key={room.roomId}
+            withBorder
+            radius="md"
+            style={{
+              borderColor: hasSelected
+                ? 'var(--mantine-color-blue-5)'
+                : isFull
+                  ? 'var(--mantine-color-gray-3)'
+                  : undefined,
+              borderWidth: hasSelected ? 2 : 1,
+              opacity: isFull && !hasSelected ? 0.7 : 1,
+            }}
           >
-            {t('back')}
-          </Button>
-        </Box>
-      )}
-
-      {/* Navigation cards */}
-      {!showBeds && (
-        <SimpleGrid cols={2} spacing="sm">
-          {groups.map(({ name, count }) => (
-            <Paper
-              key={name}
-              withBorder
-              radius="md"
+            {/* Room header row — click anywhere to expand */}
+            <Group
               p="md"
+              justify="space-between"
+              wrap="nowrap"
               style={{ cursor: 'pointer' }}
-              onClick={() => setPath((p) => [...p, name])}
+              onClick={() => toggleRoom(room.roomId)}
             >
-              <Group justify="space-between" wrap="nowrap">
-                <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-                  <ThemeIcon
-                    size={36}
-                    radius="xl"
-                    variant="light"
-                    color="blue"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <LevelIcon size={18} />
-                  </ThemeIcon>
-                  <Box style={{ minWidth: 0 }}>
-                    <Text size="sm" fw={600} lineClamp={1}>
-                      {name}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {count === 1
-                        ? t('portal.bed_count_singular', { count })
-                        : t('portal.bed_count_plural', { count })}
-                    </Text>
-                  </Box>
-                </Group>
-                <IconChevronRight
-                  size={16}
-                  style={{ color: 'var(--mantine-color-dimmed)', flexShrink: 0 }}
-                />
+              <Box style={{ minWidth: 0 }}>
+                <Text size="sm" fw={700} lineClamp={1}>
+                  {room.roomName}
+                </Text>
+                {room.locationPath && (
+                  <Text size="xs" c="dimmed" lineClamp={1}>
+                    {room.locationPath}
+                  </Text>
+                )}
+              </Box>
+              <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+                <Badge size="xs" variant="light" color={isFull ? 'red' : 'teal'}>
+                  {isFull
+                    ? t('portal.room_full', { defaultValue: 'Full' })
+                    : t('portal.n_beds_free', {
+                        defaultValue: '{{n}} free',
+                        n: room.availableCount,
+                      })}
+                </Badge>
+                <ActionIcon variant="subtle" color="gray" size="sm">
+                  {isExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+                </ActionIcon>
               </Group>
-            </Paper>
-          ))}
-        </SimpleGrid>
-      )}
+            </Group>
 
-      {/* Bed cards */}
-      {showBeds && (
-        <Stack gap="xs">
-          {filteredBeds.length === 0 ? (
-            <Alert icon={<IconInfoCircle size={16} />} color="blue" radius="md">
-              {t('portal.no_beds_at_location')}
-            </Alert>
-          ) : (
-            <>
-              <Text size="xs" c="dimmed">
-                {filteredBeds.length === 1
-                  ? t('portal.beds_available_singular', { count: filteredBeds.length })
-                  : t('portal.beds_available_plural', { count: filteredBeds.length })}
-              </Text>
-              {filteredBeds.map((bed) => {
-                const isSelected = selected?.id === bed.id;
-                return (
-                  <Paper
-                    key={bed.id}
-                    withBorder
-                    radius="md"
-                    p="sm"
-                    style={{
-                      cursor: 'pointer',
-                      borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
-                      background: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
-                    }}
-                    onClick={() => onSelect(bed)}
-                  >
-                    <Group justify="space-between" align="center">
-                      <Group gap="sm">
-                        <Radio checked={isSelected} onChange={() => onSelect(bed)} size="sm" />
-                        <Box>
-                          <Text size="sm" fw={500}>
-                            {t('portal.bed_label', { label: bed.label })}
-                          </Text>
-                          <Group gap={4} mt={2}>
-                            {bed.genderLock && (
-                              <Badge size="xs" variant="light" color="grape">
-                                {bed.genderLock === 'male' ? t('male') : t('female')}
-                              </Badge>
+            {/* Expanded bed grid */}
+            <Collapse in={isExpanded}>
+              <Divider />
+              <SimpleGrid cols={Math.min(room.beds.length, 3) as any} p="md" spacing="sm">
+                {room.beds.map((bed) => {
+                  const isSelected = selected?.id === bed.id;
+
+                  if (bed.isTaken) {
+                    // ── Taken bed ──────────────────────────────────────────────
+                    return (
+                      <Tooltip
+                        key={bed.id}
+                        label={
+                          <Stack gap={2}>
+                            {bed.occupantNationality && (
+                              <Text size="xs">
+                                {toFlagEmoji(bed.occupantNationality)} {bed.occupantNationality}
+                              </Text>
                             )}
-                            {bed.isTrOnly && (
-                              <Badge size="xs" variant="light" color="teal">
-                                {t('portal.tr_citizens')}
-                              </Badge>
+                            {bed.occupantDepartment && (
+                              <Text size="xs">{bed.occupantDepartment}</Text>
                             )}
-                            {bed.isForeignerOnly && (
-                              <Badge size="xs" variant="light" color="orange">
-                                {t('portal.international')}
-                              </Badge>
+                          </Stack>
+                        }
+                        disabled={!bed.occupantNationality && !bed.occupantDepartment}
+                        withinPortal
+                      >
+                        <Paper
+                          withBorder
+                          radius="sm"
+                          p="sm"
+                          style={{
+                            background: 'var(--mantine-color-dark-6)',
+                            borderColor: 'var(--mantine-color-dark-4)',
+                            cursor: 'default',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <Stack gap={4} align="center">
+                            <IconBed size={20} color="var(--mantine-color-dark-2)" />
+                            <Text size="xs" fw={600} c="dark.2">
+                              {bed.label}
+                            </Text>
+                            {bed.occupantNationality && (
+                              <Text size="lg" style={{ lineHeight: 1 }}>
+                                {toFlagEmoji(bed.occupantNationality)}
+                              </Text>
                             )}
-                          </Group>
-                        </Box>
-                      </Group>
-                      <Text size="sm" fw={600} c="blue">
-                        ₺{Number(bed.priceTry).toLocaleString()}
-                      </Text>
-                    </Group>
-                  </Paper>
-                );
-              })}
-            </>
-          )}
-        </Stack>
-      )}
+                            {bed.occupantDepartment && (
+                              <Text size="xs" c="dark.3" lineClamp={2} ta="center">
+                                {bed.occupantDepartment}
+                              </Text>
+                            )}
+                          </Stack>
+                        </Paper>
+                      </Tooltip>
+                    );
+                  }
+
+                  // ── Available bed ───────────────────────────────────────────
+                  return (
+                    <Paper
+                      key={bed.id}
+                      withBorder
+                      radius="sm"
+                      p="sm"
+                      style={{
+                        cursor: 'pointer',
+                        borderColor: isSelected
+                          ? 'var(--mantine-color-blue-5)'
+                          : 'var(--mantine-color-gray-3)',
+                        background: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
+                        textAlign: 'center',
+                      }}
+                      onClick={() => onSelect(bed)}
+                    >
+                      <Stack gap={4} align="center">
+                        <IconBed
+                          size={20}
+                          color={
+                            isSelected
+                              ? 'var(--mantine-color-blue-5)'
+                              : 'var(--mantine-color-teal-5)'
+                          }
+                        />
+                        <Text size="xs" fw={600} c={isSelected ? 'blue' : undefined}>
+                          {bed.label}
+                        </Text>
+                        {isSelected && (
+                          <Badge size="xs" color="blue" variant="filled">
+                            {t('portal.selected', { defaultValue: 'Selected' })}
+                          </Badge>
+                        )}
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </SimpleGrid>
+            </Collapse>
+          </Paper>
+        );
+      })}
     </Stack>
   );
 }
@@ -693,7 +726,7 @@ function ReviewStep({
   roomType,
 }: {
   semester: PortalSemester;
-  bed: AvailableBed;
+  bed: BedWithOccupancy;
   roomType: RoomTypeCatalogItem | null;
 }) {
   const { t } = useTranslation();
@@ -892,9 +925,10 @@ export function ApplyPage() {
   const [semesters, setSemesters] = useState<PortalSemester[]>([]);
   const [isLoadingSemesters, setIsLoadingSemesters] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState<PortalSemester | null>(null);
+  const [buildings, setBuildings] = useState<PortalBuilding[]>([]);
   const [filters, setFilters] = useState<Filters>({ buildingId: null, capacity: null });
   const [selectedRoomType, setSelectedRoomType] = useState<RoomTypeCatalogItem | null>(null);
-  const [selectedBed, setSelectedBed] = useState<AvailableBed | null>(null);
+  const [selectedBed, setSelectedBed] = useState<BedWithOccupancy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -908,6 +942,18 @@ export function ApplyPage() {
       .catch(() => {})
       .finally(() => setIsLoadingSemesters(false));
   }, []);
+
+  // Fetch buildings whenever the selected semester changes so BedStep can filter by name
+  useEffect(() => {
+    if (!selectedSemester) {
+      setBuildings([]);
+      return;
+    }
+    portalSemesters
+      .getBuildings(selectedSemester.id)
+      .then(setBuildings)
+      .catch(() => {});
+  }, [selectedSemester?.id]);
 
   const hasActiveBooking = booking !== null;
 
@@ -969,7 +1015,7 @@ export function ApplyPage() {
     />
   ) : step === 1 && selectedSemester ? (
     <FiltersStep
-      semesterId={selectedSemester.id}
+      buildings={buildings}
       filters={filters}
       onChange={(f) => {
         setFilters(f);
@@ -992,6 +1038,11 @@ export function ApplyPage() {
       semesterId={selectedSemester.id}
       roomTypeId={selectedRoomType?.id ?? null}
       roomTypeName={selectedRoomType?.name ?? null}
+      buildingName={
+        filters.buildingId != null
+          ? (buildings.find((b) => b.id === filters.buildingId)?.name ?? null)
+          : null
+      }
       selected={selectedBed}
       onSelect={setSelectedBed}
     />

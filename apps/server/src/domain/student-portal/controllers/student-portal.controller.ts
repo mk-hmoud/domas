@@ -94,6 +94,20 @@ export class StudentPortalController {
   }
 
   @UseGuards(StudentAuthGuard)
+  @Get('semesters/:id/all-beds')
+  async getAllBeds(
+    @Param('id', ParseIntPipe) semesterId: number,
+    @Query('roomTypeId') roomTypeId: string | undefined,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.studentPortalService.getAllBedsForSemester(
+      semesterId,
+      req.session.studentId!,
+      roomTypeId ? parseInt(roomTypeId, 10) : null,
+    );
+  }
+
+  @UseGuards(StudentAuthGuard)
   @Get('semesters/:id/buildings')
   async getBuildings(
     @Param('id', ParseIntPipe) semesterId: number,

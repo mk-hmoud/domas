@@ -25,6 +25,25 @@ export interface PortalSemester {
 
 // ─── Available Beds ───────────────────────────────────────────────────────────
 
+export interface BedWithOccupancy {
+  id: number;
+  label: string;
+  status: string;
+  isTrOnly: boolean;
+  isForeignerOnly: boolean;
+  ownership: LocationOwnership;
+  roomId: number;
+  roomName: string;
+  roomTypeId: number;
+  genderLock: GenderType | null;
+  priceTry: number;
+  priceForeign: number | null;
+  locationPath: string;
+  isTaken: boolean;
+  occupantNationality: string | null;
+  occupantDepartment: string | null;
+}
+
 export interface AvailableBed {
   id: number;
   label: string;
