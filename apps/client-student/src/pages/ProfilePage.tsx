@@ -9,12 +9,20 @@ import {
   Divider,
   Grid,
   Group,
+  Paper,
   Stack,
   Text,
   TextInput,
-  Title,
 } from '@domas/ui';
-import { IconCheck, IconDeviceFloppy, IconInfoCircle, IconUser } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconDeviceFloppy,
+  IconInfoCircle,
+  IconLogout,
+  IconMail,
+  IconPhone,
+  IconUser,
+} from '@tabler/icons-react';
 import { portalProfile } from '@domas/api-client';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
 
@@ -56,80 +64,122 @@ export function ProfilePage() {
   };
 
   return (
-    <Stack gap="md">
-      <Box>
-        <Title order={4}>{t('portal.profile_title')}</Title>
-        <Text size="sm" c="dimmed">
-          {t('portal.profile_subtitle')}
-        </Text>
-      </Box>
+    <Stack gap="lg">
+      {/* Hero header */}
+      <Paper
+        radius="xl"
+        style={{
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
+          boxShadow: '0 6px 24px rgba(25,113,194,0.22)',
+        }}
+      >
+        <Box px="xl" py="lg">
+          <Group gap="lg" align="center" wrap="nowrap">
+            <Avatar
+              size={64}
+              radius="xl"
+              style={{
+                background: 'rgba(255,255,255,0.25)',
+                color: 'white',
+                fontSize: 22,
+                fontWeight: 800,
+                border: '2px solid rgba(255,255,255,0.4)',
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </Avatar>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text fw={800} c="white" size="xl" lh={1.2}>
+                {fullName}
+              </Text>
+              <Text size="sm" c="white" style={{ opacity: 0.8 }}>
+                {student.studentNumber}
+              </Text>
+              <Text size="xs" c="white" style={{ opacity: 0.65, marginTop: 2 }}>
+                {student.department}
+              </Text>
+            </Box>
+          </Group>
+        </Box>
+      </Paper>
 
       <Grid gutter="md" align="flex-start">
         {/* Left — identity (read-only) */}
         <Grid.Col span={{ base: 12, sm: 5 }}>
-          <Card withBorder radius="md" p="md">
-            <Group gap="md" mb="md">
-              <Avatar size={56} radius="xl" color="blue">
-                {initials}
-              </Avatar>
-              <Box>
-                <Text fw={700} size="md">
-                  {fullName}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  {student.studentNumber}
-                </Text>
-              </Box>
+          <Paper
+            radius="xl"
+            p="lg"
+            style={{
+              border: '1px solid var(--mantine-color-default-border)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            }}
+          >
+            <Group gap="sm" mb="md">
+              <Box
+                style={{
+                  width: 6,
+                  height: 20,
+                  borderRadius: 3,
+                  background: 'linear-gradient(180deg, #228BE6, #0C8599)',
+                }}
+              />
+              <Text fw={700} size="sm">
+                {t('portal.profile_title')}
+              </Text>
             </Group>
 
-            <Divider mb="md" />
-
-            <Stack gap="xs">
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {t('department')}
-                </Text>
-                <Text size="sm" ta="right" style={{ maxWidth: '60%' }}>
-                  {student.department}
-                </Text>
-              </Group>
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {t('gender')}
-                </Text>
-                <Text size="sm" tt="capitalize">
-                  {student.gender}
-                </Text>
-              </Group>
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {t('nationality')}
-                </Text>
-                <Text size="sm">{student.nationalityCode}</Text>
-              </Group>
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {t('portal.date_of_birth')}
-                </Text>
-                <Text size="sm">{new Date(student.birthDate).toLocaleDateString()}</Text>
-              </Group>
+            <Stack gap="sm">
+              {[
+                { label: t('department'), value: student.department },
+                { label: t('gender'), value: student.gender },
+                { label: t('nationality'), value: student.nationalityCode },
+                {
+                  label: t('portal.date_of_birth'),
+                  value: new Date(student.birthDate).toLocaleDateString(),
+                },
+              ].map(({ label, value }) => (
+                <Group key={label} justify="space-between" wrap="nowrap">
+                  <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
+                    {label}
+                  </Text>
+                  <Text size="sm" fw={500} ta="right" style={{ maxWidth: '60%' }}>
+                    {value}
+                  </Text>
+                </Group>
+              ))}
             </Stack>
-          </Card>
+          </Paper>
         </Grid.Col>
 
         {/* Right — editable contact + session */}
         <Grid.Col span={{ base: 12, sm: 7 }}>
           <Stack gap="md">
-            <Card withBorder radius="md" p="md">
-              <Stack gap="md">
-                <Group gap="xs">
-                  <IconUser size={16} />
-                  <Text fw={600} size="sm">
+            <Paper
+              radius="xl"
+              p="lg"
+              style={{
+                border: '1px solid var(--mantine-color-default-border)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              }}
+            >
+              <Stack gap="lg">
+                <Group gap="sm">
+                  <Box
+                    style={{
+                      width: 6,
+                      height: 20,
+                      borderRadius: 3,
+                      background: 'linear-gradient(180deg, #228BE6, #0C8599)',
+                    }}
+                  />
+                  <Text fw={700} size="sm">
                     {t('portal.contact_information')}
                   </Text>
                 </Group>
 
-                <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="md">
+                <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="lg">
                   {t('portal.contact_info_hint')}
                 </Alert>
 
@@ -140,6 +190,8 @@ export function ProfilePage() {
                   onChange={(e) => setEmail(e.currentTarget.value)}
                   inputMode="email"
                   autoComplete="email"
+                  radius="lg"
+                  leftSection={<IconMail size={15} />}
                 />
 
                 <TextInput
@@ -149,12 +201,14 @@ export function ProfilePage() {
                   onChange={(e) => setPhoneNumber(e.currentTarget.value)}
                   inputMode="tel"
                   autoComplete="tel"
+                  radius="lg"
+                  leftSection={<IconPhone size={15} />}
                 />
 
                 {saveError && (
                   <Alert
                     color="red"
-                    radius="md"
+                    radius="lg"
                     variant="light"
                     withCloseButton
                     onClose={() => setSaveError(null)}
@@ -164,7 +218,7 @@ export function ProfilePage() {
                 )}
 
                 {saveSuccess && (
-                  <Alert icon={<IconCheck size={14} />} color="green" radius="md" variant="light">
+                  <Alert icon={<IconCheck size={14} />} color="green" radius="lg" variant="light">
                     {t('portal.contact_saved')}
                   </Alert>
                 )}
@@ -174,30 +228,57 @@ export function ProfilePage() {
                   onClick={handleSave}
                   loading={isSaving}
                   disabled={!hasChanges || isSaving}
+                  radius="xl"
+                  variant="gradient"
+                  gradient={{ from: 'blue', to: 'cyan' }}
+                  style={{
+                    boxShadow:
+                      hasChanges && !isSaving ? '0 4px 14px rgba(34,139,230,0.3)' : undefined,
+                    alignSelf: 'flex-start',
+                  }}
                 >
                   {t('save_changes')}
                 </Button>
               </Stack>
-            </Card>
+            </Paper>
 
-            <Card withBorder radius="md" p="md">
-              <Stack gap="xs">
-                <Text fw={600} size="sm">
-                  {t('portal.session')}
-                </Text>
+            <Paper
+              radius="xl"
+              p="lg"
+              style={{
+                border: '1px solid var(--mantine-color-red-3)',
+                background: 'var(--mantine-color-red-light)',
+              }}
+            >
+              <Stack gap="sm">
+                <Group gap="sm">
+                  <Box
+                    style={{
+                      width: 6,
+                      height: 20,
+                      borderRadius: 3,
+                      background: 'var(--mantine-color-red-5)',
+                    }}
+                  />
+                  <Text fw={700} size="sm">
+                    {t('portal.session')}
+                  </Text>
+                </Group>
                 <Text size="xs" c="dimmed">
                   {t('portal.signed_in_as', { number: student.studentNumber })}
                 </Text>
                 <Button
-                  variant="outline"
+                  variant="filled"
                   color="red"
+                  leftSection={<IconLogout size={15} />}
                   onClick={logout}
+                  radius="xl"
                   style={{ alignSelf: 'flex-start' }}
                 >
                   {t('portal.sign_out')}
                 </Button>
               </Stack>
-            </Card>
+            </Paper>
           </Stack>
         </Grid.Col>
       </Grid>
