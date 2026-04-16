@@ -25,6 +25,25 @@ export interface PortalSemester {
 
 // ─── Available Beds ───────────────────────────────────────────────────────────
 
+export interface BedWithOccupancy {
+  id: number;
+  label: string;
+  status: string;
+  isTrOnly: boolean;
+  isForeignerOnly: boolean;
+  ownership: LocationOwnership;
+  roomId: number;
+  roomName: string;
+  roomTypeId: number;
+  genderLock: GenderType | null;
+  priceTry: number;
+  priceForeign: number | null;
+  locationPath: string;
+  isTaken: boolean;
+  occupantNationality: string | null;
+  occupantDepartment: string | null;
+}
+
 export interface AvailableBed {
   id: number;
   label: string;
@@ -34,9 +53,29 @@ export interface AvailableBed {
   ownership: LocationOwnership;
   roomId: number;
   roomName: string;
+  roomTypeId: number;
   genderLock: GenderType | null;
-  basePrice: number | null;
+  priceTry: number;
+  priceForeign: number | null;
   locationPath: string;
+}
+
+export interface PortalBuilding {
+  id: number;
+  name: string;
+  availableBedCount: number;
+}
+
+export interface RoomTypeCatalogItem {
+  id: number;
+  name: string;
+  description?: string;
+  galleryUrls: string[];
+  amenities: string[];
+  capacity: number;
+  priceTry: number;
+  priceForeign: number | null;
+  availableBedCount: number;
 }
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
@@ -64,6 +103,14 @@ export interface StudentBookingView {
   locationPath: string;
 }
 
+export interface PortalRoomType {
+  id: number;
+  name: string;
+  description?: string;
+  galleryUrls: string[];
+  amenities: string[];
+}
+
 export interface StudentCurrentBooking extends StudentBookingView {
   accountingApprovedAt: string | null;
   contractUrl: string | null;
@@ -74,6 +121,12 @@ export interface StudentCurrentBooking extends StudentBookingView {
   paymentDeadlineDate: string | null;
   accessCardNumber: number | null;
   accessCardStatus: string | null;
+  // Room type display assets (null when room has no type assigned)
+  roomTypeId: number | null;
+  roomTypeName: string | null;
+  roomTypeDescription: string | null;
+  roomTypeGalleryUrls: string[];
+  roomTypeAmenities: string[];
 }
 
 // ─── Financial ────────────────────────────────────────────────────────────────

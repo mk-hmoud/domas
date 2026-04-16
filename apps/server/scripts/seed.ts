@@ -4,6 +4,7 @@ import { AppModule } from '../src/app.module';
 import { StudentsService } from '../src/domain/students/services/students.service';
 import { LocationsService } from '../src/domain/locations/services/locations.service';
 import { SemestersService } from '../src/domain/semesters/services/semesters.service';
+import { RoomTypesService } from '../src/domain/room-types/services/room-types.service';
 import { InventoryService } from '../src/domain/inventory/services/inventory.service';
 import { AccessCardsService } from '../src/domain/access-cards/services/access-cards.service';
 import { UsersService } from '../src/domain/users/services/users.service';
@@ -22,6 +23,7 @@ async function bootstrap() {
   const studentsService = app.get(StudentsService);
   const locationsService = app.get(LocationsService);
   const semestersService = app.get(SemestersService);
+  const roomTypesService = app.get(RoomTypesService);
   const inventoryService = app.get(InventoryService);
   const accessCardsService = app.get(AccessCardsService);
   const usersService = app.get(UsersService);
@@ -73,7 +75,51 @@ async function bootstrap() {
       logger.log(`Semester ${academicYear} Spring already exists.`);
     }
 
-    // 2. Create Locations
+    // 2. Create Room Types
+    logger.log('Checking Room Types...');
+    const existingRoomTypes = await roomTypesService.findAll();
+
+    const getOrCreateRoomType = async (name: string, capacity: number, description?: string) => {
+      const existing = existingRoomTypes.find((rt) => rt.name === name);
+      if (existing) return existing;
+      const rt = await roomTypesService.create({
+        name,
+        capacity,
+        description,
+        galleryUrls: [],
+        amenities: [],
+      });
+      logger.log(`Created room type: ${name} (capacity: ${capacity})`);
+      return rt;
+    };
+
+    const singleRoomType = await getOrCreateRoomType(
+      'Standard Single',
+      1,
+      'Private single-occupancy room',
+    );
+    const tripleRoomType = await getOrCreateRoomType(
+      'Standard Triple',
+      3,
+      'Shared 3-person room with individual study desks',
+    );
+
+    // 2b. Set semester pricing for room types
+    logger.log('Checking Semester Pricing...');
+    const existingPricing = await semestersService.getPricing(semester.id);
+    if (existingPricing.every((row) => row.priceTry === null)) {
+      await semestersService.setPricing(semester.id, {
+        items: [
+          { roomTypeId: singleRoomType.id, priceTry: 18000, priceForeign: 500 },
+          { roomTypeId: tripleRoomType.id, priceTry: 12000, priceForeign: 330 },
+        ],
+      });
+      logger.log('Set semester pricing for room types.');
+    } else {
+      logger.log('Semester pricing already set.');
+    }
+
+    // 3. Create Locations
     logger.log('Checking Locations...');
     const allLocations = await locationsService.findAll({ page: 1, limit: 1000 });
 
@@ -127,10 +173,11 @@ async function bootstrap() {
           parentId: floor.id,
           bedCount: 3,
           genderLock: GenderType.MALE,
+          roomTypeId: tripleRoomType.id,
         },
         seedContext,
       );
-      logger.log('Created Room 201.');
+      logger.log('Created Room 201 (Standard Triple).');
     }
 
     let room202 = allLocations.data.find((l) => l.name === 'Room 202');
@@ -142,13 +189,14 @@ async function bootstrap() {
           parentId: floor.id,
           bedCount: 1,
           genderLock: GenderType.FEMALE,
+          roomTypeId: singleRoomType.id,
         },
         seedContext,
       );
-      logger.log('Created Room 202.');
+      logger.log('Created Room 202 (Standard Single).');
     }
 
-    // 3. Access Cards
+    // 4. Access Cards
     logger.log('Checking Access Cards...');
     const batches = await accessCardsService.findAllBatches();
     if (!batches.find((b) => b.name === 'General Pool 2025')) {
@@ -165,7 +213,7 @@ async function bootstrap() {
       logger.log('Card Batch already exists.');
     }
 
-    // 4. Students
+    // 5. Students
     logger.log('Checking Students...');
     const students = await studentsService.findAll({ page: 1, limit: 100 });
 
@@ -211,7 +259,7 @@ async function bootstrap() {
       logger.log('Created Sarah.');
     }
 
-    // 5. Inventory Catalog
+    // 6. Inventory Catalog
     logger.log('Checking Inventory Catalog...');
     const catalog = await inventoryService.findAllCatalog();
 
@@ -259,7 +307,7 @@ async function bootstrap() {
     });
     logger.log('Inventory Catalog checked/created.');
 
-    // 6. Inventory Templates
+    // 7. Inventory Templates
     logger.log('Checking Inventory Templates...');
     const allTemplates = await inventoryService.findAllTemplates();
     const updatedCatalog = await inventoryService.findAllCatalog();
@@ -298,7 +346,7 @@ async function bootstrap() {
       }
     }
 
-    // 7. Assign Inventory
+    // 8. Assign Inventory
     logger.log('Checking Assignments...');
     const floorAssignments = await inventoryService.findAssignmentsByLocation(floor.id);
     if (!floorAssignments.find((a) => a.catalogId === oven.id)) {

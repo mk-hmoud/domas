@@ -1,6 +1,24 @@
 import { SemesterStatus } from "../enums/semester-status.enum";
 import { SemesterType } from "../enums/semester-type.enum";
 
+export interface SemesterRoomPricingRow {
+  roomTypeId: number;
+  roomTypeName: string;
+  capacity: number;
+  priceTry: number | null;
+  priceForeign: number | null;
+}
+
+export interface SemesterRoomPricingItemDto {
+  roomTypeId: number;
+  priceTry: number;
+  priceForeign?: number | null;
+}
+
+export interface SetSemesterPricingDto {
+  items: SemesterRoomPricingItemDto[];
+}
+
 export interface Semester {
   id: number;
   type: SemesterType;

@@ -10,6 +10,6 @@ export interface UpdateLocationDto {
   isTrOnly?: boolean;
   isForeignerOnly?: boolean;
   ownership?: LocationOwnership;
-  basePrice?: number;
   status?: string;
+  roomTypeId?: number | null;
 }
