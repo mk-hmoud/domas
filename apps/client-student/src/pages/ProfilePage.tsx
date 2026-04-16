@@ -1,19 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Card,
-  Divider,
-  Grid,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  TextInput,
-} from '@domas/ui';
+import { Alert, Avatar, Box, Button, Grid, Group, Paper, Stack, Text, TextInput } from '@domas/ui';
 import {
   IconCheck,
   IconDeviceFloppy,
@@ -21,7 +8,6 @@ import {
   IconLogout,
   IconMail,
   IconPhone,
-  IconUser,
 } from '@tabler/icons-react';
 import { portalProfile } from '@domas/api-client';
 import { useStudentAuth } from '../contexts/StudentAuthContext';

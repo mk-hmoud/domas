@@ -4,7 +4,6 @@ import {
   Alert,
   Badge,
   Box,
-  Card,
   Group,
   Paper,
   SimpleGrid,
@@ -20,7 +19,6 @@ import {
   IconCreditCard,
   IconInfoCircle,
   IconReceipt,
-  IconTrendingUp,
 } from '@tabler/icons-react';
 import { StudentDamageLiability, StudentTransaction } from '@domas/ts-types';
 import { portalFinancial } from '@domas/api-client';
