@@ -264,6 +264,7 @@
   "delete_user_message": "Are you sure you want to delete {{email}}? This action cannot be undone.",
   "confirm": "Confirm",
   "cancel": "Cancel",
+  "unlimited": "Unlimited",
   "delete_success": "User deleted successfully",
   "delete_error": "Failed to delete user",
   "location_delete_success": "Location deleted successfully",
@@ -537,6 +538,8 @@
     "currency": "Currency",
     "auto_activate": "Auto Activate",
     "auto_close": "Auto Close",
+    "max_room_changes": "Max Room Changes",
+    "max_room_changes_hint": "Leave empty for unlimited changes",
     "types": {
       "fall": "Fall",
       "spring": "Spring",

@@ -52,6 +52,7 @@ export function SemesterModal({
       depositAmountForeign: 0,
       foreignCurrencyCode: "USD",
       status: SemesterStatus.PLANNED,
+      maxRoomChanges: null as number | null,
     },
     validate: {
       academicYear: (val) => (val ? null : t("field_required")),
@@ -91,6 +92,7 @@ export function SemesterModal({
           depositAmountForeign: initialValues.depositAmountForeign,
           foreignCurrencyCode: initialValues.foreignCurrencyCode,
           status: initialValues.status,
+          maxRoomChanges: initialValues.maxRoomChanges ?? null,
         });
       } else if (lastSemester) {
         // Smart Pre-fill Logic
@@ -128,6 +130,7 @@ export function SemesterModal({
           depositAmountForeign: lastSemester.depositAmountForeign,
           foreignCurrencyCode: lastSemester.foreignCurrencyCode,
           status: SemesterStatus.PLANNED,
+          maxRoomChanges: null,
         });
       } else {
         form.reset();
@@ -152,6 +155,10 @@ export function SemesterModal({
       endDate: toIso(values.endDate),
       bookingStartDate: toIso(values.bookingStartDate),
       bookingEndDate: toIso(values.bookingEndDate),
+      maxRoomChanges:
+        values.maxRoomChanges != null && values.maxRoomChanges !== ""
+          ? Number(values.maxRoomChanges)
+          : null,
     };
     await onSubmit(payload);
     onClose();
@@ -299,6 +306,24 @@ export function SemesterModal({
               {...form.getInputProps("foreignCurrencyCode")}
             />
           </SimpleGrid>
+
+          <NumberInput
+            label={t("semester.max_room_changes", {
+              defaultValue: "Max Room Changes",
+            })}
+            description={t("semester.max_room_changes_hint", {
+              defaultValue: "Leave empty for unlimited changes",
+            })}
+            placeholder={t("unlimited", { defaultValue: "Unlimited" })}
+            min={0}
+            value={form.values.maxRoomChanges ?? ""}
+            onChange={(v) =>
+              form.setFieldValue(
+                "maxRoomChanges",
+                v === "" ? null : (v as number),
+              )
+            }
+          />
 
           <Select
             label={t("status")}

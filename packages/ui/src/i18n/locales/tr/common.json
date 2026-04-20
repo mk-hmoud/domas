@@ -262,6 +262,7 @@
   "delete_user_message": "{{email}} kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
   "confirm": "Onayla",
   "cancel": "İptal",
+  "unlimited": "Sınırsız",
   "delete_success": "Kullanıcı başarıyla silindi",
   "delete_error": "Kullanıcı silinemedi",
   "location_delete_success": "Lokasyon başarıyla silindi",
@@ -535,6 +536,8 @@
     "currency": "Para Birimi",
     "auto_activate": "Otomatik Etkinleştir",
     "auto_close": "Otomatik Kapat",
+    "max_room_changes": "Maks. Oda Değişikliği",
+    "max_room_changes_hint": "Sınırsız değişim için boş bırakın",
     "types": {
       "fall": "Güz",
       "spring": "Bahar",

@@ -506,6 +506,19 @@ export function SharedSemestersPage() {
               </Box>
             </Group>
 
+            <Box>
+              <Text size="xs" c="dimmed">
+                {t("semester.max_room_changes", {
+                  defaultValue: "Max Room Changes",
+                })}
+              </Text>
+              <Text>
+                {viewSemester.maxRoomChanges != null
+                  ? viewSemester.maxRoomChanges
+                  : t("unlimited", { defaultValue: "Unlimited" })}
+              </Text>
+            </Box>
+
             <Divider
               label={
                 <Group gap={6}>
