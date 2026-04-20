@@ -19,6 +19,7 @@ import {
   Title,
 } from '@domas/ui';
 import {
+  IconArrowsExchange,
   IconBed,
   IconCalendar,
   IconCreditCard,
@@ -35,6 +36,7 @@ import { portalBookings } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
 import { RoomShowcase } from '../components/RoomShowcase';
+import { RoomChangeTab } from '../components/RoomChangeTab';
 
 function usePaymentLabel() {
   const { t } = useTranslation();
@@ -60,7 +62,7 @@ export function BookingPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const paymentLabel = usePaymentLabel();
-  const { booking, isLoading } = useCurrentBooking();
+  const { booking, isLoading, refetch } = useCurrentBooking();
 
   useEffect(() => {
     if (!isLoading && booking === null) {
@@ -219,6 +221,9 @@ export function BookingPage() {
                     </Tabs.Tab>
                     <Tabs.Tab value="financial" leftSection={<IconReceipt size={14} />}>
                       {t('portal.financial_tab')}
+                    </Tabs.Tab>
+                    <Tabs.Tab value="room-change" leftSection={<IconArrowsExchange size={14} />}>
+                      {t('portal.room_change_tab')}
                     </Tabs.Tab>
                   </Tabs.List>
 
@@ -438,6 +443,10 @@ export function BookingPage() {
                         )}
                       </Group>
                     </Stack>
+                  </Tabs.Panel>
+                  {/* Room Change tab */}
+                  <Tabs.Panel value="room-change" p="lg">
+                    <RoomChangeTab booking={booking} onRefetch={refetch} />
                   </Tabs.Panel>
                 </Tabs>
               </Paper>

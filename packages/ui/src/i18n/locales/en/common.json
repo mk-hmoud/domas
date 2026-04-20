@@ -810,6 +810,27 @@
     "step_filters_desc": "Building & room size",
     "step_catalog_label": "Room Type",
     "step_catalog_desc": "Choose a room style",
-    "skip_to_beds": "Browse all beds"
+    "skip_to_beds": "Browse all beds",
+    "room_change_tab": "Room Change",
+    "room_change_quota_label": "Room Change Allowance",
+    "room_change_usage_unlimited": "Unlimited changes allowed",
+    "room_change_usage_count": "{{used}} of {{max}} changes used",
+    "room_change_limit_reached": "Room change limit reached",
+    "room_change_pending_title": "Pending Request",
+    "room_change_cancel_request": "Cancel",
+    "room_change_cancel_error": "Failed to cancel request",
+    "room_change_cancelled": "Request cancelled",
+    "room_change_request_btn": "Request Room Change",
+    "room_change_history_title": "Request History",
+    "room_change_no_history": "No room change requests yet.",
+    "room_change_modal_title": "Select New Bed",
+    "room_change_note_label": "Note (optional)",
+    "room_change_note_placeholder": "Any reason or preference...",
+    "room_change_submit": "Submit Request",
+    "room_change_submit_error": "Failed to submit request. Please try again.",
+    "room_change_submitted": "Room change request submitted successfully.",
+    "room_change_no_available_beds": "No available beds found for this semester.",
+    "room_change_status_approved": "Approved",
+    "room_change_status_rejected": "Rejected"
   }
 }

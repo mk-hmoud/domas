@@ -800,6 +800,27 @@
     "step_filters_desc": "Bina & oda büyüklüğü",
     "step_catalog_label": "Oda Tipi",
     "step_catalog_desc": "Oda stili seçin",
-    "skip_to_beds": "Tüm yatakları gör"
+    "skip_to_beds": "Tüm yatakları gör",
+    "room_change_tab": "Oda Değişikliği",
+    "room_change_quota_label": "Oda Değişikliği Hakkı",
+    "room_change_usage_unlimited": "Sınırsız değişiklik hakkı",
+    "room_change_usage_count": "{{max}} hakkın {{used}} tanesi kullanıldı",
+    "room_change_limit_reached": "Oda değişikliği limiti doldu",
+    "room_change_pending_title": "Bekleyen Talep",
+    "room_change_cancel_request": "İptal Et",
+    "room_change_cancel_error": "Talep iptal edilemedi",
+    "room_change_cancelled": "Talep iptal edildi",
+    "room_change_request_btn": "Oda Değişikliği Talep Et",
+    "room_change_history_title": "Talep Geçmişi",
+    "room_change_no_history": "Henüz oda değişikliği talebi yok.",
+    "room_change_modal_title": "Yeni Yatak Seçin",
+    "room_change_note_label": "Not (isteğe bağlı)",
+    "room_change_note_placeholder": "Sebep veya tercih belirtebilirsiniz...",
+    "room_change_submit": "Talep Gönder",
+    "room_change_submit_error": "Talep gönderilemedi. Lütfen tekrar deneyin.",
+    "room_change_submitted": "Oda değişikliği talebiniz başarıyla gönderildi.",
+    "room_change_no_available_beds": "Bu dönem için uygun yatak bulunamadı.",
+    "room_change_status_approved": "Onaylandı",
+    "room_change_status_rejected": "Reddedildi"
   }
 }
