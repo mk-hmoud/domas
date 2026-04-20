@@ -19,3 +19,4 @@ export * from "./endpoints/announcements";
 export * from "./endpoints/guests";
 export * from "./endpoints/stats";
 export * from "./endpoints/room-types";
+export * from "./endpoints/room-changes";

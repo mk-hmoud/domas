@@ -708,3 +708,49 @@ CREATE TABLE semester_room_pricing (
     price_foreign NUMERIC(10,2),
     PRIMARY KEY (semester_id, room_type_id)
 );
+
+-- =============================================
+-- ROOM CHANGE REQUESTS
+-- =============================================
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS max_room_changes INT DEFAULT NULL;
+
+ALTER TABLE bookings
+    ADD COLUMN IF NOT EXISTS room_changes_count INT NOT NULL DEFAULT 0;
+
+CREATE TYPE room_change_status_enum AS ENUM ('pending', 'approved', 'rejected');
+
+CREATE TABLE room_change_requests (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id      UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    student_id      UUID NOT NULL REFERENCES students(id),
+    semester_id     INT  NOT NULL REFERENCES semesters(id),
+
+    -- The bed the student wants to move to
+    requested_bed_id INT NOT NULL REFERENCES beds(id),
+
+    -- Snapshot of the bed they are leaving (set at creation time)
+    current_bed_id   INT NOT NULL REFERENCES beds(id),
+
+    status          room_change_status_enum NOT NULL DEFAULT 'pending',
+    note            TEXT,
+
+    -- Resolution
+    resolved_by     UUID REFERENCES users(id),
+    resolved_at     TIMESTAMPTZ,
+    rejection_reason TEXT,
+
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Only one pending request per booking at a time
+    CONSTRAINT uq_one_pending_per_booking
+        EXCLUDE USING btree (booking_id WITH =)
+        WHERE (status = 'pending')
+);
+
+CREATE INDEX idx_room_change_requests_booking   ON room_change_requests(booking_id);
+CREATE INDEX idx_room_change_requests_student   ON room_change_requests(student_id);
+CREATE INDEX idx_room_change_requests_semester  ON room_change_requests(semester_id);
+CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);

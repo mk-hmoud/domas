@@ -35,6 +35,7 @@ export interface Semester {
   status: SemesterStatus;
   autoActivate: boolean;
   autoClose: boolean;
+  maxRoomChanges: number | null;
   createdAt: string;
   updatedAt: string;
 }
