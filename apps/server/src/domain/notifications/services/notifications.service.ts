@@ -13,6 +13,8 @@ export const NotificationType = {
   DAMAGE_CHARGE: 'damage_charge',
   ACCESS_CARD_ISSUED: 'access_card_issued',
   PAYMENT_DEADLINE_REMINDER: 'payment_deadline_reminder',
+  ROOM_CHANGE_APPROVED: 'room_change_approved',
+  ROOM_CHANGE_REJECTED: 'room_change_rejected',
 } as const;
 
 export type NotificationTypeValue = (typeof NotificationType)[keyof typeof NotificationType];

@@ -24,4 +24,10 @@ export const roomChanges = {
     );
     return response.data;
   },
+
+  moveBed: async (bookingId: string, bedId: number): Promise<void> => {
+    await apiClient.post(`/room-changes/bookings/${bookingId}/move-bed`, {
+      bedId,
+    });
+  },
 };

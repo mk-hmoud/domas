@@ -250,10 +250,11 @@ export const portalRoomChanges = {
   },
 
   create: async (
+    semesterId: number,
     dto: StudentCreateRoomChangeDto,
   ): Promise<StudentRoomChangeView> => {
     const response = await apiClient.post<StudentRoomChangeView>(
-      "/portal/room-changes",
+      `/portal/room-changes/${semesterId}`,
       dto,
     );
     return response.data;

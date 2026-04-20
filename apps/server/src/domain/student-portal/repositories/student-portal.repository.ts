@@ -449,7 +449,10 @@ export class StudentPortalRepository {
         rt.amenities        AS "roomTypeAmenities",
         -- Access card
         ac.card_number AS "accessCardNumber",
-        ac.status      AS "accessCardStatus"
+        ac.status      AS "accessCardStatus",
+        -- Room change tracking
+        bk.room_changes_count AS "roomChangesCount",
+        s.max_room_changes    AS "maxRoomChanges"
       FROM  bookings bk
       JOIN  semesters s  ON bk.semester_id = s.id
       JOIN  beds bd      ON bk.bed_id      = bd.id
