@@ -11,7 +11,6 @@ import {
   Paper,
   Drawer,
   Stack,
-  Box,
   Code,
   Badge,
 } from "@mantine/core";
@@ -35,6 +34,7 @@ import {
   StudentsTable,
   BulkActionsBar,
   ComposeEmailModal,
+  LabelValue,
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -372,9 +372,9 @@ export function SharedStudentsPage() {
           size="md"
         >
           {selectedStudent && (
-            <Stack gap="md">
-              <Group justify="space-between">
-                <Text size="xl" fw={700}>
+            <Stack gap="lg">
+              <Group justify="space-between" align="flex-start">
+                <Text fw={700} size="md">
                   {selectedStudent.firstName} {selectedStudent.lastName}
                 </Text>
                 <Badge color={selectedStudent.isActive ? "green" : "gray"}>
@@ -382,54 +382,48 @@ export function SharedStudentsPage() {
                 </Badge>
               </Group>
 
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("student_number")}
-                </Text>
-                <Text fw={500}>{selectedStudent.studentNumber}</Text>
-              </Box>
-
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("national_id")}
-                </Text>
-                <Text fw={500}>{selectedStudent.nationalId}</Text>
-              </Box>
-
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("birth_date")}
-                </Text>
-                <Text>
-                  {selectedStudent.birthDate
-                    ? new Date(selectedStudent.birthDate).toLocaleDateString(
-                        "en-GB",
-                      )
-                    : "-"}
-                </Text>
-              </Box>
-
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("email")}
-                </Text>
-                <Text>{selectedStudent.email || "-"}</Text>
-              </Box>
+              <Group grow>
+                <LabelValue label={t("student_number")}>
+                  {selectedStudent.studentNumber}
+                </LabelValue>
+                <LabelValue label={t("national_id")}>
+                  {selectedStudent.nationalId}
+                </LabelValue>
+              </Group>
 
               <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("phone_number")}
-                  </Text>
-                  <Text>{selectedStudent.phoneNumber || "-"}</Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("whatsapp_number", { defaultValue: "WhatsApp" })}
-                  </Text>
+                <LabelValue label={t("gender")}>
+                  {t(selectedStudent.gender)}
+                </LabelValue>
+                <LabelValue label={t("nationality")}>
+                  {getCountryName(selectedStudent.nationalityCode)}
+                </LabelValue>
+              </Group>
+
+              <LabelValue label={t("birth_date")}>
+                {selectedStudent.birthDate
+                  ? new Date(selectedStudent.birthDate).toLocaleDateString(
+                      "en-GB",
+                    )
+                  : "—"}
+              </LabelValue>
+
+              <LabelValue label={t("email")}>
+                {selectedStudent.email || "—"}
+              </LabelValue>
+
+              <Group grow>
+                <LabelValue label={t("phone_number")}>
+                  {selectedStudent.phoneNumber || "—"}
+                </LabelValue>
+                <LabelValue
+                  label={t("whatsapp_number", { defaultValue: "WhatsApp" })}
+                >
                   {selectedStudent.whatsappNumber ? (
                     <Group gap="xs">
-                      <Text>{selectedStudent.whatsappNumber}</Text>
+                      <Text size="sm" fw={500}>
+                        {selectedStudent.whatsappNumber}
+                      </Text>
                       <Button
                         size="compact-xs"
                         color="green"
@@ -446,33 +440,17 @@ export function SharedStudentsPage() {
                       </Button>
                     </Group>
                   ) : (
-                    <Text c="dimmed">-</Text>
+                    <Text size="sm" c="dimmed">
+                      —
+                    </Text>
                   )}
-                </Box>
-              </Group>
-
-              <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("gender")}
-                  </Text>
-                  <Text>{t(selectedStudent.gender)}</Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("nationality")}
-                  </Text>
-                  <Text>{getCountryName(selectedStudent.nationalityCode)}</Text>
-                </Box>
+                </LabelValue>
               </Group>
 
               {selectedStudent.userId && (
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    User ID
-                  </Text>
+                <LabelValue label="User ID">
                   <Code>{selectedStudent.userId}</Code>
-                </Box>
+                </LabelValue>
               )}
 
               <Group grow>

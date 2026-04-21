@@ -43,3 +43,4 @@ export * from "./layouts/DashboardLayout";
 export * from "./components/Dashboard/StatCard";
 export * from "./components/PageHeader";
 export * from "./components/EmptyState";
+export * from "./components/LabelValue";

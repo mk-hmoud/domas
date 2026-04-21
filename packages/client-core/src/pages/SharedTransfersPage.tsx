@@ -10,7 +10,6 @@ import {
   Card,
   Stack,
   Drawer,
-  Box,
   Badge,
 } from "@mantine/core";
 import { IconSearch, IconArrowsLeftRight } from "@tabler/icons-react";
@@ -21,7 +20,7 @@ import {
   TransferBookingDto,
   BookingOpsStatus,
 } from "@domas/ts-types";
-import { BookingsTable, TransferSemesterModal } from "@domas/ui";
+import { BookingsTable, TransferSemesterModal, LabelValue } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
@@ -236,22 +235,18 @@ export function SharedTransfersPage() {
           position="right"
         >
           {selectedBooking && (
-            <Stack gap="md">
-              <Text fw={700} size="lg">
+            <Stack gap="lg">
+              <Text fw={700} size="md">
                 {studentsMap.get(selectedBooking.studentId)}
               </Text>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("current_bed", { defaultValue: "Current Bed" })}
-                </Text>
-                <Text>{bedsMap.get(selectedBooking.bedId)}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("status")}
-                </Text>
-                <Badge>{selectedBooking.status}</Badge>
-              </Box>
+              <LabelValue
+                label={t("current_bed", { defaultValue: "Current Bed" })}
+              >
+                {bedsMap.get(selectedBooking.bedId) || selectedBooking.bedId}
+              </LabelValue>
+              <LabelValue label={t("status")}>
+                <Badge variant="light">{selectedBooking.status}</Badge>
+              </LabelValue>
             </Stack>
           )}
         </Drawer>

@@ -8,7 +8,6 @@ import {
   Drawer,
   Stack,
   Badge,
-  Box,
   TextInput,
 } from "@mantine/core";
 import { IconPlus, IconEdit, IconSearch } from "@tabler/icons-react";
@@ -20,7 +19,7 @@ import {
   UpdateUserDto,
   Role,
 } from "@domas/ts-types";
-import { CreateUserModal, UsersTable } from "@domas/ui";
+import { CreateUserModal, UsersTable, LabelValue } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -237,16 +236,16 @@ export function SharedUsersPage({
           size="md"
         >
           {viewUser && (
-            <Stack gap="md">
-              <Group justify="space-between">
-                <Stack gap={0}>
-                  <Text size="xl" fw={700}>
+            <Stack gap="lg">
+              <Group justify="space-between" align="flex-start">
+                <Stack gap={2}>
+                  <Text fw={700} size="md">
                     {viewUser.firstName || viewUser.lastName
                       ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim()
                       : viewUser.email}
                   </Text>
                   {(viewUser.firstName || viewUser.lastName) && (
-                    <Text size="sm" c="dimmed">
+                    <Text size="xs" c="dimmed">
                       {viewUser.email}
                     </Text>
                   )}
@@ -256,41 +255,28 @@ export function SharedUsersPage({
                 </Badge>
               </Group>
 
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("user_id", { defaultValue: "User ID" })}
-                </Text>
-                <Text size="sm" style={{ wordBreak: "break-all" }}>
-                  {viewUser.id}
-                </Text>
-              </Box>
+              <LabelValue
+                label={t("user_id", { defaultValue: "User ID" })}
+                style={{ wordBreak: "break-all" }}
+              >
+                {viewUser.id}
+              </LabelValue>
 
               {viewUser.phoneNumber && (
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("phone_number", { defaultValue: "Phone Number" })}
-                  </Text>
-                  <Text size="sm">{viewUser.phoneNumber}</Text>
-                </Box>
+                <LabelValue
+                  label={t("phone_number", { defaultValue: "Phone Number" })}
+                >
+                  {viewUser.phoneNumber}
+                </LabelValue>
               )}
 
               <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("created_at")}
-                  </Text>
-                  <Text>
-                    {new Date(viewUser.createdAt).toLocaleDateString()}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("updated_at")}
-                  </Text>
-                  <Text>
-                    {new Date(viewUser.updatedAt).toLocaleDateString()}
-                  </Text>
-                </Box>
+                <LabelValue label={t("created_at")}>
+                  {new Date(viewUser.createdAt).toLocaleDateString()}
+                </LabelValue>
+                <LabelValue label={t("updated_at")}>
+                  {new Date(viewUser.updatedAt).toLocaleDateString()}
+                </LabelValue>
               </Group>
 
               {viewUser.isRecoveryAdmin && (
@@ -299,10 +285,7 @@ export function SharedUsersPage({
                 </Badge>
               )}
 
-              <Box>
-                <Text size="xs" c="dimmed" mb={4}>
-                  {t("user_roles")}
-                </Text>
+              <LabelValue label={t("user_roles")}>
                 <Group gap="xs">
                   {viewUser.roles && viewUser.roles.length > 0 ? (
                     viewUser.roles.map((role) => (
@@ -312,11 +295,11 @@ export function SharedUsersPage({
                     ))
                   ) : (
                     <Text size="sm" c="dimmed">
-                      -
+                      —
                     </Text>
                   )}
                 </Group>
-              </Box>
+              </LabelValue>
 
               <Button
                 variant="light"
@@ -325,7 +308,7 @@ export function SharedUsersPage({
                   openEditModal(viewUser);
                   setViewUser(null);
                 }}
-                mt="xl"
+                mt="md"
               >
                 {t("edit_user", { defaultValue: "Edit User" })}
               </Button>

@@ -4,14 +4,13 @@ import {
   Group,
   Text,
   Badge,
-  Title,
   Divider,
-  Box,
   Button,
 } from "@mantine/core";
-import { IconEdit, IconArchive, IconInfoCircle } from "@tabler/icons-react";
+import { IconEdit, IconArchive } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { InventoryCatalogItem } from "@domas/ts-types";
+import { LabelValue } from "../LabelValue";
 
 interface InventoryCatalogDrawerProps {
   opened: boolean;
@@ -35,8 +34,8 @@ export function InventoryCatalogDrawer({
       onClose={onClose}
       title={
         <Group gap="xs">
-          <IconArchive size={20} />
-          <Text fw={700}>
+          <IconArchive size={18} />
+          <Text fw={700} size="sm">
             {t("item_details", { defaultValue: "Item Details" })}
           </Text>
         </Group>
@@ -45,74 +44,65 @@ export function InventoryCatalogDrawer({
       size="md"
     >
       {item && (
-        <Stack gap="md">
+        <Stack gap="lg">
           <Group justify="space-between" align="flex-start">
-            <Stack gap={0}>
-              <Title order={3}>{isTr ? item.nameTr : item.nameEn}</Title>
-              <Text size="sm" c="dimmed">
+            <Stack gap={2}>
+              <Text fw={700} size="md">
+                {isTr ? item.nameTr : item.nameEn}
+              </Text>
+              <Text size="xs" c="dimmed">
                 {isTr ? item.nameEn : item.nameTr}
               </Text>
             </Stack>
-            <Badge color={item.isActive ? "green" : "gray"} variant="filled">
+            <Badge color={item.isActive ? "green" : "gray"} variant="light">
               {item.isActive ? t("active") : t("inactive")}
             </Badge>
           </Group>
 
           <Divider />
 
-          <Box>
-            <Text size="xs" c="dimmed" mb={4}>
-              {t("scope")}
-            </Text>
-            <Group gap="xs">
-              <Badge variant="light" color="blue" size="lg">
-                {t(`inventory_scope.${item.scope}`)}
-              </Badge>
-              {item.isOptional && (
-                <Badge variant="dot" color="cyan" size="lg">
-                  {t("is_optional")}
+          <Stack gap="md">
+            <LabelValue label={t("scope")}>
+              <Group gap="xs">
+                <Badge variant="light" color="blue">
+                  {t(`inventory_scope.${item.scope}`)}
                 </Badge>
-              )}
+                {item.isOptional && (
+                  <Badge variant="dot" color="cyan">
+                    {t("is_optional")}
+                  </Badge>
+                )}
+              </Group>
+            </LabelValue>
+
+            <Group grow>
+              <LabelValue label={t("price_try")}>
+                <Text fw={700} size="lg" c="blue">
+                  {item.basePriceTry} TRY
+                </Text>
+              </LabelValue>
+              <LabelValue label={t("price_foreign")}>
+                <Text fw={700} size="lg" c="green">
+                  {item.basePriceForeign} {item.foreignCurrencyCode}
+                </Text>
+              </LabelValue>
             </Group>
-          </Box>
 
-          <Group grow>
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("price_try")}
-              </Text>
-              <Text fw={700} size="xl" c="blue">
-                {item.basePriceTry} TRY
-              </Text>
-            </Box>
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("price_foreign")}
-              </Text>
-              <Text fw={700} size="xl" c="green">
-                {item.basePriceForeign} {item.foreignCurrencyCode}
-              </Text>
-            </Box>
-          </Group>
-
-          <Box>
-            <Text size="xs" c="dimmed" mb={4}>
-              {t("description")}
-            </Text>
-            <Text size="sm">
-              {(isTr ? item.descriptionTr : item.descriptionEn) || "-"}
-            </Text>
-          </Box>
+            <LabelValue label={t("description")}>
+              {(isTr ? item.descriptionTr : item.descriptionEn) || (
+                <Text size="sm" c="dimmed" fs="italic">
+                  —
+                </Text>
+              )}
+            </LabelValue>
+          </Stack>
 
           <Divider />
 
-          <Stack gap="xs">
-            <Group gap={4}>
-              <IconInfoCircle size={14} color="var(--mantine-color-dimmed)" />
-              <Text size="xs" c="dimmed">
-                {t("item_id", { defaultValue: "Item ID" })}: {item.id}
-              </Text>
-            </Group>
+          <Stack gap={4}>
+            <Text size="xs" c="dimmed">
+              {t("item_id", { defaultValue: "Item ID" })}: {item.id}
+            </Text>
             <Text size="xs" c="dimmed">
               {t("created_at")}: {new Date(item.createdAt).toLocaleString()}
             </Text>
@@ -128,7 +118,7 @@ export function InventoryCatalogDrawer({
               onEdit?.(item);
               onClose();
             }}
-            mt="xl"
+            mt="md"
           >
             {t("edit_catalog_item")}
           </Button>
