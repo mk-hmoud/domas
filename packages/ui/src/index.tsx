@@ -41,6 +41,7 @@ export * from "./components/RoomTypes";
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";
 export * from "./components/Dashboard/StatCard";
+export * from "./components/Dashboard/TableSkeleton";
 export * from "./components/PageHeader";
 export * from "./components/EmptyState";
 export * from "./components/LabelValue";

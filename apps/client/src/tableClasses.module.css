@@ -1,0 +1,15 @@
+.thead {
+  background: var(--mantine-color-gray-0);
+  border-bottom: 2px solid var(--mantine-color-gray-2);
+}
+
+.th {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mantine-color-gray-6);
+  white-space: nowrap;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}

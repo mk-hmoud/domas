@@ -299,8 +299,6 @@ export function SharedStudentsPage() {
         }
       />
       <PageShell>
-        <LoadingOverlay visible={loading} />
-
         <Card withBorder padding="md" radius="md" mb="md">
           <TextInput
             placeholder={t("search_placeholder", { defaultValue: "Search..." })}
@@ -310,7 +308,8 @@ export function SharedStudentsPage() {
           />
         </Card>
 
-        <Paper withBorder radius="md">
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
           <StudentsTable
             data={data.data}
             selectedIds={selectedIds}
