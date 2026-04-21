@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActionIcon,
   Badge,
   Box,
   Button,
@@ -14,8 +15,8 @@ import {
   Text,
   Textarea,
   TextInput,
+  ThemeIcon,
   Title,
-  ActionIcon,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -23,13 +24,26 @@ import { notifications } from "@mantine/notifications";
 import {
   IconDotsVertical,
   IconEdit,
+  IconFile,
+  IconPaperclip,
   IconPin,
   IconPlus,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { announcements as announcementsApi } from "@domas/api-client";
-import { Announcement, CreateAnnouncementDto } from "@domas/ts-types";
+import {
+  Announcement,
+  AnnouncementAttachmentMeta,
+  CreateAnnouncementDto,
+} from "@domas/ts-types";
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface AnnouncementFormValues {
   title: string;
@@ -46,11 +60,20 @@ function AnnouncementModal({
 }: {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (values: AnnouncementFormValues) => Promise<void>;
+  onSubmit: (values: AnnouncementFormValues) => Promise<string>;
   initial?: Announcement | null;
 }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<string[]>(
+    [],
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const existingAttachments: AnnouncementAttachmentMeta[] = (
+    initial?.attachments ?? []
+  ).filter((a) => !deletedAttachmentIds.includes(a.id));
 
   const form = useForm<AnnouncementFormValues>({
     initialValues: { title: "", body: "", pinned: false, expiresAt: "" },
@@ -70,13 +93,41 @@ function AnnouncementModal({
           ? new Date(initial.expiresAt).toISOString().split("T")[0]
           : "",
       });
+      setPendingFiles([]);
+      setDeletedAttachmentIds([]);
     }
   }, [opened, initial]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      setPendingFiles((prev) => [...prev, ...files]);
+    }
+    e.target.value = "";
+  };
+
+  const removePending = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const markDeleted = (attachmentId: string) => {
+    setDeletedAttachmentIds((prev) => [...prev, attachmentId]);
+  };
 
   const handleSubmit = async (values: AnnouncementFormValues) => {
     setLoading(true);
     try {
-      await onSubmit(values);
+      const id = await onSubmit(values);
+      // Delete removed attachments
+      await Promise.all(
+        deletedAttachmentIds.map((aid) =>
+          announcementsApi.deleteAttachment(id, aid),
+        ),
+      );
+      // Upload new files
+      if (pendingFiles.length > 0) {
+        await announcementsApi.uploadAttachments(id, pendingFiles);
+      }
       onClose();
     } finally {
       setLoading(false);
@@ -122,6 +173,118 @@ function AnnouncementModal({
               {...form.getInputProps("expiresAt")}
             />
           </Group>
+
+          {/* Attachments section */}
+          <Box>
+            <Group justify="space-between" mb="xs">
+              <Text size="sm" fw={500}>
+                {t("attachments", { defaultValue: "Attachments" })}
+              </Text>
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconPaperclip size={13} />}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {t("add_files", { defaultValue: "Add files" })}
+              </Button>
+            </Group>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+
+            {existingAttachments.length === 0 && pendingFiles.length === 0 && (
+              <Text size="xs" c="dimmed">
+                {t("no_attachments", { defaultValue: "No attachments yet." })}
+              </Text>
+            )}
+
+            <Stack gap={4}>
+              {existingAttachments.map((att) => (
+                <Group
+                  key={att.id}
+                  justify="space-between"
+                  wrap="nowrap"
+                  px="sm"
+                  py={6}
+                  style={{
+                    border: "1px solid var(--mantine-color-default-border)",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                    <ThemeIcon
+                      size={20}
+                      variant="light"
+                      color="blue"
+                      radius="sm"
+                    >
+                      <IconFile size={11} />
+                    </ThemeIcon>
+                    <Text size="xs" lineClamp={1}>
+                      {att.filename}
+                    </Text>
+                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+                      {formatBytes(att.size)}
+                    </Text>
+                  </Group>
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    onClick={() => markDeleted(att.id)}
+                  >
+                    <IconX size={11} />
+                  </ActionIcon>
+                </Group>
+              ))}
+
+              {pendingFiles.map((file, i) => (
+                <Group
+                  key={i}
+                  justify="space-between"
+                  wrap="nowrap"
+                  px="sm"
+                  py={6}
+                  style={{
+                    border: "1px dashed var(--mantine-color-blue-4)",
+                    borderRadius: 8,
+                    background: "var(--mantine-color-blue-light)",
+                  }}
+                >
+                  <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                    <ThemeIcon
+                      size={20}
+                      variant="filled"
+                      color="blue"
+                      radius="sm"
+                    >
+                      <IconFile size={11} />
+                    </ThemeIcon>
+                    <Text size="xs" lineClamp={1}>
+                      {file.name}
+                    </Text>
+                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+                      {formatBytes(file.size)}
+                    </Text>
+                  </Group>
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    onClick={() => removePending(i)}
+                  >
+                    <IconX size={11} />
+                  </ActionIcon>
+                </Group>
+              ))}
+            </Stack>
+          </Box>
+
           <Group justify="flex-end">
             <Button variant="default" onClick={onClose}>
               {t("cancel")}
@@ -156,14 +319,16 @@ export function SharedAnnouncementsPage() {
     load();
   }, []);
 
-  const handleCreate = async (values: AnnouncementFormValues) => {
+  const handleCreate = async (
+    values: AnnouncementFormValues,
+  ): Promise<string> => {
     const dto: CreateAnnouncementDto = {
       title: values.title,
       body: values.body,
       pinned: values.pinned,
       expiresAt: values.expiresAt || undefined,
     };
-    await announcementsApi.create(dto);
+    const ann = await announcementsApi.create(dto);
     notifications.show({
       color: "green",
       message: t("created_successfully", {
@@ -171,10 +336,13 @@ export function SharedAnnouncementsPage() {
       }),
     });
     load();
+    return ann.id;
   };
 
-  const handleUpdate = async (values: AnnouncementFormValues) => {
-    if (!editing) return;
+  const handleUpdate = async (
+    values: AnnouncementFormValues,
+  ): Promise<string> => {
+    if (!editing) return "";
     await announcementsApi.update(editing.id, {
       title: values.title,
       body: values.body,
@@ -186,6 +354,7 @@ export function SharedAnnouncementsPage() {
       message: t("saved_successfully", { defaultValue: "Saved successfully" }),
     });
     load();
+    return editing.id;
   };
 
   const handleTogglePublish = async (item: Announcement) => {
@@ -263,10 +432,42 @@ export function SharedAnnouncementsPage() {
                       ? t("published", { defaultValue: "Published" })
                       : t("draft", { defaultValue: "Draft" })}
                   </Badge>
+                  {item.attachments.length > 0 && (
+                    <Badge
+                      color="blue"
+                      variant="light"
+                      size="sm"
+                      leftSection={<IconPaperclip size={10} />}
+                    >
+                      {item.attachments.length}
+                    </Badge>
+                  )}
                 </Group>
                 <Text size="sm" c="dimmed" lineClamp={2}>
                   {item.body}
                 </Text>
+                {item.attachments.length > 0 && (
+                  <Group gap="xs" mt={6} wrap="wrap">
+                    {item.attachments.map((att) => (
+                      <Button
+                        key={att.id}
+                        size="xs"
+                        variant="subtle"
+                        color="blue"
+                        leftSection={<IconFile size={11} />}
+                        onClick={() =>
+                          announcementsApi.downloadAttachment(
+                            item.id,
+                            att.id,
+                            att.filename,
+                          )
+                        }
+                      >
+                        {att.filename}
+                      </Button>
+                    ))}
+                  </Group>
+                )}
                 <Text size="xs" c="dimmed" mt={4}>
                   {item.createdByName && `${item.createdByName} · `}
                   {new Date(item.createdAt).toLocaleDateString()}

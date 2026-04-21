@@ -1,3 +1,12 @@
+export interface AnnouncementAttachmentMeta {
+  id: string;
+  announcementId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -10,4 +19,5 @@ export interface Announcement {
   createdByName: string;
   createdAt: string;
   updatedAt: string;
+  attachments: AnnouncementAttachmentMeta[];
 }

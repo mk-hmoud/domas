@@ -1,3 +1,12 @@
+export interface AttachmentMeta {
+  id: string;
+  announcementId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: Date;
+}
+
 export class Announcement {
   id!: string;
   title!: string;
@@ -10,6 +19,7 @@ export class Announcement {
   createdByName!: string;
   createdAt!: Date;
   updatedAt!: Date;
+  attachments!: AttachmentMeta[];
 
   constructor(partial: Partial<Announcement>) {
     Object.assign(this, partial);

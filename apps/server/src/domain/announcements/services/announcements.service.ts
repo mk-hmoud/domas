@@ -42,4 +42,27 @@ export class AnnouncementsService {
     const deleted = await this.repo.delete(id);
     if (!deleted) throw new NotFoundException('Announcement not found');
   }
+
+  async uploadAttachments(id: string, files: Express.Multer.File[]): Promise<Announcement> {
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new NotFoundException('Announcement not found');
+    if (files && files.length > 0) {
+      await this.repo.createAttachments(id, files);
+    }
+    return this.repo.findById(id) as Promise<Announcement>;
+  }
+
+  async downloadAttachment(
+    announcementId: string,
+    attachmentId: string,
+  ): Promise<{ data: Buffer; filename: string; mimeType: string }> {
+    const attachment = await this.repo.findAttachmentById(attachmentId, announcementId);
+    if (!attachment) throw new NotFoundException('Attachment not found');
+    return attachment;
+  }
+
+  async deleteAttachment(announcementId: string, attachmentId: string): Promise<void> {
+    const deleted = await this.repo.deleteAttachment(attachmentId, announcementId);
+    if (!deleted) throw new NotFoundException('Attachment not found');
+  }
 }

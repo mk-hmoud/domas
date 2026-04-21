@@ -22,12 +22,29 @@ export class AnnouncementsRepository {
       createdByName: row.created_by_name ?? '',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      attachments: row.attachments ?? [],
     });
   }
 
+  private readonly attachmentsSubquery = `
+    COALESCE((
+      SELECT json_agg(json_build_object(
+        'id',             aa.id,
+        'announcementId', aa.announcement_id,
+        'filename',       aa.filename,
+        'mimeType',       aa.mime_type,
+        'size',           aa.size,
+        'createdAt',      aa.created_at
+      ) ORDER BY aa.created_at ASC)
+      FROM announcement_attachments aa
+      WHERE aa.announcement_id = a.id
+    ), '[]'::json) AS attachments
+  `;
+
   private readonly baseSelect = `
     SELECT a.*,
-           CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
+           CONCAT(u.first_name, ' ', u.last_name) AS created_by_name,
+           ${this.attachmentsSubquery}
     FROM announcements a
     JOIN users u ON u.id = a.created_by
   `;
@@ -120,6 +137,41 @@ export class AnnouncementsRepository {
 
   async delete(id: string): Promise<boolean> {
     const result = await this.db.getPool().query(`DELETE FROM announcements WHERE id = $1`, [id]);
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // ─── Attachments ─────────────────────────────────────────────────────────────
+
+  async createAttachments(announcementId: string, files: Express.Multer.File[]): Promise<void> {
+    for (const file of files) {
+      await this.db.getPool().query(
+        `INSERT INTO announcement_attachments (announcement_id, filename, mime_type, size, data)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [announcementId, file.originalname, file.mimetype, file.size, file.buffer],
+      );
+    }
+  }
+
+  async findAttachmentById(
+    attachmentId: string,
+    announcementId: string,
+  ): Promise<{ id: string; filename: string; mimeType: string; data: Buffer } | null> {
+    const result = await this.db.getPool().query(
+      `SELECT id, filename, mime_type AS "mimeType", data
+       FROM announcement_attachments
+       WHERE id = $1 AND announcement_id = $2`,
+      [attachmentId, announcementId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async deleteAttachment(attachmentId: string, announcementId: string): Promise<boolean> {
+    const result = await this.db
+      .getPool()
+      .query(`DELETE FROM announcement_attachments WHERE id = $1 AND announcement_id = $2`, [
+        attachmentId,
+        announcementId,
+      ]);
     return (result.rowCount ?? 0) > 0;
   }
 }
