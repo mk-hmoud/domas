@@ -12,6 +12,7 @@ export interface DashboardLayoutProps {
   user?: User;
   onLogout?: () => void;
   onShowHistory?: () => void;
+  activeLink?: string;
 }
 
 export function DashboardLayout({
@@ -22,6 +23,7 @@ export function DashboardLayout({
   user,
   onLogout,
   onShowHistory,
+  activeLink,
 }: DashboardLayoutProps) {
   return (
     <Flex direction="column" h="100vh">
@@ -33,8 +35,20 @@ export function DashboardLayout({
         onShowHistory={onShowHistory}
       />
       <Flex style={{ flex: 1, overflow: "hidden" }}>
-        <NavbarNested data={navData} onLinkClick={onNavigate} />
-        <Box style={{ flex: 1, overflowY: "auto" }}>{children}</Box>
+        <NavbarNested
+          data={navData}
+          onLinkClick={onNavigate}
+          activeLink={activeLink}
+        />
+        <Box
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            backgroundColor: "var(--mantine-color-gray-0)",
+          }}
+        >
+          {children}
+        </Box>
       </Flex>
     </Flex>
   );

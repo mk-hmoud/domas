@@ -13,8 +13,8 @@ interface DomMantineProviderProps {
 
 export function DomMantineProvider({ children }: DomMantineProviderProps) {
   return (
-    <MantineProvider theme={theme} defaultColorScheme="auto">
-      <Notifications />
+    <MantineProvider theme={theme} defaultColorScheme="light">
+      <Notifications position="top-right" limit={5} />
       <ModalsProvider>{children}</ModalsProvider>
     </MantineProvider>
   );

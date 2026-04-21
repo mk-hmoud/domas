@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Group, Text, Code } from '@mantine/core';
+import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
   IconBuildingSkyscraper,
@@ -10,7 +10,7 @@ import {
   IconSettings,
   IconDatabase,
 } from '@tabler/icons-react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
 import { useTranslation } from 'react-i18next';
 import { audit } from '@domas/api-client';
@@ -19,6 +19,7 @@ import { notifications } from '@mantine/notifications';
 
 export function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
   const { t } = useTranslation();
 
@@ -227,18 +228,16 @@ export function DashboardLayout() {
       <SharedDashboardLayout
         navData={navData}
         onNavigate={(link) => navigate(link)}
+        activeLink={location.pathname}
         user={user || undefined}
         onLogout={logout}
         onShowHistory={() => setHistoryOpened(true)}
         headerLogo={
           <Group gap={8}>
-            <IconBuildingSkyscraper size={28} />
-            <Text fw={700} size="lg">
+            <IconBuildingSkyscraper size={22} stroke={1.5} color="var(--mantine-color-indigo-6)" />
+            <Text fw={700} size="md" c="gray.8" style={{ letterSpacing: '-0.01em' }}>
               DOMAS
             </Text>
-            <Code fw={700} ml="xs">
-              v{import.meta.env.APP_VERSION}
-            </Code>
           </Group>
         }
       >

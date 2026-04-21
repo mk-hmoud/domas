@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Group,
-  Box,
-  Collapse,
-  ThemeIcon,
-  Text,
-  UnstyledButton,
-  rem,
-} from "@mantine/core";
+import { Group, Box, Collapse, UnstyledButton, rem } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import classes from "./NavbarLinksGroup.module.css";
 
@@ -18,6 +10,7 @@ interface LinksGroupProps {
   link?: string;
   links?: { label: string; link: string }[];
   onLinkClick?: (link: string) => void;
+  activeLink?: string;
 }
 
 export function LinksGroup({
@@ -27,22 +20,24 @@ export function LinksGroup({
   link,
   links,
   onLinkClick,
+  activeLink,
 }: LinksGroupProps) {
   const hasLinks = Array.isArray(links);
-  const [opened, setOpened] = useState(initiallyOpened || false);
-  const items = (hasLinks ? links : []).map((link) => (
-    <Text<"a">
-      component="a"
-      className={classes.link}
-      href={link.link}
-      key={link.label}
-      onClick={(event) => {
-        event.preventDefault();
-        onLinkClick?.(link.link);
+  const isChildActive = hasLinks && links.some((l) => l.link === activeLink);
+  const [opened, setOpened] = useState(initiallyOpened || isChildActive);
+
+  const items = (hasLinks ? links : []).map((l) => (
+    <a
+      className={`${classes.link} ${activeLink === l.link ? classes.linkActive : ""}`}
+      href={l.link}
+      key={l.label}
+      onClick={(e) => {
+        e.preventDefault();
+        onLinkClick?.(l.link);
       }}
     >
-      {link.label}
-    </Text>
+      {l.label}
+    </a>
   ));
 
   return (
@@ -57,21 +52,28 @@ export function LinksGroup({
         }}
         className={classes.control}
       >
-        <Group justify="space-between" gap={0}>
-          <Box style={{ display: "flex", alignItems: "center" }}>
-            <ThemeIcon variant="light" size={30}>
-              <Icon style={{ width: rem(18), height: rem(18) }} />
-            </ThemeIcon>
-            <Box ml="md">{label}</Box>
+        <Group justify="space-between" gap={0} w="100%">
+          <Box style={{ display: "flex", alignItems: "center", gap: rem(10) }}>
+            <Icon
+              style={{
+                width: rem(16),
+                height: rem(16),
+                flexShrink: 0,
+                color: "var(--mantine-color-gray-6)",
+              }}
+              stroke={1.75}
+            />
+            <span>{label}</span>
           </Box>
           {hasLinks && (
             <IconChevronRight
               className={classes.chevron}
               stroke={1.5}
               style={{
-                width: rem(16),
-                height: rem(16),
-                transform: opened ? "rotate(-90deg)" : "none",
+                width: rem(14),
+                height: rem(14),
+                transform: opened ? "rotate(90deg)" : "none",
+                color: "var(--mantine-color-gray-5)",
               }}
             />
           )}
