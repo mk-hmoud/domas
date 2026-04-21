@@ -18,6 +18,9 @@ import {
   SimpleGrid,
   Alert,
   Select,
+  Modal,
+  Loader,
+  ThemeIcon,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -25,8 +28,15 @@ import {
   IconEdit,
   IconInfoCircle,
   IconX,
+  IconArrowsExchange,
 } from "@tabler/icons-react";
-import { bookings, students, beds, semesters } from "@domas/api-client";
+import {
+  bookings,
+  students,
+  beds,
+  semesters,
+  roomChanges,
+} from "@domas/api-client";
 import {
   Booking,
   Student,
@@ -35,6 +45,7 @@ import {
   PaymentStatus,
   CreateBookingDto,
   CreateStudentDto,
+  StaffAvailableBed,
 } from "@domas/ts-types";
 import { CreateBookingModal, BookingsTable } from "@domas/ui";
 import { useTranslation } from "react-i18next";
@@ -79,6 +90,14 @@ export function SharedBookingsPage() {
   // Full Edit State
   const [isEditMode, setIsEditMode] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null);
+
+  // Move Bed State
+  const [moveBedOpened, setMoveBedOpened] = useState(false);
+  const [moveBedLoading, setMoveBedLoading] = useState(false);
+  const [moveBedBeds, setMoveBedBeds] = useState<StaffAvailableBed[]>([]);
+  const [moveBedSelectedId, setMoveBedSelectedId] = useState<string | null>(
+    null,
+  );
 
   const fetchBookings = async (filters?: {
     semesterId?: number;
@@ -216,6 +235,51 @@ export function SharedBookingsPage() {
     setBookingToEdit(booking);
     setIsEditMode(true);
     setModalOpened(true);
+  };
+
+  const openMoveBed = async (booking: Booking) => {
+    setMoveBedSelectedId(null);
+    setMoveBedOpened(true);
+    setMoveBedLoading(true);
+    try {
+      const available = await roomChanges.getAvailableBeds(booking.id);
+      setMoveBedBeds(available);
+    } catch {
+      notifications.show({ message: t("failed_to_fetch_data"), color: "red" });
+      setMoveBedOpened(false);
+    } finally {
+      setMoveBedLoading(false);
+    }
+  };
+
+  const handleMoveBedSubmit = async () => {
+    if (!selectedBooking || !moveBedSelectedId) return;
+    setMoveBedLoading(true);
+    try {
+      await roomChanges.moveBed(
+        selectedBooking.id,
+        parseInt(moveBedSelectedId, 10),
+      );
+      notifications.show({ message: t("move_bed.success"), color: "green" });
+      setMoveBedOpened(false);
+      setMoveBedSelectedId(null);
+      // Refresh booking list and update drawer
+      await fetchBookings({
+        semesterId: filterSemesterId
+          ? parseInt(filterSemesterId, 10)
+          : undefined,
+        status: (filterStatus as BookingOpsStatus) || undefined,
+        paymentStatus: (filterPaymentStatus as PaymentStatus) || undefined,
+      });
+      setSelectedBooking(null);
+    } catch (e: any) {
+      notifications.show({
+        message: e?.response?.data?.message ?? t("move_bed.error"),
+        color: "red",
+      });
+    } finally {
+      setMoveBedLoading(false);
+    }
   };
 
   const handleCreateBooking = async (values: CreateBookingDto) => {
@@ -539,6 +603,17 @@ export function SharedBookingsPage() {
               </Text>
             </Box>
 
+            {hasPermission("room_changes.manage") && (
+              <Button
+                variant="light"
+                color="teal"
+                leftSection={<IconArrowsExchange size={16} />}
+                onClick={() => openMoveBed(selectedBooking)}
+              >
+                {t("move_bed.button")}
+              </Button>
+            )}
+
             <Button
               variant="light"
               leftSection={<IconEdit size={16} />}
@@ -549,6 +624,90 @@ export function SharedBookingsPage() {
           </Stack>
         )}
       </Drawer>
+
+      {/* Move Bed Modal */}
+      <Modal
+        opened={moveBedOpened}
+        onClose={() => setMoveBedOpened(false)}
+        title={t("move_bed.modal_title")}
+        size="md"
+      >
+        <Stack gap="md">
+          {moveBedLoading ? (
+            <Group justify="center" py="lg">
+              <Loader size="sm" />
+            </Group>
+          ) : moveBedBeds.length === 0 ? (
+            <Alert icon={<IconInfoCircle size={14} />} color="blue" radius="md">
+              {t("move_bed.no_available_beds")}
+            </Alert>
+          ) : (
+            <Stack gap="xs" style={{ maxHeight: 360, overflowY: "auto" }}>
+              {moveBedBeds.map((bed) => {
+                const isSelected = moveBedSelectedId === String(bed.id);
+                return (
+                  <Paper
+                    key={bed.id}
+                    radius="md"
+                    p="sm"
+                    withBorder
+                    style={{
+                      cursor: "pointer",
+                      background: isSelected
+                        ? "var(--mantine-color-teal-light)"
+                        : undefined,
+                      borderColor: isSelected
+                        ? "var(--mantine-color-teal-5)"
+                        : undefined,
+                    }}
+                    onClick={() =>
+                      setMoveBedSelectedId(isSelected ? null : String(bed.id))
+                    }
+                  >
+                    <Group gap="sm" wrap="nowrap">
+                      <ThemeIcon
+                        size={24}
+                        radius="sm"
+                        variant={isSelected ? "filled" : "light"}
+                        color="teal"
+                      >
+                        <IconArrowsExchange size={12} />
+                      </ThemeIcon>
+                      <Box style={{ minWidth: 0 }}>
+                        <Text size="sm" fw={600} lineClamp={1}>
+                          {bed.roomName} — {bed.label}
+                        </Text>
+                        <Text size="xs" c="dimmed" lineClamp={1}>
+                          {bed.locationPath}
+                        </Text>
+                      </Box>
+                    </Group>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
+
+          <Group justify="flex-end" mt="xs">
+            <Button
+              variant="default"
+              onClick={() => setMoveBedOpened(false)}
+              disabled={moveBedLoading}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              color="teal"
+              onClick={handleMoveBedSubmit}
+              disabled={!moveBedSelectedId}
+              loading={moveBedLoading}
+              leftSection={<IconArrowsExchange size={14} />}
+            >
+              {t("move_bed.confirm")}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 }

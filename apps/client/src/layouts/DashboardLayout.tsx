@@ -105,6 +105,11 @@ export function DashboardLayout() {
             link: '/dashboard/guest-stays',
             requiredPermission: 'guests.manage',
           },
+          {
+            label: t('nav.room_changes'),
+            link: '/dashboard/room-changes',
+            requiredPermission: 'room_changes.view',
+          },
         ],
       },
       {

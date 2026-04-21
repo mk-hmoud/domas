@@ -286,6 +286,34 @@ export class RoomChangesRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
+  async findAvailableBedsForBooking(bookingId: string): Promise<any[]> {
+    const query = `
+      SELECT
+        b.id,
+        b.label,
+        l.id    AS "roomId",
+        l.name  AS "roomName",
+        (
+          SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
+          FROM   locations anc
+          WHERE  anc.tree_path @> l.tree_path AND anc.deleted_at IS NULL
+        ) AS "locationPath"
+      FROM  beds b
+      JOIN  locations l ON b.location_id = l.id
+      WHERE b.deleted_at IS NULL
+        AND b.status = 'available'
+        AND b.id NOT IN (
+          SELECT bed_id FROM bookings
+          WHERE  semester_id = (SELECT semester_id FROM bookings WHERE id = $1)
+            AND  status NOT IN ('cancelled', 'rejected')
+            AND  id != $1
+        )
+      ORDER BY l.name, b.label
+    `;
+    const result = await this.db.getPool().query(query, [bookingId]);
+    return result.rows;
+  }
+
   async moveBed(
     bookingId: string,
     newBedId: number,

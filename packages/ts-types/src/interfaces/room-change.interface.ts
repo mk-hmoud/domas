@@ -39,6 +39,15 @@ export interface StudentRoomChangeView {
   resolvedAt: string | null;
 }
 
+// Bed option returned for the staff move-bed picker
+export interface StaffAvailableBed {
+  id: number;
+  label: string;
+  roomId: number;
+  roomName: string;
+  locationPath: string;
+}
+
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 export interface StudentCreateRoomChangeDto {

@@ -441,6 +441,7 @@
     "room_types": "Oda Tipleri",
     "announcements": "Duyurular",
     "guest_stays": "Misafir Konaklamaları",
+    "room_changes": "Oda Değişikliği",
     "system": "Sistem",
     "audit_logs": "Denetim Kayıtları"
   },
@@ -822,5 +823,37 @@
     "room_change_no_available_beds": "Bu dönem için uygun yatak bulunamadı.",
     "room_change_status_approved": "Onaylandı",
     "room_change_status_rejected": "Reddedildi"
+  },
+  "room_change": {
+    "page_title": "Oda Değişikliği Talepleri",
+    "tab_pending": "Bekleyen",
+    "tab_history": "Geçmiş",
+    "no_pending": "Bekleyen oda değişikliği talebi yok.",
+    "no_history": "Henüz çözüme kavuşturulmuş talep yok.",
+    "from_label": "Mevcut",
+    "to_label": "Talep Edilen",
+    "status_pending": "Beklemede",
+    "status_approved": "Onaylandı",
+    "status_rejected": "Reddedildi",
+    "review_title": "Talebi İncele",
+    "student": "Öğrenci",
+    "semester": "Dönem",
+    "current_bed": "Mevcut Yatak",
+    "requested_bed": "Talep Edilen Yatak",
+    "rejection_reason_label": "Red Nedeni (isteğe bağlı)",
+    "rejection_reason_placeholder": "Red için bir neden belirtin...",
+    "approve": "Onayla",
+    "reject": "Reddet",
+    "approved_success": "Talep onaylandı ve öğrenci taşındı.",
+    "rejected_success": "Talep reddedildi.",
+    "action_error": "Talep işlenirken hata oluştu."
+  },
+  "move_bed": {
+    "button": "Yatak Değiştir",
+    "modal_title": "Yeni Yatağa Taşı",
+    "no_available_beds": "Bu rezervasyon için uygun yatak bulunamadı.",
+    "confirm": "Yatak Değiştir",
+    "success": "Yatak başarıyla değiştirildi.",
+    "error": "Yatak değiştirilemedi."
   }
 }

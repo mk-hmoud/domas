@@ -1,5 +1,9 @@
 import { apiClient } from "../client";
-import { RoomChangeRequestView, ResolveRoomChangeDto } from "@domas/ts-types";
+import {
+  RoomChangeRequestView,
+  ResolveRoomChangeDto,
+  StaffAvailableBed,
+} from "@domas/ts-types";
 
 // Staff endpoints for managing room change requests
 export const roomChanges = {
@@ -29,5 +33,12 @@ export const roomChanges = {
     await apiClient.post(`/room-changes/bookings/${bookingId}/move-bed`, {
       bedId,
     });
+  },
+
+  getAvailableBeds: async (bookingId: string): Promise<StaffAvailableBed[]> => {
+    const response = await apiClient.get<StaffAvailableBed[]>(
+      `/room-changes/bookings/${bookingId}/available-beds`,
+    );
+    return response.data;
   },
 };

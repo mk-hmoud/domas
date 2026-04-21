@@ -443,6 +443,7 @@
     "room_types": "Room Types",
     "announcements": "Announcements",
     "guest_stays": "Guest Stays",
+    "room_changes": "Room Changes",
     "system": "System",
     "audit_logs": "Audit Logs"
   },
@@ -832,5 +833,38 @@
     "room_change_no_available_beds": "No available beds found for this semester.",
     "room_change_status_approved": "Approved",
     "room_change_status_rejected": "Rejected"
-  }
+  },
+  "room_change": {
+    "page_title": "Room Change Requests",
+    "tab_pending": "Pending",
+    "tab_history": "History",
+    "no_pending": "No pending room change requests.",
+    "no_history": "No resolved requests yet.",
+    "from_label": "From",
+    "to_label": "To",
+    "status_pending": "Pending",
+    "status_approved": "Approved",
+    "status_rejected": "Rejected",
+    "review_title": "Review Request",
+    "student": "Student",
+    "semester": "Semester",
+    "current_bed": "Current Bed",
+    "requested_bed": "Requested Bed",
+    "rejection_reason_label": "Rejection Reason (optional)",
+    "rejection_reason_placeholder": "Provide a reason for rejection...",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved_success": "Request approved and student moved.",
+    "rejected_success": "Request rejected.",
+    "action_error": "Failed to process request."
+  },
+  "move_bed": {
+    "button": "Move Bed",
+    "modal_title": "Move to New Bed",
+    "no_available_beds": "No available beds found for this booking.",
+    "confirm": "Move Bed",
+    "success": "Bed moved successfully.",
+    "error": "Failed to move bed."
+  },
+  "all_semesters": "All Semesters"
 }

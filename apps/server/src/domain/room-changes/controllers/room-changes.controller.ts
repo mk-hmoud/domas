@@ -44,6 +44,12 @@ export class RoomChangesController {
   }
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)
+  @Get('bookings/:bookingId/available-beds')
+  getAvailableBeds(@Param('bookingId') bookingId: string) {
+    return this.roomChangesService.getAvailableBedsForBooking(bookingId);
+  }
+
+  @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)
   @Post('bookings/:bookingId/move-bed')
   staffMoveBed(@Param('bookingId') bookingId: string, @Body() dto: StaffMoveBedDto) {
     return this.roomChangesService.staffMoveBed(bookingId, dto);

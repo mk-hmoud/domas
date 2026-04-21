@@ -194,6 +194,10 @@ export class RoomChangesService {
     });
   }
 
+  async getAvailableBedsForBooking(bookingId: string): Promise<any[]> {
+    return this.roomChangesRepo.findAvailableBedsForBooking(bookingId);
+  }
+
   async staffMoveBed(bookingId: string, dto: StaffMoveBedDto): Promise<void> {
     return this.db.transaction(async (client) => {
       // Fetch booking to get semesterId
