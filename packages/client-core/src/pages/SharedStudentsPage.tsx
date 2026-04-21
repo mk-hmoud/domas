@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
-  Container,
   Card,
   Text,
   Group,
@@ -287,225 +286,229 @@ export function SharedStudentsPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <Title>{t("students", { defaultValue: "Students" })}</Title>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setCreateModalOpened(true)}
-        >
-          {t("create_student", { defaultValue: "Create Student" })}
-        </Button>
-      </Group>
+    <>
+      <PageHeader
+        title={t("students", { defaultValue: "Students" })}
+        actions={
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setCreateModalOpened(true)}
+          >
+            {t("create_student", { defaultValue: "Create Student" })}
+          </Button>
+        }
+      />
+      <PageShell>
+        <LoadingOverlay visible={loading} />
 
-      <Card withBorder padding="md" radius="md" mb="md">
-        <TextInput
-          placeholder={t("search_placeholder", { defaultValue: "Search..." })}
-          leftSection={<IconSearch size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+        <Card withBorder padding="md" radius="md" mb="md">
+          <TextInput
+            placeholder={t("search_placeholder", { defaultValue: "Search..." })}
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          />
+        </Card>
+
+        <Paper withBorder radius="md">
+          <StudentsTable
+            data={data.data}
+            selectedIds={selectedIds}
+            onToggleSelection={handleToggleSelection}
+            onToggleSelectAll={handleToggleSelectAll}
+            onSelect={setSelectedStudent}
+            onEdit={(student) => {
+              setEditingStudent(student);
+              setEditModalOpened(true);
+            }}
+            onDelete={handleDelete}
+            onToggleStatus={handleToggleStatus}
+          />
+          {data.data.length === 0 && !loading && (
+            <Text c="dimmed" ta="center" py="xl">
+              No students found
+            </Text>
+          )}
+        </Paper>
+
+        <Group justify="flex-end" mt="md">
+          <Pagination
+            total={Math.ceil(data.total / 10)}
+            value={page}
+            onChange={setPage}
+          />
+        </Group>
+
+        <BulkActionsBar
+          selectedCount={selectedIds.length}
+          onDelete={handleBulkDelete}
+          onActivate={() => handleBulkStatusUpdate(true)}
+          onDeactivate={() => handleBulkStatusUpdate(false)}
+          onSendEmail={() => setComposeEmailOpened(true)}
+          onClear={() => setSelectedIds([])}
         />
-      </Card>
 
-      <Paper withBorder radius="md">
-        <StudentsTable
-          data={data.data}
-          selectedIds={selectedIds}
-          onToggleSelection={handleToggleSelection}
-          onToggleSelectAll={handleToggleSelectAll}
-          onSelect={setSelectedStudent}
-          onEdit={(student) => {
-            setEditingStudent(student);
-            setEditModalOpened(true);
+        <StudentModal
+          opened={createModalOpened}
+          onClose={() => setCreateModalOpened(false)}
+          onSubmit={handleCreate}
+        />
+
+        <StudentModal
+          opened={editModalOpened}
+          onClose={() => {
+            setEditModalOpened(false);
+            setEditingStudent(null);
           }}
-          onDelete={handleDelete}
-          onToggleStatus={handleToggleStatus}
+          onSubmit={handleUpdate}
+          initialValues={editingStudent}
         />
-        {data.data.length === 0 && !loading && (
-          <Text c="dimmed" ta="center" py="xl">
-            No students found
-          </Text>
-        )}
-      </Paper>
 
-      <Group justify="flex-end" mt="md">
-        <Pagination
-          total={Math.ceil(data.total / 10)}
-          value={page}
-          onChange={setPage}
-        />
-      </Group>
+        <Drawer
+          opened={!!selectedStudent && !editModalOpened}
+          onClose={() => setSelectedStudent(null)}
+          title={t("student_details", { defaultValue: "Student Details" })}
+          position="right"
+          size="md"
+        >
+          {selectedStudent && (
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Text size="xl" fw={700}>
+                  {selectedStudent.firstName} {selectedStudent.lastName}
+                </Text>
+                <Badge color={selectedStudent.isActive ? "green" : "gray"}>
+                  {selectedStudent.isActive ? t("active") : t("inactive")}
+                </Badge>
+              </Group>
 
-      <BulkActionsBar
-        selectedCount={selectedIds.length}
-        onDelete={handleBulkDelete}
-        onActivate={() => handleBulkStatusUpdate(true)}
-        onDeactivate={() => handleBulkStatusUpdate(false)}
-        onSendEmail={() => setComposeEmailOpened(true)}
-        onClear={() => setSelectedIds([])}
-      />
-
-      <StudentModal
-        opened={createModalOpened}
-        onClose={() => setCreateModalOpened(false)}
-        onSubmit={handleCreate}
-      />
-
-      <StudentModal
-        opened={editModalOpened}
-        onClose={() => {
-          setEditModalOpened(false);
-          setEditingStudent(null);
-        }}
-        onSubmit={handleUpdate}
-        initialValues={editingStudent}
-      />
-
-      <Drawer
-        opened={!!selectedStudent && !editModalOpened}
-        onClose={() => setSelectedStudent(null)}
-        title={t("student_details", { defaultValue: "Student Details" })}
-        position="right"
-        size="md"
-      >
-        {selectedStudent && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Text size="xl" fw={700}>
-                {selectedStudent.firstName} {selectedStudent.lastName}
-              </Text>
-              <Badge color={selectedStudent.isActive ? "green" : "gray"}>
-                {selectedStudent.isActive ? t("active") : t("inactive")}
-              </Badge>
-            </Group>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("student_number")}
-              </Text>
-              <Text fw={500}>{selectedStudent.studentNumber}</Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("national_id")}
-              </Text>
-              <Text fw={500}>{selectedStudent.nationalId}</Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("birth_date")}
-              </Text>
-              <Text>
-                {selectedStudent.birthDate
-                  ? new Date(selectedStudent.birthDate).toLocaleDateString(
-                      "en-GB",
-                    )
-                  : "-"}
-              </Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("email")}
-              </Text>
-              <Text>{selectedStudent.email || "-"}</Text>
-            </Box>
-
-            <Group grow>
               <Box>
                 <Text size="xs" c="dimmed">
-                  {t("phone_number")}
+                  {t("student_number")}
                 </Text>
-                <Text>{selectedStudent.phoneNumber || "-"}</Text>
+                <Text fw={500}>{selectedStudent.studentNumber}</Text>
               </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("whatsapp_number", { defaultValue: "WhatsApp" })}
-                </Text>
-                {selectedStudent.whatsappNumber ? (
-                  <Group gap="xs">
-                    <Text>{selectedStudent.whatsappNumber}</Text>
-                    <Button
-                      size="compact-xs"
-                      color="green"
-                      variant="light"
-                      leftSection={<IconBrandWhatsapp size={12} />}
-                      onClick={() =>
-                        window.open(
-                          `https://wa.me/${selectedStudent.whatsappNumber!.replace(/\D/g, "")}`,
-                          "_blank",
-                        )
-                      }
-                    >
-                      {t("open", { defaultValue: "Open" })}
-                    </Button>
-                  </Group>
-                ) : (
-                  <Text c="dimmed">-</Text>
-                )}
-              </Box>
-            </Group>
 
-            <Group grow>
               <Box>
                 <Text size="xs" c="dimmed">
-                  {t("gender")}
+                  {t("national_id")}
                 </Text>
-                <Text>{t(selectedStudent.gender)}</Text>
+                <Text fw={500}>{selectedStudent.nationalId}</Text>
               </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("nationality")}
-                </Text>
-                <Text>{getCountryName(selectedStudent.nationalityCode)}</Text>
-              </Box>
-            </Group>
 
-            {selectedStudent.userId && (
               <Box>
                 <Text size="xs" c="dimmed">
-                  User ID
+                  {t("birth_date")}
                 </Text>
-                <Code>{selectedStudent.userId}</Code>
+                <Text>
+                  {selectedStudent.birthDate
+                    ? new Date(selectedStudent.birthDate).toLocaleDateString(
+                        "en-GB",
+                      )
+                    : "-"}
+                </Text>
               </Box>
-            )}
 
-            <Group grow>
-              <Button
-                variant="light"
-                leftSection={<IconEdit size={16} />}
-                onClick={() => {
-                  setEditingStudent(selectedStudent);
-                  setEditModalOpened(true);
-                }}
-              >
-                {t("edit")}
-              </Button>
-              {selectedStudent.email && (
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("email")}
+                </Text>
+                <Text>{selectedStudent.email || "-"}</Text>
+              </Box>
+
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("phone_number")}
+                  </Text>
+                  <Text>{selectedStudent.phoneNumber || "-"}</Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("whatsapp_number", { defaultValue: "WhatsApp" })}
+                  </Text>
+                  {selectedStudent.whatsappNumber ? (
+                    <Group gap="xs">
+                      <Text>{selectedStudent.whatsappNumber}</Text>
+                      <Button
+                        size="compact-xs"
+                        color="green"
+                        variant="light"
+                        leftSection={<IconBrandWhatsapp size={12} />}
+                        onClick={() =>
+                          window.open(
+                            `https://wa.me/${selectedStudent.whatsappNumber!.replace(/\D/g, "")}`,
+                            "_blank",
+                          )
+                        }
+                      >
+                        {t("open", { defaultValue: "Open" })}
+                      </Button>
+                    </Group>
+                  ) : (
+                    <Text c="dimmed">-</Text>
+                  )}
+                </Box>
+              </Group>
+
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("gender")}
+                  </Text>
+                  <Text>{t(selectedStudent.gender)}</Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("nationality")}
+                  </Text>
+                  <Text>{getCountryName(selectedStudent.nationalityCode)}</Text>
+                </Box>
+              </Group>
+
+              {selectedStudent.userId && (
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    User ID
+                  </Text>
+                  <Code>{selectedStudent.userId}</Code>
+                </Box>
+              )}
+
+              <Group grow>
                 <Button
                   variant="light"
-                  color="blue"
-                  leftSection={<IconMail size={16} />}
+                  leftSection={<IconEdit size={16} />}
                   onClick={() => {
-                    window.open(`mailto:${selectedStudent.email}`, "_blank");
+                    setEditingStudent(selectedStudent);
+                    setEditModalOpened(true);
                   }}
                 >
-                  {t("email_verb", { defaultValue: "Email" })}
+                  {t("edit")}
                 </Button>
-              )}
-            </Group>
-          </Stack>
-        )}
-      </Drawer>
+                {selectedStudent.email && (
+                  <Button
+                    variant="light"
+                    color="blue"
+                    leftSection={<IconMail size={16} />}
+                    onClick={() => {
+                      window.open(`mailto:${selectedStudent.email}`, "_blank");
+                    }}
+                  >
+                    {t("email_verb", { defaultValue: "Email" })}
+                  </Button>
+                )}
+              </Group>
+            </Stack>
+          )}
+        </Drawer>
 
-      <ComposeEmailModal
-        opened={composeEmailOpened}
-        onClose={() => setComposeEmailOpened(false)}
-        resolveDto={{ scope: "list", studentIds: selectedIds }}
-      />
-    </Container>
+        <ComposeEmailModal
+          opened={composeEmailOpened}
+          onClose={() => setComposeEmailOpened(false)}
+          resolveDto={{ scope: "list", studentIds: selectedIds }}
+        />
+      </PageShell>
+    </>
   );
 }

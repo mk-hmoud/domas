@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
-  Container,
   Table,
   Badge,
   Tabs,
@@ -270,417 +269,426 @@ export function SharedAuditLogsPage() {
   };
 
   return (
-    <Container size="xl" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <Title>{t("nav.audit_logs", { defaultValue: "Audit Logs" })}</Title>
-        <Select
-          label={t("audit.rows_per_page", { defaultValue: "Rows per page" })}
-          value={limit}
-          onChange={(val) => {
-            setLimit(val || "50");
-            setPage(1);
-          }}
-          data={["20", "50", "100", "200"]}
-          w={130}
-        />
-      </Group>
+    <>
+      <PageHeader
+        title={t("nav.audit_logs", { defaultValue: "Audit Logs" })}
+        actions={
+          <Select
+            label={t("audit.rows_per_page", { defaultValue: "Rows per page" })}
+            value={limit}
+            onChange={(val) => {
+              setLimit(val || "50");
+              setPage(1);
+            }}
+            data={["20", "50", "100", "200"]}
+            w={130}
+          />
+        }
+      />
+      <PageShell size="xl">
+        <LoadingOverlay visible={loading} />
 
-      <Tabs value={activeTab} onChange={setActiveTab}>
-        <Tabs.List mb="md">
-          <Tabs.Tab value="search" leftSection={<IconSearch size={16} />}>
-            {t("audit.search_logs", { defaultValue: "Search Logs" })}
-          </Tabs.Tab>
-          <Tabs.Tab
-            value="suspicious"
-            leftSection={<IconAlertTriangle size={16} />}
-            color="red"
-          >
-            {t("audit.suspicious_activity", {
-              defaultValue: "Suspicious Activity",
-            })}
-          </Tabs.Tab>
-          <Tabs.Tab value="bulk" leftSection={<IconDatabase size={16} />}>
-            {t("audit.bulk_operations", { defaultValue: "Bulk Operations" })}
-          </Tabs.Tab>
-        </Tabs.List>
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List mb="md">
+            <Tabs.Tab value="search" leftSection={<IconSearch size={16} />}>
+              {t("audit.search_logs", { defaultValue: "Search Logs" })}
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="suspicious"
+              leftSection={<IconAlertTriangle size={16} />}
+              color="red"
+            >
+              {t("audit.suspicious_activity", {
+                defaultValue: "Suspicious Activity",
+              })}
+            </Tabs.Tab>
+            <Tabs.Tab value="bulk" leftSection={<IconDatabase size={16} />}>
+              {t("audit.bulk_operations", { defaultValue: "Bulk Operations" })}
+            </Tabs.Tab>
+          </Tabs.List>
 
-        <Tabs.Panel value="search">
-          <Card withBorder padding="md" radius="md" mb="md">
-            <Text fw={600} mb="sm" c="dimmed">
-              {t("audit.filters", { defaultValue: "Filters" })}
-            </Text>
-            <SimpleGrid cols={{ base: 1, md: 2, lg: 4 }} spacing="md">
-              <TextInput
-                placeholder={t("audit.search_placeholder", {
-                  defaultValue: "Search table or User UUID...",
-                })}
-                leftSection={<IconSearch size={16} />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearchClick()}
-              />
-              <MultiSelect
-                placeholder={t("audit.filter_by_action", {
-                  defaultValue: "Filter by Action",
-                })}
-                data={[
-                  {
-                    value: "I",
-                    label: t("audit.actions.insert", {
-                      defaultValue: "Insert",
-                    }),
-                  },
-                  {
-                    value: "U",
-                    label: t("audit.actions.update", {
-                      defaultValue: "Update",
-                    }),
-                  },
-                  {
-                    value: "D",
-                    label: t("audit.actions.delete", {
-                      defaultValue: "Delete",
-                    }),
-                  },
-                ]}
-                value={selectedActions}
-                onChange={(val) => {
-                  setSelectedActions(val);
-                  setPage(1);
-                }}
-                leftSection={<IconFilter size={16} />}
-              />
-              <TextInput
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => {
-                  setDateRange((prev) => ({ ...prev, start: e.target.value }));
-                  setDatePreset("custom");
-                  setPage(1);
-                }}
-                leftSection={<IconCalendar size={16} />}
-              />
-              <TextInput
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => {
-                  setDateRange((prev) => ({ ...prev, end: e.target.value }));
-                  setDatePreset("custom");
-                  setPage(1);
-                }}
-              />
-            </SimpleGrid>
-            <Group mt="md" justify="space-between">
-              <Group>
-                <SegmentedControl
-                  value={datePreset}
-                  onChange={applyDatePreset}
-                  size="xs"
+          <Tabs.Panel value="search">
+            <Card withBorder padding="md" radius="md" mb="md">
+              <Text fw={600} mb="sm" c="dimmed">
+                {t("audit.filters", { defaultValue: "Filters" })}
+              </Text>
+              <SimpleGrid cols={{ base: 1, md: 2, lg: 4 }} spacing="md">
+                <TextInput
+                  placeholder={t("audit.search_placeholder", {
+                    defaultValue: "Search table or User UUID...",
+                  })}
+                  leftSection={<IconSearch size={16} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchClick()}
+                />
+                <MultiSelect
+                  placeholder={t("audit.filter_by_action", {
+                    defaultValue: "Filter by Action",
+                  })}
                   data={[
                     {
-                      label: t("audit.presets.all", { defaultValue: "All" }),
-                      value: "all",
+                      value: "I",
+                      label: t("audit.actions.insert", {
+                        defaultValue: "Insert",
+                      }),
                     },
                     {
-                      label: t("audit.presets.today", {
-                        defaultValue: "Today",
+                      value: "U",
+                      label: t("audit.actions.update", {
+                        defaultValue: "Update",
                       }),
-                      value: "today",
                     },
                     {
-                      label: t("audit.presets.this_week", {
-                        defaultValue: "This Week",
+                      value: "D",
+                      label: t("audit.actions.delete", {
+                        defaultValue: "Delete",
                       }),
-                      value: "this_week",
-                    },
-                    {
-                      label: t("audit.presets.this_month", {
-                        defaultValue: "This Month",
-                      }),
-                      value: "this_month",
                     },
                   ]}
+                  value={selectedActions}
+                  onChange={(val) => {
+                    setSelectedActions(val);
+                    setPage(1);
+                  }}
+                  leftSection={<IconFilter size={16} />}
                 />
-                {datePreset !== "all" && (
-                  <Button
-                    variant="subtle"
+                <TextInput
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => {
+                    setDateRange((prev) => ({
+                      ...prev,
+                      start: e.target.value,
+                    }));
+                    setDatePreset("custom");
+                    setPage(1);
+                  }}
+                  leftSection={<IconCalendar size={16} />}
+                />
+                <TextInput
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => {
+                    setDateRange((prev) => ({ ...prev, end: e.target.value }));
+                    setDatePreset("custom");
+                    setPage(1);
+                  }}
+                />
+              </SimpleGrid>
+              <Group mt="md" justify="space-between">
+                <Group>
+                  <SegmentedControl
+                    value={datePreset}
+                    onChange={applyDatePreset}
                     size="xs"
-                    color="gray"
-                    onClick={() => applyDatePreset("all")}
-                  >
-                    {t("audit.clear_dates", { defaultValue: "Clear Dates" })}
-                  </Button>
-                )}
+                    data={[
+                      {
+                        label: t("audit.presets.all", { defaultValue: "All" }),
+                        value: "all",
+                      },
+                      {
+                        label: t("audit.presets.today", {
+                          defaultValue: "Today",
+                        }),
+                        value: "today",
+                      },
+                      {
+                        label: t("audit.presets.this_week", {
+                          defaultValue: "This Week",
+                        }),
+                        value: "this_week",
+                      },
+                      {
+                        label: t("audit.presets.this_month", {
+                          defaultValue: "This Month",
+                        }),
+                        value: "this_month",
+                      },
+                    ]}
+                  />
+                  {datePreset !== "all" && (
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      color="gray"
+                      onClick={() => applyDatePreset("all")}
+                    >
+                      {t("audit.clear_dates", { defaultValue: "Clear Dates" })}
+                    </Button>
+                  )}
+                </Group>
+                <Button
+                  onClick={handleSearchClick}
+                  leftSection={<IconSearch size={16} />}
+                >
+                  {t("audit.search", { defaultValue: "Search" })}
+                </Button>
               </Group>
-              <Button
-                onClick={handleSearchClick}
-                leftSection={<IconSearch size={16} />}
-              >
-                {t("audit.search", { defaultValue: "Search" })}
-              </Button>
-            </Group>
-          </Card>
+            </Card>
 
-          <Card withBorder padding="sm" radius="md">
-            <ScrollArea>
-              <Table striped highlightOnHover>
+            <Card withBorder padding="sm" radius="md">
+              <ScrollArea>
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>
+                        {t("audit.timestamp", { defaultValue: "Timestamp" })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("audit.user", { defaultValue: "User" })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("audit.table", { defaultValue: "Table" })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("audit.action", { defaultValue: "Action" })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("audit.record_id", { defaultValue: "Record ID" })}
+                      </Table.Th>
+                      <Table.Th>
+                        {t("audit.changed_fields", {
+                          defaultValue: "Changed Fields",
+                        })}
+                      </Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {searchResults.data.map((log, index) => (
+                      <Table.Tr
+                        key={index}
+                        onClick={() => setSelectedLog(log)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <Table.Td style={{ whiteSpace: "nowrap" }}>
+                          <Group gap={4}>
+                            <IconClock size={14} color="gray" />
+                            <Text size="sm">
+                              {formatDate(log.event_timestamp)}
+                            </Text>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4}>
+                            <IconUser size={14} color="gray" />
+                            <Text size="sm" fw={500}>
+                              {log.username || "System"}
+                            </Text>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4}>
+                            <IconTable size={14} color="gray" />
+                            <Code>{log.table_name}</Code>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge
+                            color={getActionColor(log.action)}
+                            variant="light"
+                          >
+                            {getActionLabel(log.action)}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Code>{log.record_id}</Code>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4}>
+                            {log.changed_fields
+                              ?.slice(0, 3)
+                              .map((field: string) => (
+                                <Badge
+                                  key={field}
+                                  size="sm"
+                                  variant="outline"
+                                  color="gray"
+                                >
+                                  {field}
+                                </Badge>
+                              ))}
+                            {log.changed_fields &&
+                              log.changed_fields.length > 3 && (
+                                <Badge size="sm" variant="outline" color="gray">
+                                  +{log.changed_fields.length - 3}
+                                </Badge>
+                              )}
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
+              {searchResults.data.length === 0 && !loading && (
+                <Text c="dimmed" ta="center" py="xl">
+                  {t("audit.no_logs_found", {
+                    defaultValue: "No audit logs found matching criteria",
+                  })}
+                </Text>
+              )}
+
+              <Group justify="flex-end" mt="md">
+                <Pagination
+                  total={Math.ceil(searchResults.total / parseInt(limit))}
+                  value={page}
+                  onChange={setPage}
+                />
+              </Group>
+            </Card>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="suspicious">
+            <Card withBorder padding="md" radius="md">
+              <Timeline
+                active={suspiciousActivity.length - 1}
+                bulletSize={24}
+                lineWidth={2}
+              >
+                {suspiciousActivity.map((item, index) => (
+                  <Timeline.Item
+                    key={index}
+                    bullet={<IconAlertTriangle size={12} />}
+                    title={
+                      <Text fw={700} c="red">
+                        {item.username} - Multiple Failures
+                      </Text>
+                    }
+                    color="red"
+                  >
+                    <Text c="dimmed" size="sm">
+                      {t("audit.failed_login_attempts", {
+                        defaultValue: "Failed login attempts",
+                      })}
+                      :{" "}
+                      <Text span fw={700}>
+                        {item.failure_count}
+                      </Text>
+                    </Text>
+                    <Text size="xs" mt={4}>
+                      {t("audit.last_attempt", {
+                        defaultValue: "Last attempt",
+                      })}
+                      : {formatDate(item.last_attempt)}
+                    </Text>
+                    <Group mt={4}>
+                      {item.ip_addresses?.map((ip) => (
+                        <Code key={ip}>{ip}</Code>
+                      ))}
+                    </Group>
+                  </Timeline.Item>
+                ))}
+              </Timeline>
+              {suspiciousActivity.length === 0 && !loading && (
+                <Text c="dimmed" ta="center" py="xl">
+                  {t("audit.no_suspicious_activity", {
+                    defaultValue: "No suspicious activity detected",
+                  })}
+                </Text>
+              )}
+            </Card>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="bulk">
+            <Card withBorder padding="sm" radius="md">
+              <Table>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>
                       {t("audit.timestamp", { defaultValue: "Timestamp" })}
                     </Table.Th>
                     <Table.Th>
+                      {t("audit.operation", { defaultValue: "Operation" })}
+                    </Table.Th>
+                    <Table.Th>
                       {t("audit.user", { defaultValue: "User" })}
                     </Table.Th>
                     <Table.Th>
-                      {t("audit.table", { defaultValue: "Table" })}
+                      {t("audit.resource", { defaultValue: "Resource" })}
                     </Table.Th>
                     <Table.Th>
-                      {t("audit.action", { defaultValue: "Action" })}
-                    </Table.Th>
-                    <Table.Th>
-                      {t("audit.record_id", { defaultValue: "Record ID" })}
-                    </Table.Th>
-                    <Table.Th>
-                      {t("audit.changed_fields", {
-                        defaultValue: "Changed Fields",
-                      })}
+                      {t("audit.affected", { defaultValue: "Affected" })}
                     </Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {searchResults.data.map((log, index) => (
-                    <Table.Tr
-                      key={index}
-                      onClick={() => setSelectedLog(log)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <Table.Td style={{ whiteSpace: "nowrap" }}>
-                        <Group gap={4}>
-                          <IconClock size={14} color="gray" />
-                          <Text size="sm">
-                            {formatDate(log.event_timestamp)}
-                          </Text>
-                        </Group>
-                      </Table.Td>
+                  {bulkOperations.map((op, index) => (
+                    <Table.Tr key={index}>
+                      <Table.Td>{formatDate(op.event_timestamp)}</Table.Td>
                       <Table.Td>
-                        <Group gap={4}>
-                          <IconUser size={14} color="gray" />
-                          <Text size="sm" fw={500}>
-                            {log.username || "System"}
-                          </Text>
-                        </Group>
+                        <Badge>{op.operation_type}</Badge>
                       </Table.Td>
+                      <Table.Td>{op.username}</Table.Td>
+                      <Table.Td>{op.resource_type}</Table.Td>
                       <Table.Td>
-                        <Group gap={4}>
-                          <IconTable size={14} color="gray" />
-                          <Code>{log.table_name}</Code>
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge
-                          color={getActionColor(log.action)}
-                          variant="light"
-                        >
-                          {getActionLabel(log.action)}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Code>{log.record_id}</Code>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap={4}>
-                          {log.changed_fields
-                            ?.slice(0, 3)
-                            .map((field: string) => (
-                              <Badge
-                                key={field}
-                                size="sm"
-                                variant="outline"
-                                color="gray"
-                              >
-                                {field}
-                              </Badge>
-                            ))}
-                          {log.changed_fields &&
-                            log.changed_fields.length > 3 && (
-                              <Badge size="sm" variant="outline" color="gray">
-                                +{log.changed_fields.length - 3}
-                              </Badge>
-                            )}
-                        </Group>
+                        <Text fw={700}>{op.affected_count}</Text>
                       </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
               </Table>
-            </ScrollArea>
-            {searchResults.data.length === 0 && !loading && (
-              <Text c="dimmed" ta="center" py="xl">
-                {t("audit.no_logs_found", {
-                  defaultValue: "No audit logs found matching criteria",
-                })}
-              </Text>
-            )}
+              {bulkOperations.length === 0 && !loading && (
+                <Text c="dimmed" ta="center" py="xl">
+                  {t("audit.no_bulk_operations", {
+                    defaultValue: "No bulk operations found",
+                  })}
+                </Text>
+              )}
+            </Card>
+          </Tabs.Panel>
+        </Tabs>
 
-            <Group justify="flex-end" mt="md">
-              <Pagination
-                total={Math.ceil(searchResults.total / parseInt(limit))}
-                value={page}
-                onChange={setPage}
-              />
+        <Drawer
+          opened={!!selectedLog}
+          onClose={() => setSelectedLog(null)}
+          title={
+            <Group>
+              <Text fw={700} size="lg">
+                {t("audit.log_details", { defaultValue: "Log Details" })}
+              </Text>
+              <Badge>{selectedLog?.action}</Badge>
+              <Code>{selectedLog?.event_id}</Code>
             </Group>
-          </Card>
-        </Tabs.Panel>
-
-        <Tabs.Panel value="suspicious">
-          <Card withBorder padding="md" radius="md">
-            <Timeline
-              active={suspiciousActivity.length - 1}
-              bulletSize={24}
-              lineWidth={2}
-            >
-              {suspiciousActivity.map((item, index) => (
-                <Timeline.Item
-                  key={index}
-                  bullet={<IconAlertTriangle size={12} />}
-                  title={
-                    <Text fw={700} c="red">
-                      {item.username} - Multiple Failures
-                    </Text>
-                  }
-                  color="red"
-                >
-                  <Text c="dimmed" size="sm">
-                    {t("audit.failed_login_attempts", {
-                      defaultValue: "Failed login attempts",
-                    })}
-                    :{" "}
-                    <Text span fw={700}>
-                      {item.failure_count}
-                    </Text>
-                  </Text>
-                  <Text size="xs" mt={4}>
-                    {t("audit.last_attempt", { defaultValue: "Last attempt" })}:{" "}
-                    {formatDate(item.last_attempt)}
-                  </Text>
-                  <Group mt={4}>
-                    {item.ip_addresses?.map((ip) => (
-                      <Code key={ip}>{ip}</Code>
-                    ))}
-                  </Group>
-                </Timeline.Item>
-              ))}
-            </Timeline>
-            {suspiciousActivity.length === 0 && !loading && (
-              <Text c="dimmed" ta="center" py="xl">
-                {t("audit.no_suspicious_activity", {
-                  defaultValue: "No suspicious activity detected",
-                })}
-              </Text>
-            )}
-          </Card>
-        </Tabs.Panel>
-
-        <Tabs.Panel value="bulk">
-          <Card withBorder padding="sm" radius="md">
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>
-                    {t("audit.timestamp", { defaultValue: "Timestamp" })}
-                  </Table.Th>
-                  <Table.Th>
-                    {t("audit.operation", { defaultValue: "Operation" })}
-                  </Table.Th>
-                  <Table.Th>
+          }
+          position="right"
+          size="xl"
+        >
+          {selectedLog && (
+            <Stack gap="md">
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
                     {t("audit.user", { defaultValue: "User" })}
-                  </Table.Th>
-                  <Table.Th>
-                    {t("audit.resource", { defaultValue: "Resource" })}
-                  </Table.Th>
-                  <Table.Th>
-                    {t("audit.affected", { defaultValue: "Affected" })}
-                  </Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {bulkOperations.map((op, index) => (
-                  <Table.Tr key={index}>
-                    <Table.Td>{formatDate(op.event_timestamp)}</Table.Td>
-                    <Table.Td>
-                      <Badge>{op.operation_type}</Badge>
-                    </Table.Td>
-                    <Table.Td>{op.username}</Table.Td>
-                    <Table.Td>{op.resource_type}</Table.Td>
-                    <Table.Td>
-                      <Text fw={700}>{op.affected_count}</Text>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-            {bulkOperations.length === 0 && !loading && (
-              <Text c="dimmed" ta="center" py="xl">
-                {t("audit.no_bulk_operations", {
-                  defaultValue: "No bulk operations found",
-                })}
-              </Text>
-            )}
-          </Card>
-        </Tabs.Panel>
-      </Tabs>
+                  </Text>
+                  <Text fw={500}>{selectedLog.username}</Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("audit.table", { defaultValue: "Table" })}
+                  </Text>
+                  <Text fw={500}>{selectedLog.table_name}</Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("audit.record_id", { defaultValue: "Record ID" })}
+                  </Text>
+                  <Code>{selectedLog.record_id}</Code>
+                </Box>
+              </Group>
 
-      <Drawer
-        opened={!!selectedLog}
-        onClose={() => setSelectedLog(null)}
-        title={
-          <Group>
-            <Text fw={700} size="lg">
-              {t("audit.log_details", { defaultValue: "Log Details" })}
-            </Text>
-            <Badge>{selectedLog?.action}</Badge>
-            <Code>{selectedLog?.event_id}</Code>
-          </Group>
-        }
-        position="right"
-        size="xl"
-      >
-        {selectedLog && (
-          <Stack gap="md">
-            <Group grow>
               <Box>
                 <Text size="xs" c="dimmed">
-                  {t("audit.user", { defaultValue: "User" })}
+                  {t("audit.timestamp", { defaultValue: "Timestamp" })}
                 </Text>
-                <Text fw={500}>{selectedLog.username}</Text>
+                <Text>{formatDate(selectedLog.event_timestamp)}</Text>
               </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("audit.table", { defaultValue: "Table" })}
-                </Text>
-                <Text fw={500}>{selectedLog.table_name}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("audit.record_id", { defaultValue: "Record ID" })}
-                </Text>
-                <Code>{selectedLog.record_id}</Code>
-              </Box>
-            </Group>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("audit.timestamp", { defaultValue: "Timestamp" })}
-              </Text>
-              <Text>{formatDate(selectedLog.event_timestamp)}</Text>
-            </Box>
-
-            {renderDrawerContent(selectedLog)}
-          </Stack>
-        )}
-      </Drawer>
-    </Container>
+              {renderDrawerContent(selectedLog)}
+            </Stack>
+          )}
+        </Drawer>
+      </PageShell>
+    </>
   );
 }

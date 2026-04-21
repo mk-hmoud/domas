@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  Container,
-  Stack,
-  Group,
-  Title,
-  Text,
-  Button,
-  Paper,
-  LoadingOverlay,
-  Tabs,
-} from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
+import { Stack, Button, Paper, LoadingOverlay, Tabs } from "@mantine/core";
 import { IconPlus, IconListSearch, IconHistory } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -244,83 +235,89 @@ export function SharedDamagesPage() {
   };
 
   return (
-    <Container size="lg" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={2}>{t("damages")}</Title>
-            <Text c="dimmed" size="sm">
-              {t("damage_reports_description")}
-            </Text>
-          </div>
-          {hasPermission("damages.report") && (
+    <>
+      <PageHeader
+        title={t("damages")}
+        subtitle={t("damage_reports_description")}
+        actions={
+          hasPermission("damages.report") ? (
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={() => setModalOpened(true)}
             >
               {t("report_damage")}
             </Button>
-          )}
-        </Group>
-
-        <Tabs defaultValue="reported">
-          <Tabs.List mb="md">
-            <Tabs.Tab
-              value="reported"
-              leftSection={<IconListSearch size={14} />}
-            >
-              {t("reported_damages", "Reported")}
-            </Tabs.Tab>
-            <Tabs.Tab value="processed" leftSection={<IconHistory size={14} />}>
-              {t("processed_damages", "Processed")}
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel value="reported">
-            <Paper withBorder radius="md" style={{ position: "relative" }}>
-              <LoadingOverlay visible={loading} />
-              <DamageReportTable
-                data={reports.filter((r) => r.status === DamageStatus.PENDING)}
-                onView={handleViewDetails}
-                onApprove={(r) => handleApprove(r.id)}
-                onReject={(r) => handleReject(r.id)}
-                canManage={hasPermission("damages.manage")}
-              />
-            </Paper>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="processed">
-            <Paper withBorder radius="md" style={{ position: "relative" }}>
-              <LoadingOverlay visible={loading} />
-              <DamageReportTable
-                data={reports.filter((r) => r.status !== DamageStatus.PENDING)}
-                onView={handleViewDetails}
-                onApprove={(r) => handleApprove(r.id)}
-                onReject={(r) => handleReject(r.id)}
-                canManage={hasPermission("damages.manage")}
-              />
-            </Paper>
-          </Tabs.Panel>
-        </Tabs>
-      </Stack>
-
-      <CreateDamageModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSubmit={handleCreateReport}
-        students={studentList}
-        guestStays={activeGuestStays}
-        loading={actionLoading}
+          ) : undefined
+        }
       />
+      <PageShell>
+        <Stack gap="lg">
+          <Tabs defaultValue="reported">
+            <Tabs.List mb="md">
+              <Tabs.Tab
+                value="reported"
+                leftSection={<IconListSearch size={14} />}
+              >
+                {t("reported_damages", "Reported")}
+              </Tabs.Tab>
+              <Tabs.Tab
+                value="processed"
+                leftSection={<IconHistory size={14} />}
+              >
+                {t("processed_damages", "Processed")}
+              </Tabs.Tab>
+            </Tabs.List>
 
-      <DamageDetailsDrawer
-        opened={drawerOpened}
-        onClose={() => setDrawerOpened(false)}
-        report={selectedReport}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        loading={actionLoading}
-      />
-    </Container>
+            <Tabs.Panel value="reported">
+              <Paper withBorder radius="md" style={{ position: "relative" }}>
+                <LoadingOverlay visible={loading} />
+                <DamageReportTable
+                  data={reports.filter(
+                    (r) => r.status === DamageStatus.PENDING,
+                  )}
+                  onView={handleViewDetails}
+                  onApprove={(r) => handleApprove(r.id)}
+                  onReject={(r) => handleReject(r.id)}
+                  canManage={hasPermission("damages.manage")}
+                />
+              </Paper>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="processed">
+              <Paper withBorder radius="md" style={{ position: "relative" }}>
+                <LoadingOverlay visible={loading} />
+                <DamageReportTable
+                  data={reports.filter(
+                    (r) => r.status !== DamageStatus.PENDING,
+                  )}
+                  onView={handleViewDetails}
+                  onApprove={(r) => handleApprove(r.id)}
+                  onReject={(r) => handleReject(r.id)}
+                  canManage={hasPermission("damages.manage")}
+                />
+              </Paper>
+            </Tabs.Panel>
+          </Tabs>
+        </Stack>
+
+        <CreateDamageModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          onSubmit={handleCreateReport}
+          students={studentList}
+          guestStays={activeGuestStays}
+          loading={actionLoading}
+        />
+
+        <DamageDetailsDrawer
+          opened={drawerOpened}
+          onClose={() => setDrawerOpened(false)}
+          report={selectedReport}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          loading={actionLoading}
+        />
+      </PageShell>
+    </>
   );
 }

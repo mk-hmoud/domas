@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Title, Text, Button, Group, Container, Card, TextInput } from '@mantine/core';
+import { Title, Text, Button, Group, Card, TextInput } from '@mantine/core';
+import { PageHeader, PageShell } from '@domas/ui';
 import { IconPlus, IconSearch, IconShield, IconShieldCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { CreateRoleDto, Role, Permission } from '@domas/ts-types';
@@ -122,86 +123,85 @@ export function RolesPage() {
   const customRolesCount = roles.length - systemRolesCount;
 
   return (
-    <Container fluid p="md">
-      <Group justify="space-between" mb="lg">
-        <div>
-          <Title order={2}>{t('roles_and_permissions')}</Title>
-          <Text c="dimmed" size="sm">
-            {t('manage_roles_description')}
-          </Text>
-        </div>
-        <Button leftSection={<IconPlus size={14} />} onClick={openCreateModal}>
-          {t('create_role')}
-        </Button>
-      </Group>
-
-      {/* Stats Cards */}
-      <Group mb="lg" grow>
-        <Card withBorder padding="md" radius="md">
-          <Group justify="space-between">
-            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
-              {t('total_roles')}
+    <>
+      <PageHeader
+        title={t('roles_and_permissions')}
+        subtitle={t('manage_roles_description')}
+        actions={
+          <Button leftSection={<IconPlus size={14} />} onClick={openCreateModal}>
+            {t('create_role')}
+          </Button>
+        }
+      />
+      <PageShell>
+        {/* Stats Cards */}
+        <Group mb="lg" grow>
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between">
+              <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                {t('total_roles')}
+              </Text>
+              <IconShield size={22} className="text-gray-500" />
+            </Group>
+            <Group align="flex-end" gap="xs" mt={25}>
+              <Text fw={700} size="xl" lh={1}>
+                {roles.length}
+              </Text>
+            </Group>
+            <Text c="dimmed" size="xs" mt="sm">
+              {systemRolesCount} {t('system_roles')}
             </Text>
-            <IconShield size={22} className="text-gray-500" />
-          </Group>
-          <Group align="flex-end" gap="xs" mt={25}>
-            <Text fw={700} size="xl" lh={1}>
-              {roles.length}
+          </Card>
+          <Card withBorder padding="md" radius="md">
+            <Group justify="space-between">
+              <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                {t('custom_roles')}
+              </Text>
+              <IconShieldCheck size={22} className="text-gray-500" />
+            </Group>
+            <Group align="flex-end" gap="xs" mt={25}>
+              <Text fw={700} size="xl" lh={1}>
+                {customRolesCount}
+              </Text>
+            </Group>
+            <Text c="dimmed" size="xs" mt="sm">
+              {t('user_defined_roles')}
             </Text>
-          </Group>
-          <Text c="dimmed" size="xs" mt="sm">
-            {systemRolesCount} {t('system_roles')}
-          </Text>
-        </Card>
-        <Card withBorder padding="md" radius="md">
-          <Group justify="space-between">
-            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
-              {t('custom_roles')}
-            </Text>
-            <IconShieldCheck size={22} className="text-gray-500" />
-          </Group>
-          <Group align="flex-end" gap="xs" mt={25}>
-            <Text fw={700} size="xl" lh={1}>
-              {customRolesCount}
-            </Text>
-          </Group>
-          <Text c="dimmed" size="xs" mt="sm">
-            {t('user_defined_roles')}
-          </Text>
-        </Card>
-      </Group>
-
-      <Card withBorder radius="md" p="md" mb="lg">
-        <Group justify="space-between" mb="md">
-          <Group>
-            <Title order={4}>{t('all_roles')}</Title>
-            <Text c="dimmed" size="sm">
-              {filteredRoles.length} {t('records_found')}
-            </Text>
-          </Group>
-          <TextInput
-            placeholder={t('search_roles')}
-            leftSection={<IconSearch size={14} />}
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.currentTarget.value)}
-          />
+          </Card>
         </Group>
 
-        <RolesTable
-          data={filteredRoles}
-          onEdit={openEditModal}
-          onDelete={openDeleteModal}
-          loading={loading}
-        />
-      </Card>
+        <Card withBorder radius="md" p="md" mb="lg">
+          <Group justify="space-between" mb="md">
+            <Group>
+              <Title order={4}>{t('all_roles')}</Title>
+              <Text c="dimmed" size="sm">
+                {filteredRoles.length} {t('records_found')}
+              </Text>
+            </Group>
+            <TextInput
+              placeholder={t('search_roles')}
+              leftSection={<IconSearch size={14} />}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+            />
+          </Group>
 
-      <CreateRoleModal
-        opened={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSubmit={handleCreateOrUpdate}
-        roleToEdit={roleToEdit}
-        permissions={permissions}
-      />
-    </Container>
+          <RolesTable
+            data={filteredRoles}
+            onEdit={openEditModal}
+            onDelete={openDeleteModal}
+            loading={loading}
+          />
+        </Card>
+
+        <CreateRoleModal
+          opened={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSubmit={handleCreateOrUpdate}
+          roleToEdit={roleToEdit}
+          permissions={permissions}
+        />
+      </PageShell>
+    </>
   );
 }

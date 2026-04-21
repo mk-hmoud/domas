@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Card,
-  Container,
   Group,
   LoadingOverlay,
   Menu,
@@ -16,8 +15,8 @@ import {
   Textarea,
   TextInput,
   ThemeIcon,
-  Title,
 } from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
@@ -392,135 +391,138 @@ export function SharedAnnouncementsPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
+    <>
+      <PageHeader
+        title={t("announcements", { defaultValue: "Announcements" })}
+        actions={
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => {
+              setEditing(null);
+              setModalOpened(true);
+            }}
+          >
+            {t("new_announcement", { defaultValue: "New Announcement" })}
+          </Button>
+        }
+      />
+      <PageShell>
+        <LoadingOverlay visible={loading} />
 
-      <Group justify="space-between" mb="lg">
-        <Title>{t("announcements", { defaultValue: "Announcements" })}</Title>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => {
-            setEditing(null);
-            setModalOpened(true);
-          }}
-        >
-          {t("new_announcement", { defaultValue: "New Announcement" })}
-        </Button>
-      </Group>
-
-      <Stack gap="sm">
-        {data.length === 0 && !loading && (
-          <Text c="dimmed" ta="center" py="xl">
-            {t("no_announcements_yet", {
-              defaultValue: "No announcements yet.",
-            })}
-          </Text>
-        )}
-        {data.map((item) => (
-          <Card key={item.id} withBorder radius="md" p="md">
-            <Group justify="space-between" align="flex-start">
-              <Box style={{ flex: 1 }}>
-                <Group gap="xs" mb={4}>
-                  {item.pinned && <IconPin size={14} color="orange" />}
-                  <Text fw={600}>{item.title}</Text>
-                  <Badge
-                    color={item.isPublished ? "green" : "gray"}
-                    variant="light"
-                    size="sm"
-                  >
-                    {item.isPublished
-                      ? t("published", { defaultValue: "Published" })
-                      : t("draft", { defaultValue: "Draft" })}
-                  </Badge>
-                  {item.attachments.length > 0 && (
+        <Stack gap="sm">
+          {data.length === 0 && !loading && (
+            <Text c="dimmed" ta="center" py="xl">
+              {t("no_announcements_yet", {
+                defaultValue: "No announcements yet.",
+              })}
+            </Text>
+          )}
+          {data.map((item) => (
+            <Card key={item.id} withBorder radius="md" p="md">
+              <Group justify="space-between" align="flex-start">
+                <Box style={{ flex: 1 }}>
+                  <Group gap="xs" mb={4}>
+                    {item.pinned && <IconPin size={14} color="orange" />}
+                    <Text fw={600}>{item.title}</Text>
                     <Badge
-                      color="blue"
+                      color={item.isPublished ? "green" : "gray"}
                       variant="light"
                       size="sm"
-                      leftSection={<IconPaperclip size={10} />}
                     >
-                      {item.attachments.length}
+                      {item.isPublished
+                        ? t("published", { defaultValue: "Published" })
+                        : t("draft", { defaultValue: "Draft" })}
                     </Badge>
-                  )}
-                </Group>
-                <Text size="sm" c="dimmed" lineClamp={2}>
-                  {item.body}
-                </Text>
-                {item.attachments.length > 0 && (
-                  <Group gap="xs" mt={6} wrap="wrap">
-                    {item.attachments.map((att) => (
-                      <Button
-                        key={att.id}
-                        size="xs"
-                        variant="subtle"
+                    {item.attachments.length > 0 && (
+                      <Badge
                         color="blue"
-                        leftSection={<IconFile size={11} />}
-                        onClick={() =>
-                          announcementsApi.downloadAttachment(
-                            item.id,
-                            att.id,
-                            att.filename,
-                          )
-                        }
+                        variant="light"
+                        size="sm"
+                        leftSection={<IconPaperclip size={10} />}
                       >
-                        {att.filename}
-                      </Button>
-                    ))}
+                        {item.attachments.length}
+                      </Badge>
+                    )}
                   </Group>
-                )}
-                <Text size="xs" c="dimmed" mt={4}>
-                  {item.createdByName && `${item.createdByName} · `}
-                  {new Date(item.createdAt).toLocaleDateString()}
-                  {item.expiresAt &&
-                    ` · ${t("expires", { defaultValue: "Expires" })} ${new Date(item.expiresAt).toLocaleDateString()}`}
-                </Text>
-              </Box>
+                  <Text size="sm" c="dimmed" lineClamp={2}>
+                    {item.body}
+                  </Text>
+                  {item.attachments.length > 0 && (
+                    <Group gap="xs" mt={6} wrap="wrap">
+                      {item.attachments.map((att) => (
+                        <Button
+                          key={att.id}
+                          size="xs"
+                          variant="subtle"
+                          color="blue"
+                          leftSection={<IconFile size={11} />}
+                          onClick={() =>
+                            announcementsApi.downloadAttachment(
+                              item.id,
+                              att.id,
+                              att.filename,
+                            )
+                          }
+                        >
+                          {att.filename}
+                        </Button>
+                      ))}
+                    </Group>
+                  )}
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {item.createdByName && `${item.createdByName} · `}
+                    {new Date(item.createdAt).toLocaleDateString()}
+                    {item.expiresAt &&
+                      ` · ${t("expires", { defaultValue: "Expires" })} ${new Date(item.expiresAt).toLocaleDateString()}`}
+                  </Text>
+                </Box>
 
-              <Menu shadow="md" width={180} withinPortal>
-                <Menu.Target>
-                  <ActionIcon variant="subtle" color="gray">
-                    <IconDotsVertical size={16} />
-                  </ActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Item
-                    leftSection={<IconEdit size={14} />}
-                    onClick={() => {
-                      setEditing(item);
-                      setModalOpened(true);
-                    }}
-                  >
-                    {t("edit")}
-                  </Menu.Item>
-                  <Menu.Item
-                    leftSection={<IconPin size={14} />}
-                    onClick={() => handleTogglePublish(item)}
-                  >
-                    {item.isPublished
-                      ? t("unpublish", { defaultValue: "Unpublish" })
-                      : t("publish", { defaultValue: "Publish" })}
-                  </Menu.Item>
-                  <Menu.Divider />
-                  <Menu.Item
-                    color="red"
-                    leftSection={<IconTrash size={14} />}
-                    onClick={() => handleDelete(item)}
-                  >
-                    {t("delete")}
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
-            </Group>
-          </Card>
-        ))}
-      </Stack>
+                <Menu shadow="md" width={180} withinPortal>
+                  <Menu.Target>
+                    <ActionIcon variant="subtle" color="gray">
+                      <IconDotsVertical size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={<IconEdit size={14} />}
+                      onClick={() => {
+                        setEditing(item);
+                        setModalOpened(true);
+                      }}
+                    >
+                      {t("edit")}
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconPin size={14} />}
+                      onClick={() => handleTogglePublish(item)}
+                    >
+                      {item.isPublished
+                        ? t("unpublish", { defaultValue: "Unpublish" })
+                        : t("publish", { defaultValue: "Publish" })}
+                    </Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item
+                      color="red"
+                      leftSection={<IconTrash size={14} />}
+                      onClick={() => handleDelete(item)}
+                    >
+                      {t("delete")}
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Group>
+            </Card>
+          ))}
+        </Stack>
 
-      <AnnouncementModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSubmit={editing ? handleUpdate : handleCreate}
-        initial={editing}
-      />
-    </Container>
+        <AnnouncementModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          onSubmit={editing ? handleUpdate : handleCreate}
+          initial={editing}
+        />
+      </PageShell>
+    </>
   );
 }

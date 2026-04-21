@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Button,
-  Group,
   Paper,
   LoadingOverlay,
-  Container,
   Text,
   TextInput,
   Card,
@@ -141,67 +139,67 @@ export function SharedInventoryCatalogPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <div>
-          <Title order={2}>{t("inventory_catalog")}</Title>
-          <Text c="dimmed" size="sm">
-            {t("inventory_catalog_description")}
-          </Text>
-        </div>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => {
-            setSelectedItem(null);
-            setModalOpened(true);
-          }}
-        >
-          {t("create_catalog_item")}
-        </Button>
-      </Group>
+    <>
+      <PageHeader
+        title={t("inventory_catalog")}
+        subtitle={t("inventory_catalog_description")}
+        actions={
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => {
+              setSelectedItem(null);
+              setModalOpened(true);
+            }}
+          >
+            {t("create_catalog_item")}
+          </Button>
+        }
+      />
+      <PageShell>
+        <LoadingOverlay visible={loading} />
 
-      <Card withBorder padding="md" radius="md" mb="md">
-        <TextInput
-          placeholder={t("search_placeholder", "Search...")}
-          leftSection={<IconSearch size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-        />
-      </Card>
+        <Card withBorder padding="md" radius="md" mb="md">
+          <TextInput
+            placeholder={t("search_placeholder", "Search...")}
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          />
+        </Card>
 
-      <Paper withBorder radius="md">
-        <InventoryCatalogTable
-          data={filteredData}
+        <Paper withBorder radius="md">
+          <InventoryCatalogTable
+            data={filteredData}
+            onEdit={(item) => {
+              setSelectedItem(item);
+              setModalOpened(true);
+            }}
+            onDelete={handleDelete}
+            onRowClick={setViewItem}
+          />
+        </Paper>
+
+        <InventoryCatalogDrawer
+          opened={!!viewItem}
+          onClose={() => setViewItem(null)}
+          item={viewItem}
           onEdit={(item) => {
             setSelectedItem(item);
             setModalOpened(true);
           }}
-          onDelete={handleDelete}
-          onRowClick={setViewItem}
         />
-      </Paper>
 
-      <InventoryCatalogDrawer
-        opened={!!viewItem}
-        onClose={() => setViewItem(null)}
-        item={viewItem}
-        onEdit={(item) => {
-          setSelectedItem(item);
-          setModalOpened(true);
-        }}
-      />
-
-      <InventoryCatalogModal
-        opened={modalOpened}
-        onClose={() => {
-          setModalOpened(false);
-          setSelectedItem(null);
-        }}
-        onSubmit={selectedItem ? handleUpdate : handleCreate}
-        initialValues={selectedItem}
-        loading={modalLoading}
-      />
-    </Container>
+        <InventoryCatalogModal
+          opened={modalOpened}
+          onClose={() => {
+            setModalOpened(false);
+            setSelectedItem(null);
+          }}
+          onSubmit={selectedItem ? handleUpdate : handleCreate}
+          initialValues={selectedItem}
+          loading={modalLoading}
+        />
+      </PageShell>
+    </>
   );
 }

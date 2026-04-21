@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Button,
   Group,
   Paper,
@@ -11,7 +11,6 @@ import {
   LoadingOverlay,
   Menu,
   Pagination,
-  Container,
   Drawer,
   Stack,
   Box,
@@ -285,360 +284,371 @@ export function SharedSemestersPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>{t("semesters_page_title")}</Title>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setCreateModalOpened(true)}
-        >
-          {t("create_semester")}
-        </Button>
-      </Group>
-
-      <Paper withBorder radius="md">
-        <Table verticalSpacing="sm" striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>{t("semester_name")}</Table.Th>
-              <Table.Th>{t("start_date")}</Table.Th>
-              <Table.Th>{t("end_date")}</Table.Th>
-              <Table.Th>{t("status")}</Table.Th>
-              <Table.Th style={{ width: 80 }} />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.map((semester) => (
-              <Table.Tr
-                key={semester.id}
-                onClick={() => setViewSemester(semester)}
-                style={{ cursor: "pointer" }}
-              >
-                <Table.Td fw={500}>
-                  {semester.displayName ||
-                    `${semester.academicYear} ${semester.type}`}
-                </Table.Td>
-                <Table.Td>{formatDate(semester.startDate)}</Table.Td>
-                <Table.Td>{formatDate(semester.endDate)}</Table.Td>
-                <Table.Td>
-                  <Badge
-                    color={getStatusColor(semester.status)}
-                    variant="light"
-                  >
-                    {t(`semester.statuses.${semester.status}`)}
-                  </Badge>
-                </Table.Td>
-                <Table.Td onClick={(e) => e.stopPropagation()}>
-                  <Menu shadow="md" width={200}>
-                    <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray">
-                        <IconDotsVertical size={16} />
-                      </ActionIcon>
-                    </Menu.Target>
-
-                    <Menu.Dropdown>
-                      <Menu.Item
-                        leftSection={<IconEdit size={14} />}
-                        onClick={() => openEditModal(semester)}
-                      >
-                        {t("edit")}
-                      </Menu.Item>
-
-                      <Menu.Label>{t("status")}</Menu.Label>
-                      <Menu.Item
-                        leftSection={<IconCheck size={14} />}
-                        onClick={() =>
-                          handleUpdateStatus(semester, SemesterStatus.ACTIVE)
-                        }
-                        disabled={semester.status === SemesterStatus.ACTIVE}
-                      >
-                        {t("semester.actions.set_active")}
-                      </Menu.Item>
-                      <Menu.Item
-                        leftSection={<IconX size={14} />}
-                        onClick={() =>
-                          handleUpdateStatus(semester, SemesterStatus.CLOSED)
-                        }
-                        disabled={semester.status === SemesterStatus.CLOSED}
-                      >
-                        {t("semester.actions.close")}
-                      </Menu.Item>
-                      <Menu.Item
-                        leftSection={<IconArchive size={14} />}
-                        onClick={() =>
-                          handleUpdateStatus(semester, SemesterStatus.ARCHIVED)
-                        }
-                        disabled={semester.status === SemesterStatus.ARCHIVED}
-                      >
-                        {t("semester.actions.archive")}
-                      </Menu.Item>
-
-                      <Menu.Divider />
-                      <Menu.Item
-                        color="red"
-                        leftSection={<IconTrash size={14} />}
-                        onClick={() => openDeleteModal(semester)}
-                      >
-                        {t("delete")}
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-        {data.length === 0 && !loading && (
-          <Text c="dimmed" ta="center" py="xl">
-            No semesters found
-          </Text>
-        )}
-      </Paper>
-
-      <Group justify="flex-end" mt="md">
-        <Pagination
-          total={Math.ceil(total / limit)}
-          value={page}
-          onChange={setPage}
-        />
-      </Group>
-
-      <SemesterModal
-        opened={createModalOpened}
-        onClose={() => setCreateModalOpened(false)}
-        onSubmit={handleCreate}
-        loading={modalLoading}
-        lastSemester={data.length > 0 ? data[0] : undefined}
-      />
-
-      <SemesterModal
-        opened={editModalOpened}
-        onClose={() => {
-          setEditModalOpened(false);
-          setSelectedSemester(null);
-        }}
-        onSubmit={handleUpdate}
-        initialValues={selectedSemester}
-        loading={modalLoading}
-      />
-
-      <Drawer
-        opened={!!viewSemester}
-        onClose={() => setViewSemester(null)}
-        title={
-          <Text fw={700} size="lg">
-            {t("semester_label", { defaultValue: "Semester" })}
-          </Text>
+    <>
+      <PageHeader
+        title={t("semesters_page_title")}
+        actions={
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setCreateModalOpened(true)}
+          >
+            {t("create_semester")}
+          </Button>
         }
-        position="right"
-        size="md"
-      >
-        {viewSemester && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Text size="xl" fw={700}>
-                {viewSemester.displayName ||
-                  `${viewSemester.academicYear} ${viewSemester.type}`}
-              </Text>
-              <Badge color={getStatusColor(viewSemester.status)}>
-                {t(`semester.statuses.${viewSemester.status}`)}
-              </Badge>
-            </Group>
+      />
+      <PageShell>
+        <LoadingOverlay visible={loading} />
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("start_date")}
-                </Text>
-                <Text>{formatDate(viewSemester.startDate)}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("end_date")}
-                </Text>
-                <Text>{formatDate(viewSemester.endDate)}</Text>
-              </Box>
-            </Group>
+        <Paper withBorder radius="md">
+          <Table verticalSpacing="sm" striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>{t("semester_name")}</Table.Th>
+                <Table.Th>{t("start_date")}</Table.Th>
+                <Table.Th>{t("end_date")}</Table.Th>
+                <Table.Th>{t("status")}</Table.Th>
+                <Table.Th style={{ width: 80 }} />
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.map((semester) => (
+                <Table.Tr
+                  key={semester.id}
+                  onClick={() => setViewSemester(semester)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <Table.Td fw={500}>
+                    {semester.displayName ||
+                      `${semester.academicYear} ${semester.type}`}
+                  </Table.Td>
+                  <Table.Td>{formatDate(semester.startDate)}</Table.Td>
+                  <Table.Td>{formatDate(semester.endDate)}</Table.Td>
+                  <Table.Td>
+                    <Badge
+                      color={getStatusColor(semester.status)}
+                      variant="light"
+                    >
+                      {t(`semester.statuses.${semester.status}`)}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td onClick={(e) => e.stopPropagation()}>
+                    <Menu shadow="md" width={200}>
+                      <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray">
+                          <IconDotsVertical size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("semester.booking_start", {
-                    defaultValue: "Booking Start",
-                  })}
-                </Text>
-                <Text>
-                  {viewSemester.bookingStartDate
-                    ? formatDate(viewSemester.bookingStartDate)
-                    : "-"}
-                </Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("semester.booking_end", { defaultValue: "Booking End" })}
-                </Text>
-                <Text>
-                  {viewSemester.bookingEndDate
-                    ? formatDate(viewSemester.bookingEndDate)
-                    : "-"}
-                </Text>
-              </Box>
-            </Group>
+                      <Menu.Dropdown>
+                        <Menu.Item
+                          leftSection={<IconEdit size={14} />}
+                          onClick={() => openEditModal(semester)}
+                        >
+                          {t("edit")}
+                        </Menu.Item>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("semester.deposit_try", { defaultValue: "Deposit (TRY)" })}
-                </Text>
-                <Text>{viewSemester.depositAmountTry}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("semester.deposit_foreign", {
-                    defaultValue: "Deposit (Foreign)",
-                  })}
-                </Text>
-                <Text>
-                  {viewSemester.depositAmountForeign}{" "}
-                  {viewSemester.foreignCurrencyCode}
-                </Text>
-              </Box>
-            </Group>
+                        <Menu.Label>{t("status")}</Menu.Label>
+                        <Menu.Item
+                          leftSection={<IconCheck size={14} />}
+                          onClick={() =>
+                            handleUpdateStatus(semester, SemesterStatus.ACTIVE)
+                          }
+                          disabled={semester.status === SemesterStatus.ACTIVE}
+                        >
+                          {t("semester.actions.set_active")}
+                        </Menu.Item>
+                        <Menu.Item
+                          leftSection={<IconX size={14} />}
+                          onClick={() =>
+                            handleUpdateStatus(semester, SemesterStatus.CLOSED)
+                          }
+                          disabled={semester.status === SemesterStatus.CLOSED}
+                        >
+                          {t("semester.actions.close")}
+                        </Menu.Item>
+                        <Menu.Item
+                          leftSection={<IconArchive size={14} />}
+                          onClick={() =>
+                            handleUpdateStatus(
+                              semester,
+                              SemesterStatus.ARCHIVED,
+                            )
+                          }
+                          disabled={semester.status === SemesterStatus.ARCHIVED}
+                        >
+                          {t("semester.actions.archive")}
+                        </Menu.Item>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("semester.max_room_changes", {
-                  defaultValue: "Max Room Changes",
-                })}
-              </Text>
-              <Text>
-                {viewSemester.maxRoomChanges != null
-                  ? viewSemester.maxRoomChanges
-                  : t("unlimited", { defaultValue: "Unlimited" })}
-              </Text>
-            </Box>
+                        <Menu.Divider />
+                        <Menu.Item
+                          color="red"
+                          leftSection={<IconTrash size={14} />}
+                          onClick={() => openDeleteModal(semester)}
+                        >
+                          {t("delete")}
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+          {data.length === 0 && !loading && (
+            <Text c="dimmed" ta="center" py="xl">
+              No semesters found
+            </Text>
+          )}
+        </Paper>
 
-            <Divider
-              label={
-                <Group gap={6}>
-                  <IconCurrencyLira size={14} />
-                  <Text size="sm" fw={500}>
-                    {t("semester.room_pricing", {
-                      defaultValue: "Room Type Pricing",
+        <Group justify="flex-end" mt="md">
+          <Pagination
+            total={Math.ceil(total / limit)}
+            value={page}
+            onChange={setPage}
+          />
+        </Group>
+
+        <SemesterModal
+          opened={createModalOpened}
+          onClose={() => setCreateModalOpened(false)}
+          onSubmit={handleCreate}
+          loading={modalLoading}
+          lastSemester={data.length > 0 ? data[0] : undefined}
+        />
+
+        <SemesterModal
+          opened={editModalOpened}
+          onClose={() => {
+            setEditModalOpened(false);
+            setSelectedSemester(null);
+          }}
+          onSubmit={handleUpdate}
+          initialValues={selectedSemester}
+          loading={modalLoading}
+        />
+
+        <Drawer
+          opened={!!viewSemester}
+          onClose={() => setViewSemester(null)}
+          title={
+            <Text fw={700} size="lg">
+              {t("semester_label", { defaultValue: "Semester" })}
+            </Text>
+          }
+          position="right"
+          size="md"
+        >
+          {viewSemester && (
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Text size="xl" fw={700}>
+                  {viewSemester.displayName ||
+                    `${viewSemester.academicYear} ${viewSemester.type}`}
+                </Text>
+                <Badge color={getStatusColor(viewSemester.status)}>
+                  {t(`semester.statuses.${viewSemester.status}`)}
+                </Badge>
+              </Group>
+
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("start_date")}
+                  </Text>
+                  <Text>{formatDate(viewSemester.startDate)}</Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("end_date")}
+                  </Text>
+                  <Text>{formatDate(viewSemester.endDate)}</Text>
+                </Box>
+              </Group>
+
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("semester.booking_start", {
+                      defaultValue: "Booking Start",
                     })}
                   </Text>
-                </Group>
-              }
-              labelPosition="left"
-            />
+                  <Text>
+                    {viewSemester.bookingStartDate
+                      ? formatDate(viewSemester.bookingStartDate)
+                      : "-"}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("semester.booking_end", { defaultValue: "Booking End" })}
+                  </Text>
+                  <Text>
+                    {viewSemester.bookingEndDate
+                      ? formatDate(viewSemester.bookingEndDate)
+                      : "-"}
+                  </Text>
+                </Box>
+              </Group>
 
-            <Box style={{ position: "relative" }}>
-              <LoadingOverlay visible={pricingLoading} />
-              {pricingRows.length === 0 && !pricingLoading ? (
-                <Text size="sm" c="dimmed">
-                  {t("semester.no_room_types", {
-                    defaultValue:
-                      "No room types defined yet. Create room types first.",
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("semester.deposit_try", {
+                      defaultValue: "Deposit (TRY)",
+                    })}
+                  </Text>
+                  <Text>{viewSemester.depositAmountTry}</Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("semester.deposit_foreign", {
+                      defaultValue: "Deposit (Foreign)",
+                    })}
+                  </Text>
+                  <Text>
+                    {viewSemester.depositAmountForeign}{" "}
+                    {viewSemester.foreignCurrencyCode}
+                  </Text>
+                </Box>
+              </Group>
+
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("semester.max_room_changes", {
+                    defaultValue: "Max Room Changes",
                   })}
                 </Text>
-              ) : (
-                <Table withTableBorder withColumnBorders fz="sm">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>
-                        {t("room_type", { defaultValue: "Room Type" })}
-                      </Table.Th>
-                      <Table.Th>
-                        {t("capacity", { defaultValue: "Cap." })}
-                      </Table.Th>
-                      <Table.Th>
-                        {t("semester.price_try", {
-                          defaultValue: "Price (TRY)",
-                        })}
-                      </Table.Th>
-                      <Table.Th>
-                        {t("semester.price_foreign", {
-                          defaultValue: `Price (${viewSemester.foreignCurrencyCode})`,
-                        })}
-                      </Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {pricingRows.map((row) => (
-                      <Table.Tr key={row.roomTypeId}>
-                        <Table.Td>{row.roomTypeName}</Table.Td>
-                        <Table.Td>{row.capacity}</Table.Td>
-                        <Table.Td>
-                          <NumberInput
-                            size="xs"
-                            min={0}
-                            placeholder="0"
-                            value={pricingEdits[row.roomTypeId]?.priceTry ?? ""}
-                            onChange={(v) =>
-                              setPricingEdits((prev) => ({
-                                ...prev,
-                                [row.roomTypeId]: {
-                                  ...prev[row.roomTypeId],
-                                  priceTry: v,
-                                },
-                              }))
-                            }
-                          />
-                        </Table.Td>
-                        <Table.Td>
-                          <NumberInput
-                            size="xs"
-                            min={0}
-                            placeholder="—"
-                            value={
-                              pricingEdits[row.roomTypeId]?.priceForeign ?? ""
-                            }
-                            onChange={(v) =>
-                              setPricingEdits((prev) => ({
-                                ...prev,
-                                [row.roomTypeId]: {
-                                  ...prev[row.roomTypeId],
-                                  priceForeign: v,
-                                },
-                              }))
-                            }
-                          />
-                        </Table.Td>
+                <Text>
+                  {viewSemester.maxRoomChanges != null
+                    ? viewSemester.maxRoomChanges
+                    : t("unlimited", { defaultValue: "Unlimited" })}
+                </Text>
+              </Box>
+
+              <Divider
+                label={
+                  <Group gap={6}>
+                    <IconCurrencyLira size={14} />
+                    <Text size="sm" fw={500}>
+                      {t("semester.room_pricing", {
+                        defaultValue: "Room Type Pricing",
+                      })}
+                    </Text>
+                  </Group>
+                }
+                labelPosition="left"
+              />
+
+              <Box style={{ position: "relative" }}>
+                <LoadingOverlay visible={pricingLoading} />
+                {pricingRows.length === 0 && !pricingLoading ? (
+                  <Text size="sm" c="dimmed">
+                    {t("semester.no_room_types", {
+                      defaultValue:
+                        "No room types defined yet. Create room types first.",
+                    })}
+                  </Text>
+                ) : (
+                  <Table withTableBorder withColumnBorders fz="sm">
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>
+                          {t("room_type", { defaultValue: "Room Type" })}
+                        </Table.Th>
+                        <Table.Th>
+                          {t("capacity", { defaultValue: "Cap." })}
+                        </Table.Th>
+                        <Table.Th>
+                          {t("semester.price_try", {
+                            defaultValue: "Price (TRY)",
+                          })}
+                        </Table.Th>
+                        <Table.Th>
+                          {t("semester.price_foreign", {
+                            defaultValue: `Price (${viewSemester.foreignCurrencyCode})`,
+                          })}
+                        </Table.Th>
                       </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {pricingRows.map((row) => (
+                        <Table.Tr key={row.roomTypeId}>
+                          <Table.Td>{row.roomTypeName}</Table.Td>
+                          <Table.Td>{row.capacity}</Table.Td>
+                          <Table.Td>
+                            <NumberInput
+                              size="xs"
+                              min={0}
+                              placeholder="0"
+                              value={
+                                pricingEdits[row.roomTypeId]?.priceTry ?? ""
+                              }
+                              onChange={(v) =>
+                                setPricingEdits((prev) => ({
+                                  ...prev,
+                                  [row.roomTypeId]: {
+                                    ...prev[row.roomTypeId],
+                                    priceTry: v,
+                                  },
+                                }))
+                              }
+                            />
+                          </Table.Td>
+                          <Table.Td>
+                            <NumberInput
+                              size="xs"
+                              min={0}
+                              placeholder="—"
+                              value={
+                                pricingEdits[row.roomTypeId]?.priceForeign ?? ""
+                              }
+                              onChange={(v) =>
+                                setPricingEdits((prev) => ({
+                                  ...prev,
+                                  [row.roomTypeId]: {
+                                    ...prev[row.roomTypeId],
+                                    priceForeign: v,
+                                  },
+                                }))
+                              }
+                            />
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Box>
+
+              {pricingRows.length > 0 && (
+                <Button
+                  size="sm"
+                  loading={pricingSaving}
+                  onClick={handleSavePricing}
+                >
+                  {t("semester.save_pricing", {
+                    defaultValue: "Save Pricing",
+                  })}
+                </Button>
               )}
-            </Box>
 
-            {pricingRows.length > 0 && (
+              <Divider />
+
               <Button
-                size="sm"
-                loading={pricingSaving}
-                onClick={handleSavePricing}
+                variant="light"
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  openEditModal(viewSemester);
+                  setViewSemester(null); // Close drawer when editing
+                }}
               >
-                {t("semester.save_pricing", {
-                  defaultValue: "Save Pricing",
-                })}
+                {t("edit")}
               </Button>
-            )}
-
-            <Divider />
-
-            <Button
-              variant="light"
-              leftSection={<IconEdit size={16} />}
-              onClick={() => {
-                openEditModal(viewSemester);
-                setViewSemester(null); // Close drawer when editing
-              }}
-            >
-              {t("edit")}
-            </Button>
-          </Stack>
-        )}
-      </Drawer>
-    </Container>
+            </Stack>
+          )}
+        </Drawer>
+      </PageShell>
+    </>
   );
 }

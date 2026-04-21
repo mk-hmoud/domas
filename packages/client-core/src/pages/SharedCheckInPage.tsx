@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Text,
-  Container,
   Paper,
   Table,
   Button,
@@ -155,15 +154,11 @@ export function SharedCheckInPage() {
   });
 
   return (
-    <Container size="lg" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={2}>{t("check_in")}</Title>
-            <Text c="dimmed" size="sm">
-              {t("check_in_description")}
-            </Text>
-          </div>
+    <>
+      <PageHeader
+        title={t("check_in")}
+        subtitle={t("check_in_description")}
+        actions={
           <ActionIcon
             variant="subtle"
             onClick={fetchBookings}
@@ -171,42 +166,45 @@ export function SharedCheckInPage() {
           >
             <IconRefresh size={20} />
           </ActionIcon>
-        </Group>
-
-        <Paper withBorder radius="md" style={{ position: "relative" }}>
-          <LoadingOverlay visible={loading} />
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t("student")}</Table.Th>
-                <Table.Th>{t("location")}</Table.Th>
-                <Table.Th>{t("status")}</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {rows}
-              {data.length === 0 && !loading && (
-                <Table.Tr>
-                  <Table.Td colSpan={4}>
-                    <Text ta="center" py="xl" c="dimmed">
-                      {t("no_bookings_ready")}
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Paper>
-      </Stack>
-
-      <CheckInDetailsModal
-        opened={!!selectedBooking}
-        onClose={() => setSelectedBooking(null)}
-        booking={selectedBooking}
-        onConfirm={handleCheckIn}
-        loading={processLoading}
+        }
       />
-    </Container>
+      <PageShell>
+        <Stack gap="lg">
+          <Paper withBorder radius="md" style={{ position: "relative" }}>
+            <LoadingOverlay visible={loading} />
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>{t("student")}</Table.Th>
+                  <Table.Th>{t("location")}</Table.Th>
+                  <Table.Th>{t("status")}</Table.Th>
+                  <Table.Th />
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {rows}
+                {data.length === 0 && !loading && (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>
+                      <Text ta="center" py="xl" c="dimmed">
+                        {t("no_bookings_ready")}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        </Stack>
+
+        <CheckInDetailsModal
+          opened={!!selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          booking={selectedBooking}
+          onConfirm={handleCheckIn}
+          loading={processLoading}
+        />
+      </PageShell>
+    </>
   );
 }

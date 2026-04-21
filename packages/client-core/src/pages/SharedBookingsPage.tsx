@@ -1,9 +1,8 @@
 import { useEffect, useState, useMemo, Fragment } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Button,
   Group,
-  Container,
   LoadingOverlay,
   Paper,
   Text,
@@ -33,7 +32,6 @@ import {
   IconX,
   IconArrowsExchange,
   IconBed,
-  IconMapPin,
   IconChevronDown,
   IconChevronUp,
   IconBuilding,
@@ -450,601 +448,616 @@ export function SharedBookingsPage() {
   }, [data, debouncedSearch, studentsMap, bedsMap]);
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <Title>{t("nav.bookings", { defaultValue: "Bookings" })}</Title>
-        <Button
-          leftSection={<IconPlus size={14} />}
-          onClick={() => setModalOpened(true)}
-        >
-          {t("create_booking")}
-        </Button>
-      </Group>
-
-      <Card withBorder padding="md" radius="md" mb="md">
-        <Stack gap="sm">
-          <TextInput
-            placeholder={t("search_placeholder", {
-              defaultValue: "Search by student or bed...",
-            })}
-            leftSection={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          />
-          <Group grow wrap="nowrap">
-            <Select
-              placeholder={t("all_semesters", "All Semesters")}
-              data={allSemesters.map((s) => ({
-                value: String(s.id),
-                label: s.displayName,
-              }))}
-              value={filterSemesterId}
-              onChange={setFilterSemesterId}
-              clearable
-            />
-            <Select
-              placeholder={t("all_statuses", "All Statuses")}
-              data={Object.values(BookingOpsStatus).map((s) => ({
-                value: s,
-                label: t(`booking_status.${s}`, { defaultValue: s }),
-              }))}
-              value={filterStatus}
-              onChange={setFilterStatus}
-              clearable
-            />
-            <Select
-              placeholder={t("all_payment_statuses", "All Payment Statuses")}
-              data={Object.values(PaymentStatus).map((s) => ({
-                value: s,
-                label: t(`portal.payment_${s}`, { defaultValue: s }),
-              }))}
-              value={filterPaymentStatus}
-              onChange={setFilterPaymentStatus}
-              clearable
-            />
-            {hasActiveFilters && (
-              <Button
-                variant="subtle"
-                color="gray"
-                leftSection={<IconX size={14} />}
-                onClick={clearFilters}
-                style={{ flexShrink: 0 }}
-              >
-                {t("clear_filters", "Clear")}
-              </Button>
-            )}
-          </Group>
-        </Stack>
-      </Card>
-
-      <Paper withBorder radius="md">
-        <BookingsTable
-          data={filteredData}
-          studentsMap={studentsMap}
-          bedsMap={bedsMap}
-          onSelect={setSelectedBooking}
-          onView={setSelectedBooking}
-          onEdit={handleEditClick}
-          onDelete={(booking) => console.log("Delete", booking)}
-        />
-        {filteredData.length === 0 && !loading && (
-          <Text c="dimmed" ta="center" py="xl">
-            {t("no_bookings_found", { defaultValue: "No bookings found" })}
-          </Text>
-        )}
-      </Paper>
-
-      <CreateBookingModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSubmit={handleCreateBooking}
-        onCreateStudent={handleCreateStudent}
-        students={studentList.map((s) => ({
-          value: s.id,
-          label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
-        }))}
-        semesters={allSemesters}
-        initialStudentId={isEditMode ? bookingToEdit?.studentId : null}
-        initialBedId={isEditMode ? bookingToEdit?.bedId : null}
-        isEdit={isEditMode}
+    <>
+      <PageHeader
+        title={t("nav.bookings", { defaultValue: "Bookings" })}
+        actions={
+          <Button
+            leftSection={<IconPlus size={14} />}
+            onClick={() => setModalOpened(true)}
+          >
+            {t("create_booking")}
+          </Button>
+        }
       />
+      <PageShell>
+        <LoadingOverlay visible={loading} />
 
-      <Drawer
-        opened={!!selectedBooking}
-        onClose={() => setSelectedBooking(null)}
-        title={t("booking_details", { defaultValue: "Booking Details" })}
-        position="right"
-        size="md"
-      >
-        {selectedBooking && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Text size="xl" fw={700}>
-                {studentsMap.get(selectedBooking.studentId) ||
-                  "Unknown Student"}
-              </Text>
-              <Badge>{selectedBooking.status}</Badge>
+        <Card withBorder padding="md" radius="md" mb="md">
+          <Stack gap="sm">
+            <TextInput
+              placeholder={t("search_placeholder", {
+                defaultValue: "Search by student or bed...",
+              })}
+              leftSection={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            />
+            <Group grow wrap="nowrap">
+              <Select
+                placeholder={t("all_semesters", "All Semesters")}
+                data={allSemesters.map((s) => ({
+                  value: String(s.id),
+                  label: s.displayName,
+                }))}
+                value={filterSemesterId}
+                onChange={setFilterSemesterId}
+                clearable
+              />
+              <Select
+                placeholder={t("all_statuses", "All Statuses")}
+                data={Object.values(BookingOpsStatus).map((s) => ({
+                  value: s,
+                  label: t(`booking_status.${s}`, { defaultValue: s }),
+                }))}
+                value={filterStatus}
+                onChange={setFilterStatus}
+                clearable
+              />
+              <Select
+                placeholder={t("all_payment_statuses", "All Payment Statuses")}
+                data={Object.values(PaymentStatus).map((s) => ({
+                  value: s,
+                  label: t(`portal.payment_${s}`, { defaultValue: s }),
+                }))}
+                value={filterPaymentStatus}
+                onChange={setFilterPaymentStatus}
+                clearable
+              />
+              {hasActiveFilters && (
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<IconX size={14} />}
+                  onClick={clearFilters}
+                  style={{ flexShrink: 0 }}
+                >
+                  {t("clear_filters", "Clear")}
+                </Button>
+              )}
             </Group>
+          </Stack>
+        </Card>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                ID
-              </Text>
-              <Code>{selectedBooking.id}</Code>
-            </Box>
+        <Paper withBorder radius="md">
+          <BookingsTable
+            data={filteredData}
+            studentsMap={studentsMap}
+            bedsMap={bedsMap}
+            onSelect={setSelectedBooking}
+            onView={setSelectedBooking}
+            onEdit={handleEditClick}
+            onDelete={(booking) => console.log("Delete", booking)}
+          />
+          {filteredData.length === 0 && !loading && (
+            <Text c="dimmed" ta="center" py="xl">
+              {t("no_bookings_found", { defaultValue: "No bookings found" })}
+            </Text>
+          )}
+        </Paper>
 
-            {selectedBooking.previousBookingId && (
+        <CreateBookingModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          onSubmit={handleCreateBooking}
+          onCreateStudent={handleCreateStudent}
+          students={studentList.map((s) => ({
+            value: s.id,
+            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+          }))}
+          semesters={allSemesters}
+          initialStudentId={isEditMode ? bookingToEdit?.studentId : null}
+          initialBedId={isEditMode ? bookingToEdit?.bedId : null}
+          isEdit={isEditMode}
+        />
+
+        <Drawer
+          opened={!!selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          title={t("booking_details", { defaultValue: "Booking Details" })}
+          position="right"
+          size="md"
+        >
+          {selectedBooking && (
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Text size="xl" fw={700}>
+                  {studentsMap.get(selectedBooking.studentId) ||
+                    "Unknown Student"}
+                </Text>
+                <Badge>{selectedBooking.status}</Badge>
+              </Group>
+
               <Box>
                 <Text size="xs" c="dimmed">
-                  {t("rolled_over_from", { defaultValue: "Rolled over from" })}
+                  ID
                 </Text>
-                <Code color="blue">{selectedBooking.previousBookingId}</Code>
+                <Code>{selectedBooking.id}</Code>
               </Box>
-            )}
 
-            <Divider
-              label={t("stay_period", "Stay Period")}
-              labelPosition="center"
-            />
+              {selectedBooking.previousBookingId && (
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("rolled_over_from", {
+                      defaultValue: "Rolled over from",
+                    })}
+                  </Text>
+                  <Code color="blue">{selectedBooking.previousBookingId}</Code>
+                </Box>
+              )}
 
-            {!isEditingDates ? (
-              <Stack gap="xs">
-                <Group grow>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("start_date")}
-                    </Text>
-                    <Text>
-                      {new Date(selectedBooking.startDate).toLocaleDateString()}
-                    </Text>
-                  </Box>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("end_date")}
-                    </Text>
-                    <Text>
-                      {new Date(selectedBooking.endDate).toLocaleDateString()}
-                    </Text>
-                  </Box>
-                </Group>
-                {hasPermission("bookings.update") && (
-                  <Button
-                    variant="subtle"
-                    size="xs"
-                    leftSection={<IconEdit size={14} />}
-                    onClick={() => setIsEditingDates(true)}
-                  >
-                    {t("modify_stay_period", "Modify Stay Period")}
-                  </Button>
-                )}
-              </Stack>
-            ) : (
-              <Stack gap="sm">
-                {(() => {
-                  const s = allSemesters.find(
-                    (sem) => sem.id === selectedBooking.semesterId,
-                  );
-                  if (
-                    s &&
-                    editStartDate &&
-                    editEndDate &&
-                    (dayjs(editStartDate).isBefore(dayjs(s.startDate), "day") ||
-                      dayjs(editEndDate).isAfter(dayjs(s.endDate), "day"))
-                  ) {
-                    return (
-                      <Alert
-                        color="orange"
-                        icon={<IconInfoCircle size={16} />}
-                        variant="light"
-                      >
-                        {t("out_of_bounds_warning")}
-                      </Alert>
+              <Divider
+                label={t("stay_period", "Stay Period")}
+                labelPosition="center"
+              />
+
+              {!isEditingDates ? (
+                <Stack gap="xs">
+                  <Group grow>
+                    <Box>
+                      <Text size="xs" c="dimmed">
+                        {t("start_date")}
+                      </Text>
+                      <Text>
+                        {new Date(
+                          selectedBooking.startDate,
+                        ).toLocaleDateString()}
+                      </Text>
+                    </Box>
+                    <Box>
+                      <Text size="xs" c="dimmed">
+                        {t("end_date")}
+                      </Text>
+                      <Text>
+                        {new Date(selectedBooking.endDate).toLocaleDateString()}
+                      </Text>
+                    </Box>
+                  </Group>
+                  {hasPermission("bookings.update") && (
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      leftSection={<IconEdit size={14} />}
+                      onClick={() => setIsEditingDates(true)}
+                    >
+                      {t("modify_stay_period", "Modify Stay Period")}
+                    </Button>
+                  )}
+                </Stack>
+              ) : (
+                <Stack gap="sm">
+                  {(() => {
+                    const s = allSemesters.find(
+                      (sem) => sem.id === selectedBooking.semesterId,
                     );
-                  }
-                  return null;
-                })()}
-                <SimpleGrid cols={2}>
-                  <DatePickerInput
-                    label={t("start_date")}
-                    value={editStartDate}
-                    onChange={setEditStartDate as any}
-                    required
-                    disabled={
-                      selectedBooking.status === "active" ||
-                      selectedBooking.status === "completed" ||
-                      selectedBooking.status === "cancelled" ||
-                      selectedBooking.status === "rejected"
+                    if (
+                      s &&
+                      editStartDate &&
+                      editEndDate &&
+                      (dayjs(editStartDate).isBefore(
+                        dayjs(s.startDate),
+                        "day",
+                      ) ||
+                        dayjs(editEndDate).isAfter(dayjs(s.endDate), "day"))
+                    ) {
+                      return (
+                        <Alert
+                          color="orange"
+                          icon={<IconInfoCircle size={16} />}
+                          variant="light"
+                        >
+                          {t("out_of_bounds_warning")}
+                        </Alert>
+                      );
                     }
-                  />
-                  <DatePickerInput
-                    label={t("end_date")}
-                    value={editEndDate}
-                    onChange={setEditEndDate as any}
-                    required
-                    disabled={
-                      selectedBooking.status === "completed" ||
-                      selectedBooking.status === "cancelled" ||
-                      selectedBooking.status === "rejected"
-                    }
-                  />
-                </SimpleGrid>
-                <Group grow>
-                  <Button
-                    variant="default"
-                    onClick={() => setIsEditingDates(false)}
-                  >
-                    {t("cancel")}
-                  </Button>
-                  <Button onClick={handleUpdateDates} loading={loading}>
-                    {t("save_changes", "Save Changes")}
-                  </Button>
-                </Group>
-              </Stack>
-            )}
+                    return null;
+                  })()}
+                  <SimpleGrid cols={2}>
+                    <DatePickerInput
+                      label={t("start_date")}
+                      value={editStartDate}
+                      onChange={setEditStartDate as any}
+                      required
+                      disabled={
+                        selectedBooking.status === "active" ||
+                        selectedBooking.status === "completed" ||
+                        selectedBooking.status === "cancelled" ||
+                        selectedBooking.status === "rejected"
+                      }
+                    />
+                    <DatePickerInput
+                      label={t("end_date")}
+                      value={editEndDate}
+                      onChange={setEditEndDate as any}
+                      required
+                      disabled={
+                        selectedBooking.status === "completed" ||
+                        selectedBooking.status === "cancelled" ||
+                        selectedBooking.status === "rejected"
+                      }
+                    />
+                  </SimpleGrid>
+                  <Group grow>
+                    <Button
+                      variant="default"
+                      onClick={() => setIsEditingDates(false)}
+                    >
+                      {t("cancel")}
+                    </Button>
+                    <Button onClick={handleUpdateDates} loading={loading}>
+                      {t("save_changes", "Save Changes")}
+                    </Button>
+                  </Group>
+                </Stack>
+              )}
 
-            <Divider />
+              <Divider />
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("bed")}
-              </Text>
-              <Text fw={500}>
-                {bedsMap.get(selectedBooking.bedId) || "Unknown Bed"}
-              </Text>
-            </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("bed")}
+                </Text>
+                <Text fw={500}>
+                  {bedsMap.get(selectedBooking.bedId) || "Unknown Bed"}
+                </Text>
+              </Box>
 
-            {hasPermission("room_changes.manage") && (
+              {hasPermission("room_changes.manage") && (
+                <Button
+                  variant="light"
+                  color="teal"
+                  leftSection={<IconArrowsExchange size={16} />}
+                  onClick={() => openMoveBed(selectedBooking)}
+                >
+                  {t("move_bed.button")}
+                </Button>
+              )}
+
               <Button
                 variant="light"
-                color="teal"
-                leftSection={<IconArrowsExchange size={16} />}
-                onClick={() => openMoveBed(selectedBooking)}
+                leftSection={<IconEdit size={16} />}
+                onClick={() => handleEditClick(selectedBooking)}
               >
-                {t("move_bed.button")}
+                {t("edit")}
               </Button>
-            )}
+            </Stack>
+          )}
+        </Drawer>
 
-            <Button
-              variant="light"
-              leftSection={<IconEdit size={16} />}
-              onClick={() => handleEditClick(selectedBooking)}
-            >
-              {t("edit")}
-            </Button>
-          </Stack>
-        )}
-      </Drawer>
+        {/* Move Bed Modal */}
+        <Modal
+          opened={moveBedOpened}
+          onClose={() => {
+            setMoveBedOpened(false);
+            setMoveBedSearch("");
+          }}
+          title={t("move_bed.modal_title")}
+          size="lg"
+        >
+          <Stack gap="md">
+            <TextInput
+              placeholder={t("move_bed.search_placeholder")}
+              leftSection={<IconSearch size={14} />}
+              value={moveBedSearch}
+              onChange={(e) => setMoveBedSearch(e.currentTarget.value)}
+              radius="md"
+              disabled={moveBedLoading}
+            />
+            {moveBedLoading ? (
+              <Group justify="center" py="lg">
+                <Loader size="sm" />
+              </Group>
+            ) : moveBedTree.length === 0 ? (
+              <Alert
+                icon={<IconInfoCircle size={14} />}
+                color="blue"
+                radius="md"
+              >
+                {moveBedSearch
+                  ? t("move_bed.no_search_results")
+                  : t("move_bed.no_available_beds")}
+              </Alert>
+            ) : (
+              (() => {
+                interface BedRoom {
+                  roomId: number;
+                  roomName: string;
+                  beds: StaffAvailableBed[];
+                }
+                interface TreeNode {
+                  name: string;
+                  nodeKey: string;
+                  children: TreeNode[];
+                  rooms: BedRoom[];
+                }
 
-      {/* Move Bed Modal */}
-      <Modal
-        opened={moveBedOpened}
-        onClose={() => {
-          setMoveBedOpened(false);
-          setMoveBedSearch("");
-        }}
-        title={t("move_bed.modal_title")}
-        size="lg"
-      >
-        <Stack gap="md">
-          <TextInput
-            placeholder={t("move_bed.search_placeholder")}
-            leftSection={<IconSearch size={14} />}
-            value={moveBedSearch}
-            onChange={(e) => setMoveBedSearch(e.currentTarget.value)}
-            radius="md"
-            disabled={moveBedLoading}
-          />
-          {moveBedLoading ? (
-            <Group justify="center" py="lg">
-              <Loader size="sm" />
-            </Group>
-          ) : moveBedTree.length === 0 ? (
-            <Alert icon={<IconInfoCircle size={14} />} color="blue" radius="md">
-              {moveBedSearch
-                ? t("move_bed.no_search_results")
-                : t("move_bed.no_available_beds")}
-            </Alert>
-          ) : (
-            (() => {
-              interface BedRoom {
-                roomId: number;
-                roomName: string;
-                beds: StaffAvailableBed[];
-              }
-              interface TreeNode {
-                name: string;
-                nodeKey: string;
-                children: TreeNode[];
-                rooms: BedRoom[];
-              }
+                const toggle = (key: string) =>
+                  setMoveBedExpanded((prev) => {
+                    const n = new Set(prev);
+                    n.has(key) ? n.delete(key) : n.add(key);
+                    return n;
+                  });
 
-              const toggle = (key: string) =>
-                setMoveBedExpanded((prev) => {
-                  const n = new Set(prev);
-                  n.has(key) ? n.delete(key) : n.add(key);
-                  return n;
-                });
+                const countBeds = (node: TreeNode): number =>
+                  node.rooms.reduce((s, r) => s + r.beds.length, 0) +
+                  node.children.reduce((s, c) => s + countBeds(c), 0);
+                const countRooms = (node: TreeNode): number =>
+                  node.rooms.length +
+                  node.children.reduce((s, c) => s + countRooms(c), 0);
+                const hasSelected = (node: TreeNode): boolean =>
+                  node.rooms.some((r) =>
+                    r.beds.some((b) => String(b.id) === moveBedSelectedId),
+                  ) || node.children.some((c) => hasSelected(c));
 
-              const countBeds = (node: TreeNode): number =>
-                node.rooms.reduce((s, r) => s + r.beds.length, 0) +
-                node.children.reduce((s, c) => s + countBeds(c), 0);
-              const countRooms = (node: TreeNode): number =>
-                node.rooms.length +
-                node.children.reduce((s, c) => s + countRooms(c), 0);
-              const hasSelected = (node: TreeNode): boolean =>
-                node.rooms.some((r) =>
-                  r.beds.some((b) => String(b.id) === moveBedSelectedId),
-                ) || node.children.some((c) => hasSelected(c));
+                const renderNode = (
+                  node: TreeNode,
+                  depth: number,
+                ): React.ReactNode => {
+                  const expanded = moveBedExpanded.has(node.nodeKey);
+                  const sel = hasSelected(node);
+                  const beds = countBeds(node);
+                  const rooms = countRooms(node);
+                  const indent = 16 + depth * 20;
 
-              const renderNode = (
-                node: TreeNode,
-                depth: number,
-              ): React.ReactNode => {
-                const expanded = moveBedExpanded.has(node.nodeKey);
-                const sel = hasSelected(node);
-                const beds = countBeds(node);
-                const rooms = countRooms(node);
-                const indent = 16 + depth * 20;
-
-                const nodeHeader = (
-                  <Group
-                    px="md"
-                    py={depth === 0 ? "sm" : "xs"}
-                    justify="space-between"
-                    wrap="nowrap"
-                    style={{
-                      cursor: "pointer",
-                      paddingLeft: indent,
-                      background: sel
-                        ? "var(--mantine-color-teal-light)"
-                        : depth === 0
-                          ? "var(--mantine-color-gray-light)"
-                          : undefined,
-                    }}
-                    onClick={() => toggle(node.nodeKey)}
-                  >
+                  const nodeHeader = (
                     <Group
-                      gap="sm"
+                      px="md"
+                      py={depth === 0 ? "sm" : "xs"}
+                      justify="space-between"
                       wrap="nowrap"
-                      style={{ minWidth: 0, flex: 1 }}
+                      style={{
+                        cursor: "pointer",
+                        paddingLeft: indent,
+                        background: sel
+                          ? "var(--mantine-color-teal-light)"
+                          : depth === 0
+                            ? "var(--mantine-color-gray-light)"
+                            : undefined,
+                      }}
+                      onClick={() => toggle(node.nodeKey)}
                     >
-                      <ThemeIcon
-                        size={depth === 0 ? 32 : 26}
-                        radius="md"
-                        variant={sel ? "gradient" : "light"}
-                        gradient={
-                          sel ? { from: "teal", to: "cyan" } : undefined
-                        }
-                        color={sel ? "teal" : depth === 0 ? "gray" : "blue"}
-                        style={{ flexShrink: 0 }}
+                      <Group
+                        gap="sm"
+                        wrap="nowrap"
+                        style={{ minWidth: 0, flex: 1 }}
                       >
-                        <IconBuilding size={depth === 0 ? 16 : 13} />
-                      </ThemeIcon>
-                      <Box style={{ minWidth: 0 }}>
-                        <Text
-                          size="sm"
-                          fw={depth === 0 ? 700 : 600}
-                          lineClamp={1}
+                        <ThemeIcon
+                          size={depth === 0 ? 32 : 26}
+                          radius="md"
+                          variant={sel ? "gradient" : "light"}
+                          gradient={
+                            sel ? { from: "teal", to: "cyan" } : undefined
+                          }
+                          color={sel ? "teal" : depth === 0 ? "gray" : "blue"}
+                          style={{ flexShrink: 0 }}
                         >
-                          {node.name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {rooms} {rooms === 1 ? "room" : "rooms"} · {beds}{" "}
-                          {beds === 1 ? "bed" : "beds"}
-                        </Text>
-                      </Box>
+                          <IconBuilding size={depth === 0 ? 16 : 13} />
+                        </ThemeIcon>
+                        <Box style={{ minWidth: 0 }}>
+                          <Text
+                            size="sm"
+                            fw={depth === 0 ? 700 : 600}
+                            lineClamp={1}
+                          >
+                            {node.name}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {rooms} {rooms === 1 ? "room" : "rooms"} · {beds}{" "}
+                            {beds === 1 ? "bed" : "beds"}
+                          </Text>
+                        </Box>
+                      </Group>
+                      <ActionIcon
+                        variant="subtle"
+                        color={sel ? "teal" : "gray"}
+                        size="sm"
+                      >
+                        {expanded ? (
+                          <IconChevronUp size={13} />
+                        ) : (
+                          <IconChevronDown size={13} />
+                        )}
+                      </ActionIcon>
                     </Group>
-                    <ActionIcon
-                      variant="subtle"
-                      color={sel ? "teal" : "gray"}
-                      size="sm"
-                    >
-                      {expanded ? (
-                        <IconChevronUp size={13} />
-                      ) : (
-                        <IconChevronDown size={13} />
-                      )}
-                    </ActionIcon>
-                  </Group>
-                );
+                  );
 
-                const nodeBody = (
-                  <Collapse in={expanded}>
-                    <Stack gap={0}>
-                      {node.children.map((child) => (
-                        <Fragment key={child.nodeKey}>
-                          <Divider />
-                          {renderNode(child, depth + 1)}
-                        </Fragment>
-                      ))}
-                      {node.rooms.map((room) => {
-                        const roomKey = `room::${room.roomId}`;
-                        const roomExpanded = moveBedExpanded.has(roomKey);
-                        const roomSel = room.beds.some(
-                          (b) => String(b.id) === moveBedSelectedId,
-                        );
-                        const roomIndent = indent + 20;
-                        return (
-                          <Fragment key={room.roomId}>
+                  const nodeBody = (
+                    <Collapse in={expanded}>
+                      <Stack gap={0}>
+                        {node.children.map((child) => (
+                          <Fragment key={child.nodeKey}>
                             <Divider />
-                            <Group
-                              px="md"
-                              py="xs"
-                              justify="space-between"
-                              wrap="nowrap"
-                              style={{
-                                cursor: "pointer",
-                                paddingLeft: roomIndent,
-                                background: roomSel
-                                  ? "var(--mantine-color-teal-0)"
-                                  : undefined,
-                              }}
-                              onClick={() => toggle(roomKey)}
-                            >
+                            {renderNode(child, depth + 1)}
+                          </Fragment>
+                        ))}
+                        {node.rooms.map((room) => {
+                          const roomKey = `room::${room.roomId}`;
+                          const roomExpanded = moveBedExpanded.has(roomKey);
+                          const roomSel = room.beds.some(
+                            (b) => String(b.id) === moveBedSelectedId,
+                          );
+                          const roomIndent = indent + 20;
+                          return (
+                            <Fragment key={room.roomId}>
+                              <Divider />
                               <Group
-                                gap="sm"
+                                px="md"
+                                py="xs"
+                                justify="space-between"
                                 wrap="nowrap"
-                                style={{ minWidth: 0, flex: 1 }}
+                                style={{
+                                  cursor: "pointer",
+                                  paddingLeft: roomIndent,
+                                  background: roomSel
+                                    ? "var(--mantine-color-teal-0)"
+                                    : undefined,
+                                }}
+                                onClick={() => toggle(roomKey)}
                               >
-                                <ThemeIcon
-                                  size={22}
-                                  radius="md"
-                                  variant={roomSel ? "filled" : "light"}
-                                  color="teal"
+                                <Group
+                                  gap="sm"
+                                  wrap="nowrap"
+                                  style={{ minWidth: 0, flex: 1 }}
+                                >
+                                  <ThemeIcon
+                                    size={22}
+                                    radius="md"
+                                    variant={roomSel ? "filled" : "light"}
+                                    color="teal"
+                                    style={{ flexShrink: 0 }}
+                                  >
+                                    <IconArrowsExchange size={11} />
+                                  </ThemeIcon>
+                                  <Text size="sm" fw={600} lineClamp={1}>
+                                    {room.roomName}
+                                  </Text>
+                                </Group>
+                                <Group
+                                  gap={6}
+                                  wrap="nowrap"
                                   style={{ flexShrink: 0 }}
                                 >
-                                  <IconArrowsExchange size={11} />
-                                </ThemeIcon>
-                                <Text size="sm" fw={600} lineClamp={1}>
-                                  {room.roomName}
-                                </Text>
+                                  <Text size="xs" c="dimmed">
+                                    {room.beds.length}{" "}
+                                    {room.beds.length === 1 ? "bed" : "beds"}
+                                  </Text>
+                                  <ActionIcon
+                                    variant="subtle"
+                                    color={roomSel ? "teal" : "gray"}
+                                    size="xs"
+                                  >
+                                    {roomExpanded ? (
+                                      <IconChevronUp size={11} />
+                                    ) : (
+                                      <IconChevronDown size={11} />
+                                    )}
+                                  </ActionIcon>
+                                </Group>
                               </Group>
-                              <Group
-                                gap={6}
-                                wrap="nowrap"
-                                style={{ flexShrink: 0 }}
-                              >
-                                <Text size="xs" c="dimmed">
-                                  {room.beds.length}{" "}
-                                  {room.beds.length === 1 ? "bed" : "beds"}
-                                </Text>
-                                <ActionIcon
-                                  variant="subtle"
-                                  color={roomSel ? "teal" : "gray"}
-                                  size="xs"
+                              <Collapse in={roomExpanded}>
+                                <Divider />
+                                <SimpleGrid
+                                  cols={Math.min(room.beds.length, 4) as any}
+                                  p="sm"
+                                  spacing="xs"
+                                  style={{ paddingLeft: roomIndent }}
                                 >
-                                  {roomExpanded ? (
-                                    <IconChevronUp size={11} />
-                                  ) : (
-                                    <IconChevronDown size={11} />
-                                  )}
-                                </ActionIcon>
-                              </Group>
-                            </Group>
-                            <Collapse in={roomExpanded}>
-                              <Divider />
-                              <SimpleGrid
-                                cols={Math.min(room.beds.length, 4) as any}
-                                p="sm"
-                                spacing="xs"
-                                style={{ paddingLeft: roomIndent }}
-                              >
-                                {room.beds.map((bed) => {
-                                  const isSel =
-                                    moveBedSelectedId === String(bed.id);
-                                  return (
-                                    <Paper
-                                      key={bed.id}
-                                      radius="md"
-                                      p="sm"
-                                      style={{
-                                        cursor: "pointer",
-                                        textAlign: "center",
-                                        background: isSel
-                                          ? "linear-gradient(135deg, var(--mantine-color-teal-6) 0%, var(--mantine-color-teal-5) 100%)"
-                                          : "var(--mantine-color-body)",
-                                        border: `2px solid ${isSel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
-                                        boxShadow: isSel
-                                          ? "0 4px 14px rgba(18,184,134,0.35)"
-                                          : undefined,
-                                        transition: "all 0.18s ease",
-                                      }}
-                                      onClick={() =>
-                                        setMoveBedSelectedId(
-                                          isSel ? null : String(bed.id),
-                                        )
-                                      }
-                                    >
-                                      <Stack gap={4} align="center">
-                                        <ThemeIcon
-                                          size={24}
-                                          radius="md"
-                                          variant={isSel ? "filled" : "light"}
-                                          color={isSel ? "white" : "teal"}
-                                          style={
-                                            isSel
-                                              ? {
-                                                  background:
-                                                    "rgba(255,255,255,0.25)",
-                                                  color: "white",
-                                                }
-                                              : undefined
-                                          }
-                                        >
-                                          <IconBed size={12} />
-                                        </ThemeIcon>
-                                        <Text
-                                          size="xs"
-                                          fw={700}
-                                          c={isSel ? "white" : undefined}
-                                        >
-                                          {bed.label}
-                                        </Text>
-                                      </Stack>
-                                    </Paper>
-                                  );
-                                })}
-                              </SimpleGrid>
-                            </Collapse>
-                          </Fragment>
-                        );
-                      })}
+                                  {room.beds.map((bed) => {
+                                    const isSel =
+                                      moveBedSelectedId === String(bed.id);
+                                    return (
+                                      <Paper
+                                        key={bed.id}
+                                        radius="md"
+                                        p="sm"
+                                        style={{
+                                          cursor: "pointer",
+                                          textAlign: "center",
+                                          background: isSel
+                                            ? "linear-gradient(135deg, var(--mantine-color-teal-6) 0%, var(--mantine-color-teal-5) 100%)"
+                                            : "var(--mantine-color-body)",
+                                          border: `2px solid ${isSel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
+                                          boxShadow: isSel
+                                            ? "0 4px 14px rgba(18,184,134,0.35)"
+                                            : undefined,
+                                          transition: "all 0.18s ease",
+                                        }}
+                                        onClick={() =>
+                                          setMoveBedSelectedId(
+                                            isSel ? null : String(bed.id),
+                                          )
+                                        }
+                                      >
+                                        <Stack gap={4} align="center">
+                                          <ThemeIcon
+                                            size={24}
+                                            radius="md"
+                                            variant={isSel ? "filled" : "light"}
+                                            color={isSel ? "white" : "teal"}
+                                            style={
+                                              isSel
+                                                ? {
+                                                    background:
+                                                      "rgba(255,255,255,0.25)",
+                                                    color: "white",
+                                                  }
+                                                : undefined
+                                            }
+                                          >
+                                            <IconBed size={12} />
+                                          </ThemeIcon>
+                                          <Text
+                                            size="xs"
+                                            fw={700}
+                                            c={isSel ? "white" : undefined}
+                                          >
+                                            {bed.label}
+                                          </Text>
+                                        </Stack>
+                                      </Paper>
+                                    );
+                                  })}
+                                </SimpleGrid>
+                              </Collapse>
+                            </Fragment>
+                          );
+                        })}
+                      </Stack>
+                    </Collapse>
+                  );
+
+                  return depth === 0 ? (
+                    <Paper
+                      key={node.nodeKey}
+                      radius="lg"
+                      style={{
+                        overflow: "hidden",
+                        border: `2px solid ${sel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
+                        transition: "border-color 0.2s ease",
+                      }}
+                    >
+                      {nodeHeader}
+                      {nodeBody}
+                    </Paper>
+                  ) : (
+                    <>
+                      {nodeHeader}
+                      {nodeBody}
+                    </>
+                  );
+                };
+
+                return (
+                  <ScrollArea h={460} type="scroll" scrollbarSize={6}>
+                    <Stack gap="xs" pr={4}>
+                      {moveBedTree.map((top) => renderNode(top, 0))}
                     </Stack>
-                  </Collapse>
+                  </ScrollArea>
                 );
+              })()
+            )}
 
-                return depth === 0 ? (
-                  <Paper
-                    key={node.nodeKey}
-                    radius="lg"
-                    style={{
-                      overflow: "hidden",
-                      border: `2px solid ${sel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
-                      transition: "border-color 0.2s ease",
-                    }}
-                  >
-                    {nodeHeader}
-                    {nodeBody}
-                  </Paper>
-                ) : (
-                  <>
-                    {nodeHeader}
-                    {nodeBody}
-                  </>
-                );
-              };
-
-              return (
-                <ScrollArea h={460} type="scroll" scrollbarSize={6}>
-                  <Stack gap="xs" pr={4}>
-                    {moveBedTree.map((top) => renderNode(top, 0))}
-                  </Stack>
-                </ScrollArea>
-              );
-            })()
-          )}
-
-          <Group justify="flex-end" mt="xs">
-            <Button
-              variant="default"
-              onClick={() => setMoveBedOpened(false)}
-              disabled={moveBedLoading}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              color="teal"
-              onClick={handleMoveBedSubmit}
-              disabled={!moveBedSelectedId}
-              loading={moveBedLoading}
-              leftSection={<IconArrowsExchange size={14} />}
-            >
-              {t("move_bed.confirm")}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-    </Container>
+            <Group justify="flex-end" mt="xs">
+              <Button
+                variant="default"
+                onClick={() => setMoveBedOpened(false)}
+                disabled={moveBedLoading}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                color="teal"
+                onClick={handleMoveBedSubmit}
+                disabled={!moveBedSelectedId}
+                loading={moveBedLoading}
+                leftSection={<IconArrowsExchange size={14} />}
+              >
+                {t("move_bed.confirm")}
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+      </PageShell>
+    </>
   );
 }

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
   ActionIcon,
   Badge,
   Box,
   Button,
   Card,
-  Container,
   Divider,
   Group,
   LoadingOverlay,
@@ -19,7 +19,6 @@ import {
   Text,
   Textarea,
   TextInput,
-  Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -661,61 +660,64 @@ export function SharedGuestStaysPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-
-      <Group justify="space-between" mb="lg">
-        <Title>{t("guest_stays", { defaultValue: "Guest Stays" })}</Title>
-        <Button
-          leftSection={<IconUserPlus size={16} />}
-          onClick={() => {
-            setEditing(null);
-            setModalOpened(true);
-          }}
-        >
-          {t("new_guest_stay", { defaultValue: "New Guest Stay" })}
-        </Button>
-      </Group>
-
-      <Tabs value={activeTab} onChange={handleTabChange} mb="md">
-        <Tabs.List>
-          <Tabs.Tab value="active">
-            {t("active_and_upcoming", { defaultValue: "Active & Upcoming" })}
-          </Tabs.Tab>
-          <Tabs.Tab value="upcoming">
-            {t("future_stays", { defaultValue: "Future Stays" })}
-          </Tabs.Tab>
-          <Tabs.Tab value="all">
-            {t("all_stays", { defaultValue: "All Stays" })}
-          </Tabs.Tab>
-        </Tabs.List>
-      </Tabs>
-
-      <Stack gap="sm">
-        {!loading && stays.length === 0 && (
-          <Text c="dimmed" ta="center" py="xl">
-            {t("no_guest_stays", { defaultValue: "No guest stays found." })}
-          </Text>
-        )}
-        {stays.map((s) => (
-          <StayCard
-            key={s.id}
-            stay={s}
-            onEdit={(stay) => {
-              setEditing(stay);
+    <>
+      <PageHeader
+        title={t("guest_stays", { defaultValue: "Guest Stays" })}
+        actions={
+          <Button
+            leftSection={<IconUserPlus size={16} />}
+            onClick={() => {
+              setEditing(null);
               setModalOpened(true);
             }}
-            onRefresh={() => load()}
-          />
-        ))}
-      </Stack>
-
-      <StayModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSaved={() => load()}
-        initial={editing}
+          >
+            {t("new_guest_stay", { defaultValue: "New Guest Stay" })}
+          </Button>
+        }
       />
-    </Container>
+      <PageShell>
+        <LoadingOverlay visible={loading} />
+
+        <Tabs value={activeTab} onChange={handleTabChange} mb="md">
+          <Tabs.List>
+            <Tabs.Tab value="active">
+              {t("active_and_upcoming", { defaultValue: "Active & Upcoming" })}
+            </Tabs.Tab>
+            <Tabs.Tab value="upcoming">
+              {t("future_stays", { defaultValue: "Future Stays" })}
+            </Tabs.Tab>
+            <Tabs.Tab value="all">
+              {t("all_stays", { defaultValue: "All Stays" })}
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs>
+
+        <Stack gap="sm">
+          {!loading && stays.length === 0 && (
+            <Text c="dimmed" ta="center" py="xl">
+              {t("no_guest_stays", { defaultValue: "No guest stays found." })}
+            </Text>
+          )}
+          {stays.map((s) => (
+            <StayCard
+              key={s.id}
+              stay={s}
+              onEdit={(stay) => {
+                setEditing(stay);
+                setModalOpened(true);
+              }}
+              onRefresh={() => load()}
+            />
+          ))}
+        </Stack>
+
+        <StayModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          onSaved={() => load()}
+          initial={editing}
+        />
+      </PageShell>
+    </>
   );
 }

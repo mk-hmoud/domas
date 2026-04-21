@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  Container,
-  Stack,
-  Group,
-  Title,
-  Text,
-  Button,
-  Paper,
-  LoadingOverlay,
-  Tabs,
-} from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
+import { Stack, Button, Paper, LoadingOverlay, Tabs } from "@mantine/core";
 import { IconPlus, IconCards } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { accessCards, locations } from "@domas/api-client";
@@ -84,57 +75,56 @@ export function SharedAccessCardsPage() {
   );
 
   return (
-    <Container size="lg" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={2}>{t("access_cards")}</Title>
-            <Text c="dimmed" size="sm">
-              {t("card_batches_description")}
-            </Text>
-          </div>
-          {hasPermission("access_cards.manage") && (
+    <>
+      <PageHeader
+        title={t("access_cards")}
+        subtitle={t("card_batches_description")}
+        actions={
+          hasPermission("access_cards.manage") ? (
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={() => setModalOpened(true)}
             >
               {t("create_batch")}
             </Button>
-          )}
-        </Group>
-
-        <Tabs value={activeTab} onChange={setActiveTab}>
-          <Tabs.List>
-            <Tabs.Tab value="batches" leftSection={<IconCards size={14} />}>
-              {t("card_batches")}
-            </Tabs.Tab>
-            <Tabs.Tab value="all_cards" leftSection={<IconCards size={14} />}>
-              {t("all_cards", "All Cards")}
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel value="batches" pt="md">
-            <Paper withBorder radius="md" style={{ position: "relative" }}>
-              <LoadingOverlay visible={loading} />
-              <CardBatchTable data={batches} />
-            </Paper>
-          </Tabs.Panel>
-
-          <Tabs.Panel value="all_cards" pt="md">
-            <Paper withBorder radius="md" style={{ position: "relative" }}>
-              <LoadingOverlay visible={loading} />
-              <AccessCardTable data={cards} />
-            </Paper>
-          </Tabs.Panel>
-        </Tabs>
-      </Stack>
-
-      <CardBatchModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSubmit={handleCreateBatch}
-        locations={allowedLocations}
+          ) : undefined
+        }
       />
-    </Container>
+      <PageShell>
+        <Stack gap="lg">
+          <Tabs value={activeTab} onChange={setActiveTab}>
+            <Tabs.List>
+              <Tabs.Tab value="batches" leftSection={<IconCards size={14} />}>
+                {t("card_batches")}
+              </Tabs.Tab>
+              <Tabs.Tab value="all_cards" leftSection={<IconCards size={14} />}>
+                {t("all_cards", "All Cards")}
+              </Tabs.Tab>
+            </Tabs.List>
+
+            <Tabs.Panel value="batches" pt="md">
+              <Paper withBorder radius="md" style={{ position: "relative" }}>
+                <LoadingOverlay visible={loading} />
+                <CardBatchTable data={batches} />
+              </Paper>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="all_cards" pt="md">
+              <Paper withBorder radius="md" style={{ position: "relative" }}>
+                <LoadingOverlay visible={loading} />
+                <AccessCardTable data={cards} />
+              </Paper>
+            </Tabs.Panel>
+          </Tabs>
+        </Stack>
+
+        <CardBatchModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          onSubmit={handleCreateBatch}
+          locations={allowedLocations}
+        />
+      </PageShell>
+    </>
   );
 }

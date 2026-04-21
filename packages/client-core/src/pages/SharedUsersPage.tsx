@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Button,
   Group,
-  Container,
   Pagination,
   Text,
   Drawer,
@@ -171,159 +170,169 @@ export function SharedUsersPage({
   };
 
   return (
-    <Container size="lg" py="xl">
-      <Group justify="space-between" mb="lg">
-        <Title>{t(title)}</Title>
-        <Button leftSection={<IconPlus size={14} />} onClick={openCreateModal}>
-          {t("create_user")}
-        </Button>
-      </Group>
-
-      <TextInput
-        placeholder={t("search_placeholder", "Search...")}
-        leftSection={<IconSearch size={16} />}
-        mb="md"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.currentTarget.value)}
-      />
-
-      <UsersTable
-        data={filteredData}
-        onDelete={confirmDelete}
-        onEdit={openEditModal}
-        onRowClick={setViewUser}
-      />
-
-      {paginatedData?.data.length === 0 && (
-        <Text ta="center" mt="xl" c="dimmed">
-          No users found.
-        </Text>
-      )}
-
-      {paginatedData && paginatedData.total > paginatedData.limit && (
-        <Group justify="center" mt="xl">
-          <Pagination
-            total={Math.ceil(paginatedData.total / paginatedData.limit)}
-            value={activePage}
-            onChange={setPage}
-          />
-        </Group>
-      )}
-
-      <CreateUserModal
-        opened={modalOpened}
-        onClose={() => {
-          setModalOpened(false);
-          setUserToEdit(null);
-        }}
-        onSubmit={handleCreateOrUpdateUser}
-        userToEdit={userToEdit}
-        availableRoles={availableRoles}
-      />
-
-      <Drawer
-        opened={!!viewUser}
-        onClose={() => setViewUser(null)}
-        title={
-          <Text fw={700} size="lg">
-            {t("user_details", { defaultValue: "User Details" })}
-          </Text>
+    <>
+      <PageHeader
+        title={t(title)}
+        actions={
+          <Button
+            leftSection={<IconPlus size={14} />}
+            onClick={openCreateModal}
+          >
+            {t("create_user")}
+          </Button>
         }
-        position="right"
-        size="md"
-      >
-        {viewUser && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Stack gap={0}>
-                <Text size="xl" fw={700}>
-                  {viewUser.firstName || viewUser.lastName
-                    ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim()
-                    : viewUser.email}
-                </Text>
-                {(viewUser.firstName || viewUser.lastName) && (
-                  <Text size="sm" c="dimmed">
-                    {viewUser.email}
-                  </Text>
-                )}
-              </Stack>
-              <Badge color={viewUser.isActive ? "green" : "gray"}>
-                {viewUser.isActive ? t("active") : t("inactive")}
-              </Badge>
-            </Group>
+      />
+      <PageShell>
+        <TextInput
+          placeholder={t("search_placeholder", "Search...")}
+          leftSection={<IconSearch size={16} />}
+          mb="md"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+        />
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("user_id", { defaultValue: "User ID" })}
-              </Text>
-              <Text size="sm" style={{ wordBreak: "break-all" }}>
-                {viewUser.id}
-              </Text>
-            </Box>
+        <UsersTable
+          data={filteredData}
+          onDelete={confirmDelete}
+          onEdit={openEditModal}
+          onRowClick={setViewUser}
+        />
 
-            {viewUser.phoneNumber && (
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("phone_number", { defaultValue: "Phone Number" })}
-                </Text>
-                <Text size="sm">{viewUser.phoneNumber}</Text>
-              </Box>
-            )}
-
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("created_at")}
-                </Text>
-                <Text>{new Date(viewUser.createdAt).toLocaleDateString()}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("updated_at")}
-                </Text>
-                <Text>{new Date(viewUser.updatedAt).toLocaleDateString()}</Text>
-              </Box>
-            </Group>
-
-            {viewUser.isRecoveryAdmin && (
-              <Badge color="red" variant="filled" fullWidth>
-                Recovery Admin
-              </Badge>
-            )}
-
-            <Box>
-              <Text size="xs" c="dimmed" mb={4}>
-                {t("user_roles")}
-              </Text>
-              <Group gap="xs">
-                {viewUser.roles && viewUser.roles.length > 0 ? (
-                  viewUser.roles.map((role) => (
-                    <Badge key={role.id} variant="outline">
-                      {role.name}
-                    </Badge>
-                  ))
-                ) : (
-                  <Text size="sm" c="dimmed">
-                    -
-                  </Text>
-                )}
-              </Group>
-            </Box>
-
-            <Button
-              variant="light"
-              leftSection={<IconEdit size={16} />}
-              onClick={() => {
-                openEditModal(viewUser);
-                setViewUser(null);
-              }}
-              mt="xl"
-            >
-              {t("edit_user", { defaultValue: "Edit User" })}
-            </Button>
-          </Stack>
+        {paginatedData?.data.length === 0 && (
+          <Text ta="center" mt="xl" c="dimmed">
+            No users found.
+          </Text>
         )}
-      </Drawer>
-    </Container>
+
+        {paginatedData && paginatedData.total > paginatedData.limit && (
+          <Group justify="center" mt="xl">
+            <Pagination
+              total={Math.ceil(paginatedData.total / paginatedData.limit)}
+              value={activePage}
+              onChange={setPage}
+            />
+          </Group>
+        )}
+
+        <CreateUserModal
+          opened={modalOpened}
+          onClose={() => {
+            setModalOpened(false);
+            setUserToEdit(null);
+          }}
+          onSubmit={handleCreateOrUpdateUser}
+          userToEdit={userToEdit}
+          availableRoles={availableRoles}
+        />
+
+        <Drawer
+          opened={!!viewUser}
+          onClose={() => setViewUser(null)}
+          title={
+            <Text fw={700} size="lg">
+              {t("user_details", { defaultValue: "User Details" })}
+            </Text>
+          }
+          position="right"
+          size="md"
+        >
+          {viewUser && (
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Stack gap={0}>
+                  <Text size="xl" fw={700}>
+                    {viewUser.firstName || viewUser.lastName
+                      ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim()
+                      : viewUser.email}
+                  </Text>
+                  {(viewUser.firstName || viewUser.lastName) && (
+                    <Text size="sm" c="dimmed">
+                      {viewUser.email}
+                    </Text>
+                  )}
+                </Stack>
+                <Badge color={viewUser.isActive ? "green" : "gray"}>
+                  {viewUser.isActive ? t("active") : t("inactive")}
+                </Badge>
+              </Group>
+
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("user_id", { defaultValue: "User ID" })}
+                </Text>
+                <Text size="sm" style={{ wordBreak: "break-all" }}>
+                  {viewUser.id}
+                </Text>
+              </Box>
+
+              {viewUser.phoneNumber && (
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("phone_number", { defaultValue: "Phone Number" })}
+                  </Text>
+                  <Text size="sm">{viewUser.phoneNumber}</Text>
+                </Box>
+              )}
+
+              <Group grow>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("created_at")}
+                  </Text>
+                  <Text>
+                    {new Date(viewUser.createdAt).toLocaleDateString()}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t("updated_at")}
+                  </Text>
+                  <Text>
+                    {new Date(viewUser.updatedAt).toLocaleDateString()}
+                  </Text>
+                </Box>
+              </Group>
+
+              {viewUser.isRecoveryAdmin && (
+                <Badge color="red" variant="filled" fullWidth>
+                  Recovery Admin
+                </Badge>
+              )}
+
+              <Box>
+                <Text size="xs" c="dimmed" mb={4}>
+                  {t("user_roles")}
+                </Text>
+                <Group gap="xs">
+                  {viewUser.roles && viewUser.roles.length > 0 ? (
+                    viewUser.roles.map((role) => (
+                      <Badge key={role.id} variant="outline">
+                        {role.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text size="sm" c="dimmed">
+                      -
+                    </Text>
+                  )}
+                </Group>
+              </Box>
+
+              <Button
+                variant="light"
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  openEditModal(viewUser);
+                  setViewUser(null);
+                }}
+                mt="xl"
+              >
+                {t("edit_user", { defaultValue: "Edit User" })}
+              </Button>
+            </Stack>
+          )}
+        </Drawer>
+      </PageShell>
+    </>
   );
 }

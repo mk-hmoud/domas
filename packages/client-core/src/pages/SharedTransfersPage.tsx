@@ -1,9 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Button,
   Group,
-  Container,
   LoadingOverlay,
   Paper,
   Text,
@@ -154,13 +153,11 @@ export function SharedTransfersPage() {
   });
 
   return (
-    <Container size="lg" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <Title>
-            {t("booking_transfers", { defaultValue: "Booking Transfers" })}
-          </Title>
-          <Group>
+    <>
+      <PageHeader
+        title={t("booking_transfers", { defaultValue: "Booking Transfers" })}
+        actions={
+          <Group gap="sm">
             {selectedIds.length > 0 && (
               <Button
                 variant="subtle"
@@ -179,83 +176,86 @@ export function SharedTransfersPage() {
               {selectedIds.length})
             </Button>
           </Group>
-        </Group>
-
-        <Card withBorder padding="md" radius="md">
-          <TextInput
-            placeholder={t("search_by_student_or_bed", {
-              defaultValue: "Search by student or bed...",
-            })}
-            leftSection={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          />
-        </Card>
-
-        <Paper withBorder radius="md" style={{ position: "relative" }}>
-          <LoadingOverlay visible={loading} />
-          <BookingsTable
-            data={filteredData}
-            studentsMap={studentsMap}
-            bedsMap={bedsMap}
-            onSelect={(booking) => {
-              setSelectedIds((prev) =>
-                prev.includes(booking.id)
-                  ? prev.filter((id) => id !== booking.id)
-                  : [...prev, booking.id],
-              );
-            }}
-            onView={setSelectedBooking}
-            onTransfer={(booking) => {
-              setSelectedIds([booking.id]);
-              setTransferModalOpened(true);
-            }}
-          />
-          {filteredData.length === 0 && !loading && (
-            <Text c="dimmed" ta="center" py="xl">
-              {t("no_transferable_bookings", {
-                defaultValue: "No transferable bookings found",
-              })}
-            </Text>
-          )}
-        </Paper>
-      </Stack>
-
-      <TransferSemesterModal
-        opened={transferModalOpened}
-        onClose={() => setTransferModalOpened(false)}
-        onSubmit={handleTransferSubmit}
-        semesters={allSemesters}
-        studentNames={selectedStudentNames}
-        loading={loading}
+        }
       />
+      <PageShell>
+        <Stack gap="lg">
+          <Card withBorder padding="md" radius="md">
+            <TextInput
+              placeholder={t("search_by_student_or_bed", {
+                defaultValue: "Search by student or bed...",
+              })}
+              leftSection={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            />
+          </Card>
 
-      <Drawer
-        opened={!!selectedBooking}
-        onClose={() => setSelectedBooking(null)}
-        title={t("student_details", { defaultValue: "Student Details" })}
-        position="right"
-      >
-        {selectedBooking && (
-          <Stack gap="md">
-            <Text fw={700} size="lg">
-              {studentsMap.get(selectedBooking.studentId)}
-            </Text>
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("current_bed", { defaultValue: "Current Bed" })}
+          <Paper withBorder radius="md" style={{ position: "relative" }}>
+            <LoadingOverlay visible={loading} />
+            <BookingsTable
+              data={filteredData}
+              studentsMap={studentsMap}
+              bedsMap={bedsMap}
+              onSelect={(booking) => {
+                setSelectedIds((prev) =>
+                  prev.includes(booking.id)
+                    ? prev.filter((id) => id !== booking.id)
+                    : [...prev, booking.id],
+                );
+              }}
+              onView={setSelectedBooking}
+              onTransfer={(booking) => {
+                setSelectedIds([booking.id]);
+                setTransferModalOpened(true);
+              }}
+            />
+            {filteredData.length === 0 && !loading && (
+              <Text c="dimmed" ta="center" py="xl">
+                {t("no_transferable_bookings", {
+                  defaultValue: "No transferable bookings found",
+                })}
               </Text>
-              <Text>{bedsMap.get(selectedBooking.bedId)}</Text>
-            </Box>
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("status")}
+            )}
+          </Paper>
+        </Stack>
+
+        <TransferSemesterModal
+          opened={transferModalOpened}
+          onClose={() => setTransferModalOpened(false)}
+          onSubmit={handleTransferSubmit}
+          semesters={allSemesters}
+          studentNames={selectedStudentNames}
+          loading={loading}
+        />
+
+        <Drawer
+          opened={!!selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          title={t("student_details", { defaultValue: "Student Details" })}
+          position="right"
+        >
+          {selectedBooking && (
+            <Stack gap="md">
+              <Text fw={700} size="lg">
+                {studentsMap.get(selectedBooking.studentId)}
               </Text>
-              <Badge>{selectedBooking.status}</Badge>
-            </Box>
-          </Stack>
-        )}
-      </Drawer>
-    </Container>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("current_bed", { defaultValue: "Current Bed" })}
+                </Text>
+                <Text>{bedsMap.get(selectedBooking.bedId)}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("status")}
+                </Text>
+                <Badge>{selectedBooking.status}</Badge>
+              </Box>
+            </Stack>
+          )}
+        </Drawer>
+      </PageShell>
+    </>
   );
 }
