@@ -13,6 +13,8 @@ import { IconHierarchy, IconMail } from "@tabler/icons-react";
 import { Location, GenderType, Bed } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { LocationIcon } from "../LocationIcon";
+import { EmptyState } from "../../EmptyState";
+import classes from "../../Table/table.module.css";
 
 interface LocationRegistryTableProps {
   data: (Location | Bed)[];
@@ -209,31 +211,37 @@ export function LocationRegistryTable({
   });
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th style={{ width: 40 }}>
+          <Table.Th className={classes.th} style={{ width: 40 }}>
             <Checkbox
               checked={allSelected}
               indeterminate={someSelected}
               onChange={onToggleSelectAll}
             />
           </Table.Th>
-          <Table.Th>{t("name")}</Table.Th>
-          <Table.Th>{t("resident", "Resident")}</Table.Th>
-          <Table.Th>{t("policies")}</Table.Th>
-          <Table.Th>{t("status_occupancy", "Status / Occupancy")}</Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th}>{t("name")}</Table.Th>
+          <Table.Th className={classes.th}>
+            {t("resident", "Resident")}
+          </Table.Th>
+          <Table.Th className={classes.th}>{t("policies")}</Table.Th>
+          <Table.Th className={classes.th}>
+            {t("status_occupancy", "Status / Occupancy")}
+          </Table.Th>
+          <Table.Th className={classes.th} style={{ width: 120 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={6}>
-              <Text ta="center" c="dimmed" py="xl">
-                {t("no_records_found", "No records found")}
-              </Text>
+            <Table.Td colSpan={6} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_records_found", {
+                  defaultValue: "No records found",
+                })}
+              />
             </Table.Td>
           </Table.Tr>
         )}

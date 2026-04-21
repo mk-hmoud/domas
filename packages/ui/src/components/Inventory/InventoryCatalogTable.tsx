@@ -1,7 +1,9 @@
-import { Table, Group, ActionIcon, Badge, Text } from "@mantine/core";
+import { Table, Group, ActionIcon, Badge } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { InventoryCatalogItem } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface InventoryCatalogTableProps {
   data: InventoryCatalogItem[];
@@ -77,25 +79,23 @@ export function InventoryCatalogTable({
   ));
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("name")}</Table.Th>
-          <Table.Th>{t("scope")}</Table.Th>
-          <Table.Th>{t("price")}</Table.Th>
-          <Table.Th>{t("status")}</Table.Th>
-          <Table.Th>{t("flags", "Flags")}</Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th}>{t("name")}</Table.Th>
+          <Table.Th className={classes.th}>{t("scope")}</Table.Th>
+          <Table.Th className={classes.th}>{t("price")}</Table.Th>
+          <Table.Th className={classes.th}>{t("status")}</Table.Th>
+          <Table.Th className={classes.th}>{t("flags", "Flags")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 64 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={6}>
-              <Text ta="center" c="dimmed" py="xl">
-                {t("no_inventory_items")}
-              </Text>
+            <Table.Td colSpan={6} style={{ padding: 0 }}>
+              <EmptyState title={t("no_inventory_items")} />
             </Table.Td>
           </Table.Tr>
         )}

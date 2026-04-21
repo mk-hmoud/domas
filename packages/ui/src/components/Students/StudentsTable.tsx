@@ -10,6 +10,8 @@ import {
 } from "@tabler/icons-react";
 import { Student, COUNTRIES } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface StudentsTableProps {
   data: Student[];
@@ -53,7 +55,7 @@ export function StudentsTable({
         key={student.id}
         onClick={() => onSelect(student)}
         style={{ cursor: "pointer" }}
-        bg={isSelected ? "var(--mantine-color-blue-light)" : undefined}
+        bg={isSelected ? "var(--mantine-color-indigo-0)" : undefined}
       >
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Checkbox
@@ -72,33 +74,23 @@ export function StudentsTable({
             {student.isActive ? t("active") : t("inactive")}
           </Badge>
         </Table.Td>
-        <Table.Td>
-          <Menu shadow="md" width={200} withinPortal>
+        <Table.Td onClick={(e) => e.stopPropagation()}>
+          <Menu shadow="md" width={200} withinPortal position="bottom-end">
             <Menu.Target>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <ActionIcon variant="subtle" color="gray">
                 <IconDotsVertical size={16} />
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item
                 leftSection={<IconEye size={14} />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect(student);
-                }}
+                onClick={() => onSelect(student)}
               >
                 {t("view_details", { defaultValue: "View Details" })}
               </Menu.Item>
               <Menu.Item
                 leftSection={<IconEdit size={14} />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(student);
-                }}
+                onClick={() => onEdit(student)}
               >
                 {t("edit")}
               </Menu.Item>
@@ -111,10 +103,7 @@ export function StudentsTable({
                   )
                 }
                 color={student.isActive ? "orange" : "green"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleStatus(student);
-                }}
+                onClick={() => onToggleStatus(student)}
               >
                 {student.isActive
                   ? t("deactivate", { defaultValue: "Deactivate" })
@@ -126,13 +115,12 @@ export function StudentsTable({
                   <Menu.Item
                     color="green"
                     leftSection={<IconBrandWhatsapp size={14} />}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={() =>
                       window.open(
                         `https://wa.me/${student.whatsappNumber!.replace(/\D/g, "")}`,
                         "_blank",
-                      );
-                    }}
+                      )
+                    }
                   >
                     {t("whatsapp", { defaultValue: "WhatsApp" })}
                   </Menu.Item>
@@ -142,10 +130,7 @@ export function StudentsTable({
               <Menu.Item
                 color="red"
                 leftSection={<IconTrash size={14} />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(student);
-                }}
+                onClick={() => onDelete(student)}
               >
                 {t("delete")}
               </Menu.Item>
@@ -157,29 +142,48 @@ export function StudentsTable({
   });
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th style={{ width: 40 }}>
+          <Table.Th className={classes.th} style={{ width: 40 }}>
             <Checkbox
               checked={allSelected}
               indeterminate={someSelected}
               onChange={onToggleSelectAll}
             />
           </Table.Th>
-          <Table.Th>
-            {t("student_number", { defaultValue: "Student Number" })}
+          <Table.Th className={classes.th}>
+            {t("student_number", { defaultValue: "Student No." })}
           </Table.Th>
-          <Table.Th>{t("full_name", { defaultValue: "Full Name" })}</Table.Th>
-          <Table.Th>{t("gender", { defaultValue: "Gender" })}</Table.Th>
-          <Table.Th>
+          <Table.Th className={classes.th}>
+            {t("full_name", { defaultValue: "Full Name" })}
+          </Table.Th>
+          <Table.Th className={classes.th}>
+            {t("gender", { defaultValue: "Gender" })}
+          </Table.Th>
+          <Table.Th className={classes.th}>
             {t("nationality", { defaultValue: "Nationality" })}
           </Table.Th>
-          <Table.Th>{t("status", { defaultValue: "Status" })}</Table.Th>
-          <Table.Th style={{ width: 80 }} />
+          <Table.Th className={classes.th}>
+            {t("status", { defaultValue: "Status" })}
+          </Table.Th>
+          <Table.Th className={classes.th} style={{ width: 48 }} />
         </Table.Tr>
       </Table.Thead>
-      <Table.Tbody>{rows}</Table.Tbody>
+      <Table.Tbody>
+        {rows}
+        {data.length === 0 && (
+          <Table.Tr>
+            <Table.Td colSpan={7} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_students_found", {
+                  defaultValue: "No students found",
+                })}
+              />
+            </Table.Td>
+          </Table.Tr>
+        )}
+      </Table.Tbody>
     </Table>
   );
 }

@@ -8,6 +8,8 @@ import {
 } from "@tabler/icons-react";
 import { Booking } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface BookingsTableProps {
   data: Booking[];
@@ -75,14 +77,10 @@ export function BookingsTable({
       </Table.Td>
       <Table.Td>{new Date(booking.startDate).toLocaleDateString()}</Table.Td>
       <Table.Td>{new Date(booking.endDate).toLocaleDateString()}</Table.Td>
-      <Table.Td>
+      <Table.Td onClick={(e) => e.stopPropagation()}>
         <Menu shadow="md" width={200} withinPortal position="bottom-end">
           <Menu.Target>
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <ActionIcon variant="subtle" color="gray">
               <IconDotsVertical size={16} />
             </ActionIcon>
           </Menu.Target>
@@ -114,13 +112,16 @@ export function BookingsTable({
               </Menu.Item>
             )}
             {onDelete && (
-              <Menu.Item
-                color="red"
-                leftSection={<IconTrash size={14} />}
-                onClick={() => onDelete(booking)}
-              >
-                {t("delete")}
-              </Menu.Item>
+              <>
+                <Menu.Divider />
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconTrash size={14} />}
+                  onClick={() => onDelete(booking)}
+                >
+                  {t("delete")}
+                </Menu.Item>
+              </>
             )}
           </Menu.Dropdown>
         </Menu>
@@ -129,18 +130,31 @@ export function BookingsTable({
   ));
 
   return (
-    <Table verticalSpacing="sm" highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("student")}</Table.Th>
-          <Table.Th>{t("bed")}</Table.Th>
-          <Table.Th>{t("status")}</Table.Th>
-          <Table.Th>{t("start_date")}</Table.Th>
-          <Table.Th>{t("end_date")}</Table.Th>
-          <Table.Th style={{ width: 50 }} />
+          <Table.Th className={classes.th}>{t("student")}</Table.Th>
+          <Table.Th className={classes.th}>{t("bed")}</Table.Th>
+          <Table.Th className={classes.th}>{t("status")}</Table.Th>
+          <Table.Th className={classes.th}>{t("start_date")}</Table.Th>
+          <Table.Th className={classes.th}>{t("end_date")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 48 }} />
         </Table.Tr>
       </Table.Thead>
-      <Table.Tbody>{rows}</Table.Tbody>
+      <Table.Tbody>
+        {rows}
+        {data.length === 0 && (
+          <Table.Tr>
+            <Table.Td colSpan={6} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_bookings_found", {
+                  defaultValue: "No bookings found",
+                })}
+              />
+            </Table.Td>
+          </Table.Tr>
+        )}
+      </Table.Tbody>
     </Table>
   );
 }

@@ -11,6 +11,8 @@ import { IconEdit, IconTrash, IconPhoto } from "@tabler/icons-react";
 import { modals } from "@mantine/modals";
 import { useTranslation } from "react-i18next";
 import { RoomType } from "@domas/ts-types";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 export interface RoomTypesTableProps {
   data: RoomType[];
@@ -45,26 +47,30 @@ export function RoomTypesTable({
 
   return (
     <Table highlightOnHover verticalSpacing="sm">
-      <Table.Thead>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("name")}</Table.Th>
-          <Table.Th>{t("capacity", { defaultValue: "Capacity" })}</Table.Th>
-          <Table.Th>{t("amenities", { defaultValue: "Amenities" })}</Table.Th>
-          <Table.Th>
+          <Table.Th className={classes.th}>{t("name")}</Table.Th>
+          <Table.Th className={classes.th}>
+            {t("capacity", { defaultValue: "Capacity" })}
+          </Table.Th>
+          <Table.Th className={classes.th}>
+            {t("amenities", { defaultValue: "Amenities" })}
+          </Table.Th>
+          <Table.Th className={classes.th}>
             {t("gallery_photos", { defaultValue: "Gallery Photos" })}
           </Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th} style={{ width: 80 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {data.length === 0 ? (
           <Table.Tr>
-            <Table.Td colSpan={5}>
-              <Text c="dimmed" ta="center" size="sm" py="md">
-                {t("no_room_types", {
-                  defaultValue: "No room types yet. Create one to get started.",
+            <Table.Td colSpan={5} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_room_types", {
+                  defaultValue: "No room types yet",
                 })}
-              </Text>
+              />
             </Table.Td>
           </Table.Tr>
         ) : (

@@ -6,6 +6,8 @@ import {
   IconArrowBackUp,
   IconUserShare,
 } from "@tabler/icons-react";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface AccessCardTableProps {
   data: AccessCard[];
@@ -39,7 +41,7 @@ export function AccessCardTable({
 
   const rows = data.map((card) => (
     <Table.Tr key={card.id}>
-      <Table.Td fw={700}>#{card.cardNumber}</Table.Td>
+      <Table.Td fw={600}>#{card.cardNumber}</Table.Td>
       <Table.Td>
         <Badge color={getStatusColor(card.status)} variant="light">
           {t(`card_status_enum.${card.status}`, card.status)}
@@ -50,7 +52,7 @@ export function AccessCardTable({
           <Text size="sm">{card.currentHolderId}</Text>
         ) : (
           <Text size="sm" c="dimmed">
-            -
+            —
           </Text>
         )}
       </Table.Td>
@@ -95,23 +97,23 @@ export function AccessCardTable({
   ));
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("card_number")}</Table.Th>
-          <Table.Th>{t("status")}</Table.Th>
-          <Table.Th>{t("current_holder")}</Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th}>{t("card_number")}</Table.Th>
+          <Table.Th className={classes.th}>{t("status")}</Table.Th>
+          <Table.Th className={classes.th}>{t("current_holder")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 100 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={4}>
-              <Text ta="center" c="dimmed" py="xl">
-                {t("no_cards_found", "No cards found.")}
-              </Text>
+            <Table.Td colSpan={4} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_cards_found", { defaultValue: "No cards found" })}
+              />
             </Table.Td>
           </Table.Tr>
         )}
