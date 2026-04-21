@@ -15,6 +15,7 @@ import {
   Textarea,
   Title,
 } from "@mantine/core";
+import classes from "../Table/table.module.css";
 import {
   IconUser,
   IconBed,
@@ -290,12 +291,19 @@ export function CheckOutDetailsModal({
                 p={0}
                 style={{ overflow: "hidden" }}
               >
-                <Table striped>
-                  <Table.Thead>
+                <Table highlightOnHover>
+                  <Table.Thead className={classes.thead}>
                     <Table.Tr>
-                      <Table.Th>{t("item")}</Table.Th>
-                      <Table.Th>{t("quantity")}</Table.Th>
-                      <Table.Th ta="right">{t("status")}</Table.Th>
+                      <Table.Th className={classes.th}>{t("item")}</Table.Th>
+                      <Table.Th className={classes.th}>
+                        {t("quantity")}
+                      </Table.Th>
+                      <Table.Th
+                        className={classes.th}
+                        style={{ textAlign: "right" }}
+                      >
+                        {t("status")}
+                      </Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>

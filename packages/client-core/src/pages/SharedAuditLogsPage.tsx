@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState, LabelValue } from "@domas/ui";
+import tableClasses from "../tableClasses.module.css";
 import {
   Table,
   Badge,
@@ -20,7 +21,6 @@ import {
   LoadingOverlay,
   Drawer,
   Stack,
-  Box,
   Alert,
 } from "@mantine/core";
 import {
@@ -286,8 +286,6 @@ export function SharedAuditLogsPage() {
         }
       />
       <PageShell size="xl">
-        <LoadingOverlay visible={loading} />
-
         <Tabs value={activeTab} onChange={setActiveTab}>
           <Tabs.List mb="md">
             <Tabs.Tab value="search" leftSection={<IconSearch size={16} />}>
@@ -427,27 +425,33 @@ export function SharedAuditLogsPage() {
               </Group>
             </Card>
 
-            <Card withBorder padding="sm" radius="md">
+            <Card
+              withBorder
+              padding="sm"
+              radius="md"
+              style={{ position: "relative" }}
+            >
+              <LoadingOverlay visible={loading} />
               <ScrollArea>
-                <Table striped highlightOnHover>
-                  <Table.Thead>
+                <Table highlightOnHover>
+                  <Table.Thead className={tableClasses.thead}>
                     <Table.Tr>
-                      <Table.Th>
+                      <Table.Th className={tableClasses.th}>
                         {t("audit.timestamp", { defaultValue: "Timestamp" })}
                       </Table.Th>
-                      <Table.Th>
+                      <Table.Th className={tableClasses.th}>
                         {t("audit.user", { defaultValue: "User" })}
                       </Table.Th>
-                      <Table.Th>
+                      <Table.Th className={tableClasses.th}>
                         {t("audit.table", { defaultValue: "Table" })}
                       </Table.Th>
-                      <Table.Th>
+                      <Table.Th className={tableClasses.th}>
                         {t("audit.action", { defaultValue: "Action" })}
                       </Table.Th>
-                      <Table.Th>
+                      <Table.Th className={tableClasses.th}>
                         {t("audit.record_id", { defaultValue: "Record ID" })}
                       </Table.Th>
-                      <Table.Th>
+                      <Table.Th className={tableClasses.th}>
                         {t("audit.changed_fields", {
                           defaultValue: "Changed Fields",
                         })}
@@ -522,11 +526,11 @@ export function SharedAuditLogsPage() {
                 </Table>
               </ScrollArea>
               {searchResults.data.length === 0 && !loading && (
-                <Text c="dimmed" ta="center" py="xl">
-                  {t("audit.no_logs_found", {
+                <EmptyState
+                  title={t("audit.no_logs_found", {
                     defaultValue: "No audit logs found matching criteria",
                   })}
-                </Text>
+                />
               )}
 
               <Group justify="flex-end" mt="md">
@@ -581,33 +585,33 @@ export function SharedAuditLogsPage() {
                 ))}
               </Timeline>
               {suspiciousActivity.length === 0 && !loading && (
-                <Text c="dimmed" ta="center" py="xl">
-                  {t("audit.no_suspicious_activity", {
+                <EmptyState
+                  title={t("audit.no_suspicious_activity", {
                     defaultValue: "No suspicious activity detected",
                   })}
-                </Text>
+                />
               )}
             </Card>
           </Tabs.Panel>
 
           <Tabs.Panel value="bulk">
             <Card withBorder padding="sm" radius="md">
-              <Table>
-                <Table.Thead>
+              <Table highlightOnHover>
+                <Table.Thead className={tableClasses.thead}>
                   <Table.Tr>
-                    <Table.Th>
+                    <Table.Th className={tableClasses.th}>
                       {t("audit.timestamp", { defaultValue: "Timestamp" })}
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th className={tableClasses.th}>
                       {t("audit.operation", { defaultValue: "Operation" })}
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th className={tableClasses.th}>
                       {t("audit.user", { defaultValue: "User" })}
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th className={tableClasses.th}>
                       {t("audit.resource", { defaultValue: "Resource" })}
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th className={tableClasses.th}>
                       {t("audit.affected", { defaultValue: "Affected" })}
                     </Table.Th>
                   </Table.Tr>
@@ -629,11 +633,11 @@ export function SharedAuditLogsPage() {
                 </Table.Tbody>
               </Table>
               {bulkOperations.length === 0 && !loading && (
-                <Text c="dimmed" ta="center" py="xl">
-                  {t("audit.no_bulk_operations", {
+                <EmptyState
+                  title={t("audit.no_bulk_operations", {
                     defaultValue: "No bulk operations found",
                   })}
-                </Text>
+                />
               )}
             </Card>
           </Tabs.Panel>
@@ -657,32 +661,24 @@ export function SharedAuditLogsPage() {
           {selectedLog && (
             <Stack gap="md">
               <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("audit.user", { defaultValue: "User" })}
-                  </Text>
-                  <Text fw={500}>{selectedLog.username}</Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("audit.table", { defaultValue: "Table" })}
-                  </Text>
-                  <Text fw={500}>{selectedLog.table_name}</Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("audit.record_id", { defaultValue: "Record ID" })}
-                  </Text>
+                <LabelValue label={t("audit.user", { defaultValue: "User" })}>
+                  {selectedLog.username}
+                </LabelValue>
+                <LabelValue label={t("audit.table", { defaultValue: "Table" })}>
+                  {selectedLog.table_name}
+                </LabelValue>
+                <LabelValue
+                  label={t("audit.record_id", { defaultValue: "Record ID" })}
+                >
                   <Code>{selectedLog.record_id}</Code>
-                </Box>
+                </LabelValue>
               </Group>
 
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("audit.timestamp", { defaultValue: "Timestamp" })}
-                </Text>
-                <Text>{formatDate(selectedLog.event_timestamp)}</Text>
-              </Box>
+              <LabelValue
+                label={t("audit.timestamp", { defaultValue: "Timestamp" })}
+              >
+                {formatDate(selectedLog.event_timestamp)}
+              </LabelValue>
 
               {renderDrawerContent(selectedLog)}
             </Stack>

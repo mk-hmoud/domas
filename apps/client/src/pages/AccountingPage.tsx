@@ -2,9 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   TextInput,
   Tabs,
-  Title,
   Text,
-  Container,
   Group,
   Card,
   Badge,
@@ -14,14 +12,21 @@ import {
   Divider,
   Paper,
   LoadingOverlay,
-  Box,
 } from '@mantine/core';
 import { IconClock, IconCircleCheck, IconSearch, IconX, IconCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { bookings, students, semesters } from '@domas/api-client';
 import { BookingOpsStatus, PaymentStatus } from '@domas/ts-types';
 import { notifications } from '@mantine/notifications';
-import { PaymentsTable, StudentPayment, AccountingBulkActionsBar } from '@domas/ui';
+import {
+  PaymentsTable,
+  StudentPayment,
+  AccountingBulkActionsBar,
+  PageHeader,
+  PageShell,
+  LabelValue,
+  EmptyState,
+} from '@domas/ui';
 import { modals } from '@mantine/modals';
 
 export function AccountingPage() {
@@ -282,169 +287,141 @@ export function AccountingPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: 'relative' }}>
-      <LoadingOverlay visible={loading} />
-
-      <Group justify="space-between" mb="lg">
-        <div>
-          <Title order={2}>
-            {t('accounting_page_title', {
-              defaultValue: 'Accounting Dashboard',
-            })}
-          </Title>
-          <Text c="dimmed" size="sm">
-            {t('accounting_page_description', {
-              defaultValue: 'Manage and process student booking payments',
-            })}
-          </Text>
-        </div>
-      </Group>
-
-      <Card withBorder padding="md" radius="md" mb="md">
-        <TextInput
-          placeholder={t('search_placeholder')}
-          leftSection={<IconSearch size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-        />
-      </Card>
-
-      <Tabs defaultValue="pending">
-        <Tabs.List mb="md">
-          <Tabs.Tab value="pending" leftSection={<IconClock size={14} />}>
-            {t('pending')} ({pendingPayments.length})
-          </Tabs.Tab>
-          <Tabs.Tab value="history" leftSection={<IconCircleCheck size={14} />}>
-            {t('history')} ({processedPayments.length})
-          </Tabs.Tab>
-        </Tabs.List>
-
-        <Tabs.Panel value="pending">
-          <Paper withBorder radius="md">
-            <PaymentsTable
-              data={filteredPending}
-              onSelect={handleRowClick}
-              onAccept={handleAcceptPayment}
-              onReject={handleRejectPayment}
-              selectedIds={selectedIds}
-              onToggleSelection={handleToggleSelection}
-              onToggleSelectAll={() => handleToggleSelectAll(filteredPending)}
-            />
-            {filteredPending.length === 0 && !loading && (
-              <Text c="dimmed" ta="center" py="xl">
-                {t('no_payments_found', {
-                  defaultValue: 'No pending payments found',
-                })}
-              </Text>
-            )}
-          </Paper>
-        </Tabs.Panel>
-
-        <Tabs.Panel value="history">
-          <Paper withBorder radius="md">
-            <PaymentsTable data={filteredHistory} onSelect={handleRowClick} />
-            {filteredHistory.length === 0 && !loading && (
-              <Text c="dimmed" ta="center" py="xl">
-                {t('no_history_found', { defaultValue: 'No history found' })}
-              </Text>
-            )}
-          </Paper>
-        </Tabs.Panel>
-      </Tabs>
-
-      <AccountingBulkActionsBar
-        selectedCount={selectedIds.length}
-        onAccept={handleBulkAccept}
-        onReject={handleBulkReject}
-        onClear={() => setSelectedIds([])}
+    <>
+      <PageHeader
+        title={t('accounting_page_title', { defaultValue: 'Accounting Dashboard' })}
+        subtitle={t('accounting_page_description', {
+          defaultValue: 'Manage and process student booking payments',
+        })}
       />
+      <PageShell>
+        <Card withBorder padding="md" radius="md" mb="md">
+          <TextInput
+            placeholder={t('search_placeholder')}
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          />
+        </Card>
 
-      <Drawer
-        opened={panelOpen}
-        onClose={() => setPanelOpen(false)}
-        title={t('payment_details')}
-        position="right"
-        size="md"
-      >
-        {selectedPayment && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Title order={3}>{selectedPayment.studentName}</Title>
-              <Badge
-                color={
-                  selectedPayment.status === BookingOpsStatus.PENDING_ACCOUNTING
-                    ? 'yellow'
-                    : selectedPayment.status === BookingOpsStatus.REJECTED ||
-                        selectedPayment.status === BookingOpsStatus.CANCELLED
-                      ? 'red'
-                      : 'green'
-                }
-              >
-                {selectedPayment.status.replace(/_/g, ' ')}
-              </Badge>
-            </Group>
+        <Tabs defaultValue="pending">
+          <Tabs.List mb="md">
+            <Tabs.Tab value="pending" leftSection={<IconClock size={14} />}>
+              {t('pending')} ({pendingPayments.length})
+            </Tabs.Tab>
+            <Tabs.Tab value="history" leftSection={<IconCircleCheck size={14} />}>
+              {t('history')} ({processedPayments.length})
+            </Tabs.Tab>
+          </Tabs.List>
 
-            <Divider />
+          <Tabs.Panel value="pending">
+            <Paper withBorder radius="md" style={{ position: 'relative' }}>
+              <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+              <PaymentsTable
+                data={filteredPending}
+                onSelect={handleRowClick}
+                onAccept={handleAcceptPayment}
+                onReject={handleRejectPayment}
+                selectedIds={selectedIds}
+                onToggleSelection={handleToggleSelection}
+                onToggleSelectAll={() => handleToggleSelectAll(filteredPending)}
+              />
+              {filteredPending.length === 0 && !loading && (
+                <EmptyState
+                  title={t('no_payments_found', { defaultValue: 'No pending payments found' })}
+                />
+              )}
+            </Paper>
+          </Tabs.Panel>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t('student_number')}
-              </Text>
-              <Text fw={500}>{selectedPayment.studentNumber}</Text>
-            </Box>
+          <Tabs.Panel value="history">
+            <Paper withBorder radius="md" style={{ position: 'relative' }}>
+              <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+              <PaymentsTable data={filteredHistory} onSelect={handleRowClick} />
+              {filteredHistory.length === 0 && !loading && (
+                <EmptyState title={t('no_history_found', { defaultValue: 'No history found' })} />
+              )}
+            </Paper>
+          </Tabs.Panel>
+        </Tabs>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t('email')}
-              </Text>
-              <Text fw={500}>{selectedPayment.studentEmail}</Text>
-            </Box>
+        <AccountingBulkActionsBar
+          selectedCount={selectedIds.length}
+          onAccept={handleBulkAccept}
+          onReject={handleBulkReject}
+          onClear={() => setSelectedIds([])}
+        />
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t('booking')}
-              </Text>
-              <Text fw={500}>{selectedPayment.bookingType}</Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t('amount')}
-              </Text>
-              <Text size="xl" fw={700} c="blue">
-                {formatCurrency(selectedPayment.amount, selectedPayment.currency)}
-              </Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t('date')}
-              </Text>
-              <Text fw={500}>{new Date(selectedPayment.date).toLocaleString()}</Text>
-            </Box>
-
-            {selectedPayment.status === BookingOpsStatus.PENDING_ACCOUNTING && (
-              <Group grow mt="xl">
-                <Button
-                  color="red"
+        <Drawer
+          opened={panelOpen}
+          onClose={() => setPanelOpen(false)}
+          title={t('payment_details')}
+          position="right"
+          size="md"
+        >
+          {selectedPayment && (
+            <Stack gap="lg">
+              <Group justify="space-between" align="flex-start">
+                <Text fw={700} size="md">
+                  {selectedPayment.studentName}
+                </Text>
+                <Badge
                   variant="light"
-                  leftSection={<IconX size={16} />}
-                  onClick={() => handleRejectPayment(selectedPayment)}
+                  color={
+                    selectedPayment.status === BookingOpsStatus.PENDING_ACCOUNTING
+                      ? 'yellow'
+                      : selectedPayment.status === BookingOpsStatus.REJECTED ||
+                          selectedPayment.status === BookingOpsStatus.CANCELLED
+                        ? 'red'
+                        : 'green'
+                  }
                 >
-                  {t('reject')}
-                </Button>
-                <Button
-                  color="green"
-                  leftSection={<IconCheck size={16} />}
-                  onClick={() => handleAcceptPayment(selectedPayment)}
-                >
-                  {t('accept')}
-                </Button>
+                  {selectedPayment.status.replace(/_/g, ' ')}
+                </Badge>
               </Group>
-            )}
-          </Stack>
-        )}
-      </Drawer>
-    </Container>
+
+              <Divider />
+
+              <Group grow>
+                <LabelValue label={t('student_number')}>{selectedPayment.studentNumber}</LabelValue>
+                <LabelValue label={t('email')}>{selectedPayment.studentEmail}</LabelValue>
+              </Group>
+
+              <LabelValue label={t('booking')}>{selectedPayment.bookingType}</LabelValue>
+
+              <LabelValue label={t('amount')}>
+                <Text size="xl" fw={700} c="blue">
+                  {formatCurrency(selectedPayment.amount, selectedPayment.currency)}
+                </Text>
+              </LabelValue>
+
+              <LabelValue label={t('date')}>
+                {new Date(selectedPayment.date).toLocaleString()}
+              </LabelValue>
+
+              {selectedPayment.status === BookingOpsStatus.PENDING_ACCOUNTING && (
+                <Group grow mt="md">
+                  <Button
+                    color="red"
+                    variant="light"
+                    leftSection={<IconX size={16} />}
+                    onClick={() => handleRejectPayment(selectedPayment)}
+                  >
+                    {t('reject')}
+                  </Button>
+                  <Button
+                    color="green"
+                    leftSection={<IconCheck size={16} />}
+                    onClick={() => handleAcceptPayment(selectedPayment)}
+                  >
+                    {t('accept')}
+                  </Button>
+                </Group>
+              )}
+            </Stack>
+          )}
+        </Drawer>
+      </PageShell>
+    </>
   );
 }

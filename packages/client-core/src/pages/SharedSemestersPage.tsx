@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
+import tableClasses from "../tableClasses.module.css";
 import {
   Button,
   Group,
@@ -297,17 +298,20 @@ export function SharedSemestersPage() {
         }
       />
       <PageShell>
-        <LoadingOverlay visible={loading} />
-
-        <Paper withBorder radius="md">
-          <Table verticalSpacing="sm" striped highlightOnHover>
-            <Table.Thead>
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+          <Table verticalSpacing="sm" highlightOnHover>
+            <Table.Thead className={tableClasses.thead}>
               <Table.Tr>
-                <Table.Th>{t("semester_name")}</Table.Th>
-                <Table.Th>{t("start_date")}</Table.Th>
-                <Table.Th>{t("end_date")}</Table.Th>
-                <Table.Th>{t("status")}</Table.Th>
-                <Table.Th style={{ width: 80 }} />
+                <Table.Th className={tableClasses.th}>
+                  {t("semester_name")}
+                </Table.Th>
+                <Table.Th className={tableClasses.th}>
+                  {t("start_date")}
+                </Table.Th>
+                <Table.Th className={tableClasses.th}>{t("end_date")}</Table.Th>
+                <Table.Th className={tableClasses.th}>{t("status")}</Table.Th>
+                <Table.Th className={tableClasses.th} style={{ width: 48 }} />
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -395,9 +399,11 @@ export function SharedSemestersPage() {
             </Table.Tbody>
           </Table>
           {data.length === 0 && !loading && (
-            <Text c="dimmed" ta="center" py="xl">
-              No semesters found
-            </Text>
+            <EmptyState
+              title={t("no_semesters_found", {
+                defaultValue: "No semesters found",
+              })}
+            />
           )}
         </Paper>
 

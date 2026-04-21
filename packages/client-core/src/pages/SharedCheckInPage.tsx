@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
+import tableClasses from "../tableClasses.module.css";
 import {
   Text,
   Paper,
@@ -172,23 +173,25 @@ export function SharedCheckInPage() {
         <Stack gap="lg">
           <Paper withBorder radius="md" style={{ position: "relative" }}>
             <LoadingOverlay visible={loading} />
-            <Table striped highlightOnHover>
-              <Table.Thead>
+            <Table highlightOnHover>
+              <Table.Thead className={tableClasses.thead}>
                 <Table.Tr>
-                  <Table.Th>{t("student")}</Table.Th>
-                  <Table.Th>{t("location")}</Table.Th>
-                  <Table.Th>{t("status")}</Table.Th>
-                  <Table.Th />
+                  <Table.Th className={tableClasses.th}>
+                    {t("student")}
+                  </Table.Th>
+                  <Table.Th className={tableClasses.th}>
+                    {t("location")}
+                  </Table.Th>
+                  <Table.Th className={tableClasses.th}>{t("status")}</Table.Th>
+                  <Table.Th className={tableClasses.th} style={{ width: 80 }} />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {rows}
                 {data.length === 0 && !loading && (
                   <Table.Tr>
-                    <Table.Td colSpan={4}>
-                      <Text ta="center" py="xl" c="dimmed">
-                        {t("no_bookings_ready")}
-                      </Text>
+                    <Table.Td colSpan={4} style={{ padding: 0 }}>
+                      <EmptyState title={t("no_bookings_ready")} />
                     </Table.Td>
                   </Table.Tr>
                 )}
