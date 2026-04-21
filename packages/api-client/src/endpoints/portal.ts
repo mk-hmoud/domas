@@ -237,6 +237,25 @@ export const portalAnnouncements = {
     );
     return response.data;
   },
+
+  downloadAttachment: async (
+    id: string,
+    attachmentId: string,
+    filename: string,
+  ): Promise<void> => {
+    const response = await apiClient.get(
+      `/portal/announcements/${id}/attachments/${attachmentId}`,
+      { responseType: "blob" },
+    );
+    const url = URL.createObjectURL(response.data as Blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
 };
 
 // ─── Room Changes ─────────────────────────────────────────────────────────────
