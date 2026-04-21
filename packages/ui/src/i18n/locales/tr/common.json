@@ -852,6 +852,8 @@
     "button": "Yatak Değiştir",
     "modal_title": "Yeni Yatağa Taşı",
     "no_available_beds": "Bu rezervasyon için uygun yatak bulunamadı.",
+    "no_search_results": "Aramanızla eşleşen yatak bulunamadı.",
+    "search_placeholder": "Yatak, oda veya konum ara…",
     "confirm": "Yatak Değiştir",
     "success": "Yatak başarıyla değiştirildi.",
     "error": "Yatak değiştirilemedi."

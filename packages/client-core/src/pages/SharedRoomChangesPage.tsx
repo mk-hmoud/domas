@@ -194,7 +194,7 @@ export function SharedRoomChangesPage() {
 
   return (
     <Container size="lg">
-      <Stack gap="lg" pos="relative">
+      <Stack gap="lg" pos="relative" pt="xl">
         <LoadingOverlay visible={loading} />
 
         <Group justify="space-between" align="center">

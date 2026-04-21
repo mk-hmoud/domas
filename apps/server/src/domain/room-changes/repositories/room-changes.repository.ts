@@ -298,16 +298,26 @@ export class RoomChangesRepository {
           FROM   locations anc
           WHERE  anc.tree_path @> l.tree_path AND anc.deleted_at IS NULL
         ) AS "locationPath"
-      FROM  beds b
+      FROM  bookings bk
+      JOIN  students st ON st.id = bk.student_id
+      JOIN  beds b      ON b.deleted_at IS NULL AND b.status = 'available'
       JOIN  locations l ON b.location_id = l.id
-      WHERE b.deleted_at IS NULL
-        AND b.status = 'available'
+      WHERE bk.id = $1
+        -- exclude beds already booked in this semester
         AND b.id NOT IN (
           SELECT bed_id FROM bookings
-          WHERE  semester_id = (SELECT semester_id FROM bookings WHERE id = $1)
+          WHERE  semester_id = bk.semester_id
             AND  status NOT IN ('cancelled', 'rejected')
-            AND  id != $1
+            AND  id != bk.id
         )
+        -- gender compatibility
+        AND (l.gender_lock IS NULL OR l.gender_lock = st.gender)
+        -- TR/international room compatibility
+        AND NOT (l.is_tr_only        = TRUE AND st.nationality_code != 'TR')
+        AND NOT (l.is_foreigner_only = TRUE AND st.nationality_code  = 'TR')
+        -- TR/international bed compatibility
+        AND NOT (b.is_tr_only        = TRUE AND st.nationality_code != 'TR')
+        AND NOT (b.is_foreigner_only = TRUE AND st.nationality_code  = 'TR')
       ORDER BY l.name, b.label
     `;
     const result = await this.db.getPool().query(query, [bookingId]);

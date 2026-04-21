@@ -862,6 +862,8 @@
     "button": "Move Bed",
     "modal_title": "Move to New Bed",
     "no_available_beds": "No available beds found for this booking.",
+    "no_search_results": "No beds match your search.",
+    "search_placeholder": "Search by bed, room, or location…",
     "confirm": "Move Bed",
     "success": "Bed moved successfully.",
     "error": "Failed to move bed."
