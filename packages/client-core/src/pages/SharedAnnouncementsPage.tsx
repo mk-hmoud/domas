@@ -71,6 +71,7 @@ function AnnouncementModal({
     [],
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const existingAttachments: AnnouncementAttachmentMeta[] = (
     initial?.attachments ?? []
@@ -105,6 +106,26 @@ function AnnouncementModal({
       setPendingFiles((prev) => [...prev, ...files]);
     }
     e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      setPendingFiles((prev) => [...prev, ...files]);
+    }
   };
 
   const removePending = (index: number) => {
@@ -198,12 +219,6 @@ function AnnouncementModal({
               onChange={handleFileChange}
             />
 
-            {existingAttachments.length === 0 && pendingFiles.length === 0 && (
-              <Text size="xs" c="dimmed">
-                {t("no_attachments", { defaultValue: "No attachments yet." })}
-              </Text>
-            )}
-
             <Stack gap={4}>
               {existingAttachments.map((att) => (
                 <Group
@@ -284,6 +299,37 @@ function AnnouncementModal({
                 </Group>
               ))}
             </Stack>
+
+            {/* Permanent drop zone */}
+            <Box
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              mt={
+                existingAttachments.length > 0 || pendingFiles.length > 0
+                  ? "xs"
+                  : 0
+              }
+              style={{
+                border: `2px dashed ${isDragging ? "var(--mantine-color-blue-4)" : "var(--mantine-color-default-border)"}`,
+                borderRadius: "var(--mantine-radius-sm)",
+                background: isDragging
+                  ? "var(--mantine-color-blue-light)"
+                  : undefined,
+                padding: "10px 12px",
+                transition: "all 0.15s ease",
+                cursor: "pointer",
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Text size="xs" c={isDragging ? "blue" : "dimmed"} ta="center">
+                {isDragging
+                  ? t("drop_files_here", { defaultValue: "Drop files here" })
+                  : t("drop_or_click", {
+                      defaultValue: "Drop files here or click to browse",
+                    })}
+              </Text>
+            </Box>
           </Box>
 
           <Group justify="flex-end">
