@@ -65,6 +65,10 @@ export const PERMISSIONS = {
 
   // Guests
   GUESTS_MANAGE: 'guests.manage',
+
+  // Room Changes
+  ROOM_CHANGES_VIEW: 'room_changes.view',
+  ROOM_CHANGES_MANAGE: 'room_changes.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

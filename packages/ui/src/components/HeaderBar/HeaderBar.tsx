@@ -8,6 +8,7 @@ import {
   Box,
   ActionIcon,
   Tooltip,
+  Divider,
 } from "@mantine/core";
 import {
   IconLogout,
@@ -17,6 +18,7 @@ import {
 } from "@tabler/icons-react";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
+import { FontSizeControl } from "../FontSizeControl/FontSizeControl";
 import { ReactNode, forwardRef } from "react";
 import { User } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
@@ -40,15 +42,15 @@ const UserButton = forwardRef<HTMLButtonElement, UserButtonProps>(
     <UnstyledButton
       ref={ref}
       style={{
-        padding: "var(--mantine-spacing-xs)",
+        padding: "4px 8px",
         color:
           "light-dark(var(--mantine-color-black), var(--mantine-color-dark-0))",
-        borderRadius: "var(--mantine-radius-sm)",
+        borderRadius: "var(--mantine-radius-xl)",
       }}
       {...others}
     >
       <Group gap={7}>
-        <Avatar src={null} alt={name} radius="xl" size={24} />
+        <Avatar src={null} alt={name} radius="xl" size={22} />
         <Box style={{ flex: 1 }}>
           <Text size="sm" fw={500} style={{ lineHeight: 1 }}>
             {name}
@@ -76,18 +78,33 @@ export function HeaderBar({
     <header className={classes.header}>
       <Group>{logo}</Group>
 
-      <Group>
-        <Group gap="xs">
+      <Group gap="sm">
+        <Group gap={4}>
           {onShowHistory && (
-            <Tooltip label={t("history")}>
-              <ActionIcon variant="default" size="xl" onClick={onShowHistory}>
-                <IconHistory stroke={1.5} />
+            <Tooltip label={t("history")} position="bottom">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="md"
+                radius="xl"
+                onClick={onShowHistory}
+              >
+                <IconHistory size={16} stroke={1.5} />
               </ActionIcon>
             </Tooltip>
           )}
+          <FontSizeControl />
           <LanguageSwitcher />
           <ThemeToggle />
         </Group>
+
+        {user && (
+          <Divider
+            orientation="vertical"
+            h={20}
+            style={{ alignSelf: "center" }}
+          />
+        )}
 
         {user && (
           <Menu

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
+import tableClasses from "../tableClasses.module.css";
 import {
-  Title,
   Text,
-  Container,
   Paper,
   Table,
   Button,
@@ -12,7 +12,6 @@ import {
   Stack,
   ActionIcon,
   TextInput,
-  Card,
 } from "@mantine/core";
 import { IconDoorExit, IconRefresh, IconSearch } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -218,15 +217,11 @@ export function SharedCheckOutPage() {
   });
 
   return (
-    <Container size="lg" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={2}>{t("check_out")}</Title>
-            <Text c="dimmed" size="sm">
-              {t("check_out_description")}
-            </Text>
-          </div>
+    <>
+      <PageHeader
+        title={t("check_out")}
+        subtitle={t("check_out_description")}
+        actions={
           <ActionIcon
             variant="subtle"
             onClick={fetchBookings}
@@ -234,61 +229,64 @@ export function SharedCheckOutPage() {
           >
             <IconRefresh size={20} />
           </ActionIcon>
-        </Group>
-
-        <Card withBorder p="md" radius="md">
+        }
+      />
+      <PageShell>
+        <Stack gap="md">
           <TextInput
             placeholder={t("search_placeholder")}
             leftSection={<IconSearch size={16} />}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
           />
-        </Card>
 
-        <Paper withBorder radius="md" style={{ position: "relative" }}>
-          <LoadingOverlay visible={loading} />
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t("student")}</Table.Th>
-                <Table.Th>{t("location")}</Table.Th>
-                <Table.Th>{t("status")}</Table.Th>
-                <Table.Th />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {rows}
-              {filteredData.length === 0 && !loading && (
+          <Paper withBorder radius="md" style={{ position: "relative" }}>
+            <LoadingOverlay visible={loading} />
+            <Table highlightOnHover>
+              <Table.Thead className={tableClasses.thead}>
                 <Table.Tr>
-                  <Table.Td colSpan={4}>
-                    <Text ta="center" py="xl" c="dimmed">
-                      {t("no_active_bookings")}
-                    </Text>
-                  </Table.Td>
+                  <Table.Th className={tableClasses.th}>
+                    {t("student")}
+                  </Table.Th>
+                  <Table.Th className={tableClasses.th}>
+                    {t("location")}
+                  </Table.Th>
+                  <Table.Th className={tableClasses.th}>{t("status")}</Table.Th>
+                  <Table.Th className={tableClasses.th} style={{ width: 80 }} />
                 </Table.Tr>
-              )}
-            </Table.Tbody>
-          </Table>
-        </Paper>
-      </Stack>
+              </Table.Thead>
+              <Table.Tbody>
+                {rows}
+                {filteredData.length === 0 && !loading && (
+                  <Table.Tr>
+                    <Table.Td colSpan={4} style={{ padding: 0 }}>
+                      <EmptyState title={t("no_active_bookings")} />
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+        </Stack>
 
-      <CheckOutDetailsModal
-        opened={!!selectedBooking}
-        onClose={() => setSelectedBooking(null)}
-        booking={selectedBooking}
-        onConfirm={handleCheckOut}
-        onReportDamage={handleReportDamage}
-        loading={processLoading}
-      />
+        <CheckOutDetailsModal
+          opened={!!selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          booking={selectedBooking}
+          onConfirm={handleCheckOut}
+          onReportDamage={handleReportDamage}
+          loading={processLoading}
+        />
 
-      <CreateDamageModal
-        opened={damageModalOpened}
-        onClose={() => setDamageModalOpened(false)}
-        onSubmit={handleCreateDamageReport}
-        students={Array.from(studentsMap.values())}
-        loading={damageActionLoading}
-        initialValues={damageInitialValues}
-      />
-    </Container>
+        <CreateDamageModal
+          opened={damageModalOpened}
+          onClose={() => setDamageModalOpened(false)}
+          onSubmit={handleCreateDamageReport}
+          students={Array.from(studentsMap.values())}
+          loading={damageActionLoading}
+          initialValues={damageInitialValues}
+        />
+      </PageShell>
+    </>
   );
 }

@@ -2,9 +2,11 @@ import { Table, Badge, Group, Text, ActionIcon, Tooltip } from "@mantine/core";
 import { IconEye, IconCheck, IconX } from "@tabler/icons-react";
 import { DamageReport, DamageStatus } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface DamageReportTableProps {
-  data: any[]; // Extended with student and location names from mapping
+  data: any[];
   onView: (report: DamageReport) => void;
   onApprove?: (report: DamageReport) => void;
   onReject?: (report: DamageReport) => void;
@@ -66,7 +68,6 @@ export function DamageReportTable({
               <IconEye size={16} />
             </ActionIcon>
           </Tooltip>
-
           {canManage && report.status === DamageStatus.PENDING && (
             <>
               <Tooltip label={t("approve")}>
@@ -95,24 +96,26 @@ export function DamageReportTable({
   ));
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("location")}</Table.Th>
-          <Table.Th>{t("description")}</Table.Th>
-          <Table.Th>{t("status")}</Table.Th>
-          <Table.Th>{t("date")}</Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th}>{t("location")}</Table.Th>
+          <Table.Th className={classes.th}>{t("description")}</Table.Th>
+          <Table.Th className={classes.th}>{t("status")}</Table.Th>
+          <Table.Th className={classes.th}>{t("date")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 100 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={5}>
-              <Text ta="center" c="dimmed" py="xl">
-                {t("no_records_found")}
-              </Text>
+            <Table.Td colSpan={5} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_records_found", {
+                  defaultValue: "No records found",
+                })}
+              />
             </Table.Td>
           </Table.Tr>
         )}

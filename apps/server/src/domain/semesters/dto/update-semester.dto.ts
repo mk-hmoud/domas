@@ -2,11 +2,13 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   Length,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { SemesterType } from '../../../common/enums/semester-type.enum';
 import { SemesterStatus } from '../../../common/enums/semester-status.enum';
@@ -58,4 +60,10 @@ export class UpdateSemesterDto {
   @IsEnum(SemesterStatus)
   @IsOptional()
   status?: SemesterStatus;
+
+  @IsOptional()
+  @ValidateIf((o) => o.maxRoomChanges !== null)
+  @IsInt()
+  @Min(0)
+  maxRoomChanges?: number | null;
 }

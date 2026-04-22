@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
-  Container,
-  Card,
   Text,
   Group,
   Pagination,
@@ -12,7 +10,6 @@ import {
   Paper,
   Drawer,
   Stack,
-  Box,
   Code,
   Badge,
 } from "@mantine/core";
@@ -36,6 +33,8 @@ import {
   StudentsTable,
   BulkActionsBar,
   ComposeEmailModal,
+  LabelValue,
+  EmptyState,
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -287,225 +286,207 @@ export function SharedStudentsPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <Title>{t("students", { defaultValue: "Students" })}</Title>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setCreateModalOpened(true)}
-        >
-          {t("create_student", { defaultValue: "Create Student" })}
-        </Button>
-      </Group>
-
-      <Card withBorder padding="md" radius="md" mb="md">
+    <>
+      <PageHeader
+        title={t("students", { defaultValue: "Students" })}
+        actions={
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setCreateModalOpened(true)}
+          >
+            {t("create_student", { defaultValue: "Create Student" })}
+          </Button>
+        }
+      />
+      <PageShell>
         <TextInput
           placeholder={t("search_placeholder", { defaultValue: "Search..." })}
           leftSection={<IconSearch size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          mb="md"
         />
-      </Card>
 
-      <Paper withBorder radius="md">
-        <StudentsTable
-          data={data.data}
-          selectedIds={selectedIds}
-          onToggleSelection={handleToggleSelection}
-          onToggleSelectAll={handleToggleSelectAll}
-          onSelect={setSelectedStudent}
-          onEdit={(student) => {
-            setEditingStudent(student);
-            setEditModalOpened(true);
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+          <StudentsTable
+            data={data.data}
+            selectedIds={selectedIds}
+            onToggleSelection={handleToggleSelection}
+            onToggleSelectAll={handleToggleSelectAll}
+            onSelect={setSelectedStudent}
+            onEdit={(student) => {
+              setEditingStudent(student);
+              setEditModalOpened(true);
+            }}
+            onDelete={handleDelete}
+            onToggleStatus={handleToggleStatus}
+          />
+          {data.data.length === 0 && !loading && (
+            <EmptyState
+              title={t("no_students_found", {
+                defaultValue: "No students found",
+              })}
+            />
+          )}
+        </Paper>
+
+        <Group justify="flex-end" mt="md">
+          <Pagination
+            total={Math.ceil(data.total / 10)}
+            value={page}
+            onChange={setPage}
+          />
+        </Group>
+
+        <BulkActionsBar
+          selectedCount={selectedIds.length}
+          onDelete={handleBulkDelete}
+          onActivate={() => handleBulkStatusUpdate(true)}
+          onDeactivate={() => handleBulkStatusUpdate(false)}
+          onSendEmail={() => setComposeEmailOpened(true)}
+          onClear={() => setSelectedIds([])}
+        />
+
+        <StudentModal
+          opened={createModalOpened}
+          onClose={() => setCreateModalOpened(false)}
+          onSubmit={handleCreate}
+        />
+
+        <StudentModal
+          opened={editModalOpened}
+          onClose={() => {
+            setEditModalOpened(false);
+            setEditingStudent(null);
           }}
-          onDelete={handleDelete}
-          onToggleStatus={handleToggleStatus}
+          onSubmit={handleUpdate}
+          initialValues={editingStudent}
         />
-        {data.data.length === 0 && !loading && (
-          <Text c="dimmed" ta="center" py="xl">
-            No students found
-          </Text>
-        )}
-      </Paper>
 
-      <Group justify="flex-end" mt="md">
-        <Pagination
-          total={Math.ceil(data.total / 10)}
-          value={page}
-          onChange={setPage}
-        />
-      </Group>
+        <Drawer
+          opened={!!selectedStudent && !editModalOpened}
+          onClose={() => setSelectedStudent(null)}
+          title={t("student_details", { defaultValue: "Student Details" })}
+          position="right"
+          size="md"
+        >
+          {selectedStudent && (
+            <Stack gap="lg">
+              <Group justify="space-between" align="flex-start">
+                <Text fw={700} size="md">
+                  {selectedStudent.firstName} {selectedStudent.lastName}
+                </Text>
+                <Badge color={selectedStudent.isActive ? "green" : "gray"}>
+                  {selectedStudent.isActive ? t("active") : t("inactive")}
+                </Badge>
+              </Group>
 
-      <BulkActionsBar
-        selectedCount={selectedIds.length}
-        onDelete={handleBulkDelete}
-        onActivate={() => handleBulkStatusUpdate(true)}
-        onDeactivate={() => handleBulkStatusUpdate(false)}
-        onSendEmail={() => setComposeEmailOpened(true)}
-        onClear={() => setSelectedIds([])}
-      />
+              <Group grow>
+                <LabelValue label={t("student_number")}>
+                  {selectedStudent.studentNumber}
+                </LabelValue>
+                <LabelValue label={t("national_id")}>
+                  {selectedStudent.nationalId}
+                </LabelValue>
+              </Group>
 
-      <StudentModal
-        opened={createModalOpened}
-        onClose={() => setCreateModalOpened(false)}
-        onSubmit={handleCreate}
-      />
+              <Group grow>
+                <LabelValue label={t("gender")}>
+                  {t(selectedStudent.gender)}
+                </LabelValue>
+                <LabelValue label={t("nationality")}>
+                  {getCountryName(selectedStudent.nationalityCode)}
+                </LabelValue>
+              </Group>
 
-      <StudentModal
-        opened={editModalOpened}
-        onClose={() => {
-          setEditModalOpened(false);
-          setEditingStudent(null);
-        }}
-        onSubmit={handleUpdate}
-        initialValues={editingStudent}
-      />
-
-      <Drawer
-        opened={!!selectedStudent && !editModalOpened}
-        onClose={() => setSelectedStudent(null)}
-        title={t("student_details", { defaultValue: "Student Details" })}
-        position="right"
-        size="md"
-      >
-        {selectedStudent && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Text size="xl" fw={700}>
-                {selectedStudent.firstName} {selectedStudent.lastName}
-              </Text>
-              <Badge color={selectedStudent.isActive ? "green" : "gray"}>
-                {selectedStudent.isActive ? t("active") : t("inactive")}
-              </Badge>
-            </Group>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("student_number")}
-              </Text>
-              <Text fw={500}>{selectedStudent.studentNumber}</Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("national_id")}
-              </Text>
-              <Text fw={500}>{selectedStudent.nationalId}</Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("birth_date")}
-              </Text>
-              <Text>
+              <LabelValue label={t("birth_date")}>
                 {selectedStudent.birthDate
                   ? new Date(selectedStudent.birthDate).toLocaleDateString(
                       "en-GB",
                     )
-                  : "-"}
-              </Text>
-            </Box>
+                  : "—"}
+              </LabelValue>
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("email")}
-              </Text>
-              <Text>{selectedStudent.email || "-"}</Text>
-            </Box>
+              <LabelValue label={t("email")}>
+                {selectedStudent.email || "—"}
+              </LabelValue>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("phone_number")}
-                </Text>
-                <Text>{selectedStudent.phoneNumber || "-"}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("whatsapp_number", { defaultValue: "WhatsApp" })}
-                </Text>
-                {selectedStudent.whatsappNumber ? (
-                  <Group gap="xs">
-                    <Text>{selectedStudent.whatsappNumber}</Text>
-                    <Button
-                      size="compact-xs"
-                      color="green"
-                      variant="light"
-                      leftSection={<IconBrandWhatsapp size={12} />}
-                      onClick={() =>
-                        window.open(
-                          `https://wa.me/${selectedStudent.whatsappNumber!.replace(/\D/g, "")}`,
-                          "_blank",
-                        )
-                      }
-                    >
-                      {t("open", { defaultValue: "Open" })}
-                    </Button>
-                  </Group>
-                ) : (
-                  <Text c="dimmed">-</Text>
-                )}
-              </Box>
-            </Group>
+              <Group grow>
+                <LabelValue label={t("phone_number")}>
+                  {selectedStudent.phoneNumber || "—"}
+                </LabelValue>
+                <LabelValue
+                  label={t("whatsapp_number", { defaultValue: "WhatsApp" })}
+                >
+                  {selectedStudent.whatsappNumber ? (
+                    <Group gap="xs">
+                      <Text size="sm" fw={500}>
+                        {selectedStudent.whatsappNumber}
+                      </Text>
+                      <Button
+                        size="compact-xs"
+                        color="green"
+                        variant="light"
+                        leftSection={<IconBrandWhatsapp size={12} />}
+                        onClick={() =>
+                          window.open(
+                            `https://wa.me/${selectedStudent.whatsappNumber!.replace(/\D/g, "")}`,
+                            "_blank",
+                          )
+                        }
+                      >
+                        {t("open", { defaultValue: "Open" })}
+                      </Button>
+                    </Group>
+                  ) : (
+                    <Text size="sm" c="dimmed">
+                      —
+                    </Text>
+                  )}
+                </LabelValue>
+              </Group>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("gender")}
-                </Text>
-                <Text>{t(selectedStudent.gender)}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("nationality")}
-                </Text>
-                <Text>{getCountryName(selectedStudent.nationalityCode)}</Text>
-              </Box>
-            </Group>
+              {selectedStudent.userId && (
+                <LabelValue label="User ID">
+                  <Code>{selectedStudent.userId}</Code>
+                </LabelValue>
+              )}
 
-            {selectedStudent.userId && (
-              <Box>
-                <Text size="xs" c="dimmed">
-                  User ID
-                </Text>
-                <Code>{selectedStudent.userId}</Code>
-              </Box>
-            )}
-
-            <Group grow>
-              <Button
-                variant="light"
-                leftSection={<IconEdit size={16} />}
-                onClick={() => {
-                  setEditingStudent(selectedStudent);
-                  setEditModalOpened(true);
-                }}
-              >
-                {t("edit")}
-              </Button>
-              {selectedStudent.email && (
+              <Group grow>
                 <Button
                   variant="light"
-                  color="blue"
-                  leftSection={<IconMail size={16} />}
+                  leftSection={<IconEdit size={16} />}
                   onClick={() => {
-                    window.open(`mailto:${selectedStudent.email}`, "_blank");
+                    setEditingStudent(selectedStudent);
+                    setEditModalOpened(true);
                   }}
                 >
-                  {t("email_verb", { defaultValue: "Email" })}
+                  {t("edit")}
                 </Button>
-              )}
-            </Group>
-          </Stack>
-        )}
-      </Drawer>
+                {selectedStudent.email && (
+                  <Button
+                    variant="light"
+                    color="blue"
+                    leftSection={<IconMail size={16} />}
+                    onClick={() => {
+                      window.open(`mailto:${selectedStudent.email}`, "_blank");
+                    }}
+                  >
+                    {t("email_verb", { defaultValue: "Email" })}
+                  </Button>
+                )}
+              </Group>
+            </Stack>
+          )}
+        </Drawer>
 
-      <ComposeEmailModal
-        opened={composeEmailOpened}
-        onClose={() => setComposeEmailOpened(false)}
-        resolveDto={{ scope: "list", studentIds: selectedIds }}
-      />
-    </Container>
+        <ComposeEmailModal
+          opened={composeEmailOpened}
+          onClose={() => setComposeEmailOpened(false)}
+          resolveDto={{ scope: "list", studentIds: selectedIds }}
+        />
+      </PageShell>
+    </>
   );
 }

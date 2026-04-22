@@ -11,16 +11,26 @@ interface NavbarNestedProps {
     links?: { label: string; link: string }[];
   }[];
   onLinkClick?: (link: string) => void;
+  activeLink?: string;
 }
 
-export function NavbarNested({ data, onLinkClick }: NavbarNestedProps) {
+export function NavbarNested({
+  data,
+  onLinkClick,
+  activeLink,
+}: NavbarNestedProps) {
   const links = data.map((item) => (
-    <LinksGroup {...item} key={item.label} onLinkClick={onLinkClick} />
+    <LinksGroup
+      {...item}
+      key={item.label}
+      onLinkClick={onLinkClick}
+      activeLink={activeLink}
+    />
   ));
 
   return (
     <nav className={classes.navbar}>
-      <ScrollArea className={classes.links}>
+      <ScrollArea className={classes.links} scrollbarSize={4}>
         <div className={classes.linksInner}>{links}</div>
       </ScrollArea>
     </nav>

@@ -15,6 +15,7 @@ export class Semester {
   foreignCurrencyCode!: string;
   paymentDeadlineDate?: Date;
   status!: SemesterStatus;
+  maxRoomChanges?: number | null;
   createdAt!: Date;
   updatedAt!: Date;
   createdBy?: string;

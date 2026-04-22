@@ -8,11 +8,11 @@ interface LocationsManagerProps {
 
 export function LocationsManager({ sidebar, children }: LocationsManagerProps) {
   return (
-    <Grid h="calc(100vh - 100px)">
-      <Grid.Col span={3} style={{ height: "100%" }}>
+    <Grid h="calc(100vh - 130px)">
+      <Grid.Col span={4} style={{ height: "100%" }}>
         {sidebar}
       </Grid.Col>
-      <Grid.Col span={9} style={{ height: "100%" }}>
+      <Grid.Col span={8} style={{ height: "100%" }}>
         {children}
       </Grid.Col>
     </Grid>

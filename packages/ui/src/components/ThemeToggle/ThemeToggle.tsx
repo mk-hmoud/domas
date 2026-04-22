@@ -16,14 +16,16 @@ export function ThemeToggle() {
       onClick={() =>
         setColorScheme(computedColorScheme === "light" ? "dark" : "light")
       }
-      variant="default"
-      size="xl"
+      variant="subtle"
+      color="gray"
+      size="md"
+      radius="xl"
       aria-label="Toggle color scheme"
     >
       {computedColorScheme === "dark" ? (
-        <IconSun stroke={1.5} />
+        <IconSun size={16} stroke={1.5} />
       ) : (
-        <IconMoon stroke={1.5} />
+        <IconMoon size={16} stroke={1.5} />
       )}
     </ActionIcon>
   );

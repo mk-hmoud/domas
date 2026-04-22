@@ -1,7 +1,14 @@
-import { Table, Group, ActionIcon } from "@mantine/core";
-import { IconTrash, IconPencil } from "@tabler/icons-react";
+import { Table, Badge, ActionIcon, Menu } from "@mantine/core";
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconTrash,
+  IconEye,
+} from "@tabler/icons-react";
 import { User } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface UsersTableProps {
   data: User[];
@@ -25,40 +32,76 @@ export function UsersTable({
       style={{ cursor: onRowClick ? "pointer" : "default" }}
     >
       <Table.Td>{user.email}</Table.Td>
-      <Table.Td>{user.isActive ? t("active") : t("inactive")}</Table.Td>
+      <Table.Td>
+        <Badge color={user.isActive ? "green" : "gray"}>
+          {user.isActive ? t("active") : t("inactive")}
+        </Badge>
+      </Table.Td>
       <Table.Td>{new Date(user.createdAt).toLocaleDateString()}</Table.Td>
       <Table.Td onClick={(e) => e.stopPropagation()}>
-        <Group gap={0} justify="flex-end">
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            onClick={() => onEdit?.(user)}
-          >
-            <IconPencil size={16} />
-          </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            onClick={() => onDelete?.(user)}
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
-        </Group>
+        <Menu shadow="md" width={180} withinPortal position="bottom-end">
+          <Menu.Target>
+            <ActionIcon variant="subtle" color="gray">
+              <IconDotsVertical size={16} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            {onRowClick && (
+              <Menu.Item
+                leftSection={<IconEye size={14} />}
+                onClick={() => onRowClick(user)}
+              >
+                {t("view_details", { defaultValue: "View Details" })}
+              </Menu.Item>
+            )}
+            {onEdit && (
+              <Menu.Item
+                leftSection={<IconEdit size={14} />}
+                onClick={() => onEdit(user)}
+              >
+                {t("edit")}
+              </Menu.Item>
+            )}
+            {onDelete && (
+              <>
+                <Menu.Divider />
+                <Menu.Item
+                  color="red"
+                  leftSection={<IconTrash size={14} />}
+                  onClick={() => onDelete(user)}
+                >
+                  {t("delete")}
+                </Menu.Item>
+              </>
+            )}
+          </Menu.Dropdown>
+        </Menu>
       </Table.Td>
     </Table.Tr>
   ));
 
   return (
-    <Table>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("email")}</Table.Th>
-          <Table.Th>{t("status")}</Table.Th>
-          <Table.Th>{t("created_at")}</Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th}>{t("email")}</Table.Th>
+          <Table.Th className={classes.th}>{t("status")}</Table.Th>
+          <Table.Th className={classes.th}>{t("created_at")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 48 }} />
         </Table.Tr>
       </Table.Thead>
-      <Table.Tbody>{rows}</Table.Tbody>
+      <Table.Tbody>
+        {rows}
+        {data.length === 0 && (
+          <Table.Tr>
+            <Table.Td colSpan={4} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_users_found", { defaultValue: "No users found" })}
+              />
+            </Table.Td>
+          </Table.Tr>
+        )}
+      </Table.Tbody>
     </Table>
   );
 }

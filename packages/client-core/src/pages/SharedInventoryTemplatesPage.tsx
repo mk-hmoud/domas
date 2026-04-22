@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  Title,
-  Button,
-  Group,
-  Paper,
-  LoadingOverlay,
-  Container,
-  Text,
-} from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
+import { Button, Paper, LoadingOverlay, Text } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { inventory } from "@domas/api-client";
@@ -139,45 +132,48 @@ export function SharedInventoryTemplatesPage() {
   };
 
   return (
-    <Container size="lg" py="xl">
-      <Group justify="space-between" mb="lg">
-        <Title>
-          {t("inventory_blueprints", { defaultValue: "Inventory Blueprints" })}
-        </Title>
-        <Button
-          leftSection={<IconPlus size={14} />}
-          onClick={() => {
-            setSelectedTemplate(null);
-            setModalOpened(true);
-          }}
-        >
-          {t("create_template")}
-        </Button>
-      </Group>
-
-      <Paper withBorder radius="md" style={{ position: "relative" }}>
-        <LoadingOverlay visible={loading} />
-        <InventoryTemplateTable
-          data={data}
-          onEdit={(template) => {
-            setSelectedTemplate(template);
-            setModalOpened(true);
-          }}
-          onDelete={handleDelete}
-        />
-      </Paper>
-
-      <InventoryTemplateModal
-        opened={modalOpened}
-        onClose={() => {
-          setModalOpened(false);
-          setSelectedTemplate(null);
-        }}
-        onSubmit={selectedTemplate ? handleUpdate : handleCreate}
-        initialValues={selectedTemplate}
-        catalog={catalog}
-        loading={modalLoading}
+    <>
+      <PageHeader
+        title={t("inventory_blueprints", {
+          defaultValue: "Inventory Blueprints",
+        })}
+        actions={
+          <Button
+            leftSection={<IconPlus size={14} />}
+            onClick={() => {
+              setSelectedTemplate(null);
+              setModalOpened(true);
+            }}
+          >
+            {t("create_template")}
+          </Button>
+        }
       />
-    </Container>
+      <PageShell>
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} />
+          <InventoryTemplateTable
+            data={data}
+            onEdit={(template) => {
+              setSelectedTemplate(template);
+              setModalOpened(true);
+            }}
+            onDelete={handleDelete}
+          />
+        </Paper>
+
+        <InventoryTemplateModal
+          opened={modalOpened}
+          onClose={() => {
+            setModalOpened(false);
+            setSelectedTemplate(null);
+          }}
+          onSubmit={selectedTemplate ? handleUpdate : handleCreate}
+          initialValues={selectedTemplate}
+          catalog={catalog}
+          loading={modalLoading}
+        />
+      </PageShell>
+    </>
   );
 }

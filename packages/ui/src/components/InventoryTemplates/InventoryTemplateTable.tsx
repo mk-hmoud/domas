@@ -19,6 +19,8 @@ import {
 import { InventoryTemplate } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { useState, Fragment } from "react";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface InventoryTemplateTableProps {
   data: InventoryTemplate[];
@@ -177,26 +179,26 @@ export function InventoryTemplateTable({
   });
 
   return (
-    <Table striped highlightOnHover verticalSpacing="sm">
-      <Table.Thead>
+    <Table highlightOnHover verticalSpacing="sm">
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th />
-          <Table.Th>{t("name")}</Table.Th>
-          <Table.Th>{t("scope")}</Table.Th>
-          <Table.Th>{t("items")}</Table.Th>
-          <Table.Th style={{ width: 120 }} />
+          <Table.Th className={classes.th} style={{ width: 40 }} />
+          <Table.Th className={classes.th}>{t("name")}</Table.Th>
+          <Table.Th className={classes.th}>{t("scope")}</Table.Th>
+          <Table.Th className={classes.th}>{t("items")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 120 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={5}>
-              <Text ta="center" c="dimmed" py="xl">
-                {t("no_templates_found", {
+            <Table.Td colSpan={5} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_templates_found", {
                   defaultValue: "No templates found",
                 })}
-              </Text>
+              />
             </Table.Td>
           </Table.Tr>
         )}

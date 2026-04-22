@@ -1,5 +1,7 @@
-import { Table, Text, LoadingOverlay, Paper } from "@mantine/core";
+import { Table, LoadingOverlay, Paper, ScrollArea } from "@mantine/core";
 import { ReactNode } from "react";
+import { EmptyState } from "../EmptyState";
+import classes from "./table.module.css";
 
 export interface Column<T> {
   header: ReactNode;
@@ -17,6 +19,7 @@ interface GenericTableProps<T> {
   actions?: (row: T) => ReactNode;
   emptyMessage?: string;
   rowKey: (row: T) => string | number;
+  maxHeight?: number;
 }
 
 export function GenericTable<T>({
@@ -27,7 +30,10 @@ export function GenericTable<T>({
   actions,
   emptyMessage = "No data found",
   rowKey,
+  maxHeight,
 }: GenericTableProps<T>) {
+  const colSpan = columns.length + (actions ? 1 : 0);
+
   return (
     <Paper
       withBorder
@@ -39,54 +45,54 @@ export function GenericTable<T>({
         zIndex={10}
         overlayProps={{ blur: 2 }}
       />
-      <Table striped highlightOnHover={!!onRowClick}>
-        <Table.Thead>
-          <Table.Tr>
-            {columns.map((col, index) => (
-              <Table.Th
-                key={index}
-                style={{ width: col.width, textAlign: col.align }}
-              >
-                {col.header}
-              </Table.Th>
-            ))}
-            {actions && <Table.Th style={{ width: 80 }} />}
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.length > 0 ? (
-            data.map((row) => (
-              <Table.Tr
-                key={rowKey(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                style={{ cursor: onRowClick ? "pointer" : "default" }}
-              >
-                {columns.map((col, index) => (
-                  <Table.Td key={index} style={{ textAlign: col.align }}>
-                    {col.cell
-                      ? col.cell(row)
-                      : col.accessorKey
-                        ? (row[col.accessorKey] as ReactNode)
-                        : null}
-                  </Table.Td>
-                ))}
-                {actions && <Table.Td>{actions(row)}</Table.Td>}
-              </Table.Tr>
-            ))
-          ) : (
+      <ScrollArea h={maxHeight} type="auto" scrollbarSize={6}>
+        <Table highlightOnHover={!!onRowClick} stickyHeader>
+          <Table.Thead className={classes.thead}>
             <Table.Tr>
-              <Table.Td
-                colSpan={columns.length + (actions ? 1 : 0)}
-                style={{ height: 100 }}
-              >
-                <Text c="dimmed" ta="center">
-                  {emptyMessage}
-                </Text>
-              </Table.Td>
+              {columns.map((col, index) => (
+                <Table.Th
+                  key={index}
+                  className={classes.th}
+                  style={{ width: col.width, textAlign: col.align }}
+                >
+                  {col.header}
+                </Table.Th>
+              ))}
+              {actions && (
+                <Table.Th className={classes.th} style={{ width: 64 }} />
+              )}
             </Table.Tr>
-          )}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {data.length > 0 ? (
+              data.map((row) => (
+                <Table.Tr
+                  key={rowKey(row)}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  style={{ cursor: onRowClick ? "pointer" : "default" }}
+                >
+                  {columns.map((col, index) => (
+                    <Table.Td key={index} style={{ textAlign: col.align }}>
+                      {col.cell
+                        ? col.cell(row)
+                        : col.accessorKey
+                          ? (row[col.accessorKey] as ReactNode)
+                          : null}
+                    </Table.Td>
+                  ))}
+                  {actions && <Table.Td>{actions(row)}</Table.Td>}
+                </Table.Tr>
+              ))
+            ) : (
+              <Table.Tr>
+                <Table.Td colSpan={colSpan} style={{ padding: 0 }}>
+                  <EmptyState title={emptyMessage} />
+                </Table.Td>
+              </Table.Tr>
+            )}
+          </Table.Tbody>
+        </Table>
+      </ScrollArea>
     </Paper>
   );
 }

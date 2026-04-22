@@ -23,7 +23,14 @@ export function StatCard({
     <Paper withBorder p="md" radius="md">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <div>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>
+          <Text
+            size="xs"
+            c="dimmed"
+            tt="uppercase"
+            fw={600}
+            mb={4}
+            style={{ letterSpacing: "0.05em" }}
+          >
             {label}
           </Text>
           {loading ? (

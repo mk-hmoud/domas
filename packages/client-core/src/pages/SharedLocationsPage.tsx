@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
   Button,
   SimpleGrid,
@@ -8,8 +9,6 @@ import {
   Paper,
   Loader,
   Center,
-  Title,
-  Container,
   Checkbox,
   Box,
   Stack,
@@ -20,6 +19,7 @@ import {
   Pagination,
   LoadingOverlay,
   Tabs,
+  Menu,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -31,8 +31,9 @@ import {
   IconX,
   IconHierarchy,
   IconTable,
-  IconFiles,
   IconAlertTriangle,
+  IconDotsVertical,
+  IconEdit,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -71,6 +72,8 @@ import {
   ApplyTemplateModal,
   CreateBookingModal,
   ComposeEmailModal,
+  EmptyState,
+  LabelValue,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
@@ -302,12 +305,30 @@ function LocationsContent() {
   }, []);
 
   // Calculate breadcrumbs
-  const breadcrumbs = selectedNode
-    ? findLocationPath(treeData, selectedNode.id)?.map((n) => ({
-        label: n.name,
-        onClick: () => selectNode(n),
-      }))
-    : [];
+  const locationPath = selectedNode
+    ? findLocationPath(treeData, selectedNode.id)
+    : null;
+
+  const breadcrumbs =
+    locationPath?.map((n) => ({
+      label: n.name,
+      onClick: () => selectNode(n),
+    })) ?? [];
+
+  // IDs of ancestor nodes that must be expanded in the tree to reveal the selected node
+  const expandedIds = useMemo(() => {
+    if (!locationPath || locationPath.length <= 1)
+      return new Set<string | number>();
+    return new Set<string | number>(
+      locationPath
+        .slice(0, -1)
+        .map((n) =>
+          typeof n.id === "string" && n.id.startsWith("bed-")
+            ? n.id
+            : `loc-${n.id}`,
+        ),
+    );
+  }, [locationPath]);
 
   useEffect(() => {
     // We clear child selection contextually when navigating,
@@ -489,7 +510,11 @@ function LocationsContent() {
   };
 
   const handleEditLocation = () => {
-    if (selectedNode) {
+    if (!selectedNode) return;
+    if (selectedNode.type === LocationType.BED) {
+      setBedToEdit(selectedNode);
+      setEditBedModalOpened(true);
+    } else {
       setLocationToEdit(selectedNode);
       setParentForCreation({ id: null });
       setCreateModalOpened(true);
@@ -743,6 +768,14 @@ function LocationsContent() {
     setViewSelectionDrawerOpened(true);
   };
 
+  const handleApplyBlueprintForNode = () => {
+    if (!selectedNode) return;
+    setTemplateTargetType(
+      selectedNode.type === LocationType.BED ? "bed" : "location",
+    );
+    setApplyTemplateModalOpened(true);
+  };
+
   const handleUpdateBed = async (values: any) => {
     if (!bedToEdit) return;
     try {
@@ -874,85 +907,72 @@ function LocationsContent() {
   }
 
   return (
-    <Container size="xl" py="xl">
-      <Group justify="space-between" mb="lg">
-        <Title>
-          {t("locations_management", { defaultValue: "Locations Management" })}
-        </Title>
-        <SegmentedControl
-          value={activeView}
-          onChange={setActiveView}
-          data={[
-            {
-              label: (
-                <Center>
-                  <IconHierarchy size={16} />
-                  <Box ml={10}>{t("structure", "Structure")}</Box>
-                </Center>
-              ),
-              value: "structure",
-            },
-            {
-              label: (
-                <Center>
-                  <IconTable size={16} />
-                  <Box ml={10}>{t("registry", "Registry")}</Box>
-                </Center>
-              ),
-              value: "registry",
-            },
-          ]}
-        />
-      </Group>
-
-      {activeView === "structure" ? (
-        <LocationsManager
-          sidebar={
-            <LocationTree
-              data={treeData}
-              selectedId={selectedNode?.id}
-              onSelect={selectNode}
-              selectedIds={selectedIds}
-              onToggleSelection={handleToggleSelection}
-              onSelectBranch={handleSelectBranch}
-            />
-          }
-        >
-          {selectedNode ? (
-            <LocationDetail
-              title={selectedNode.name}
-              type={selectedNode.type}
-              breadcrumbs={breadcrumbs}
-              actions={
-                <>
-                  {selectedNode.type !== LocationType.UNIVERSITY && (
-                    <>
-                      <Button variant="default" onClick={handleEditLocation}>
-                        {t("edit")}
-                      </Button>
+    <>
+      <PageHeader
+        title={t("locations_management", {
+          defaultValue: "Locations Management",
+        })}
+        actions={
+          <SegmentedControl
+            value={activeView}
+            onChange={setActiveView}
+            data={[
+              {
+                label: (
+                  <Center>
+                    <IconHierarchy size={16} />
+                    <Box ml={10}>{t("structure", "Structure")}</Box>
+                  </Center>
+                ),
+                value: "structure",
+              },
+              {
+                label: (
+                  <Center>
+                    <IconTable size={16} />
+                    <Box ml={10}>{t("registry", "Registry")}</Box>
+                  </Center>
+                ),
+                value: "registry",
+              },
+            ]}
+          />
+        }
+      />
+      <PageShell size="xl">
+        {activeView === "structure" ? (
+          <LocationsManager
+            sidebar={
+              <LocationTree
+                data={treeData}
+                selectedId={selectedNode?.id}
+                onSelect={selectNode}
+                selectedIds={selectedIds}
+                onToggleSelection={handleToggleSelection}
+                onSelectBranch={handleSelectBranch}
+                expandedIds={expandedIds}
+              />
+            }
+          >
+            {selectedNode ? (
+              <LocationDetail
+                title={selectedNode.name}
+                type={selectedNode.type}
+                breadcrumbs={breadcrumbs}
+                actions={
+                  <>
+                    {(selectedNode.type === LocationType.ROOM ||
+                      selectedNode.type === LocationType.BED) && (
                       <Button
-                        variant="default"
-                        color="red"
-                        leftSection={<IconTrash size={16} />}
-                        onClick={handleDeleteSelected}
+                        variant="filled"
+                        color="green"
+                        leftSection={<IconPlus size={16} />}
+                        onClick={() => setBookingModalOpened(true)}
                       >
-                        {t("delete")}
+                        {t("create_booking")}
                       </Button>
-                    </>
-                  )}
-                  {(selectedNode.type === LocationType.ROOM ||
-                    selectedNode.type === LocationType.BED) && (
-                    <Button
-                      variant="filled"
-                      color="green"
-                      leftSection={<IconPlus size={16} />}
-                      onClick={() => setBookingModalOpened(true)}
-                    >
-                      {t("create_booking")}
-                    </Button>
-                  )}
-                  {selectedNode.type === LocationType.ROOM ? (
-                    <>
+                    )}
+                    {selectedNode.type === LocationType.ROOM && (
                       <Button
                         variant="light"
                         leftSection={<IconPlus size={16} />}
@@ -960,31 +980,49 @@ function LocationsContent() {
                       >
                         {t("create_bed", { defaultValue: "Create Bed" })}
                       </Button>
-                      <Button
-                        variant="light"
-                        color="blue"
-                        leftSection={<IconFiles size={16} />}
-                        onClick={() => {
-                          setTemplateTargetType("location");
-                          setApplyTemplateModalOpened(true);
-                        }}
-                      >
-                        {t("apply_blueprint")}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      leftSection={<IconPlus size={16} />}
-                      onClick={handleOpenCreateChild}
-                    >
-                      {t("add_child")}
-                    </Button>
-                  )}
-                </>
-              }
-            >
-              <Paper p="md" mb="md" withBorder bg="var(--mantine-color-body)">
-                <Group>
+                    )}
+                    {selectedNode.type !== LocationType.ROOM &&
+                      selectedNode.type !== LocationType.BED &&
+                      selectedNode.type !== LocationType.UNIVERSITY && (
+                        <Button
+                          leftSection={<IconPlus size={16} />}
+                          onClick={handleOpenCreateChild}
+                        >
+                          {t("add_child")}
+                        </Button>
+                      )}
+                    {selectedNode.type !== LocationType.UNIVERSITY && (
+                      <Menu shadow="md" position="bottom-end" width={160}>
+                        <Menu.Target>
+                          <ActionIcon
+                            variant="default"
+                            size="lg"
+                            aria-label="More actions"
+                          >
+                            <IconDotsVertical size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item
+                            leftSection={<IconEdit size={14} />}
+                            onClick={handleEditLocation}
+                          >
+                            {t("edit")}
+                          </Menu.Item>
+                          <Menu.Item
+                            leftSection={<IconTrash size={14} />}
+                            color="red"
+                            onClick={handleDeleteSelected}
+                          >
+                            {t("delete")}
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
+                    )}
+                  </>
+                }
+              >
+                <Group mb="md" gap="xs">
                   <Badge
                     variant="light"
                     color="blue"
@@ -1042,432 +1080,516 @@ function LocationsContent() {
                     </Badge>
                   )}
                 </Group>
-              </Paper>
 
-              {selectedNode.type === LocationType.BED ? (
-                <Stack gap="md" p="md">
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("bed_label", { defaultValue: "Label" })}
-                    </Text>
-                    <Text size="lg" fw={600}>
-                      {selectedNode.name}
-                    </Text>
-                  </Box>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("status", { defaultValue: "Status" })}
-                    </Text>
-                    <Badge
-                      color={
-                        selectedNode.status === "available"
-                          ? "green"
-                          : selectedNode.status === "maintenance"
-                            ? "orange"
-                            : "blue"
-                      }
+                {selectedNode.type === LocationType.BED ? (
+                  <Stack gap="md" p="md">
+                    <LabelValue
+                      label={t("bed_label", { defaultValue: "Label" })}
                     >
-                      {t(`bed_status.${selectedNode.status}`)}
-                    </Badge>
-                  </Box>
+                      {selectedNode.name}
+                    </LabelValue>
+                    <LabelValue label={t("status", { defaultValue: "Status" })}>
+                      <Badge
+                        color={
+                          selectedNode.status === "available"
+                            ? "green"
+                            : selectedNode.status === "maintenance"
+                              ? "orange"
+                              : "blue"
+                        }
+                        variant="light"
+                      >
+                        {t(`bed_status.${selectedNode.status}`)}
+                      </Badge>
+                    </LabelValue>
 
-                  {showInventory && (
-                    <>
-                      <Divider />
-                      <InventoryAssignmentList
-                        data={inventoryAssignments}
-                        loading={inventoryLoading}
-                        onAddClick={() => setAssignModalOpened(true)}
-                        onRemove={handleDeleteAssignment}
-                        onUpdateQuantity={handleUpdateAssignmentQuantity}
-                      />
-                    </>
-                  )}
-                </Stack>
-              ) : selectedNode.type === LocationType.ROOM ? (
-                <>
-                  <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
-                    {roomBeds.map((bed) => {
-                      const globalId = `bed-${bed.id}`;
-                      return (
-                        <BedCard
-                          key={bed.id}
-                          id={bed.id}
-                          label={bed.label}
-                          status={bed.status}
-                          selected={selectedIds.includes(globalId)}
-                          onClick={() =>
-                            selectNode({
-                              children: [],
-                              ...bed,
-                              id: globalId,
-                              name: bed.label,
-                              type: LocationType.BED,
-                            })
+                    {showInventory && (
+                      <>
+                        <Divider my="md" />
+                        <InventoryAssignmentList
+                          data={inventoryAssignments}
+                          loading={inventoryLoading}
+                          onAddClick={() => setAssignModalOpened(true)}
+                          onRemove={handleDeleteAssignment}
+                          onUpdateQuantity={handleUpdateAssignmentQuantity}
+                          onApplyTemplate={handleApplyBlueprintForNode}
+                        />
+                      </>
+                    )}
+                  </Stack>
+                ) : selectedNode.type === LocationType.ROOM ? (
+                  <>
+                    <Group justify="space-between" align="center" mb="sm">
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        fw={600}
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.05em" }}
+                      >
+                        {t("beds", { defaultValue: "Beds" })} ({roomBeds.length}
+                        )
+                      </Text>
+                      {roomBeds.length > 0 && (
+                        <Checkbox
+                          size="xs"
+                          label={t("select_all", {
+                            defaultValue: "Select All",
+                          })}
+                          checked={
+                            roomBeds.length > 0 &&
+                            roomBeds.every((b) =>
+                              selectedIds.includes(`bed-${b.id}`),
+                            )
                           }
-                          onSelect={() => handleToggleSelection(globalId)}
-                          onEdit={() => {}}
-                          onDelete={() => handleDeleteBed(bed)}
-                          onBook={() => {
-                            // First select the node so the modal gets the right initialBedId
-                            selectNode({
-                              children: [],
-                              ...bed,
-                              id: globalId,
-                              name: bed.label,
-                              type: LocationType.BED,
-                            });
-                            setBookingModalOpened(true);
+                          indeterminate={
+                            roomBeds.some((b) =>
+                              selectedIds.includes(`bed-${b.id}`),
+                            ) &&
+                            !roomBeds.every((b) =>
+                              selectedIds.includes(`bed-${b.id}`),
+                            )
+                          }
+                          onChange={() => {
+                            const allBedIds = roomBeds.map(
+                              (b) => `bed-${b.id}`,
+                            );
+                            const allSelected = allBedIds.every((id) =>
+                              selectedIds.includes(id),
+                            );
+                            if (allSelected) {
+                              setSelectedIds((prev) =>
+                                prev.filter(
+                                  (id) => !allBedIds.includes(id as string),
+                                ),
+                              );
+                            } else {
+                              setSelectedIds((prev) =>
+                                Array.from(new Set([...prev, ...allBedIds])),
+                              );
+                            }
                           }}
                         />
-                      );
-                    })}
-                  </SimpleGrid>
-                  {roomBeds.length === 0 && (
-                    <Text c="dimmed" ta="center" py="md">
-                      No beds found
-                    </Text>
-                  )}
-
-                  {showInventory && (
-                    <>
-                      <Divider my="md" />
-                      <InventoryAssignmentList
-                        data={inventoryAssignments}
-                        loading={inventoryLoading}
-                        onAddClick={() => setAssignModalOpened(true)}
-                        onRemove={handleDeleteAssignment}
-                        onUpdateQuantity={handleUpdateAssignmentQuantity}
-                      />
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {children.length > 0 && (
-                    <Group mb="md">
-                      <Checkbox
-                        checked={
-                          children.length > 0 &&
-                          children.every((c) =>
-                            selectedIds.includes(Number(c.id)),
-                          )
-                        }
-                        indeterminate={
-                          children.some((c) =>
-                            selectedIds.includes(Number(c.id)),
-                          ) &&
-                          !children.every((c) =>
-                            selectedIds.includes(Number(c.id)),
-                          )
-                        }
-                        onChange={handleToggleSelectAllChildren}
-                        label={t("select_all", { defaultValue: "Select All" })}
-                      />
+                      )}
                     </Group>
-                  )}
-                  {children.length > 0 ? (
-                    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                      {children.map((child) => {
-                        const globalId =
-                          child.type === LocationType.BED
-                            ? `bed-${child.id}`
-                            : `loc-${child.id}`;
-                        return selectedNode.type === LocationType.FLOOR ? (
-                          <RoomCard
-                            key={child.id}
-                            id={Number(child.id)}
-                            name={child.name}
-                            genderLock={child.genderLock || undefined}
+                    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
+                      {roomBeds.map((bed) => {
+                        const globalId = `bed-${bed.id}`;
+                        return (
+                          <BedCard
+                            key={bed.id}
+                            id={bed.id}
+                            label={bed.label}
+                            status={bed.status}
                             selected={selectedIds.includes(globalId)}
-                            onClick={() => selectNode(child as any)}
+                            onClick={() =>
+                              selectNode({
+                                children: [],
+                                ...bed,
+                                id: globalId,
+                                name: bed.label,
+                                type: LocationType.BED,
+                              })
+                            }
                             onSelect={() => handleToggleSelection(globalId)}
-                            onEdit={() => handleEditChild(child as any)}
-                            onDelete={() => handleDeleteChild(child as any)}
-                          />
-                        ) : (
-                          <GenericLocationCard
-                            key={child.id}
-                            id={Number(child.id)}
-                            name={child.name}
-                            icon={<LocationIcon type={child.type} />}
-                            selected={selectedIds.includes(globalId)}
-                            onClick={() => selectNode(child as any)}
-                            onSelect={() => handleToggleSelection(globalId)}
-                            onEdit={() => handleEditChild(child as any)}
-                            onDelete={() => handleDeleteChild(child as any)}
+                            onEdit={() => {}}
+                            onDelete={() => handleDeleteBed(bed)}
+                            onBook={() => {
+                              // First select the node so the modal gets the right initialBedId
+                              selectNode({
+                                children: [],
+                                ...bed,
+                                id: globalId,
+                                name: bed.label,
+                                type: LocationType.BED,
+                              });
+                              setBookingModalOpened(true);
+                            }}
                           />
                         );
                       })}
                     </SimpleGrid>
-                  ) : (
-                    <Text c="dimmed" ta="center" py="xl">
-                      {t("no_sub_locations")}
-                    </Text>
-                  )}
-
-                  {showInventory && (
-                    <>
-                      <Divider my="md" />
-                      <InventoryAssignmentList
-                        data={inventoryAssignments}
-                        loading={inventoryLoading}
-                        onAddClick={() => setAssignModalOpened(true)}
-                        onRemove={handleDeleteAssignment}
-                        onUpdateQuantity={handleUpdateAssignmentQuantity}
+                    {roomBeds.length === 0 && (
+                      <EmptyState
+                        title={t("no_beds_found", {
+                          defaultValue: "No beds found",
+                        })}
                       />
-                    </>
-                  )}
-                </>
-              )}
-            </LocationDetail>
-          ) : (
-            <Center h="100%">
-              <Text c="dimmed">{t("select_location_prompt")}</Text>
-            </Center>
-          )}
-        </LocationsManager>
-      ) : (
-        <Stack gap="md">
-          <Tabs value={activeTab} onChange={setActiveTab} variant="outline">
-            <Tabs.List>
-              <Tabs.Tab
-                value="locations"
-                leftSection={<LocationIcon type={LocationType.CAMPUS} />}
-              >
-                {t("locations", "Locations")}
-              </Tabs.Tab>
-              <Tabs.Tab
-                value="beds"
-                leftSection={<LocationIcon type={LocationType.BED} />}
-              >
-                {t("beds", "Beds")}
-              </Tabs.Tab>
-            </Tabs.List>
+                    )}
 
-            <Tabs.Panel value="locations" pt="md">
-              <Stack gap="md">
-                <LocationRegistryFilters
-                  filters={registryFilters}
-                  onFilterChange={handleFilterChange}
-                  onClearFilters={handleClearFilters}
-                />
-                <Paper withBorder radius="md" style={{ position: "relative" }}>
-                  <LoadingOverlay visible={registryLoading} />
-                  <LocationRegistryTable
-                    data={registryData}
-                    onView={(loc) => {
-                      setActiveView("structure");
-                      selectNode(loc as any);
-                    }}
-                    onEmailResidents={(locationId) =>
-                      setEmailLocationId(locationId)
-                    }
-                    selectedIds={selectedIds}
-                    onToggleSelection={handleToggleSelection}
-                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                    {showInventory && (
+                      <>
+                        <Divider my="md" />
+                        <InventoryAssignmentList
+                          data={inventoryAssignments}
+                          loading={inventoryLoading}
+                          onAddClick={() => setAssignModalOpened(true)}
+                          onRemove={handleDeleteAssignment}
+                          onUpdateQuantity={handleUpdateAssignmentQuantity}
+                          onApplyTemplate={handleApplyBlueprintForNode}
+                        />
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Group justify="space-between" align="center" mb="sm">
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        fw={600}
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.05em" }}
+                      >
+                        {selectedNode.type === LocationType.UNIVERSITY
+                          ? t("campuses", { defaultValue: "Campuses" })
+                          : selectedNode.type === LocationType.CAMPUS
+                            ? t("buildings", { defaultValue: "Buildings" })
+                            : selectedNode.type === LocationType.BUILDING
+                              ? t("floors", { defaultValue: "Floors" })
+                              : selectedNode.type === LocationType.FLOOR
+                                ? t("rooms", { defaultValue: "Rooms" })
+                                : t("locations", {
+                                    defaultValue: "Locations",
+                                  })}{" "}
+                        ({children.length})
+                      </Text>
+                      {children.length > 0 && (
+                        <Checkbox
+                          size="xs"
+                          label={t("select_all", {
+                            defaultValue: "Select All",
+                          })}
+                          checked={
+                            children.length > 0 &&
+                            children.every((c) =>
+                              selectedIds.includes(Number(c.id)),
+                            )
+                          }
+                          indeterminate={
+                            children.some((c) =>
+                              selectedIds.includes(Number(c.id)),
+                            ) &&
+                            !children.every((c) =>
+                              selectedIds.includes(Number(c.id)),
+                            )
+                          }
+                          onChange={handleToggleSelectAllChildren}
+                        />
+                      )}
+                    </Group>
+                    {children.length > 0 ? (
+                      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
+                        {children.map((child) => {
+                          const globalId =
+                            child.type === LocationType.BED
+                              ? `bed-${child.id}`
+                              : `loc-${child.id}`;
+                          return selectedNode.type === LocationType.FLOOR ? (
+                            <RoomCard
+                              key={child.id}
+                              id={Number(child.id)}
+                              name={child.name}
+                              genderLock={child.genderLock || undefined}
+                              selected={selectedIds.includes(globalId)}
+                              onClick={() => selectNode(child as any)}
+                              onSelect={() => handleToggleSelection(globalId)}
+                              onEdit={() => handleEditChild(child as any)}
+                              onDelete={() => handleDeleteChild(child as any)}
+                            />
+                          ) : (
+                            <GenericLocationCard
+                              key={child.id}
+                              id={Number(child.id)}
+                              name={child.name}
+                              icon={<LocationIcon type={child.type} />}
+                              selected={selectedIds.includes(globalId)}
+                              onClick={() => selectNode(child as any)}
+                              onSelect={() => handleToggleSelection(globalId)}
+                              onEdit={() => handleEditChild(child as any)}
+                              onDelete={() => handleDeleteChild(child as any)}
+                            />
+                          );
+                        })}
+                      </SimpleGrid>
+                    ) : (
+                      <EmptyState title={t("no_sub_locations")} />
+                    )}
+
+                    {showInventory && (
+                      <>
+                        <Divider my="md" />
+                        <InventoryAssignmentList
+                          data={inventoryAssignments}
+                          loading={inventoryLoading}
+                          onAddClick={() => setAssignModalOpened(true)}
+                          onRemove={handleDeleteAssignment}
+                          onUpdateQuantity={handleUpdateAssignmentQuantity}
+                          onApplyTemplate={handleApplyBlueprintForNode}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              </LocationDetail>
+            ) : (
+              <EmptyState
+                title={t("select_location_prompt", {
+                  defaultValue: "Select a location to view details",
+                })}
+              />
+            )}
+          </LocationsManager>
+        ) : (
+          <Stack gap="md">
+            <Tabs value={activeTab} onChange={setActiveTab} variant="outline">
+              <Tabs.List>
+                <Tabs.Tab
+                  value="locations"
+                  leftSection={<LocationIcon type={LocationType.CAMPUS} />}
+                >
+                  {t("locations", "Locations")}
+                </Tabs.Tab>
+                <Tabs.Tab
+                  value="beds"
+                  leftSection={<LocationIcon type={LocationType.BED} />}
+                >
+                  {t("beds", "Beds")}
+                </Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="locations" pt="md">
+                <Stack gap="md">
+                  <LocationRegistryFilters
+                    filters={registryFilters}
+                    onFilterChange={handleFilterChange}
+                    onClearFilters={handleClearFilters}
                   />
-                </Paper>
-              </Stack>
-            </Tabs.Panel>
-
-            <Tabs.Panel value="beds" pt="md">
-              <Stack gap="md">
-                <LocationRegistryFilters
-                  filters={registryFilters}
-                  onFilterChange={handleFilterChange}
-                  onClearFilters={handleClearFilters}
-                />
-                <Paper withBorder radius="md" style={{ position: "relative" }}>
-                  <LoadingOverlay visible={registryLoading} />
-                  <LocationRegistryTable
-                    data={registryData}
-                    onView={(bed) => {
-                      setActiveView("structure");
-                      // Convert virtual ID to bed- prefixed ID for the tree
-                      const targetId = `bed-${bed.id}`;
-                      selectNode({
-                        ...bed,
-                        id: targetId,
-                        type: LocationType.BED,
-                      } as any);
-                    }}
-                    selectedIds={selectedIds}
-                    onToggleSelection={handleToggleSelection}
-                    onToggleSelectAll={handleToggleSelectAllRegistry}
-                  />
-                </Paper>
-              </Stack>
-            </Tabs.Panel>
-          </Tabs>
-
-          <Group justify="flex-end">
-            <Pagination
-              total={Math.ceil(
-                totalRegistryItems / (registryFilters.limit || 10),
-              )}
-              value={registryFilters.page}
-              onChange={(p) => handleFilterChange("page", p)}
-            />
-          </Group>
-        </Stack>
-      )}
-
-      <CreateLocationModal
-        opened={createModalOpened}
-        onClose={() => {
-          setCreateModalOpened(false);
-          setLocationToEdit(null);
-        }}
-        onSubmit={handleSubmitLocation}
-        parentId={parentForCreation.id}
-        parentType={parentForCreation.type}
-        initialValues={locationToEdit}
-        roomTypes={roomTypesList}
-      />
-
-      <CreateBedModal
-        opened={createBedModalOpened}
-        onClose={() => setCreateBedModalOpened(false)}
-        onSubmit={handleCreateBed}
-        locationId={Number(selectedNode?.id)}
-      />
-
-      <CreateBedModal
-        opened={editBedModalOpened}
-        onClose={() => {
-          setEditBedModalOpened(false);
-          setBedToEdit(null);
-        }}
-        onSubmit={handleUpdateBed}
-        locationId={bedToEdit?.locationId}
-        initialValues={bedToEdit}
-      />
-
-      <AssignInventoryModal
-        opened={assignModalOpened}
-        onClose={() => setAssignModalOpened(false)}
-        onSubmit={handleAssignItem}
-        catalog={filteredCatalog}
-        locationId={
-          selectedNode?.type !== LocationType.BED
-            ? Number(selectedNode?.id)
-            : undefined
-        }
-        bedId={
-          selectedNode?.type === LocationType.BED
-            ? typeof selectedNode.id === "string"
-              ? Number(selectedNode.id.replace("bed-", ""))
-              : Number(selectedNode.id)
-            : undefined
-        }
-        loading={inventoryLoading}
-      />
-
-      <BulkActionsBar
-        selectedCount={selectedIds.length}
-        onDelete={handleBulkDelete}
-        onEdit={handleBulkEdit}
-        onApplyTemplate={() => handleOpenApplyTemplate(null)}
-        onClear={clearSelection}
-        onShowSelection={handleShowSelection}
-      />
-
-      <BulkEditLocationModal
-        opened={bulkEditModalOpened}
-        onClose={() => setBulkEditModalOpened(false)}
-        onSubmit={handleSubmitBulkEdit}
-        count={selectedIds.length}
-      />
-
-      <ApplyTemplateModal
-        opened={applyTemplateModalOpened}
-        onClose={() => setApplyTemplateModalOpened(false)}
-        onSubmit={handleApplyTemplate}
-        templates={templates}
-        targetType={templateTargetType}
-        count={selectedIds.length || 1}
-        loading={inventoryLoading}
-      />
-
-      <CreateBookingModal
-        opened={bookingModalOpened}
-        onClose={() => setBookingModalOpened(false)}
-        onSubmit={handleCreateBooking}
-        onCreateStudent={handleCreateStudent}
-        students={studentList.map((s) => ({
-          value: s.id,
-          label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
-        }))}
-        semesters={allSemesters}
-        initialBedId={
-          selectedNode?.type === LocationType.BED
-            ? typeof selectedNode.id === "string"
-              ? Number(selectedNode.id.replace("bed-", ""))
-              : Number(selectedNode.id)
-            : null
-        }
-        initialLocationId={
-          selectedNode?.type !== LocationType.BED && selectedNode?.id
-            ? typeof selectedNode.id === "string" &&
-              selectedNode.id.startsWith("loc-")
-              ? Number(selectedNode.id.replace("loc-", ""))
-              : Number(selectedNode.id)
-            : null
-        }
-      />
-
-      <Drawer
-        opened={viewSelectionDrawerOpened}
-        onClose={() => setViewSelectionDrawerOpened(false)}
-        title={`${t("selected_items", { defaultValue: "Selected Items" })} (${selectedIds.length})`}
-        position="right"
-      >
-        <Stack gap="xs">
-          {selectedNodesList.map((node) => {
-            const globalId =
-              node.type === LocationType.BED || node.type === "bed"
-                ? typeof node.id === "string" && node.id.startsWith("bed-")
-                  ? node.id
-                  : `bed-${node.id}`
-                : `loc-${node.id}`;
-
-            return (
-              <Paper key={globalId} withBorder p="xs">
-                <Group justify="space-between">
-                  <Group gap="xs">
-                    <LocationIcon type={node.type} />
-                    <Text size="sm" fw={500}>
-                      {node.type === LocationType.BED || node.type === "bed"
-                        ? `${node.locationName || ""} - ${node.label || node.name}`
-                        : node.name}
-                    </Text>
-                  </Group>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    onClick={() => handleToggleSelection(globalId)}
+                  <Paper
+                    withBorder
+                    radius="md"
+                    style={{ position: "relative" }}
                   >
-                    <IconX size={16} />
-                  </ActionIcon>
-                </Group>
-              </Paper>
-            );
-          })}
-          {selectedNodesList.length === 0 && (
-            <Text c="dimmed" ta="center">
-              {t("no_selection", { defaultValue: "No items selected" })}
-            </Text>
-          )}
-        </Stack>
-      </Drawer>
+                    <LoadingOverlay visible={registryLoading} />
+                    <LocationRegistryTable
+                      data={registryData}
+                      onView={(loc) => {
+                        setActiveView("structure");
+                        selectNode(loc as any);
+                      }}
+                      onEmailResidents={(locationId) =>
+                        setEmailLocationId(locationId)
+                      }
+                      selectedIds={selectedIds}
+                      onToggleSelection={handleToggleSelection}
+                      onToggleSelectAll={handleToggleSelectAllRegistry}
+                    />
+                  </Paper>
+                </Stack>
+              </Tabs.Panel>
 
-      <ComposeEmailModal
-        opened={emailLocationId !== null}
-        onClose={() => setEmailLocationId(null)}
-        resolveDto={{ scope: "location", locationId: emailLocationId ?? 0 }}
-      />
-    </Container>
+              <Tabs.Panel value="beds" pt="md">
+                <Stack gap="md">
+                  <LocationRegistryFilters
+                    filters={registryFilters}
+                    onFilterChange={handleFilterChange}
+                    onClearFilters={handleClearFilters}
+                  />
+                  <Paper
+                    withBorder
+                    radius="md"
+                    style={{ position: "relative" }}
+                  >
+                    <LoadingOverlay visible={registryLoading} />
+                    <LocationRegistryTable
+                      data={registryData}
+                      onView={(bed) => {
+                        setActiveView("structure");
+                        // Convert virtual ID to bed- prefixed ID for the tree
+                        const targetId = `bed-${bed.id}`;
+                        selectNode({
+                          ...bed,
+                          id: targetId,
+                          type: LocationType.BED,
+                        } as any);
+                      }}
+                      selectedIds={selectedIds}
+                      onToggleSelection={handleToggleSelection}
+                      onToggleSelectAll={handleToggleSelectAllRegistry}
+                    />
+                  </Paper>
+                </Stack>
+              </Tabs.Panel>
+            </Tabs>
+
+            <Group justify="flex-end">
+              <Pagination
+                total={Math.ceil(
+                  totalRegistryItems / (registryFilters.limit || 10),
+                )}
+                value={registryFilters.page}
+                onChange={(p) => handleFilterChange("page", p)}
+              />
+            </Group>
+          </Stack>
+        )}
+
+        <CreateLocationModal
+          opened={createModalOpened}
+          onClose={() => {
+            setCreateModalOpened(false);
+            setLocationToEdit(null);
+          }}
+          onSubmit={handleSubmitLocation}
+          parentId={parentForCreation.id}
+          parentType={parentForCreation.type}
+          initialValues={locationToEdit}
+          roomTypes={roomTypesList}
+        />
+
+        <CreateBedModal
+          opened={createBedModalOpened}
+          onClose={() => setCreateBedModalOpened(false)}
+          onSubmit={handleCreateBed}
+          locationId={Number(selectedNode?.id)}
+        />
+
+        <CreateBedModal
+          opened={editBedModalOpened}
+          onClose={() => {
+            setEditBedModalOpened(false);
+            setBedToEdit(null);
+          }}
+          onSubmit={handleUpdateBed}
+          locationId={bedToEdit?.locationId}
+          initialValues={bedToEdit}
+        />
+
+        <AssignInventoryModal
+          opened={assignModalOpened}
+          onClose={() => setAssignModalOpened(false)}
+          onSubmit={handleAssignItem}
+          catalog={filteredCatalog}
+          locationId={
+            selectedNode?.type !== LocationType.BED
+              ? Number(selectedNode?.id)
+              : undefined
+          }
+          bedId={
+            selectedNode?.type === LocationType.BED
+              ? typeof selectedNode.id === "string"
+                ? Number(selectedNode.id.replace("bed-", ""))
+                : Number(selectedNode.id)
+              : undefined
+          }
+          loading={inventoryLoading}
+        />
+
+        <BulkActionsBar
+          selectedCount={selectedIds.length}
+          onDelete={handleBulkDelete}
+          onEdit={handleBulkEdit}
+          onApplyTemplate={() => handleOpenApplyTemplate(null)}
+          onClear={clearSelection}
+          onShowSelection={handleShowSelection}
+        />
+
+        <BulkEditLocationModal
+          opened={bulkEditModalOpened}
+          onClose={() => setBulkEditModalOpened(false)}
+          onSubmit={handleSubmitBulkEdit}
+          count={selectedIds.length}
+        />
+
+        <ApplyTemplateModal
+          opened={applyTemplateModalOpened}
+          onClose={() => setApplyTemplateModalOpened(false)}
+          onSubmit={handleApplyTemplate}
+          templates={templates}
+          targetType={templateTargetType}
+          count={selectedIds.length || 1}
+          loading={inventoryLoading}
+        />
+
+        <CreateBookingModal
+          opened={bookingModalOpened}
+          onClose={() => setBookingModalOpened(false)}
+          onSubmit={handleCreateBooking}
+          onCreateStudent={handleCreateStudent}
+          students={studentList.map((s) => ({
+            value: s.id,
+            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+          }))}
+          semesters={allSemesters}
+          initialBedId={
+            selectedNode?.type === LocationType.BED
+              ? typeof selectedNode.id === "string"
+                ? Number(selectedNode.id.replace("bed-", ""))
+                : Number(selectedNode.id)
+              : null
+          }
+          initialLocationId={
+            selectedNode?.type !== LocationType.BED && selectedNode?.id
+              ? typeof selectedNode.id === "string" &&
+                selectedNode.id.startsWith("loc-")
+                ? Number(selectedNode.id.replace("loc-", ""))
+                : Number(selectedNode.id)
+              : null
+          }
+        />
+
+        <Drawer
+          opened={viewSelectionDrawerOpened}
+          onClose={() => setViewSelectionDrawerOpened(false)}
+          title={`${t("selected_items", { defaultValue: "Selected Items" })} (${selectedIds.length})`}
+          position="right"
+        >
+          <Stack gap="xs">
+            {selectedNodesList.map((node) => {
+              const globalId =
+                node.type === LocationType.BED || node.type === "bed"
+                  ? typeof node.id === "string" && node.id.startsWith("bed-")
+                    ? node.id
+                    : `bed-${node.id}`
+                  : `loc-${node.id}`;
+
+              return (
+                <Paper key={globalId} withBorder p="xs">
+                  <Group justify="space-between">
+                    <Group gap="xs">
+                      <LocationIcon type={node.type} />
+                      <Text size="sm" fw={500}>
+                        {node.type === LocationType.BED || node.type === "bed"
+                          ? `${node.locationName || ""} - ${node.label || node.name}`
+                          : node.name}
+                      </Text>
+                    </Group>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      onClick={() => handleToggleSelection(globalId)}
+                    >
+                      <IconX size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Paper>
+              );
+            })}
+            {selectedNodesList.length === 0 && (
+              <EmptyState
+                title={t("no_selection", { defaultValue: "No items selected" })}
+              />
+            )}
+          </Stack>
+        </Drawer>
+
+        <ComposeEmailModal
+          opened={emailLocationId !== null}
+          onClose={() => setEmailLocationId(null)}
+          resolveDto={{ scope: "location", locationId: emailLocationId ?? 0 }}
+        />
+      </PageShell>
+    </>
   );
 }
 

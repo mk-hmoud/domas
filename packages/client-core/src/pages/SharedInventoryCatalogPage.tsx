@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  Title,
-  Button,
-  Group,
-  Paper,
-  LoadingOverlay,
-  Container,
-  Text,
-  TextInput,
-  Card,
-} from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
+import { Button, Paper, LoadingOverlay, Text, TextInput } from "@mantine/core";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { inventory } from "@domas/api-client";
@@ -141,67 +132,65 @@ export function SharedInventoryCatalogPage() {
   };
 
   return (
-    <Container size="lg" py="xl" style={{ position: "relative" }}>
-      <LoadingOverlay visible={loading} />
-      <Group justify="space-between" mb="lg">
-        <div>
-          <Title order={2}>{t("inventory_catalog")}</Title>
-          <Text c="dimmed" size="sm">
-            {t("inventory_catalog_description")}
-          </Text>
-        </div>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => {
-            setSelectedItem(null);
-            setModalOpened(true);
-          }}
-        >
-          {t("create_catalog_item")}
-        </Button>
-      </Group>
-
-      <Card withBorder padding="md" radius="md" mb="md">
+    <>
+      <PageHeader
+        title={t("inventory_catalog")}
+        subtitle={t("inventory_catalog_description")}
+        actions={
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => {
+              setSelectedItem(null);
+              setModalOpened(true);
+            }}
+          >
+            {t("create_catalog_item")}
+          </Button>
+        }
+      />
+      <PageShell>
         <TextInput
           placeholder={t("search_placeholder", "Search...")}
           leftSection={<IconSearch size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          mb="md"
         />
-      </Card>
 
-      <Paper withBorder radius="md">
-        <InventoryCatalogTable
-          data={filteredData}
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} />
+          <InventoryCatalogTable
+            data={filteredData}
+            onEdit={(item) => {
+              setSelectedItem(item);
+              setModalOpened(true);
+            }}
+            onDelete={handleDelete}
+            onRowClick={setViewItem}
+          />
+        </Paper>
+
+        <InventoryCatalogDrawer
+          opened={!!viewItem}
+          onClose={() => setViewItem(null)}
+          item={viewItem}
           onEdit={(item) => {
             setSelectedItem(item);
             setModalOpened(true);
           }}
-          onDelete={handleDelete}
-          onRowClick={setViewItem}
         />
-      </Paper>
 
-      <InventoryCatalogDrawer
-        opened={!!viewItem}
-        onClose={() => setViewItem(null)}
-        item={viewItem}
-        onEdit={(item) => {
-          setSelectedItem(item);
-          setModalOpened(true);
-        }}
-      />
-
-      <InventoryCatalogModal
-        opened={modalOpened}
-        onClose={() => {
-          setModalOpened(false);
-          setSelectedItem(null);
-        }}
-        onSubmit={selectedItem ? handleUpdate : handleCreate}
-        initialValues={selectedItem}
-        loading={modalLoading}
-      />
-    </Container>
+        <InventoryCatalogModal
+          opened={modalOpened}
+          onClose={() => {
+            setModalOpened(false);
+            setSelectedItem(null);
+          }}
+          onSubmit={selectedItem ? handleUpdate : handleCreate}
+          initialValues={selectedItem}
+          loading={modalLoading}
+        />
+      </PageShell>
+    </>
   );
 }

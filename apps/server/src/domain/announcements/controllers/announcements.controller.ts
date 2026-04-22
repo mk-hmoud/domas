@@ -8,8 +8,14 @@ import {
   Param,
   Patch,
   Post,
+  Res,
+  StreamableFile,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { AnnouncementsService } from '../services/announcements.service';
 import { CreateAnnouncementDto } from '../dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from '../dto/update-announcement.dto';
@@ -19,6 +25,8 @@ import { RequirePermissions } from '../../../core/decorators/require-permissions
 import { UserContext } from '../../../core/decorators/user-context.decorator';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB per file
 
 @Controller('announcements')
 @UseGuards(AuthenticatedGuard, PermissionsGuard)
@@ -60,5 +68,36 @@ export class AnnouncementsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id') id: string) {
     return this.service.delete(id);
+  }
+
+  // ─── Attachments ─────────────────────────────────────────────────────────────
+
+  @Post(':id/attachments')
+  @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
+  @UseInterceptors(FilesInterceptor('attachments', 10, { limits: { fileSize: MAX_FILE_SIZE } }))
+  uploadAttachments(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.service.uploadAttachments(id, files);
+  }
+
+  @Get(':id/attachments/:attachmentId')
+  @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
+  async downloadAttachment(
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const { data, filename, mimeType } = await this.service.downloadAttachment(id, attachmentId);
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+    });
+    return new StreamableFile(data);
+  }
+
+  @Delete(':id/attachments/:attachmentId')
+  @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteAttachment(@Param('id') id: string, @Param('attachmentId') attachmentId: string) {
+    return this.service.deleteAttachment(id, attachmentId);
   }
 }

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Container, Title, Group, Button, Paper, LoadingOverlay } from '@mantine/core';
+import { Button, Paper, LoadingOverlay } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconPlus } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { roomTypes as roomTypesApi } from '@domas/api-client';
 import { RoomType } from '@domas/ts-types';
-import { RoomTypesTable, RoomTypeModal } from '@domas/ui';
+import { RoomTypesTable, RoomTypeModal, PageHeader, PageShell } from '@domas/ui';
 
 export function RoomTypesPage() {
   const { t } = useTranslation();
@@ -70,25 +70,28 @@ export function RoomTypesPage() {
   };
 
   return (
-    <Container size="lg" py="md">
-      <Group justify="space-between" mb="md">
-        <Title order={2}>{t('nav.room_types', { defaultValue: 'Room Types' })}</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-          {t('create_room_type', { defaultValue: 'Create Room Type' })}
-        </Button>
-      </Group>
-
-      <Paper withBorder radius="md" style={{ position: 'relative' }}>
-        <LoadingOverlay visible={loading} />
-        <RoomTypesTable data={data} onEdit={openEdit} onDelete={handleDelete} />
-      </Paper>
-
-      <RoomTypeModal
-        opened={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSubmit}
-        initialValues={editing}
+    <>
+      <PageHeader
+        title={t('nav.room_types', { defaultValue: 'Room Types' })}
+        actions={
+          <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            {t('create_room_type', { defaultValue: 'Create Room Type' })}
+          </Button>
+        }
       />
-    </Container>
+      <PageShell>
+        <Paper withBorder radius="md" style={{ position: 'relative' }}>
+          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+          <RoomTypesTable data={data} onEdit={openEdit} onDelete={handleDelete} />
+        </Paper>
+
+        <RoomTypeModal
+          opened={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleSubmit}
+          initialValues={editing}
+        />
+      </PageShell>
+    </>
   );
 }

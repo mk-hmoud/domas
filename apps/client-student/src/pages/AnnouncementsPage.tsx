@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Box, Group, Paper, Skeleton, Stack, Text, ThemeIcon } from '@domas/ui';
-import { IconPin, IconSpeakerphone } from '@tabler/icons-react';
+import {
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Group,
+  Paper,
+  Skeleton,
+  Stack,
+  Text,
+  ThemeIcon,
+} from '@domas/ui';
+import { IconFile, IconPaperclip, IconPin, IconSpeakerphone } from '@tabler/icons-react';
 import { Announcement } from '@domas/ts-types';
 import { portalAnnouncements } from '@domas/api-client';
 
@@ -62,6 +73,34 @@ function AnnouncementCard({ item }: { item: Announcement }) {
           <Text size="sm" c="dimmed" style={{ whiteSpace: 'pre-wrap' }}>
             {item.body}
           </Text>
+
+          {item.attachments && item.attachments.length > 0 && (
+            <Box mt="sm">
+              <Group gap="xs" mb={4}>
+                <IconPaperclip size={13} color="var(--mantine-color-dimmed)" />
+                <Text size="xs" c="dimmed" fw={500}>
+                  {t('portal.attachments', { defaultValue: 'Attachments' })}
+                </Text>
+              </Group>
+              <Group gap="xs" wrap="wrap">
+                {item.attachments.map((att) => (
+                  <Button
+                    key={att.id}
+                    size="xs"
+                    variant="light"
+                    color="blue"
+                    radius="xl"
+                    leftSection={<IconFile size={11} />}
+                    onClick={() =>
+                      portalAnnouncements.downloadAttachment(item.id, att.id, att.filename)
+                    }
+                  >
+                    {att.filename}
+                  </Button>
+                ))}
+              </Group>
+            </Box>
+          )}
 
           {item.createdByName && (
             <Text size="xs" c="dimmed" mt="sm" fw={500}>

@@ -59,15 +59,15 @@ export function LocationDetail({
               ))}
             </Breadcrumbs>
           )}
-          <Group gap="sm">
+          <Group gap="sm" align="center">
             {type && (
-              <ThemeIcon size="lg" variant="light" color="blue">
-                <LocationIcon type={type} size={20} />
+              <ThemeIcon size="md" variant="light" color="blue">
+                <LocationIcon type={type} size={16} />
               </ThemeIcon>
             )}
-            <Title order={2}>{title}</Title>
+            <Title order={4}>{title}</Title>
             {type && (
-              <Badge variant="outline" color="gray" size="lg">
+              <Badge variant="outline" color="gray" size="sm">
                 {type.toUpperCase()}
               </Badge>
             )}

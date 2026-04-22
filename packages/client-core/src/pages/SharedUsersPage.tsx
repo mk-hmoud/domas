@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Title,
   Button,
   Group,
-  Container,
   Pagination,
   Text,
   Drawer,
   Stack,
   Badge,
-  Box,
   TextInput,
+  Paper,
+  LoadingOverlay,
 } from "@mantine/core";
 import { IconPlus, IconEdit, IconSearch } from "@tabler/icons-react";
 import { users, access } from "@domas/api-client";
@@ -21,7 +21,7 @@ import {
   UpdateUserDto,
   Role,
 } from "@domas/ts-types";
-import { CreateUserModal, UsersTable } from "@domas/ui";
+import { CreateUserModal, UsersTable, LabelValue, EmptyState } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -44,8 +44,10 @@ export function SharedUsersPage({
   const [modalOpened, setModalOpened] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchData = async (page: number) => {
+    setLoading(true);
     try {
       const [result, rolesResult] = await Promise.all([
         users.findAll({ page, limit: 10, roles: role }),
@@ -59,6 +61,8 @@ export function SharedUsersPage({
         message: t("failed_to_fetch_data"),
         color: "red",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -171,159 +175,155 @@ export function SharedUsersPage({
   };
 
   return (
-    <Container size="lg" py="xl">
-      <Group justify="space-between" mb="lg">
-        <Title>{t(title)}</Title>
-        <Button leftSection={<IconPlus size={14} />} onClick={openCreateModal}>
-          {t("create_user")}
-        </Button>
-      </Group>
-
-      <TextInput
-        placeholder={t("search_placeholder", "Search...")}
-        leftSection={<IconSearch size={16} />}
-        mb="md"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.currentTarget.value)}
-      />
-
-      <UsersTable
-        data={filteredData}
-        onDelete={confirmDelete}
-        onEdit={openEditModal}
-        onRowClick={setViewUser}
-      />
-
-      {paginatedData?.data.length === 0 && (
-        <Text ta="center" mt="xl" c="dimmed">
-          No users found.
-        </Text>
-      )}
-
-      {paginatedData && paginatedData.total > paginatedData.limit && (
-        <Group justify="center" mt="xl">
-          <Pagination
-            total={Math.ceil(paginatedData.total / paginatedData.limit)}
-            value={activePage}
-            onChange={setPage}
-          />
-        </Group>
-      )}
-
-      <CreateUserModal
-        opened={modalOpened}
-        onClose={() => {
-          setModalOpened(false);
-          setUserToEdit(null);
-        }}
-        onSubmit={handleCreateOrUpdateUser}
-        userToEdit={userToEdit}
-        availableRoles={availableRoles}
-      />
-
-      <Drawer
-        opened={!!viewUser}
-        onClose={() => setViewUser(null)}
-        title={
-          <Text fw={700} size="lg">
-            {t("user_details", { defaultValue: "User Details" })}
-          </Text>
+    <>
+      <PageHeader
+        title={t(title)}
+        actions={
+          <Button
+            leftSection={<IconPlus size={14} />}
+            onClick={openCreateModal}
+          >
+            {t("create_user")}
+          </Button>
         }
-        position="right"
-        size="md"
-      >
-        {viewUser && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Stack gap={0}>
-                <Text size="xl" fw={700}>
-                  {viewUser.firstName || viewUser.lastName
-                    ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim()
-                    : viewUser.email}
-                </Text>
-                {(viewUser.firstName || viewUser.lastName) && (
-                  <Text size="sm" c="dimmed">
-                    {viewUser.email}
-                  </Text>
-                )}
-              </Stack>
-              <Badge color={viewUser.isActive ? "green" : "gray"}>
-                {viewUser.isActive ? t("active") : t("inactive")}
-              </Badge>
-            </Group>
+      />
+      <PageShell>
+        <TextInput
+          placeholder={t("search_placeholder", "Search...")}
+          leftSection={<IconSearch size={16} />}
+          mb="md"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+        />
 
-            <Box>
-              <Text size="xs" c="dimmed">
-                {t("user_id", { defaultValue: "User ID" })}
-              </Text>
-              <Text size="sm" style={{ wordBreak: "break-all" }}>
-                {viewUser.id}
-              </Text>
-            </Box>
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+          <UsersTable
+            data={filteredData}
+            onDelete={confirmDelete}
+            onEdit={openEditModal}
+            onRowClick={setViewUser}
+          />
+          {paginatedData?.data.length === 0 && !loading && (
+            <EmptyState
+              title={t("no_users_found", { defaultValue: "No users found" })}
+            />
+          )}
+        </Paper>
 
-            {viewUser.phoneNumber && (
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("phone_number", { defaultValue: "Phone Number" })}
-                </Text>
-                <Text size="sm">{viewUser.phoneNumber}</Text>
-              </Box>
-            )}
-
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("created_at")}
-                </Text>
-                <Text>{new Date(viewUser.createdAt).toLocaleDateString()}</Text>
-              </Box>
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("updated_at")}
-                </Text>
-                <Text>{new Date(viewUser.updatedAt).toLocaleDateString()}</Text>
-              </Box>
-            </Group>
-
-            {viewUser.isRecoveryAdmin && (
-              <Badge color="red" variant="filled" fullWidth>
-                Recovery Admin
-              </Badge>
-            )}
-
-            <Box>
-              <Text size="xs" c="dimmed" mb={4}>
-                {t("user_roles")}
-              </Text>
-              <Group gap="xs">
-                {viewUser.roles && viewUser.roles.length > 0 ? (
-                  viewUser.roles.map((role) => (
-                    <Badge key={role.id} variant="outline">
-                      {role.name}
-                    </Badge>
-                  ))
-                ) : (
-                  <Text size="sm" c="dimmed">
-                    -
-                  </Text>
-                )}
-              </Group>
-            </Box>
-
-            <Button
-              variant="light"
-              leftSection={<IconEdit size={16} />}
-              onClick={() => {
-                openEditModal(viewUser);
-                setViewUser(null);
-              }}
-              mt="xl"
-            >
-              {t("edit_user", { defaultValue: "Edit User" })}
-            </Button>
-          </Stack>
+        {paginatedData && paginatedData.total > paginatedData.limit && (
+          <Group justify="center" mt="xl">
+            <Pagination
+              total={Math.ceil(paginatedData.total / paginatedData.limit)}
+              value={activePage}
+              onChange={setPage}
+            />
+          </Group>
         )}
-      </Drawer>
-    </Container>
+
+        <CreateUserModal
+          opened={modalOpened}
+          onClose={() => {
+            setModalOpened(false);
+            setUserToEdit(null);
+          }}
+          onSubmit={handleCreateOrUpdateUser}
+          userToEdit={userToEdit}
+          availableRoles={availableRoles}
+        />
+
+        <Drawer
+          opened={!!viewUser}
+          onClose={() => setViewUser(null)}
+          title={
+            <Text fw={700} size="lg">
+              {t("user_details", { defaultValue: "User Details" })}
+            </Text>
+          }
+          position="right"
+          size="md"
+        >
+          {viewUser && (
+            <Stack gap="lg">
+              <Group justify="space-between" align="flex-start">
+                <Stack gap={2}>
+                  <Text fw={700} size="md">
+                    {viewUser.firstName || viewUser.lastName
+                      ? `${viewUser.firstName || ""} ${viewUser.lastName || ""}`.trim()
+                      : viewUser.email}
+                  </Text>
+                  {(viewUser.firstName || viewUser.lastName) && (
+                    <Text size="xs" c="dimmed">
+                      {viewUser.email}
+                    </Text>
+                  )}
+                </Stack>
+                <Badge color={viewUser.isActive ? "green" : "gray"}>
+                  {viewUser.isActive ? t("active") : t("inactive")}
+                </Badge>
+              </Group>
+
+              <LabelValue
+                label={t("user_id", { defaultValue: "User ID" })}
+                style={{ wordBreak: "break-all" }}
+              >
+                {viewUser.id}
+              </LabelValue>
+
+              {viewUser.phoneNumber && (
+                <LabelValue
+                  label={t("phone_number", { defaultValue: "Phone Number" })}
+                >
+                  {viewUser.phoneNumber}
+                </LabelValue>
+              )}
+
+              <Group grow>
+                <LabelValue label={t("created_at")}>
+                  {new Date(viewUser.createdAt).toLocaleDateString()}
+                </LabelValue>
+                <LabelValue label={t("updated_at")}>
+                  {new Date(viewUser.updatedAt).toLocaleDateString()}
+                </LabelValue>
+              </Group>
+
+              {viewUser.isRecoveryAdmin && (
+                <Badge color="red" variant="filled" fullWidth>
+                  Recovery Admin
+                </Badge>
+              )}
+
+              <LabelValue label={t("user_roles")}>
+                <Group gap="xs">
+                  {viewUser.roles && viewUser.roles.length > 0 ? (
+                    viewUser.roles.map((role) => (
+                      <Badge key={role.id} variant="outline">
+                        {role.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text size="sm" c="dimmed">
+                      —
+                    </Text>
+                  )}
+                </Group>
+              </LabelValue>
+
+              <Button
+                variant="light"
+                leftSection={<IconEdit size={16} />}
+                onClick={() => {
+                  openEditModal(viewUser);
+                  setViewUser(null);
+                }}
+                mt="md"
+              >
+                {t("edit_user", { defaultValue: "Edit User" })}
+              </Button>
+            </Stack>
+          )}
+        </Drawer>
+      </PageShell>
+    </>
   );
 }

@@ -60,3 +60,20 @@ CREATE TABLE announcements (
 CREATE INDEX idx_announcements_portal
     ON announcements(is_published, pinned DESC, published_at DESC)
     WHERE is_published = TRUE;
+
+-- =============================================
+-- ANNOUNCEMENT ATTACHMENTS
+-- =============================================
+
+CREATE TABLE announcement_attachments (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    announcement_id UUID         NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+    filename        VARCHAR(255) NOT NULL,
+    mime_type       VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
+    size            INT          NOT NULL,
+    data            BYTEA        NOT NULL,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_announcement_attachments_ann_id
+    ON announcement_attachments(announcement_id);

@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  Container,
-  Stack,
-  Group,
-  Title,
-  Text,
-  Button,
-  Paper,
-  LoadingOverlay,
-  Tabs,
-} from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
+import { Button, Paper, LoadingOverlay, Tabs, Badge } from "@mantine/core";
 import { IconPlus, IconListSearch, IconHistory } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -244,30 +235,38 @@ export function SharedDamagesPage() {
   };
 
   return (
-    <Container size="lg" py="xl">
-      <Stack gap="lg">
-        <Group justify="space-between">
-          <div>
-            <Title order={2}>{t("damages")}</Title>
-            <Text c="dimmed" size="sm">
-              {t("damage_reports_description")}
-            </Text>
-          </div>
-          {hasPermission("damages.report") && (
+    <>
+      <PageHeader
+        title={t("damages")}
+        subtitle={t("damage_reports_description")}
+        actions={
+          hasPermission("damages.report") ? (
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={() => setModalOpened(true)}
             >
               {t("report_damage")}
             </Button>
-          )}
-        </Group>
-
+          ) : undefined
+        }
+      />
+      <PageShell>
         <Tabs defaultValue="reported">
           <Tabs.List mb="md">
             <Tabs.Tab
               value="reported"
               leftSection={<IconListSearch size={14} />}
+              rightSection={
+                reports.filter((r) => r.status === DamageStatus.PENDING)
+                  .length > 0 ? (
+                  <Badge size="xs" color="red" variant="filled">
+                    {
+                      reports.filter((r) => r.status === DamageStatus.PENDING)
+                        .length
+                    }
+                  </Badge>
+                ) : undefined
+              }
             >
               {t("reported_damages", "Reported")}
             </Tabs.Tab>
@@ -302,25 +301,25 @@ export function SharedDamagesPage() {
             </Paper>
           </Tabs.Panel>
         </Tabs>
-      </Stack>
 
-      <CreateDamageModal
-        opened={modalOpened}
-        onClose={() => setModalOpened(false)}
-        onSubmit={handleCreateReport}
-        students={studentList}
-        guestStays={activeGuestStays}
-        loading={actionLoading}
-      />
+        <CreateDamageModal
+          opened={modalOpened}
+          onClose={() => setModalOpened(false)}
+          onSubmit={handleCreateReport}
+          students={studentList}
+          guestStays={activeGuestStays}
+          loading={actionLoading}
+        />
 
-      <DamageDetailsDrawer
-        opened={drawerOpened}
-        onClose={() => setDrawerOpened(false)}
-        report={selectedReport}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        loading={actionLoading}
-      />
-    </Container>
+        <DamageDetailsDrawer
+          opened={drawerOpened}
+          onClose={() => setDrawerOpened(false)}
+          report={selectedReport}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          loading={actionLoading}
+        />
+      </PageShell>
+    </>
   );
 }

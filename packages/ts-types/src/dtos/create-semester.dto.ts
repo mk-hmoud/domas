@@ -13,4 +13,5 @@ export interface CreateSemesterDto {
   foreignCurrencyCode?: string;
   paymentDeadlineDate?: string;
   status?: SemesterStatus;
+  maxRoomChanges?: number | null;
 }

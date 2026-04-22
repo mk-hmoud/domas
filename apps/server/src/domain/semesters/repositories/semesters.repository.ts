@@ -30,7 +30,8 @@ export class SemestersRepository {
       foreign_currency_code as "foreignCurrencyCode",
       payment_deadline_date as "paymentDeadlineDate",
       status,
-      created_at as "createdAt", 
+      max_room_changes as "maxRoomChanges",
+      created_at as "createdAt",
       updated_at as "updatedAt",
       created_by as "createdBy"
     `;
@@ -146,6 +147,8 @@ export class SemestersRepository {
     if (data.paymentDeadlineDate !== undefined)
       addUpdate('payment_deadline_date', data.paymentDeadlineDate);
     if (data.status) addUpdate('status', data.status);
+    if (data.maxRoomChanges !== undefined)
+      addUpdate('max_room_changes', data.maxRoomChanges ?? null);
 
     if (updates.length === 0) {
       return this.findById(id, client);

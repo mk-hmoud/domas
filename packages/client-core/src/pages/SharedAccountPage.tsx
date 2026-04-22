@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Container,
-  Title,
   Paper,
   TextInput,
   Button,
@@ -9,7 +7,9 @@ import {
   Stack,
   PasswordInput,
   Grid,
+  Text,
 } from "@mantine/core";
+import { PageHeader, PageShell } from "@domas/ui";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
@@ -111,80 +111,79 @@ export function SharedAccountPage() {
   };
 
   return (
-    <Container size="md" py="xl">
-      <Title order={2} mb="lg">
-        {t("account_settings")}
-      </Title>
-
-      <Grid>
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <Paper withBorder p="md" radius="md">
-            <Title order={4} mb="md">
-              {t("profile")}
-            </Title>
-            <form onSubmit={profileForm.onSubmit(handleUpdateProfile)}>
-              <Stack>
-                <TextInput
-                  label={t("email")}
-                  disabled
-                  {...profileForm.getInputProps("email")}
-                />
-                <Group grow>
+    <>
+      <PageHeader title={t("account_settings")} />
+      <PageShell size="md">
+        <Grid>
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Paper withBorder p="md" radius="md">
+              <Text fw={600} mb="md">
+                {t("profile")}
+              </Text>
+              <form onSubmit={profileForm.onSubmit(handleUpdateProfile)}>
+                <Stack>
                   <TextInput
-                    label={t("first_name")}
-                    {...profileForm.getInputProps("firstName")}
+                    label={t("email")}
+                    disabled
+                    {...profileForm.getInputProps("email")}
                   />
+                  <Group grow>
+                    <TextInput
+                      label={t("first_name")}
+                      {...profileForm.getInputProps("firstName")}
+                    />
+                    <TextInput
+                      label={t("last_name")}
+                      {...profileForm.getInputProps("lastName")}
+                    />
+                  </Group>
                   <TextInput
-                    label={t("last_name")}
-                    {...profileForm.getInputProps("lastName")}
+                    label={t("phone_number")}
+                    {...profileForm.getInputProps("phoneNumber")}
                   />
-                </Group>
-                <TextInput
-                  label={t("phone_number")}
-                  {...profileForm.getInputProps("phoneNumber")}
-                />
-                <Group justify="flex-end">
-                  <Button type="submit" loading={loadingProfile}>
-                    {t("save_changes")}
-                  </Button>
-                </Group>
-              </Stack>
-            </form>
-          </Paper>
-        </Grid.Col>
+                  <Group justify="flex-end">
+                    <Button type="submit" loading={loadingProfile}>
+                      {t("save_changes")}
+                    </Button>
+                  </Group>
+                </Stack>
+              </form>
+            </Paper>
+          </Grid.Col>
 
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <Paper withBorder p="md" radius="md">
-            <Title order={4} mb="md">
-              {t("change_password")}
-            </Title>
-            <form onSubmit={passwordForm.onSubmit(handleChangePassword)}>
-              <Stack>
-                <PasswordInput
-                  label={t("current_password")}
-                  required
-                  {...passwordForm.getInputProps("currentPassword")}
-                />
-                <PasswordInput
-                  label={t("new_password")}
-                  required
-                  {...passwordForm.getInputProps("newPassword")}
-                />
-                <PasswordInput
-                  label={t("confirm_new_password")}
-                  required
-                  {...passwordForm.getInputProps("confirmNewPassword")}
-                />
-                <Group justify="flex-end">
-                  <Button type="submit" loading={loadingPassword}>
-                    {t("change_password")}
-                  </Button>
-                </Group>
-              </Stack>
-            </form>
-          </Paper>
-        </Grid.Col>
-      </Grid>
-    </Container>
+          <Grid.Col span={{ base: 12, md: 6 }}>
+            <Paper withBorder p="md" radius="md">
+              <Text fw={600} mb="md">
+                {t("change_password")}
+              </Text>
+              <form onSubmit={passwordForm.onSubmit(handleChangePassword)}>
+                <Stack>
+                  <PasswordInput
+                    label={t("current_password")}
+                    required
+                    {...passwordForm.getInputProps("currentPassword")}
+                  />
+                  <PasswordInput
+                    label={t("new_password")}
+                    required
+                    {...passwordForm.getInputProps("newPassword")}
+                  />
+                  <PasswordInput
+                    label={t("confirm_new_password")}
+                    required
+                    {...passwordForm.getInputProps("confirmNewPassword")}
+                  />
+                  <Group justify="flex-end">
+                    <Button type="submit" loading={loadingPassword}>
+                      {t("change_password")}
+                    </Button>
+                  </Group>
+                </Stack>
+              </form>
+            </Paper>
+          </Grid.Col>
+        </Grid>
+      </PageShell>
+    </>
   );
 }

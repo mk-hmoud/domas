@@ -6,8 +6,15 @@ import {
   ActionIcon,
   Group,
   Text,
+  ThemeIcon,
+  rem,
 } from "@mantine/core";
-import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconTrash,
+  IconBuilding,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { ReactNode } from "react";
 
@@ -36,42 +43,55 @@ export function GenericLocationCard({
   return (
     <Card
       withBorder
-      padding="md"
+      padding="sm"
       radius="md"
       onClick={onClick}
-      style={{ cursor: "pointer", position: "relative" }}
+      style={{
+        cursor: "pointer",
+        borderLeftWidth: rem(3),
+        borderLeftColor: selected
+          ? "var(--mantine-color-blue-filled)"
+          : "var(--mantine-color-violet-filled)",
+        backgroundColor: selected
+          ? "var(--mantine-color-blue-light)"
+          : undefined,
+      }}
     >
-      <Box
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          zIndex: 2,
-        }}
-      >
-        <Checkbox
-          checked={selected}
-          onChange={onSelect}
-          onClick={(e) => e.stopPropagation()}
-        />
-      </Box>
+      <Group justify="space-between" wrap="nowrap" gap="xs">
+        <Group wrap="nowrap" gap="xs" style={{ flex: 1, minWidth: 0 }}>
+          <Checkbox
+            size="xs"
+            checked={selected}
+            onChange={onSelect}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <ThemeIcon variant="light" size={28} radius="sm" color="violet">
+            {icon || <IconBuilding size={14} />}
+          </ThemeIcon>
+          <Box style={{ minWidth: 0, flex: 1 }}>
+            <Text
+              fw={600}
+              size="sm"
+              style={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {name}
+            </Text>
+          </Box>
+        </Group>
 
-      <Box
-        style={{
-          position: "absolute",
-          top: 5,
-          right: 5,
-          zIndex: 2,
-        }}
-      >
         <Menu shadow="md" width={150} position="bottom-end">
           <Menu.Target>
             <ActionIcon
-              variant="transparent"
+              variant="subtle"
               color="gray"
+              size="sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <IconDotsVertical size={16} />
+              <IconDotsVertical size={14} />
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
@@ -96,16 +116,7 @@ export function GenericLocationCard({
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      </Box>
-
-      <Box pt="sm">
-        <Group justify="center">
-          <Group gap="xs">
-            {icon}
-            <Text fw={600}>{name}</Text>
-          </Group>
-        </Group>
-      </Box>
+      </Group>
     </Card>
   );
 }

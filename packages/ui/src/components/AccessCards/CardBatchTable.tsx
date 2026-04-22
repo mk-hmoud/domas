@@ -1,6 +1,8 @@
 import { Table, Text, Badge } from "@mantine/core";
 import { CardBatch } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { EmptyState } from "../EmptyState";
+import classes from "../Table/table.module.css";
 
 interface CardBatchTableProps {
   data: CardBatch[];
@@ -29,23 +31,25 @@ export function CardBatchTable({ data }: CardBatchTableProps) {
   ));
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
+    <Table highlightOnHover>
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th>{t("batch_name")}</Table.Th>
-          <Table.Th>{t("range")}</Table.Th>
-          <Table.Th>{t("total_cards", "Total")}</Table.Th>
-          <Table.Th>{t("created_at")}</Table.Th>
+          <Table.Th className={classes.th}>{t("batch_name")}</Table.Th>
+          <Table.Th className={classes.th}>{t("range")}</Table.Th>
+          <Table.Th className={classes.th}>
+            {t("total_cards", "Total")}
+          </Table.Th>
+          <Table.Th className={classes.th}>{t("created_at")}</Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={4}>
-              <Text ta="center" c="dimmed" py="xl">
-                {t("no_batches_found", "No card batches found.")}
-              </Text>
+            <Table.Td colSpan={4} style={{ padding: 0 }}>
+              <EmptyState
+                title={t("no_batches_found", "No card batches found")}
+              />
             </Table.Td>
           </Table.Tr>
         )}

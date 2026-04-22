@@ -127,6 +127,9 @@ export interface StudentCurrentBooking extends StudentBookingView {
   roomTypeDescription: string | null;
   roomTypeGalleryUrls: string[];
   roomTypeAmenities: string[];
+  // Room change tracking
+  roomChangesCount: number;
+  maxRoomChanges: number | null;
 }
 
 // ─── Financial ────────────────────────────────────────────────────────────────
@@ -164,7 +167,9 @@ export type NotificationTypeValue =
   | "booking_dates_updated"
   | "damage_charge"
   | "access_card_issued"
-  | "payment_deadline_reminder";
+  | "payment_deadline_reminder"
+  | "room_change_approved"
+  | "room_change_rejected";
 
 export interface StudentNotification {
   id: string;

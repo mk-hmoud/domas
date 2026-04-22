@@ -1,6 +1,5 @@
 import {
   Card,
-  Box,
   Menu,
   ActionIcon,
   Group,
@@ -8,6 +7,8 @@ import {
   Badge,
   ThemeIcon,
   Checkbox,
+  Box,
+  rem,
 } from "@mantine/core";
 import {
   IconDotsVertical,
@@ -30,6 +31,12 @@ interface BedCardProps {
   onSelect?: () => void;
 }
 
+function getStatusColor(status: string) {
+  if (status === "available") return "green";
+  if (status === "maintenance") return "orange";
+  return "blue";
+}
+
 export function BedCard({
   label,
   status,
@@ -41,56 +48,66 @@ export function BedCard({
   onSelect,
 }: BedCardProps) {
   const { t } = useTranslation();
+  const color = getStatusColor(status);
 
   return (
     <Card
       withBorder
-      padding="md"
+      padding="sm"
       radius="md"
       onClick={onClick}
       style={{
         cursor: "pointer",
-        position: "relative",
-        borderColor: selected ? "var(--mantine-color-blue-filled)" : undefined,
+        borderLeftWidth: rem(3),
+        borderLeftColor: selected
+          ? "var(--mantine-color-blue-filled)"
+          : `var(--mantine-color-${color}-filled)`,
         backgroundColor: selected
           ? "var(--mantine-color-blue-light)"
-          : "transparent",
+          : undefined,
       }}
     >
-      <Box
-        style={{
-          position: "absolute",
-          top: 5,
-          left: 5,
-          zIndex: 2,
-        }}
-      >
-        <Checkbox
-          checked={selected}
-          onChange={(e) => {
-            e.stopPropagation();
-            onSelect?.();
-          }}
-          onClick={(e) => e.stopPropagation()}
-        />
-      </Box>
+      <Group justify="space-between" wrap="nowrap" gap="xs">
+        <Group wrap="nowrap" gap="xs" style={{ flex: 1, minWidth: 0 }}>
+          <Checkbox
+            size="xs"
+            checked={selected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelect?.();
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <ThemeIcon variant="light" size={28} radius="sm" color={color}>
+            <IconBed size={14} />
+          </ThemeIcon>
+          <Box style={{ minWidth: 0, flex: 1 }}>
+            <Text
+              fw={600}
+              size="sm"
+              style={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {label}
+            </Text>
+            <Badge size="xs" variant="light" color={color} mt={2}>
+              {t(`bed_status.${status}`)}
+            </Badge>
+          </Box>
+        </Group>
 
-      <Box
-        style={{
-          position: "absolute",
-          top: 5,
-          right: 5,
-          zIndex: 2,
-        }}
-      >
-        <Menu shadow="md" width={150}>
+        <Menu shadow="md" width={160} position="bottom-end">
           <Menu.Target>
             <ActionIcon
-              variant="transparent"
+              variant="subtle"
               color="gray"
+              size="sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <IconDotsVertical size={16} />
+              <IconDotsVertical size={14} />
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
@@ -127,41 +144,7 @@ export function BedCard({
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      </Box>
-
-      <Group justify="center" mb="md" mt="xs">
-        <ThemeIcon
-          variant="light"
-          size={48}
-          radius="md"
-          color={
-            status === "available"
-              ? "green"
-              : status === "maintenance"
-                ? "orange"
-                : "blue"
-          }
-        >
-          <IconBed size={24} />
-        </ThemeIcon>
       </Group>
-      <Text fw={700} ta="center" size="lg">
-        {label}
-      </Text>
-      <Badge
-        fullWidth
-        mt="sm"
-        variant="light"
-        color={
-          status === "available"
-            ? "green"
-            : status === "maintenance"
-              ? "orange"
-              : "blue"
-        }
-      >
-        {t(`bed_status.${status}`)}
-      </Badge>
     </Card>
   );
 }

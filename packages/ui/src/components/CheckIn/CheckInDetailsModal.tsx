@@ -287,7 +287,7 @@ export function CheckInDetailsModal({
                     p={0}
                     style={{ overflow: "hidden" }}
                   >
-                    <Table striped>
+                    <Table>
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th>{t("item")}</Table.Th>
@@ -335,7 +335,7 @@ export function CheckInDetailsModal({
                 p={0}
                 style={{ overflow: "hidden" }}
               >
-                <Table striped highlightOnHover>
+                <Table highlightOnHover>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th style={{ width: 40 }} />
@@ -455,7 +455,7 @@ export function CheckInDetailsModal({
                   withBorder
                   p="xl"
                   radius="md"
-                  bg="var(--mantine-color-blue-light)"
+                  bg="var(--mantine-color-indigo-0)"
                 >
                   <Stack gap={0} align="center">
                     <Text size="xs" fw={700} c="blue" tt="uppercase">

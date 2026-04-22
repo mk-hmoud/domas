@@ -15,6 +15,8 @@ import {
   UpdateStudentContactDto,
   StudentCreateBookingDto,
   Announcement,
+  StudentCreateRoomChangeDto,
+  StudentRoomChangeView,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -234,5 +236,50 @@ export const portalAnnouncements = {
       "/portal/announcements",
     );
     return response.data;
+  },
+
+  downloadAttachment: async (
+    id: string,
+    attachmentId: string,
+    filename: string,
+  ): Promise<void> => {
+    const response = await apiClient.get(
+      `/portal/announcements/${id}/attachments/${attachmentId}`,
+      { responseType: "blob" },
+    );
+    const url = URL.createObjectURL(response.data as Blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+};
+
+// ─── Room Changes ─────────────────────────────────────────────────────────────
+
+export const portalRoomChanges = {
+  getAll: async (): Promise<StudentRoomChangeView[]> => {
+    const response = await apiClient.get<StudentRoomChangeView[]>(
+      "/portal/room-changes",
+    );
+    return response.data;
+  },
+
+  create: async (
+    semesterId: number,
+    dto: StudentCreateRoomChangeDto,
+  ): Promise<StudentRoomChangeView> => {
+    const response = await apiClient.post<StudentRoomChangeView>(
+      `/portal/room-changes/${semesterId}`,
+      dto,
+    );
+    return response.data;
+  },
+
+  cancel: async (id: string): Promise<void> => {
+    await apiClient.delete(`/portal/room-changes/${id}`);
   },
 };

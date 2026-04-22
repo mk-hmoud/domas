@@ -4,9 +4,7 @@ import {
   Group,
   Text,
   Badge,
-  Title,
   Divider,
-  Box,
   Button,
   Table,
   Paper,
@@ -14,6 +12,8 @@ import {
 import { IconCheck, IconX, IconAlertTriangle } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { DamageReport, DamageStatus } from "@domas/ts-types";
+import { LabelValue } from "../LabelValue";
+import classes from "../Table/table.module.css";
 
 interface DamageDetailsDrawerProps {
   opened: boolean;
@@ -65,10 +65,10 @@ export function DamageDetailsDrawer({
       title={
         <Group gap="xs">
           <IconAlertTriangle
-            size={20}
+            size={18}
             color="var(--mantine-color-orange-filled)"
           />
-          <Text fw={700}>
+          <Text fw={700} size="sm">
             {t("damage_report_details", "Damage Report Details")}
           </Text>
         </Group>
@@ -77,92 +77,75 @@ export function DamageDetailsDrawer({
       size="md"
     >
       {report && (
-        <Stack gap="md">
+        <Stack gap="lg">
           <Group justify="space-between" align="flex-start">
-            <Stack gap={0}>
-              <Title order={3}>
+            <Stack gap={2}>
+              <Text fw={700} size="md">
                 {report.locationName || report.locationId}
-              </Title>
-              <Text size="sm" c="dimmed">
+              </Text>
+              <Text size="xs" c="dimmed">
                 {new Date(report.reportedAt).toLocaleString()}
               </Text>
             </Stack>
             <Badge
               color={getStatusColor(report.status)}
-              variant="filled"
+              variant="light"
               size="lg"
             >
               {t(`damage_status.${report.status}`)}
             </Badge>
           </Group>
 
-          <Divider
-            label={t("incident_info", "Incident Information")}
-            labelPosition="center"
-          />
+          <Divider />
 
-          <Box>
-            <Text size="xs" c="dimmed" mb={4} tt="uppercase" fw={700}>
-              {t("description")}
-            </Text>
-            <Text size="sm">{report.description}</Text>
-          </Box>
+          <Stack gap="md">
+            <LabelValue label={t("description")}>
+              {report.description}
+            </LabelValue>
 
-          <Group grow>
-            <Box>
-              <Text size="xs" c="dimmed" mb={4} tt="uppercase" fw={700}>
-                {t("price_try")}
-              </Text>
-              <Text fw={700} size="lg">
-                {report.costTry || 0} TRY
-              </Text>
-            </Box>
-            <Box>
-              <Text size="xs" c="dimmed" mb={4} tt="uppercase" fw={700}>
-                {t("price_foreign")}
-              </Text>
-              <Text fw={700} size="lg">
-                {report.costForeign || 0} {report.currencyCode}
-              </Text>
-            </Box>
-          </Group>
+            <Group grow>
+              <LabelValue label={t("price_try")}>
+                <Text fw={700} size="lg">
+                  {report.costTry || 0} TRY
+                </Text>
+              </LabelValue>
+              <LabelValue label={t("price_foreign")}>
+                <Text fw={700} size="lg">
+                  {report.costForeign || 0} {report.currencyCode}
+                </Text>
+              </LabelValue>
+            </Group>
 
-          <Box>
-            <Text size="xs" c="dimmed" mb={4} tt="uppercase" fw={700}>
-              {t("culprits")}
-            </Text>
-            {report.culpritNames ? (
-              <Text size="sm" fw={500}>
-                {report.culpritNames}
-              </Text>
-            ) : (
-              <Text size="sm" c="dimmed" fs="italic">
-                {t(
-                  "group_liability_note",
-                  "No specific students identified (Group liability will apply)",
-                )}
-              </Text>
-            )}
-          </Box>
+            <LabelValue label={t("culprits")}>
+              {report.culpritNames ? (
+                report.culpritNames
+              ) : (
+                <Text size="sm" c="dimmed" fs="italic">
+                  {t(
+                    "group_liability_note",
+                    "No specific students identified (Group liability will apply)",
+                  )}
+                </Text>
+              )}
+            </LabelValue>
+          </Stack>
 
           {report.status === DamageStatus.APPROVED && (
-            <Box>
-              <Text size="xs" c="dimmed" mb={8} tt="uppercase" fw={700}>
-                {t("liabilities")}
-              </Text>
+            <>
+              <Divider label={t("liabilities")} labelPosition="left" />
               <Paper
                 withBorder
                 radius="md"
                 p={0}
                 style={{ overflow: "hidden" }}
               >
-                <Table striped>
-                  <Table.Thead>
+                <Table highlightOnHover>
+                  <Table.Thead className={classes.thead}>
                     <Table.Tr>
-                      <Table.Th>
+                      <Table.Th className={classes.th}>
                         {t("culprit", { defaultValue: "Culprit" })}
                       </Table.Th>
-                      <Table.Th>{t("amount")}</Table.Th>
+                      <Table.Th className={classes.th}>{t("amount")}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -194,12 +177,12 @@ export function DamageDetailsDrawer({
                   </Table.Tbody>
                 </Table>
               </Paper>
-            </Box>
+            </>
           )}
 
           <Divider />
 
-          <Stack gap="xs">
+          <Stack gap={4}>
             <Text size="xs" c="dimmed">
               {t("reported_by")}: {report.reportedByName || report.reportedBy}
             </Text>
@@ -213,7 +196,7 @@ export function DamageDetailsDrawer({
 
           {report.status === DamageStatus.PENDING &&
             (onApprove || onReject) && (
-              <Group grow mt="xl">
+              <Group grow mt="md">
                 <Button
                   variant="light"
                   color="red"

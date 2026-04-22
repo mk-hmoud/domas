@@ -15,6 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { BookingOpsStatus } from "@domas/ts-types";
+import classes from "../Table/table.module.css";
 
 export interface StudentPayment {
   id: string; // Booking ID
@@ -86,7 +87,7 @@ export function PaymentsTable({
         key={payment.id}
         onClick={() => onSelect(payment)}
         style={{ cursor: "pointer" }}
-        bg={isSelected ? "var(--mantine-color-blue-light)" : undefined}
+        bg={isSelected ? "var(--mantine-color-indigo-0)" : undefined}
       >
         <Table.Td onClick={(e) => e.stopPropagation()}>
           {payment.status === BookingOpsStatus.PENDING_ACCOUNTING &&
@@ -158,10 +159,10 @@ export function PaymentsTable({
   });
 
   return (
-    <Table striped highlightOnHover verticalSpacing="sm">
-      <Table.Thead>
+    <Table highlightOnHover verticalSpacing="sm">
+      <Table.Thead className={classes.thead}>
         <Table.Tr>
-          <Table.Th style={{ width: 40 }}>
+          <Table.Th className={classes.th} style={{ width: 40 }}>
             {onToggleSelectAll && (
               <Checkbox
                 checked={allSelected}
@@ -170,15 +171,15 @@ export function PaymentsTable({
               />
             )}
           </Table.Th>
-          <Table.Th>
-            {t("student_number", { defaultValue: "Student Number" })}
+          <Table.Th className={classes.th}>
+            {t("student_number", { defaultValue: "Student No." })}
           </Table.Th>
-          <Table.Th>{t("student")}</Table.Th>
-          <Table.Th>{t("booking")}</Table.Th>
-          <Table.Th>{t("amount")}</Table.Th>
-          <Table.Th>{t("date")}</Table.Th>
-          <Table.Th>{t("status")}</Table.Th>
-          <Table.Th />
+          <Table.Th className={classes.th}>{t("student")}</Table.Th>
+          <Table.Th className={classes.th}>{t("booking")}</Table.Th>
+          <Table.Th className={classes.th}>{t("amount")}</Table.Th>
+          <Table.Th className={classes.th}>{t("date")}</Table.Th>
+          <Table.Th className={classes.th}>{t("status")}</Table.Th>
+          <Table.Th className={classes.th} style={{ width: 48 }} />
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>{rows}</Table.Tbody>
