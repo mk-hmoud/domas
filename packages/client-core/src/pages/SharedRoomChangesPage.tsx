@@ -15,6 +15,7 @@ import {
   Divider,
   ThemeIcon,
   Select,
+  Drawer,
 } from "@mantine/core";
 import {
   IconCheck,
@@ -118,8 +119,20 @@ export function SharedRoomChangesPage() {
         ? "green"
         : "red";
 
+    const borderColor = isPending
+      ? "var(--mantine-color-yellow-filled)"
+      : req.status === "approved"
+        ? "var(--mantine-color-green-filled)"
+        : "var(--mantine-color-red-filled)";
+
     return (
-      <Paper key={req.id} radius="lg" p="md" withBorder>
+      <Paper
+        key={req.id}
+        radius="md"
+        p="md"
+        withBorder
+        style={{ borderLeftWidth: 3, borderLeftColor: borderColor }}
+      >
         <Group justify="space-between" align="flex-start" wrap="nowrap">
           <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
             <ThemeIcon
@@ -209,119 +222,6 @@ export function SharedRoomChangesPage() {
         <Stack gap="lg" pos="relative">
           <LoadingOverlay visible={loading} />
 
-          {/* Review panel */}
-          {selected && (
-            <Paper
-              radius="xl"
-              p="lg"
-              withBorder
-              style={{ borderColor: "var(--mantine-color-blue-4)" }}
-            >
-              <Stack gap="sm">
-                <Group justify="space-between">
-                  <Text fw={700}>{t("room_change.review_title")}</Text>
-                  <Button
-                    variant="subtle"
-                    size="xs"
-                    color="gray"
-                    onClick={() => setSelected(null)}
-                  >
-                    <IconX size={14} />
-                  </Button>
-                </Group>
-
-                <Divider />
-
-                <Group grow>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("room_change.student")}
-                    </Text>
-                    <Text size="sm" fw={600}>
-                      {selected.studentName}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {selected.studentNumber}
-                    </Text>
-                  </Box>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("room_change.semester")}
-                    </Text>
-                    <Text size="sm" fw={600}>
-                      {selected.semesterDisplayName}
-                    </Text>
-                  </Box>
-                </Group>
-
-                <Group grow>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("room_change.current_bed")}
-                    </Text>
-                    <Text size="sm">{selected.currentBedLabel}</Text>
-                    <Text size="xs" c="dimmed">
-                      {selected.currentLocationPath}
-                    </Text>
-                  </Box>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t("room_change.requested_bed")}
-                    </Text>
-                    <Text size="sm" fw={600}>
-                      {selected.requestedBedLabel}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {selected.requestedLocationPath}
-                    </Text>
-                  </Box>
-                </Group>
-
-                {selected.note && (
-                  <Alert
-                    icon={<IconInfoCircle size={14} />}
-                    color="blue"
-                    variant="light"
-                    radius="md"
-                  >
-                    {selected.note}
-                  </Alert>
-                )}
-
-                <Textarea
-                  label={t("room_change.rejection_reason_label")}
-                  placeholder={t("room_change.rejection_reason_placeholder")}
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.currentTarget.value)}
-                  autosize
-                  minRows={2}
-                  maxRows={3}
-                  radius="md"
-                />
-
-                <Group justify="flex-end" gap="sm">
-                  <Button
-                    variant="light"
-                    color="red"
-                    onClick={() => handleResolve(false)}
-                    loading={actionLoading}
-                    leftSection={<IconX size={14} />}
-                  >
-                    {t("room_change.reject")}
-                  </Button>
-                  <Button
-                    color="green"
-                    onClick={() => handleResolve(true)}
-                    loading={actionLoading}
-                    leftSection={<IconCheck size={14} />}
-                  >
-                    {t("room_change.approve")}
-                  </Button>
-                </Group>
-              </Stack>
-            </Paper>
-          )}
-
           <Tabs defaultValue="pending">
             <Tabs.List>
               <Tabs.Tab
@@ -360,6 +260,112 @@ export function SharedRoomChangesPage() {
           </Tabs>
         </Stack>
       </PageShell>
+
+      <Drawer
+        opened={!!selected}
+        onClose={() => {
+          setSelected(null);
+          setRejectionReason("");
+        }}
+        title={<Text fw={700}>{t("room_change.review_title")}</Text>}
+        position="right"
+        size="md"
+      >
+        {selected && (
+          <Stack gap="md">
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("room_change.student")}
+                </Text>
+                <Text size="sm" fw={600}>
+                  {selected.studentName}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {selected.studentNumber}
+                </Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("room_change.semester")}
+                </Text>
+                <Text size="sm" fw={600}>
+                  {selected.semesterDisplayName}
+                </Text>
+              </Box>
+            </Group>
+
+            <Divider />
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("room_change.current_bed")}
+                </Text>
+                <Text size="sm">{selected.currentBedLabel}</Text>
+                <Text size="xs" c="dimmed">
+                  {selected.currentLocationPath}
+                </Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed">
+                  {t("room_change.requested_bed")}
+                </Text>
+                <Text size="sm" fw={600}>
+                  {selected.requestedBedLabel}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {selected.requestedLocationPath}
+                </Text>
+              </Box>
+            </Group>
+
+            {selected.note && (
+              <Alert
+                icon={<IconInfoCircle size={14} />}
+                color="blue"
+                variant="light"
+                radius="md"
+              >
+                {selected.note}
+              </Alert>
+            )}
+
+            <Divider />
+
+            <Textarea
+              label={t("room_change.rejection_reason_label")}
+              placeholder={t("room_change.rejection_reason_placeholder")}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.currentTarget.value)}
+              autosize
+              minRows={2}
+              maxRows={4}
+              radius="md"
+            />
+
+            <Group grow mt="xs">
+              <Button
+                variant="light"
+                color="red"
+                onClick={() => handleResolve(false)}
+                loading={actionLoading}
+                leftSection={<IconX size={14} />}
+              >
+                {t("room_change.reject")}
+              </Button>
+              <Button
+                color="green"
+                onClick={() => handleResolve(true)}
+                loading={actionLoading}
+                leftSection={<IconCheck size={14} />}
+              >
+                {t("room_change.approve")}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Drawer>
     </>
   );
 }

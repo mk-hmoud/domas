@@ -170,35 +170,29 @@ export function SharedCheckInPage() {
         }
       />
       <PageShell>
-        <Stack gap="lg">
-          <Paper withBorder radius="md" style={{ position: "relative" }}>
-            <LoadingOverlay visible={loading} />
-            <Table highlightOnHover>
-              <Table.Thead className={tableClasses.thead}>
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} />
+          <Table highlightOnHover>
+            <Table.Thead className={tableClasses.thead}>
+              <Table.Tr>
+                <Table.Th className={tableClasses.th}>{t("student")}</Table.Th>
+                <Table.Th className={tableClasses.th}>{t("location")}</Table.Th>
+                <Table.Th className={tableClasses.th}>{t("status")}</Table.Th>
+                <Table.Th className={tableClasses.th} style={{ width: 80 }} />
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {rows}
+              {data.length === 0 && !loading && (
                 <Table.Tr>
-                  <Table.Th className={tableClasses.th}>
-                    {t("student")}
-                  </Table.Th>
-                  <Table.Th className={tableClasses.th}>
-                    {t("location")}
-                  </Table.Th>
-                  <Table.Th className={tableClasses.th}>{t("status")}</Table.Th>
-                  <Table.Th className={tableClasses.th} style={{ width: 80 }} />
+                  <Table.Td colSpan={4} style={{ padding: 0 }}>
+                    <EmptyState title={t("no_bookings_ready")} />
+                  </Table.Td>
                 </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {rows}
-                {data.length === 0 && !loading && (
-                  <Table.Tr>
-                    <Table.Td colSpan={4} style={{ padding: 0 }}>
-                      <EmptyState title={t("no_bookings_ready")} />
-                    </Table.Td>
-                  </Table.Tr>
-                )}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-        </Stack>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Paper>
 
         <CheckInDetailsModal
           opened={!!selectedBooking}

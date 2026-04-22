@@ -306,11 +306,29 @@ export function AccountingPage() {
 
         <Tabs defaultValue="pending">
           <Tabs.List mb="md">
-            <Tabs.Tab value="pending" leftSection={<IconClock size={14} />}>
-              {t('pending')} ({pendingPayments.length})
+            <Tabs.Tab
+              value="pending"
+              leftSection={<IconClock size={14} />}
+              rightSection={
+                pendingPayments.length > 0 ? (
+                  <Badge size="xs" color="orange" variant="filled">
+                    {pendingPayments.length}
+                  </Badge>
+                ) : undefined
+              }
+            >
+              {t('pending')}
             </Tabs.Tab>
-            <Tabs.Tab value="history" leftSection={<IconCircleCheck size={14} />}>
-              {t('history')} ({processedPayments.length})
+            <Tabs.Tab
+              value="history"
+              leftSection={<IconCircleCheck size={14} />}
+              rightSection={
+                <Badge size="xs" color="gray" variant="light">
+                  {processedPayments.length}
+                </Badge>
+              }
+            >
+              {t('history')}
             </Tabs.Tab>
           </Tabs.List>
 

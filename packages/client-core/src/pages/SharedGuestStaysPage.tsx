@@ -80,6 +80,19 @@ function statusColor(status: GuestStayStatus): string {
   }
 }
 
+function statusBorderColor(status: GuestStayStatus): string {
+  switch (status) {
+    case GuestStayStatus.ACTIVE:
+      return "var(--mantine-color-green-filled)";
+    case GuestStayStatus.COMPLETED:
+      return "var(--mantine-color-blue-filled)";
+    case GuestStayStatus.CANCELLED:
+      return "var(--mantine-color-gray-4)";
+    default:
+      return "var(--mantine-color-yellow-filled)";
+  }
+}
+
 function paymentBadge(stay: GuestStay) {
   if (!stay.paymentRequired) return null;
   const paid = Number(stay.amountPaid ?? 0);
@@ -484,7 +497,15 @@ function StayCard({
   };
 
   return (
-    <Card withBorder radius="md" p="md">
+    <Card
+      withBorder
+      radius="md"
+      p="md"
+      style={{
+        borderLeftWidth: 3,
+        borderLeftColor: statusBorderColor(stay.status),
+      }}
+    >
       <Group justify="space-between" align="flex-start">
         <Box style={{ flex: 1 }}>
           <Group gap="xs" mb={4}>

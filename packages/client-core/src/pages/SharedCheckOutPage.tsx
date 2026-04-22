@@ -12,7 +12,6 @@ import {
   Stack,
   ActionIcon,
   TextInput,
-  Card,
 } from "@mantine/core";
 import { IconDoorExit, IconRefresh, IconSearch } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -233,15 +232,13 @@ export function SharedCheckOutPage() {
         }
       />
       <PageShell>
-        <Stack gap="lg">
-          <Card withBorder p="md" radius="md">
-            <TextInput
-              placeholder={t("search_placeholder")}
-              leftSection={<IconSearch size={16} />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.currentTarget.value)}
-            />
-          </Card>
+        <Stack gap="md">
+          <TextInput
+            placeholder={t("search_placeholder")}
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          />
 
           <Paper withBorder radius="md" style={{ position: "relative" }}>
             <LoadingOverlay visible={loading} />

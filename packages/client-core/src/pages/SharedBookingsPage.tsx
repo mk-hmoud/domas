@@ -53,13 +53,34 @@ import {
   CreateStudentDto,
   StaffAvailableBed,
 } from "@domas/ts-types";
-import { CreateBookingModal, BookingsTable } from "@domas/ui";
+import { CreateBookingModal, BookingsTable, LabelValue } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { DatePickerInput } from "@mantine/dates";
 import { useAuth } from "../context/AuthContext";
 import dayjs from "dayjs";
+
+function bookingStatusColor(status: string): string {
+  switch (status) {
+    case "active":
+      return "green";
+    case "ready_for_checkin":
+      return "blue";
+    case "pending":
+      return "yellow";
+    case "pending_accounting":
+      return "orange";
+    case "completed":
+      return "teal";
+    case "cancelled":
+      return "gray";
+    case "rejected":
+      return "red";
+    default:
+      return "gray";
+  }
+}
 
 export function SharedBookingsPage() {
   const { t } = useTranslation();
@@ -561,30 +582,31 @@ export function SharedBookingsPage() {
         >
           {selectedBooking && (
             <Stack gap="md">
-              <Group justify="space-between">
+              <Group justify="space-between" align="flex-start">
                 <Text size="xl" fw={700}>
                   {studentsMap.get(selectedBooking.studentId) ||
                     "Unknown Student"}
                 </Text>
-                <Badge>{selectedBooking.status}</Badge>
+                <Badge
+                  color={bookingStatusColor(selectedBooking.status)}
+                  variant="light"
+                >
+                  {selectedBooking.status.replace(/_/g, " ")}
+                </Badge>
               </Group>
 
-              <Box>
-                <Text size="xs" c="dimmed">
-                  ID
-                </Text>
+              <LabelValue label="ID">
                 <Code>{selectedBooking.id}</Code>
-              </Box>
+              </LabelValue>
 
               {selectedBooking.previousBookingId && (
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("rolled_over_from", {
-                      defaultValue: "Rolled over from",
-                    })}
-                  </Text>
+                <LabelValue
+                  label={t("rolled_over_from", {
+                    defaultValue: "Rolled over from",
+                  })}
+                >
                   <Code color="blue">{selectedBooking.previousBookingId}</Code>
-                </Box>
+                </LabelValue>
               )}
 
               <Divider
@@ -595,24 +617,12 @@ export function SharedBookingsPage() {
               {!isEditingDates ? (
                 <Stack gap="xs">
                   <Group grow>
-                    <Box>
-                      <Text size="xs" c="dimmed">
-                        {t("start_date")}
-                      </Text>
-                      <Text>
-                        {new Date(
-                          selectedBooking.startDate,
-                        ).toLocaleDateString()}
-                      </Text>
-                    </Box>
-                    <Box>
-                      <Text size="xs" c="dimmed">
-                        {t("end_date")}
-                      </Text>
-                      <Text>
-                        {new Date(selectedBooking.endDate).toLocaleDateString()}
-                      </Text>
-                    </Box>
+                    <LabelValue label={t("start_date")}>
+                      {new Date(selectedBooking.startDate).toLocaleDateString()}
+                    </LabelValue>
+                    <LabelValue label={t("end_date")}>
+                      {new Date(selectedBooking.endDate).toLocaleDateString()}
+                    </LabelValue>
                   </Group>
                   {hasPermission("bookings.update") && (
                     <Button
@@ -694,14 +704,11 @@ export function SharedBookingsPage() {
 
               <Divider />
 
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("bed")}
-                </Text>
+              <LabelValue label={t("bed")}>
                 <Text fw={500}>
                   {bedsMap.get(selectedBooking.bedId) || "Unknown Bed"}
                 </Text>
-              </Box>
+              </LabelValue>
 
               {hasPermission("room_changes.manage") && (
                 <Button
