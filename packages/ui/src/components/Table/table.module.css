@@ -1,6 +1,6 @@
 .thead {
-  background: var(--mantine-color-gray-0);
-  border-bottom: 2px solid var(--mantine-color-gray-2);
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  border-bottom: 2px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
 }
 
 .th {
@@ -8,7 +8,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--mantine-color-gray-6);
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2));
   white-space: nowrap;
   padding-top: 10px !important;
   padding-bottom: 10px !important;

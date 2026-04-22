@@ -1,18 +1,11 @@
 .header {
   height: 52px;
   padding: 0 var(--mantine-spacing-lg);
-  background-color: var(--mantine-color-white);
-  border-bottom: 1px solid var(--mantine-color-gray-2);
+  background-color: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
   z-index: 100;
-}
-
-@media (prefers-color-scheme: dark) {
-  .header {
-    background-color: var(--mantine-color-dark-7);
-    border-bottom-color: var(--mantine-color-dark-5);
-  }
 }

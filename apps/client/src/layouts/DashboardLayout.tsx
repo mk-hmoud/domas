@@ -235,7 +235,7 @@ export function DashboardLayout() {
         headerLogo={
           <Group gap={8}>
             <IconBuildingSkyscraper size={22} stroke={1.5} color="var(--mantine-color-indigo-6)" />
-            <Text fw={700} size="md" c="gray.8" style={{ letterSpacing: '-0.01em' }}>
+            <Text fw={700} size="md" style={{ letterSpacing: '-0.01em' }}>
               DOMAS
             </Text>
           </Group>

@@ -6,13 +6,13 @@
   border-radius: var(--mantine-radius-md);
   font-size: var(--mantine-font-size-sm);
   font-weight: 500;
-  color: var(--mantine-color-gray-7);
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0));
   transition: background 100ms ease, color 100ms ease;
 }
 
 .control:hover {
-  background-color: var(--mantine-color-gray-0);
-  color: var(--mantine-color-gray-9);
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-white));
 }
 
 .link {
@@ -21,27 +21,27 @@
   padding: 6px var(--mantine-spacing-sm);
   padding-left: 40px;
   margin-left: var(--mantine-spacing-sm);
-  border-left: 1px solid var(--mantine-color-gray-2);
+  border-left: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
   font-size: var(--mantine-font-size-sm);
   font-weight: 400;
-  color: var(--mantine-color-gray-6);
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2));
   border-radius: 0 var(--mantine-radius-md) var(--mantine-radius-md) 0;
   transition: background 100ms ease, color 100ms ease;
 }
 
 .link:hover {
-  background-color: var(--mantine-color-gray-0);
-  color: var(--mantine-color-gray-9);
+  background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-white));
 }
 
 .linkActive {
   color: var(--mantine-color-indigo-7);
   font-weight: 500;
-  background-color: var(--mantine-color-indigo-0);
+  background-color: light-dark(var(--mantine-color-indigo-0), var(--mantine-color-dark-5));
 }
 
 .linkActive:hover {
-  background-color: var(--mantine-color-indigo-0);
+  background-color: light-dark(var(--mantine-color-indigo-0), var(--mantine-color-dark-5));
   color: var(--mantine-color-indigo-7);
 }
 

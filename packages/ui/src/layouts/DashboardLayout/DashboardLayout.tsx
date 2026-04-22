@@ -44,7 +44,8 @@ export function DashboardLayout({
           style={{
             flex: 1,
             overflowY: "auto",
-            backgroundColor: "var(--mantine-color-gray-0)",
+            backgroundColor:
+              "light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))",
           }}
         >
           {children}

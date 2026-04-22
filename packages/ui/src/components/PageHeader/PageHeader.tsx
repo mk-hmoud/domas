@@ -12,9 +12,11 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
     <Box
       px="xl"
       py="md"
-      bg="white"
       style={{
-        borderBottom: "1px solid var(--mantine-color-gray-2)",
+        backgroundColor:
+          "light-dark(var(--mantine-color-white), var(--mantine-color-dark-7))",
+        borderBottom:
+          "1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))",
         flexShrink: 0,
       }}
     >
