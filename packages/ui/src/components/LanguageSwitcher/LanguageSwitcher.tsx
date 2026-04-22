@@ -1,4 +1,4 @@
-import { Menu, ActionIcon } from "@mantine/core";
+import { Menu, ActionIcon, Tooltip } from "@mantine/core";
 import { useTranslation } from "react-i18next";
 import { IconLanguage } from "@tabler/icons-react";
 
@@ -11,11 +11,22 @@ export function LanguageSwitcher() {
   const { i18n } = useTranslation();
 
   return (
-    <Menu shadow="md" width={200} position="bottom-end">
+    <Menu shadow="md" width={160} position="bottom-end">
       <Menu.Target>
-        <ActionIcon variant="default" size="xl" aria-label="Change language">
-          <IconLanguage stroke={1.5} />
-        </ActionIcon>
+        <Tooltip
+          label={i18n.language === "tr" ? "Dil" : "Language"}
+          position="bottom"
+        >
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="md"
+            radius="xl"
+            aria-label="Change language"
+          >
+            <IconLanguage size={16} stroke={1.5} />
+          </ActionIcon>
+        </Tooltip>
       </Menu.Target>
 
       <Menu.Dropdown>
