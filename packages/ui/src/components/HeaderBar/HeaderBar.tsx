@@ -18,6 +18,7 @@ import {
 } from "@tabler/icons-react";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { LanguageSwitcher } from "../LanguageSwitcher/LanguageSwitcher";
+import { FontSizeControl } from "../FontSizeControl/FontSizeControl";
 import { ReactNode, forwardRef } from "react";
 import { User } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
@@ -92,6 +93,7 @@ export function HeaderBar({
               </ActionIcon>
             </Tooltip>
           )}
+          <FontSizeControl />
           <LanguageSwitcher />
           <ThemeToggle />
         </Group>
