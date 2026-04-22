@@ -35,6 +35,7 @@ import {
   BulkActionsBar,
   ComposeEmailModal,
   LabelValue,
+  EmptyState,
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -324,9 +325,11 @@ export function SharedStudentsPage() {
             onToggleStatus={handleToggleStatus}
           />
           {data.data.length === 0 && !loading && (
-            <Text c="dimmed" ta="center" py="xl">
-              No students found
-            </Text>
+            <EmptyState
+              title={t("no_students_found", {
+                defaultValue: "No students found",
+              })}
+            />
           )}
         </Paper>
 

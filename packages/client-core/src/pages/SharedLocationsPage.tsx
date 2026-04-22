@@ -70,6 +70,7 @@ import {
   ApplyTemplateModal,
   CreateBookingModal,
   ComposeEmailModal,
+  EmptyState,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
@@ -1125,9 +1126,11 @@ function LocationsContent() {
                       })}
                     </SimpleGrid>
                     {roomBeds.length === 0 && (
-                      <Text c="dimmed" ta="center" py="md">
-                        No beds found
-                      </Text>
+                      <EmptyState
+                        title={t("no_beds_found", {
+                          defaultValue: "No beds found",
+                        })}
+                      />
                     )}
 
                     {showInventory && (
@@ -1204,9 +1207,7 @@ function LocationsContent() {
                         })}
                       </SimpleGrid>
                     ) : (
-                      <Text c="dimmed" ta="center" py="xl">
-                        {t("no_sub_locations")}
-                      </Text>
+                      <EmptyState title={t("no_sub_locations")} />
                     )}
 
                     {showInventory && (
@@ -1466,9 +1467,9 @@ function LocationsContent() {
               );
             })}
             {selectedNodesList.length === 0 && (
-              <Text c="dimmed" ta="center">
-                {t("no_selection", { defaultValue: "No items selected" })}
-              </Text>
+              <EmptyState
+                title={t("no_selection", { defaultValue: "No items selected" })}
+              />
             )}
           </Stack>
         </Drawer>

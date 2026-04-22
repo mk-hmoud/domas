@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
 import {
   Stack,
   Group,
@@ -344,9 +344,7 @@ export function SharedRoomChangesPage() {
 
             <Tabs.Panel value="pending" pt="md">
               {pending.length === 0 ? (
-                <Text c="dimmed" ta="center" py="xl">
-                  {t("room_change.no_pending")}
-                </Text>
+                <EmptyState title={t("room_change.no_pending")} />
               ) : (
                 <Stack gap="sm">{pending.map(renderCard)}</Stack>
               )}
@@ -354,9 +352,7 @@ export function SharedRoomChangesPage() {
 
             <Tabs.Panel value="history" pt="md">
               {resolved.length === 0 ? (
-                <Text c="dimmed" ta="center" py="xl">
-                  {t("room_change.no_history")}
-                </Text>
+                <EmptyState title={t("room_change.no_history")} />
               ) : (
                 <Stack gap="sm">{resolved.map(renderCard)}</Stack>
               )}

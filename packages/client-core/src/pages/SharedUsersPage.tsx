@@ -19,7 +19,7 @@ import {
   UpdateUserDto,
   Role,
 } from "@domas/ts-types";
-import { CreateUserModal, UsersTable, LabelValue } from "@domas/ui";
+import { CreateUserModal, UsersTable, LabelValue, EmptyState } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -198,9 +198,9 @@ export function SharedUsersPage({
         />
 
         {paginatedData?.data.length === 0 && (
-          <Text ta="center" mt="xl" c="dimmed">
-            No users found.
-          </Text>
+          <EmptyState
+            title={t("no_users_found", { defaultValue: "No users found" })}
+          />
         )}
 
         {paginatedData && paginatedData.total > paginatedData.limit && (
