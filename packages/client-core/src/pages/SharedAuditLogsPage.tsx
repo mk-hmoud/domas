@@ -6,6 +6,7 @@ import {
   Badge,
   Tabs,
   Card,
+  Paper,
   Text,
   Group,
   Select,
@@ -425,12 +426,7 @@ export function SharedAuditLogsPage() {
               </Group>
             </Card>
 
-            <Card
-              withBorder
-              padding="sm"
-              radius="md"
-              style={{ position: "relative" }}
-            >
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
               <LoadingOverlay visible={loading} />
               <ScrollArea>
                 <Table highlightOnHover>
@@ -467,7 +463,10 @@ export function SharedAuditLogsPage() {
                       >
                         <Table.Td style={{ whiteSpace: "nowrap" }}>
                           <Group gap={4}>
-                            <IconClock size={14} color="gray" />
+                            <IconClock
+                              size={14}
+                              color="var(--mantine-color-gray-5)"
+                            />
                             <Text size="sm">
                               {formatDate(log.event_timestamp)}
                             </Text>
@@ -475,7 +474,10 @@ export function SharedAuditLogsPage() {
                         </Table.Td>
                         <Table.Td>
                           <Group gap={4}>
-                            <IconUser size={14} color="gray" />
+                            <IconUser
+                              size={14}
+                              color="var(--mantine-color-gray-5)"
+                            />
                             <Text size="sm" fw={500}>
                               {log.username || "System"}
                             </Text>
@@ -483,7 +485,10 @@ export function SharedAuditLogsPage() {
                         </Table.Td>
                         <Table.Td>
                           <Group gap={4}>
-                            <IconTable size={14} color="gray" />
+                            <IconTable
+                              size={14}
+                              color="var(--mantine-color-gray-5)"
+                            />
                             <Code>{log.table_name}</Code>
                           </Group>
                         </Table.Td>
@@ -533,14 +538,14 @@ export function SharedAuditLogsPage() {
                 />
               )}
 
-              <Group justify="flex-end" mt="md">
+              <Group justify="flex-end" mt="md" p="sm">
                 <Pagination
                   total={Math.ceil(searchResults.total / parseInt(limit))}
                   value={page}
                   onChange={setPage}
                 />
               </Group>
-            </Card>
+            </Paper>
           </Tabs.Panel>
 
           <Tabs.Panel value="suspicious">
@@ -595,7 +600,7 @@ export function SharedAuditLogsPage() {
           </Tabs.Panel>
 
           <Tabs.Panel value="bulk">
-            <Card withBorder padding="sm" radius="md">
+            <Paper withBorder radius="md">
               <Table highlightOnHover>
                 <Table.Thead className={tableClasses.thead}>
                   <Table.Tr>
@@ -639,7 +644,7 @@ export function SharedAuditLogsPage() {
                   })}
                 />
               )}
-            </Card>
+            </Paper>
           </Tabs.Panel>
         </Tabs>
 
