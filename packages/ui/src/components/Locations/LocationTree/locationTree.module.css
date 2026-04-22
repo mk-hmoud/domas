@@ -1,0 +1,63 @@
+.item {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  transition: background-color 0.1s ease;
+  position: relative;
+  text-align: left;
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background-color: transparent;
+  transition: background-color 0.1s ease;
+}
+
+.item:hover:not(.itemSelected) {
+  background-color: var(--mantine-color-default-hover);
+}
+
+.itemSelected {
+  background-color: var(--mantine-color-blue-light);
+  color: var(--mantine-color-blue-filled);
+}
+
+.itemSelected::before {
+  background-color: var(--mantine-color-blue-filled);
+}
+
+.itemSelected:hover {
+  background-color: var(--mantine-color-blue-light-hover);
+}
+
+.chevronBox {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: background-color 0.1s ease;
+}
+
+.chevronBox:hover {
+  background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4));
+}
+
+.chevron {
+  transition: transform 0.15s ease;
+  width: 14px;
+  height: 14px;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}

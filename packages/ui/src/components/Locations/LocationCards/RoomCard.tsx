@@ -1,12 +1,14 @@
 import {
   Card,
-  Box,
   Checkbox,
   Menu,
   ActionIcon,
   Group,
   Text,
   Badge,
+  ThemeIcon,
+  Box,
+  rem,
 } from "@mantine/core";
 import {
   IconDotsVertical,
@@ -43,42 +45,72 @@ export function RoomCard({
   return (
     <Card
       withBorder
-      padding="md"
+      padding="sm"
       radius="md"
       onClick={onClick}
-      style={{ cursor: "pointer", position: "relative" }}
+      style={{
+        cursor: "pointer",
+        borderLeftWidth: rem(3),
+        borderLeftColor: selected
+          ? "var(--mantine-color-blue-filled)"
+          : "var(--mantine-color-indigo-filled)",
+        backgroundColor: selected
+          ? "var(--mantine-color-blue-light)"
+          : undefined,
+      }}
     >
-      <Box
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          zIndex: 2,
-        }}
-      >
-        <Checkbox
-          checked={selected}
-          onChange={onSelect}
-          onClick={(e) => e.stopPropagation()}
-        />
-      </Box>
+      <Group justify="space-between" wrap="nowrap" gap="xs">
+        <Group wrap="nowrap" gap="xs" style={{ flex: 1, minWidth: 0 }}>
+          <Checkbox
+            size="xs"
+            checked={selected}
+            onChange={onSelect}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <ThemeIcon variant="light" size={28} radius="sm" color="indigo">
+            <IconDoor size={14} />
+          </ThemeIcon>
+          <Box style={{ minWidth: 0, flex: 1 }}>
+            <Group gap={6} wrap="nowrap">
+              <Text
+                fw={600}
+                size="sm"
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {name}
+              </Text>
+              {genderLock && (
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color={genderLock === "male" ? "blue" : "pink"}
+                  style={{ flexShrink: 0 }}
+                >
+                  {genderLock}
+                </Badge>
+              )}
+            </Group>
+            {occupancy > 0 && (
+              <Text size="xs" c="dimmed" mt={2}>
+                {occupancy} {t("occupied", { defaultValue: "occupied" })}
+              </Text>
+            )}
+          </Box>
+        </Group>
 
-      <Box
-        style={{
-          position: "absolute",
-          top: 5,
-          right: 5,
-          zIndex: 2,
-        }}
-      >
         <Menu shadow="md" width={150} position="bottom-end">
           <Menu.Target>
             <ActionIcon
-              variant="transparent"
+              variant="subtle"
               color="gray"
+              size="sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <IconDotsVertical size={16} />
+              <IconDotsVertical size={14} />
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
@@ -103,27 +135,7 @@ export function RoomCard({
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      </Box>
-
-      <Box pt="sm">
-        <Group justify="center" mb="xs">
-          <Group gap="xs">
-            <IconDoor size={18} color="gray" />
-            <Text fw={600}>{name}</Text>
-          </Group>
-          {genderLock && (
-            <Badge
-              color={genderLock === "male" ? "blue" : "pink"}
-              variant="light"
-            >
-              {genderLock}
-            </Badge>
-          )}
-        </Group>
-        <Text size="xs" c="dimmed" mb={4} ta="center">
-          {t("occupancy_label")}: {occupancy}
-        </Text>
-      </Box>
+      </Group>
     </Card>
   );
 }

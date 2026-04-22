@@ -19,6 +19,7 @@ import {
   Pagination,
   LoadingOverlay,
   Tabs,
+  Menu,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -30,8 +31,9 @@ import {
   IconX,
   IconHierarchy,
   IconTable,
-  IconFiles,
   IconAlertTriangle,
+  IconDotsVertical,
+  IconEdit,
 } from "@tabler/icons-react";
 import {
   LocationType,
@@ -71,6 +73,7 @@ import {
   CreateBookingModal,
   ComposeEmailModal,
   EmptyState,
+  LabelValue,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
@@ -302,12 +305,30 @@ function LocationsContent() {
   }, []);
 
   // Calculate breadcrumbs
-  const breadcrumbs = selectedNode
-    ? findLocationPath(treeData, selectedNode.id)?.map((n) => ({
-        label: n.name,
-        onClick: () => selectNode(n),
-      }))
-    : [];
+  const locationPath = selectedNode
+    ? findLocationPath(treeData, selectedNode.id)
+    : null;
+
+  const breadcrumbs =
+    locationPath?.map((n) => ({
+      label: n.name,
+      onClick: () => selectNode(n),
+    })) ?? [];
+
+  // IDs of ancestor nodes that must be expanded in the tree to reveal the selected node
+  const expandedIds = useMemo(() => {
+    if (!locationPath || locationPath.length <= 1)
+      return new Set<string | number>();
+    return new Set<string | number>(
+      locationPath
+        .slice(0, -1)
+        .map((n) =>
+          typeof n.id === "string" && n.id.startsWith("bed-")
+            ? n.id
+            : `loc-${n.id}`,
+        ),
+    );
+  }, [locationPath]);
 
   useEffect(() => {
     // We clear child selection contextually when navigating,
@@ -489,7 +510,11 @@ function LocationsContent() {
   };
 
   const handleEditLocation = () => {
-    if (selectedNode) {
+    if (!selectedNode) return;
+    if (selectedNode.type === LocationType.BED) {
+      setBedToEdit(selectedNode);
+      setEditBedModalOpened(true);
+    } else {
       setLocationToEdit(selectedNode);
       setParentForCreation({ id: null });
       setCreateModalOpened(true);
@@ -743,6 +768,14 @@ function LocationsContent() {
     setViewSelectionDrawerOpened(true);
   };
 
+  const handleApplyBlueprintForNode = () => {
+    if (!selectedNode) return;
+    setTemplateTargetType(
+      selectedNode.type === LocationType.BED ? "bed" : "location",
+    );
+    setApplyTemplateModalOpened(true);
+  };
+
   const handleUpdateBed = async (values: any) => {
     if (!bedToEdit) return;
     try {
@@ -917,6 +950,7 @@ function LocationsContent() {
                 selectedIds={selectedIds}
                 onToggleSelection={handleToggleSelection}
                 onSelectBranch={handleSelectBranch}
+                expandedIds={expandedIds}
               />
             }
           >
@@ -927,21 +961,6 @@ function LocationsContent() {
                 breadcrumbs={breadcrumbs}
                 actions={
                   <>
-                    {selectedNode.type !== LocationType.UNIVERSITY && (
-                      <>
-                        <Button variant="default" onClick={handleEditLocation}>
-                          {t("edit")}
-                        </Button>
-                        <Button
-                          variant="default"
-                          color="red"
-                          leftSection={<IconTrash size={16} />}
-                          onClick={handleDeleteSelected}
-                        >
-                          {t("delete")}
-                        </Button>
-                      </>
-                    )}
                     {(selectedNode.type === LocationType.ROOM ||
                       selectedNode.type === LocationType.BED) && (
                       <Button
@@ -953,113 +972,123 @@ function LocationsContent() {
                         {t("create_booking")}
                       </Button>
                     )}
-                    {selectedNode.type === LocationType.ROOM ? (
-                      <>
-                        <Button
-                          variant="light"
-                          leftSection={<IconPlus size={16} />}
-                          onClick={() => setCreateBedModalOpened(true)}
-                        >
-                          {t("create_bed", { defaultValue: "Create Bed" })}
-                        </Button>
-                        <Button
-                          variant="light"
-                          color="blue"
-                          leftSection={<IconFiles size={16} />}
-                          onClick={() => {
-                            setTemplateTargetType("location");
-                            setApplyTemplateModalOpened(true);
-                          }}
-                        >
-                          {t("apply_blueprint")}
-                        </Button>
-                      </>
-                    ) : (
+                    {selectedNode.type === LocationType.ROOM && (
                       <Button
+                        variant="light"
                         leftSection={<IconPlus size={16} />}
-                        onClick={handleOpenCreateChild}
+                        onClick={() => setCreateBedModalOpened(true)}
                       >
-                        {t("add_child")}
+                        {t("create_bed", { defaultValue: "Create Bed" })}
                       </Button>
+                    )}
+                    {selectedNode.type !== LocationType.ROOM &&
+                      selectedNode.type !== LocationType.BED &&
+                      selectedNode.type !== LocationType.UNIVERSITY && (
+                        <Button
+                          leftSection={<IconPlus size={16} />}
+                          onClick={handleOpenCreateChild}
+                        >
+                          {t("add_child")}
+                        </Button>
+                      )}
+                    {selectedNode.type !== LocationType.UNIVERSITY && (
+                      <Menu shadow="md" position="bottom-end" width={160}>
+                        <Menu.Target>
+                          <ActionIcon
+                            variant="default"
+                            size="lg"
+                            aria-label="More actions"
+                          >
+                            <IconDotsVertical size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item
+                            leftSection={<IconEdit size={14} />}
+                            onClick={handleEditLocation}
+                          >
+                            {t("edit")}
+                          </Menu.Item>
+                          <Menu.Item
+                            leftSection={<IconTrash size={14} />}
+                            color="red"
+                            onClick={handleDeleteSelected}
+                          >
+                            {t("delete")}
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
                     )}
                   </>
                 }
               >
-                <Paper p="md" mb="md" withBorder bg="var(--mantine-color-body)">
-                  <Group>
+                <Group mb="md" gap="xs">
+                  <Badge
+                    variant="light"
+                    color="blue"
+                    leftSection={<IconBuildingBank size={14} />}
+                  >
+                    {t(`ownerships.${selectedNode.ownership}`, {
+                      defaultValue: selectedNode.ownership,
+                    })}
+                  </Badge>
+                  {selectedNode.isTrOnly && (
                     <Badge
                       variant="light"
-                      color="blue"
-                      leftSection={<IconBuildingBank size={14} />}
+                      color="red"
+                      leftSection={<IconFlag size={14} />}
                     >
-                      {t(`ownerships.${selectedNode.ownership}`, {
-                        defaultValue: selectedNode.ownership,
-                      })}
+                      TR Only
                     </Badge>
-                    {selectedNode.isTrOnly && (
+                  )}
+                  {selectedNode.isForeignerOnly && (
+                    <Badge
+                      variant="light"
+                      color="grape"
+                      leftSection={<IconFlag size={14} />}
+                    >
+                      INT Only
+                    </Badge>
+                  )}
+                  {selectedNode.isGuestZone && (
+                    <Badge
+                      variant="light"
+                      color="orange"
+                      leftSection={<IconUser size={14} />}
+                    >
+                      Guest Zone
+                    </Badge>
+                  )}
+                  {selectedNode.type === LocationType.ROOM &&
+                    !selectedNode.roomTypeId && (
                       <Badge
                         variant="light"
-                        color="red"
-                        leftSection={<IconFlag size={14} />}
+                        color="yellow"
+                        leftSection={<IconAlertTriangle size={14} />}
                       >
-                        TR Only
+                        No room type
                       </Badge>
                     )}
-                    {selectedNode.isForeignerOnly && (
-                      <Badge
-                        variant="light"
-                        color="grape"
-                        leftSection={<IconFlag size={14} />}
-                      >
-                        INT Only
-                      </Badge>
-                    )}
-                    {selectedNode.isGuestZone && (
-                      <Badge
-                        variant="light"
-                        color="orange"
-                        leftSection={<IconUser size={14} />}
-                      >
-                        Guest Zone
-                      </Badge>
-                    )}
-                    {selectedNode.type === LocationType.ROOM &&
-                      !selectedNode.roomTypeId && (
-                        <Badge
-                          variant="light"
-                          color="yellow"
-                          leftSection={<IconAlertTriangle size={14} />}
-                        >
-                          No room type
-                        </Badge>
-                      )}
-                    {selectedNode.roomTypeId && (
-                      <Badge
-                        variant="light"
-                        color="green"
-                        leftSection={<IconCurrencyDollar size={14} />}
-                      >
-                        {selectedNode.roomTypeName ??
-                          `Type #${selectedNode.roomTypeId}`}
-                      </Badge>
-                    )}
-                  </Group>
-                </Paper>
+                  {selectedNode.roomTypeId && (
+                    <Badge
+                      variant="light"
+                      color="green"
+                      leftSection={<IconCurrencyDollar size={14} />}
+                    >
+                      {selectedNode.roomTypeName ??
+                        `Type #${selectedNode.roomTypeId}`}
+                    </Badge>
+                  )}
+                </Group>
 
                 {selectedNode.type === LocationType.BED ? (
                   <Stack gap="md" p="md">
-                    <Box>
-                      <Text size="xs" c="dimmed">
-                        {t("bed_label", { defaultValue: "Label" })}
-                      </Text>
-                      <Text size="lg" fw={600}>
-                        {selectedNode.name}
-                      </Text>
-                    </Box>
-                    <Box>
-                      <Text size="xs" c="dimmed">
-                        {t("status", { defaultValue: "Status" })}
-                      </Text>
+                    <LabelValue
+                      label={t("bed_label", { defaultValue: "Label" })}
+                    >
+                      {selectedNode.name}
+                    </LabelValue>
+                    <LabelValue label={t("status", { defaultValue: "Status" })}>
                       <Badge
                         color={
                           selectedNode.status === "available"
@@ -1068,26 +1097,81 @@ function LocationsContent() {
                               ? "orange"
                               : "blue"
                         }
+                        variant="light"
                       >
                         {t(`bed_status.${selectedNode.status}`)}
                       </Badge>
-                    </Box>
+                    </LabelValue>
 
                     {showInventory && (
                       <>
-                        <Divider />
+                        <Divider my="md" />
                         <InventoryAssignmentList
                           data={inventoryAssignments}
                           loading={inventoryLoading}
                           onAddClick={() => setAssignModalOpened(true)}
                           onRemove={handleDeleteAssignment}
                           onUpdateQuantity={handleUpdateAssignmentQuantity}
+                          onApplyTemplate={handleApplyBlueprintForNode}
                         />
                       </>
                     )}
                   </Stack>
                 ) : selectedNode.type === LocationType.ROOM ? (
                   <>
+                    <Group justify="space-between" align="center" mb="sm">
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        fw={600}
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.05em" }}
+                      >
+                        {t("beds", { defaultValue: "Beds" })} ({roomBeds.length}
+                        )
+                      </Text>
+                      {roomBeds.length > 0 && (
+                        <Checkbox
+                          size="xs"
+                          label={t("select_all", {
+                            defaultValue: "Select All",
+                          })}
+                          checked={
+                            roomBeds.length > 0 &&
+                            roomBeds.every((b) =>
+                              selectedIds.includes(`bed-${b.id}`),
+                            )
+                          }
+                          indeterminate={
+                            roomBeds.some((b) =>
+                              selectedIds.includes(`bed-${b.id}`),
+                            ) &&
+                            !roomBeds.every((b) =>
+                              selectedIds.includes(`bed-${b.id}`),
+                            )
+                          }
+                          onChange={() => {
+                            const allBedIds = roomBeds.map(
+                              (b) => `bed-${b.id}`,
+                            );
+                            const allSelected = allBedIds.every((id) =>
+                              selectedIds.includes(id),
+                            );
+                            if (allSelected) {
+                              setSelectedIds((prev) =>
+                                prev.filter(
+                                  (id) => !allBedIds.includes(id as string),
+                                ),
+                              );
+                            } else {
+                              setSelectedIds((prev) =>
+                                Array.from(new Set([...prev, ...allBedIds])),
+                              );
+                            }
+                          }}
+                        />
+                      )}
+                    </Group>
                     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
                       {roomBeds.map((bed) => {
                         const globalId = `bed-${bed.id}`;
@@ -1142,15 +1226,40 @@ function LocationsContent() {
                           onAddClick={() => setAssignModalOpened(true)}
                           onRemove={handleDeleteAssignment}
                           onUpdateQuantity={handleUpdateAssignmentQuantity}
+                          onApplyTemplate={handleApplyBlueprintForNode}
                         />
                       </>
                     )}
                   </>
                 ) : (
                   <>
-                    {children.length > 0 && (
-                      <Group mb="md">
+                    <Group justify="space-between" align="center" mb="sm">
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        fw={600}
+                        tt="uppercase"
+                        style={{ letterSpacing: "0.05em" }}
+                      >
+                        {selectedNode.type === LocationType.UNIVERSITY
+                          ? t("campuses", { defaultValue: "Campuses" })
+                          : selectedNode.type === LocationType.CAMPUS
+                            ? t("buildings", { defaultValue: "Buildings" })
+                            : selectedNode.type === LocationType.BUILDING
+                              ? t("floors", { defaultValue: "Floors" })
+                              : selectedNode.type === LocationType.FLOOR
+                                ? t("rooms", { defaultValue: "Rooms" })
+                                : t("locations", {
+                                    defaultValue: "Locations",
+                                  })}{" "}
+                        ({children.length})
+                      </Text>
+                      {children.length > 0 && (
                         <Checkbox
+                          size="xs"
+                          label={t("select_all", {
+                            defaultValue: "Select All",
+                          })}
                           checked={
                             children.length > 0 &&
                             children.every((c) =>
@@ -1166,14 +1275,11 @@ function LocationsContent() {
                             )
                           }
                           onChange={handleToggleSelectAllChildren}
-                          label={t("select_all", {
-                            defaultValue: "Select All",
-                          })}
                         />
-                      </Group>
-                    )}
+                      )}
+                    </Group>
                     {children.length > 0 ? (
-                      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+                      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
                         {children.map((child) => {
                           const globalId =
                             child.type === LocationType.BED
@@ -1219,6 +1325,7 @@ function LocationsContent() {
                           onAddClick={() => setAssignModalOpened(true)}
                           onRemove={handleDeleteAssignment}
                           onUpdateQuantity={handleUpdateAssignmentQuantity}
+                          onApplyTemplate={handleApplyBlueprintForNode}
                         />
                       </>
                     )}
@@ -1226,9 +1333,11 @@ function LocationsContent() {
                 )}
               </LocationDetail>
             ) : (
-              <Center h="100%">
-                <Text c="dimmed">{t("select_location_prompt")}</Text>
-              </Center>
+              <EmptyState
+                title={t("select_location_prompt", {
+                  defaultValue: "Select a location to view details",
+                })}
+              />
             )}
           </LocationsManager>
         ) : (
