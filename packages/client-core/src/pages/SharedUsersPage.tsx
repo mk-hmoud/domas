@@ -9,6 +9,8 @@ import {
   Stack,
   Badge,
   TextInput,
+  Paper,
+  LoadingOverlay,
 } from "@mantine/core";
 import { IconPlus, IconEdit, IconSearch } from "@tabler/icons-react";
 import { users, access } from "@domas/api-client";
@@ -42,8 +44,10 @@ export function SharedUsersPage({
   const [modalOpened, setModalOpened] = useState(false);
   const [viewUser, setViewUser] = useState<User | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchData = async (page: number) => {
+    setLoading(true);
     try {
       const [result, rolesResult] = await Promise.all([
         users.findAll({ page, limit: 10, roles: role }),
@@ -57,6 +61,8 @@ export function SharedUsersPage({
         message: t("failed_to_fetch_data"),
         color: "red",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -190,18 +196,20 @@ export function SharedUsersPage({
           onChange={(e) => setSearchQuery(e.currentTarget.value)}
         />
 
-        <UsersTable
-          data={filteredData}
-          onDelete={confirmDelete}
-          onEdit={openEditModal}
-          onRowClick={setViewUser}
-        />
-
-        {paginatedData?.data.length === 0 && (
-          <EmptyState
-            title={t("no_users_found", { defaultValue: "No users found" })}
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+          <UsersTable
+            data={filteredData}
+            onDelete={confirmDelete}
+            onEdit={openEditModal}
+            onRowClick={setViewUser}
           />
-        )}
+          {paginatedData?.data.length === 0 && !loading && (
+            <EmptyState
+              title={t("no_users_found", { defaultValue: "No users found" })}
+            />
+          )}
+        </Paper>
 
         {paginatedData && paginatedData.total > paginatedData.limit && (
           <Group justify="center" mt="xl">

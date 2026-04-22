@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PageHeader, PageShell, EmptyState } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState, LabelValue } from "@domas/ui";
 import tableClasses from "../tableClasses.module.css";
 import {
   Button,
@@ -458,79 +458,62 @@ export function SharedSemestersPage() {
               </Group>
 
               <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("start_date")}
-                  </Text>
-                  <Text>{formatDate(viewSemester.startDate)}</Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("end_date")}
-                  </Text>
-                  <Text>{formatDate(viewSemester.endDate)}</Text>
-                </Box>
+                <LabelValue label={t("start_date")}>
+                  {formatDate(viewSemester.startDate)}
+                </LabelValue>
+                <LabelValue label={t("end_date")}>
+                  {formatDate(viewSemester.endDate)}
+                </LabelValue>
               </Group>
 
               <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("semester.booking_start", {
-                      defaultValue: "Booking Start",
-                    })}
-                  </Text>
-                  <Text>
-                    {viewSemester.bookingStartDate
-                      ? formatDate(viewSemester.bookingStartDate)
-                      : "-"}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("semester.booking_end", { defaultValue: "Booking End" })}
-                  </Text>
-                  <Text>
-                    {viewSemester.bookingEndDate
-                      ? formatDate(viewSemester.bookingEndDate)
-                      : "-"}
-                  </Text>
-                </Box>
-              </Group>
-
-              <Group grow>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("semester.deposit_try", {
-                      defaultValue: "Deposit (TRY)",
-                    })}
-                  </Text>
-                  <Text>{viewSemester.depositAmountTry}</Text>
-                </Box>
-                <Box>
-                  <Text size="xs" c="dimmed">
-                    {t("semester.deposit_foreign", {
-                      defaultValue: "Deposit (Foreign)",
-                    })}
-                  </Text>
-                  <Text>
-                    {viewSemester.depositAmountForeign}{" "}
-                    {viewSemester.foreignCurrencyCode}
-                  </Text>
-                </Box>
-              </Group>
-
-              <Box>
-                <Text size="xs" c="dimmed">
-                  {t("semester.max_room_changes", {
-                    defaultValue: "Max Room Changes",
+                <LabelValue
+                  label={t("semester.booking_start", {
+                    defaultValue: "Booking Start",
                   })}
-                </Text>
-                <Text>
-                  {viewSemester.maxRoomChanges != null
-                    ? viewSemester.maxRoomChanges
-                    : t("unlimited", { defaultValue: "Unlimited" })}
-                </Text>
-              </Box>
+                >
+                  {viewSemester.bookingStartDate
+                    ? formatDate(viewSemester.bookingStartDate)
+                    : "—"}
+                </LabelValue>
+                <LabelValue
+                  label={t("semester.booking_end", {
+                    defaultValue: "Booking End",
+                  })}
+                >
+                  {viewSemester.bookingEndDate
+                    ? formatDate(viewSemester.bookingEndDate)
+                    : "—"}
+                </LabelValue>
+              </Group>
+
+              <Group grow>
+                <LabelValue
+                  label={t("semester.deposit_try", {
+                    defaultValue: "Deposit (TRY)",
+                  })}
+                >
+                  {viewSemester.depositAmountTry}
+                </LabelValue>
+                <LabelValue
+                  label={t("semester.deposit_foreign", {
+                    defaultValue: "Deposit (Foreign)",
+                  })}
+                >
+                  {viewSemester.depositAmountForeign}{" "}
+                  {viewSemester.foreignCurrencyCode}
+                </LabelValue>
+              </Group>
+
+              <LabelValue
+                label={t("semester.max_room_changes", {
+                  defaultValue: "Max Room Changes",
+                })}
+              >
+                {viewSemester.maxRoomChanges != null
+                  ? viewSemester.maxRoomChanges
+                  : t("unlimited", { defaultValue: "Unlimited" })}
+              </LabelValue>
 
               <Divider
                 label={

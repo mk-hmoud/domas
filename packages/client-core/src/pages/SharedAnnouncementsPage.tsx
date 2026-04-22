@@ -23,6 +23,8 @@ import { notifications } from "@mantine/notifications";
 import {
   IconDotsVertical,
   IconEdit,
+  IconEye,
+  IconEyeOff,
   IconFile,
   IconPaperclip,
   IconPin,
@@ -417,7 +419,20 @@ export function SharedAnnouncementsPage() {
             />
           )}
           {data.map((item) => (
-            <Card key={item.id} withBorder radius="md" p="md">
+            <Card
+              key={item.id}
+              withBorder
+              radius="md"
+              p="md"
+              style={{
+                borderLeftWidth: 3,
+                borderLeftColor: item.pinned
+                  ? "var(--mantine-color-orange-filled)"
+                  : item.isPublished
+                    ? "var(--mantine-color-green-filled)"
+                    : "var(--mantine-color-default-border)",
+              }}
+            >
               <Group justify="space-between" align="flex-start">
                 <Box style={{ flex: 1 }}>
                   <Group gap="xs" mb={4}>
@@ -493,7 +508,13 @@ export function SharedAnnouncementsPage() {
                       {t("edit")}
                     </Menu.Item>
                     <Menu.Item
-                      leftSection={<IconPin size={14} />}
+                      leftSection={
+                        item.isPublished ? (
+                          <IconEyeOff size={14} />
+                        ) : (
+                          <IconEye size={14} />
+                        )
+                      }
                       onClick={() => handleTogglePublish(item)}
                     >
                       {item.isPublished

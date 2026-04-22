@@ -141,7 +141,7 @@ export function RolesPage() {
               <Text size="xs" c="dimmed" fw={700} tt="uppercase">
                 {t('total_roles')}
               </Text>
-              <IconShield size={22} className="text-gray-500" />
+              <IconShield size={22} color="var(--mantine-color-gray-5)" />
             </Group>
             <Group align="flex-end" gap="xs" mt={25}>
               <Text fw={700} size="xl" lh={1}>
@@ -157,7 +157,7 @@ export function RolesPage() {
               <Text size="xs" c="dimmed" fw={700} tt="uppercase">
                 {t('custom_roles')}
               </Text>
-              <IconShieldCheck size={22} className="text-gray-500" />
+              <IconShieldCheck size={22} color="var(--mantine-color-gray-5)" />
             </Group>
             <Group align="flex-end" gap="xs" mt={25}>
               <Text fw={700} size="xl" lh={1}>
