@@ -1,17 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Badge,
-  Box,
-  Button,
-  Group,
-  Paper,
-  Skeleton,
-  Stack,
-  Text,
-  ThemeIcon,
-} from '@domas/ui';
+import { Badge, Box, Button, Group, Paper, Skeleton, Stack, Text, ThemeIcon } from '@domas/ui';
 import { IconFile, IconPaperclip, IconPin, IconSpeakerphone } from '@tabler/icons-react';
 import { Announcement } from '@domas/ts-types';
 import { portalAnnouncements } from '@domas/api-client';
