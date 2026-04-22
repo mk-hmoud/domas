@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Title, Text, Button, Group, Card, TextInput } from '@mantine/core';
+import { Text, Button, Group, Card, TextInput } from '@mantine/core';
 import { PageHeader, PageShell } from '@domas/ui';
 import { IconPlus, IconSearch, IconShield, IconShieldCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
@@ -172,12 +172,9 @@ export function RolesPage() {
 
         <Card withBorder radius="md" p="md" mb="lg">
           <Group justify="space-between" mb="md">
-            <Group>
-              <Title order={4}>{t('all_roles')}</Title>
-              <Text c="dimmed" size="sm">
-                {filteredRoles.length} {t('records_found')}
-              </Text>
-            </Group>
+            <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+              {filteredRoles.length} {t('records_found')}
+            </Text>
             <TextInput
               placeholder={t('search_roles')}
               leftSection={<IconSearch size={14} />}

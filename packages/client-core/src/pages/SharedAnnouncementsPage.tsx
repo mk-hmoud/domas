@@ -16,7 +16,7 @@ import {
   TextInput,
   ThemeIcon,
 } from "@mantine/core";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
@@ -407,15 +407,14 @@ export function SharedAnnouncementsPage() {
         }
       />
       <PageShell>
-        <LoadingOverlay visible={loading} />
-
-        <Stack gap="sm">
+        <Stack gap="sm" pos="relative">
+          <LoadingOverlay visible={loading} />
           {data.length === 0 && !loading && (
-            <Text c="dimmed" ta="center" py="xl">
-              {t("no_announcements_yet", {
+            <EmptyState
+              title={t("no_announcements_yet", {
                 defaultValue: "No announcements yet.",
               })}
-            </Text>
+            />
           )}
           {data.map((item) => (
             <Card key={item.id} withBorder radius="md" p="md">

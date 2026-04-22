@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, Fragment } from "react";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
 import {
   Button,
   Group,
@@ -461,8 +461,6 @@ export function SharedBookingsPage() {
         }
       />
       <PageShell>
-        <LoadingOverlay visible={loading} />
-
         <Card withBorder padding="md" radius="md" mb="md">
           <Stack gap="sm">
             <TextInput
@@ -519,7 +517,8 @@ export function SharedBookingsPage() {
           </Stack>
         </Card>
 
-        <Paper withBorder radius="md">
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} />
           <BookingsTable
             data={filteredData}
             studentsMap={studentsMap}
@@ -530,9 +529,11 @@ export function SharedBookingsPage() {
             onDelete={(booking) => console.log("Delete", booking)}
           />
           {filteredData.length === 0 && !loading && (
-            <Text c="dimmed" ta="center" py="xl">
-              {t("no_bookings_found", { defaultValue: "No bookings found" })}
-            </Text>
+            <EmptyState
+              title={t("no_bookings_found", {
+                defaultValue: "No bookings found",
+              })}
+            />
           )}
         </Paper>
 

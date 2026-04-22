@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PageHeader, PageShell } from "@domas/ui";
+import { PageHeader, PageShell, EmptyState } from "@domas/ui";
 import {
   ActionIcon,
   Badge,
@@ -676,8 +676,6 @@ export function SharedGuestStaysPage() {
         }
       />
       <PageShell>
-        <LoadingOverlay visible={loading} />
-
         <Tabs value={activeTab} onChange={handleTabChange} mb="md">
           <Tabs.List>
             <Tabs.Tab value="active">
@@ -692,11 +690,14 @@ export function SharedGuestStaysPage() {
           </Tabs.List>
         </Tabs>
 
-        <Stack gap="sm">
+        <Stack gap="sm" pos="relative">
+          <LoadingOverlay visible={loading} />
           {!loading && stays.length === 0 && (
-            <Text c="dimmed" ta="center" py="xl">
-              {t("no_guest_stays", { defaultValue: "No guest stays found." })}
-            </Text>
+            <EmptyState
+              title={t("no_guest_stays", {
+                defaultValue: "No guest stays found.",
+              })}
+            />
           )}
           {stays.map((s) => (
             <StayCard

@@ -156,8 +156,6 @@ export function SharedInventoryCatalogPage() {
         }
       />
       <PageShell>
-        <LoadingOverlay visible={loading} />
-
         <Card withBorder padding="md" radius="md" mb="md">
           <TextInput
             placeholder={t("search_placeholder", "Search...")}
@@ -167,7 +165,8 @@ export function SharedInventoryCatalogPage() {
           />
         </Card>
 
-        <Paper withBorder radius="md">
+        <Paper withBorder radius="md" style={{ position: "relative" }}>
+          <LoadingOverlay visible={loading} />
           <InventoryCatalogTable
             data={filteredData}
             onEdit={(item) => {
