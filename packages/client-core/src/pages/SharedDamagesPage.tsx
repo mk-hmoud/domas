@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
-import { Stack, Button, Paper, LoadingOverlay, Tabs } from "@mantine/core";
+import { Button, Paper, LoadingOverlay, Tabs, Badge } from "@mantine/core";
 import { IconPlus, IconListSearch, IconHistory } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -251,54 +251,56 @@ export function SharedDamagesPage() {
         }
       />
       <PageShell>
-        <Stack gap="lg">
-          <Tabs defaultValue="reported">
-            <Tabs.List mb="md">
-              <Tabs.Tab
-                value="reported"
-                leftSection={<IconListSearch size={14} />}
-              >
-                {t("reported_damages", "Reported")}
-              </Tabs.Tab>
-              <Tabs.Tab
-                value="processed"
-                leftSection={<IconHistory size={14} />}
-              >
-                {t("processed_damages", "Processed")}
-              </Tabs.Tab>
-            </Tabs.List>
+        <Tabs defaultValue="reported">
+          <Tabs.List mb="md">
+            <Tabs.Tab
+              value="reported"
+              leftSection={<IconListSearch size={14} />}
+              rightSection={
+                reports.filter((r) => r.status === DamageStatus.PENDING)
+                  .length > 0 ? (
+                  <Badge size="xs" color="red" variant="filled">
+                    {
+                      reports.filter((r) => r.status === DamageStatus.PENDING)
+                        .length
+                    }
+                  </Badge>
+                ) : undefined
+              }
+            >
+              {t("reported_damages", "Reported")}
+            </Tabs.Tab>
+            <Tabs.Tab value="processed" leftSection={<IconHistory size={14} />}>
+              {t("processed_damages", "Processed")}
+            </Tabs.Tab>
+          </Tabs.List>
 
-            <Tabs.Panel value="reported">
-              <Paper withBorder radius="md" style={{ position: "relative" }}>
-                <LoadingOverlay visible={loading} />
-                <DamageReportTable
-                  data={reports.filter(
-                    (r) => r.status === DamageStatus.PENDING,
-                  )}
-                  onView={handleViewDetails}
-                  onApprove={(r) => handleApprove(r.id)}
-                  onReject={(r) => handleReject(r.id)}
-                  canManage={hasPermission("damages.manage")}
-                />
-              </Paper>
-            </Tabs.Panel>
+          <Tabs.Panel value="reported">
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={loading} />
+              <DamageReportTable
+                data={reports.filter((r) => r.status === DamageStatus.PENDING)}
+                onView={handleViewDetails}
+                onApprove={(r) => handleApprove(r.id)}
+                onReject={(r) => handleReject(r.id)}
+                canManage={hasPermission("damages.manage")}
+              />
+            </Paper>
+          </Tabs.Panel>
 
-            <Tabs.Panel value="processed">
-              <Paper withBorder radius="md" style={{ position: "relative" }}>
-                <LoadingOverlay visible={loading} />
-                <DamageReportTable
-                  data={reports.filter(
-                    (r) => r.status !== DamageStatus.PENDING,
-                  )}
-                  onView={handleViewDetails}
-                  onApprove={(r) => handleApprove(r.id)}
-                  onReject={(r) => handleReject(r.id)}
-                  canManage={hasPermission("damages.manage")}
-                />
-              </Paper>
-            </Tabs.Panel>
-          </Tabs>
-        </Stack>
+          <Tabs.Panel value="processed">
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={loading} />
+              <DamageReportTable
+                data={reports.filter((r) => r.status !== DamageStatus.PENDING)}
+                onView={handleViewDetails}
+                onApprove={(r) => handleApprove(r.id)}
+                onReject={(r) => handleReject(r.id)}
+                canManage={hasPermission("damages.manage")}
+              />
+            </Paper>
+          </Tabs.Panel>
+        </Tabs>
 
         <CreateDamageModal
           opened={modalOpened}

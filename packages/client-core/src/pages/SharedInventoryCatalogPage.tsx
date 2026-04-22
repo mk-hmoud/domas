@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
-import {
-  Button,
-  Paper,
-  LoadingOverlay,
-  Text,
-  TextInput,
-  Card,
-} from "@mantine/core";
+import { Button, Paper, LoadingOverlay, Text, TextInput } from "@mantine/core";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { inventory } from "@domas/api-client";
@@ -156,14 +149,13 @@ export function SharedInventoryCatalogPage() {
         }
       />
       <PageShell>
-        <Card withBorder padding="md" radius="md" mb="md">
-          <TextInput
-            placeholder={t("search_placeholder", "Search...")}
-            leftSection={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          />
-        </Card>
+        <TextInput
+          placeholder={t("search_placeholder", "Search...")}
+          leftSection={<IconSearch size={16} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          mb="md"
+        />
 
         <Paper withBorder radius="md" style={{ position: "relative" }}>
           <LoadingOverlay visible={loading} />

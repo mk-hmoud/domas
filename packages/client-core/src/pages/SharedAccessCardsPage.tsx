@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
-import { Stack, Button, Paper, LoadingOverlay, Tabs } from "@mantine/core";
-import { IconPlus, IconCards } from "@tabler/icons-react";
+import { Button, Paper, LoadingOverlay, Tabs } from "@mantine/core";
+import { IconPlus, IconCards, IconId } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { accessCards, locations } from "@domas/api-client";
 import { useAuth } from "../context/AuthContext";
@@ -91,32 +91,30 @@ export function SharedAccessCardsPage() {
         }
       />
       <PageShell>
-        <Stack gap="lg">
-          <Tabs value={activeTab} onChange={setActiveTab}>
-            <Tabs.List>
-              <Tabs.Tab value="batches" leftSection={<IconCards size={14} />}>
-                {t("card_batches")}
-              </Tabs.Tab>
-              <Tabs.Tab value="all_cards" leftSection={<IconCards size={14} />}>
-                {t("all_cards", "All Cards")}
-              </Tabs.Tab>
-            </Tabs.List>
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List mb="md">
+            <Tabs.Tab value="batches" leftSection={<IconCards size={14} />}>
+              {t("card_batches")}
+            </Tabs.Tab>
+            <Tabs.Tab value="all_cards" leftSection={<IconId size={14} />}>
+              {t("all_cards", "All Cards")}
+            </Tabs.Tab>
+          </Tabs.List>
 
-            <Tabs.Panel value="batches" pt="md">
-              <Paper withBorder radius="md" style={{ position: "relative" }}>
-                <LoadingOverlay visible={loading} />
-                <CardBatchTable data={batches} />
-              </Paper>
-            </Tabs.Panel>
+          <Tabs.Panel value="batches">
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={loading} />
+              <CardBatchTable data={batches} />
+            </Paper>
+          </Tabs.Panel>
 
-            <Tabs.Panel value="all_cards" pt="md">
-              <Paper withBorder radius="md" style={{ position: "relative" }}>
-                <LoadingOverlay visible={loading} />
-                <AccessCardTable data={cards} />
-              </Paper>
-            </Tabs.Panel>
-          </Tabs>
-        </Stack>
+          <Tabs.Panel value="all_cards">
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={loading} />
+              <AccessCardTable data={cards} />
+            </Paper>
+          </Tabs.Panel>
+        </Tabs>
 
         <CardBatchModal
           opened={modalOpened}

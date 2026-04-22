@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
 import {
-  Card,
   Text,
   Group,
   Pagination,
@@ -300,14 +299,13 @@ export function SharedStudentsPage() {
         }
       />
       <PageShell>
-        <Card withBorder padding="md" radius="md" mb="md">
-          <TextInput
-            placeholder={t("search_placeholder", { defaultValue: "Search..." })}
-            leftSection={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          />
-        </Card>
+        <TextInput
+          placeholder={t("search_placeholder", { defaultValue: "Search..." })}
+          leftSection={<IconSearch size={16} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          mb="md"
+        />
 
         <Paper withBorder radius="md" style={{ position: "relative" }}>
           <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
