@@ -1,7 +1,7 @@
 import { useState, ReactNode } from "react";
 import { Center, Group, Box, Container, Title, Stack } from "@mantine/core";
 import { AuthenticationForm, ThemeToggle, LanguageSwitcher } from "@domas/ui";
-import { LoginCredentials } from "@domas/ts-types";
+import { LoginCredentials, User } from "@domas/ts-types";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -10,12 +10,14 @@ import { notifications } from "@mantine/notifications";
 interface SharedLoginPageProps {
   title: string;
   redirectPath?: string;
+  getRedirectPath?: (user: User) => string;
   logo?: ReactNode;
 }
 
 export function SharedLoginPage({
   title,
   redirectPath = "/dashboard",
+  getRedirectPath,
   logo,
 }: SharedLoginPageProps) {
   const [loading, setLoading] = useState(false);
@@ -26,8 +28,8 @@ export function SharedLoginPage({
   const handleSubmit = async (values: LoginCredentials) => {
     setLoading(true);
     try {
-      await login(values);
-      navigate(redirectPath);
+      const user = await login(values);
+      navigate(getRedirectPath ? getRedirectPath(user) : redirectPath);
     } catch (error) {
       console.error(error);
       notifications.show({

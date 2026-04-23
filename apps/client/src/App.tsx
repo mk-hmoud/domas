@@ -1,7 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { RectorLayout } from './layouts/RectorLayout';
 import { DashboardHome } from './pages/DashboardHome';
+import { RectorOverviewPage } from './pages/rector/RectorOverviewPage';
+import { RectorOccupancyPage } from './pages/rector/RectorOccupancyPage';
+import { RectorFinancesPage } from './pages/rector/RectorFinancesPage';
+import { RectorIssuesPage } from './pages/rector/RectorIssuesPage';
+import { RectorProfilePage } from './pages/rector/RectorProfilePage';
 import { UsersListPage } from './pages/UsersListPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { LocationsPage } from './pages/LocationsPage';
@@ -22,7 +28,7 @@ import { RoomChangesPage } from './pages/RoomChangesPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
-import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
+import { ProtectedRoute, PermissionRoute, RectorRoute } from '@domas/client-core';
 
 function App() {
   return (
@@ -191,6 +197,20 @@ function App() {
               </PermissionRoute>
             }
           />
+        </Route>
+        <Route
+          path="/rector"
+          element={
+            <RectorRoute>
+              <RectorLayout />
+            </RectorRoute>
+          }
+        >
+          <Route index element={<RectorOverviewPage />} />
+          <Route path="occupancy" element={<RectorOccupancyPage />} />
+          <Route path="finances" element={<RectorFinancesPage />} />
+          <Route path="issues" element={<RectorIssuesPage />} />
+          <Route path="profile" element={<RectorProfilePage />} />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

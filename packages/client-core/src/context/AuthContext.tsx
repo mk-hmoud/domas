@@ -11,7 +11,7 @@ import { auth } from "@domas/api-client";
 export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => Promise<void>;
   hasPermission: (permission?: string) => boolean;
 }
@@ -37,9 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<User> => {
     const user = await auth.login(credentials);
     setUser(user);
+    return user;
   };
 
   const logout = async () => {
