@@ -22,6 +22,11 @@ export interface StudentStats {
 export interface FinanceStats {
   pendingPayments: number;
   overdueCount: number;
+  pendingAccounting: number;
+}
+
+export interface RoomChangeStats {
+  pendingCount: number;
 }
 
 export interface PendingBookingRow {
@@ -46,6 +51,7 @@ export interface DashboardStats {
   guests?: GuestStats;
   students?: StudentStats;
   finances?: FinanceStats;
+  roomChanges?: RoomChangeStats;
   pendingBookings?: PendingBookingRow[];
   pendingDamages?: PendingDamageRow[];
 }
