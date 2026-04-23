@@ -754,3 +754,22 @@ CREATE INDEX idx_room_change_requests_booking   ON room_change_requests(booking_
 CREATE INDEX idx_room_change_requests_student   ON room_change_requests(student_id);
 CREATE INDEX idx_room_change_requests_semester  ON room_change_requests(semester_id);
 CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);
+
+-- =============================================
+-- RECTOR ROLE
+-- =============================================
+
+INSERT INTO permissions (slug, description)
+VALUES ('rector.view', 'Access the rector overview dashboard')
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO roles (name, description, is_system_role)
+VALUES ('Rector', 'University rector — read-only executive overview', TRUE)
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r, permissions p
+WHERE r.name = 'Rector'
+  AND p.slug = 'rector.view'
+ON CONFLICT DO NOTHING;

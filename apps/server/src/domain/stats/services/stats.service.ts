@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../core/database/database.service';
-import { DashboardStats } from '@domas/ts-types';
+import { DashboardStats, RectorDashboardStats } from '@domas/ts-types';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
 @Injectable()
@@ -219,5 +219,75 @@ export class StatsService {
 
     await Promise.all(queries);
     return result;
+  }
+
+  async getRectorDashboard(): Promise<RectorDashboardStats> {
+    const pool = this.db.getPool();
+
+    const [bookingsRow, studentsRow, financesRow, damagesRow, roomChangesRow] = await Promise.all([
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'active') AS active_residents,
+          COUNT(*) FILTER (
+            WHERE status = 'ready_for_checkin' AND start_date = CURRENT_DATE
+          ) AS check_ins_today,
+          COUNT(*) FILTER (
+            WHERE status = 'active' AND end_date = CURRENT_DATE
+          ) AS check_outs_today,
+          COUNT(*) FILTER (WHERE status = 'pending_accounting') AS pending_approval
+        FROM bookings
+        WHERE status NOT IN ('cancelled', 'rejected', 'draft')
+      `),
+      pool.query(`
+        SELECT
+          (SELECT COUNT(*) FROM students) AS total,
+          (
+            SELECT COUNT(*) FROM students s
+            WHERE NOT EXISTS (
+              SELECT 1 FROM bookings b
+              WHERE b.student_id = s.id
+                AND b.status IN ('active', 'ready_for_checkin', 'pending_accounting', 'confirmed')
+            )
+          ) AS without_active_booking
+      `),
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE payment_status = 'pending') AS pending_payments,
+          COUNT(*) FILTER (
+            WHERE payment_status = 'pending' AND end_date < CURRENT_DATE
+          ) AS overdue_count
+        FROM bookings
+        WHERE status NOT IN ('cancelled', 'rejected', 'draft')
+      `),
+      pool.query(`
+        SELECT COUNT(*) AS pending_reports
+        FROM damage_reports
+        WHERE status = 'pending'
+      `),
+      pool.query(`
+        SELECT COUNT(*) AS pending_count
+        FROM room_change_requests
+        WHERE status = 'pending'
+      `),
+    ]);
+
+    const b = bookingsRow.rows[0];
+    const s = studentsRow.rows[0];
+    const f = financesRow.rows[0];
+    const d = damagesRow.rows[0];
+    const rc = roomChangesRow.rows[0];
+
+    return {
+      activeResidents: parseInt(b.active_residents, 10),
+      checkInsToday: parseInt(b.check_ins_today, 10),
+      checkOutsToday: parseInt(b.check_outs_today, 10),
+      pendingApproval: parseInt(b.pending_approval, 10),
+      totalStudents: parseInt(s.total, 10),
+      studentsWithoutBooking: parseInt(s.without_active_booking, 10),
+      pendingPayments: parseInt(f.pending_payments, 10),
+      overduePayments: parseInt(f.overdue_count, 10),
+      pendingDamages: parseInt(d.pending_reports, 10),
+      pendingRoomChanges: parseInt(rc.pending_count, 10),
+    };
   }
 }

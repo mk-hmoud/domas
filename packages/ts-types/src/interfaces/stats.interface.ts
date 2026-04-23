@@ -45,6 +45,19 @@ export interface PendingDamageRow {
   reportedAt: string;
 }
 
+export interface RectorDashboardStats {
+  activeResidents: number;
+  checkInsToday: number;
+  checkOutsToday: number;
+  pendingApproval: number;
+  totalStudents: number;
+  studentsWithoutBooking: number;
+  pendingPayments: number;
+  overduePayments: number;
+  pendingDamages: number;
+  pendingRoomChanges: number;
+}
+
 export interface DashboardStats {
   bookings?: BookingStats;
   damages?: DamageStats;
