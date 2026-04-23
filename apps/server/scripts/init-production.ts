@@ -71,6 +71,14 @@ async function bootstrap() {
       .createRole(SYSTEM_ROLES.DORM_MANAGER, 'Dormitory Manager with operational access', true)
       .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.DORM_MANAGER));
 
+    const rectorRole = await accessRepository
+      .createRole(
+        SYSTEM_ROLES.RECTOR,
+        'University rector \u2014 read-only executive overview',
+        true,
+      )
+      .catch(() => accessRepository.findRoleByName(SYSTEM_ROLES.RECTOR));
+
     // Assign Permissions
     if (adminRole) {
       await accessRepository.assignPermissionsToRole(adminRole.id, allPermissionIds);
@@ -91,6 +99,13 @@ async function bootstrap() {
         }
       }
       await accessRepository.assignPermissionsToRole(managerRole.id, managerPermissionIds);
+    }
+
+    if (rectorRole) {
+      const rectorPerm = await accessRepository.findPermissionBySlug(PERMISSIONS.RECTOR_VIEW);
+      if (rectorPerm) {
+        await accessRepository.assignPermissionsToRole(rectorRole.id, [rectorPerm.id]);
+      }
     }
 
     console.log('\u2705 RBAC seeded.');
