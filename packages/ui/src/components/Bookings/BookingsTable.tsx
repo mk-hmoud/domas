@@ -20,6 +20,7 @@ interface BookingsTableProps {
   onDelete?: (booking: Booking) => void;
   onView?: (booking: Booking) => void;
   onTransfer?: (booking: Booking) => void;
+  emptyMessage?: string;
 }
 
 export function BookingsTable({
@@ -31,6 +32,7 @@ export function BookingsTable({
   onDelete,
   onView,
   onTransfer,
+  emptyMessage,
 }: BookingsTableProps) {
   const { t } = useTranslation();
 
@@ -147,9 +149,12 @@ export function BookingsTable({
           <Table.Tr>
             <Table.Td colSpan={6} style={{ padding: 0 }}>
               <EmptyState
-                title={t("no_bookings_found", {
-                  defaultValue: "No bookings found",
-                })}
+                title={
+                  emptyMessage ||
+                  t("no_bookings_found", {
+                    defaultValue: "No bookings found",
+                  })
+                }
               />
             </Table.Td>
           </Table.Tr>

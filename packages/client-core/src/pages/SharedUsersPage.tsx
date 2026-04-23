@@ -21,7 +21,7 @@ import {
   UpdateUserDto,
   Role,
 } from "@domas/ts-types";
-import { CreateUserModal, UsersTable, LabelValue, EmptyState } from "@domas/ui";
+import { CreateUserModal, UsersTable, LabelValue } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -204,11 +204,6 @@ export function SharedUsersPage({
             onEdit={openEditModal}
             onRowClick={setViewUser}
           />
-          {paginatedData?.data.length === 0 && !loading && (
-            <EmptyState
-              title={t("no_users_found", { defaultValue: "No users found" })}
-            />
-          )}
         </Paper>
 
         {paginatedData && paginatedData.total > paginatedData.limit && (
