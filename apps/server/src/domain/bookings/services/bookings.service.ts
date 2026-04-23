@@ -26,6 +26,7 @@ import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { UsersService } from '../../users/services/users.service';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { AccessCardsService } from '../../access-cards/services/access-cards.service';
 import { ContractsService } from '../../contracts/services/contracts.service';
@@ -92,9 +93,12 @@ export class BookingsService {
         bed.ownership === LocationOwnership.RECTORATE;
 
       if (isRectorate) {
-        const user = await this.usersService.findById(context.userId, context, client);
-        if (!user || !user.isRecoveryAdmin) {
-          throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
+        const hasAccess =
+          context.isRecoveryAdmin || context.permissions?.includes(PERMISSIONS.RECTOR_VIEW);
+        if (!hasAccess) {
+          throw new ForbiddenException(
+            'Only Rector or Recovery Admin can book Rectorate-owned locations',
+          );
         }
       }
 

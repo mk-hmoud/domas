@@ -45,6 +45,34 @@ export interface PendingDamageRow {
   reportedAt: string;
 }
 
+export interface RectorBed {
+  id: number;
+  label: string;
+  status: string;
+  locationName: string;
+  locationPath: string;
+  residentName: string | null;
+}
+
+export interface RectorBedsResponse {
+  beds: RectorBed[];
+  total: number;
+  available: number;
+  occupied: number;
+}
+
+export interface RectorResident {
+  bookingId: string;
+  studentName: string;
+  studentNumber: string;
+  bedLabel: string;
+  locationName: string;
+  locationPath: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+
 export interface RectorDashboardStats {
   activeResidents: number;
   checkInsToday: number;
