@@ -857,5 +857,26 @@
     "confirm": "Yatak Değiştir",
     "success": "Yatak başarıyla değiştirildi.",
     "error": "Yatak değiştirilemedi."
+  },
+  "rector": {
+    "nav_overview": "Genel Bakış",
+    "nav_occupancy": "Doluluk",
+    "nav_finances": "Finans",
+    "nav_issues": "Sorunlar",
+    "nav_profile": "Profil",
+    "sign_out": "Çıkış Yap",
+    "active_residents": "Aktif Sakin",
+    "check_ins_today": "Bugün Giriş",
+    "check_outs_today": "Bugün Çıkış",
+    "pending_approval": "Onay Bekleyen",
+    "total_students": "Toplam Öğrenci",
+    "students_without_booking": "Rezervasyonsuz",
+    "pending_payments": "Bekleyen Ödeme",
+    "overdue_payments": "Gecikmiş Ödeme",
+    "pending_damages": "Bekleyen Hasar",
+    "pending_room_changes": "Oda Değişikliği",
+    "occupancy_rate": "Doluluk Oranı",
+    "financial_summary": "Finansal Özet",
+    "issues_summary": "Açık Sorunlar"
   }
 }

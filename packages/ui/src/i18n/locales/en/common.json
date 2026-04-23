@@ -869,5 +869,26 @@
     "success": "Bed moved successfully.",
     "error": "Failed to move bed."
   },
-  "all_semesters": "All Semesters"
+  "all_semesters": "All Semesters",
+  "rector": {
+    "nav_overview": "Overview",
+    "nav_occupancy": "Occupancy",
+    "nav_finances": "Finances",
+    "nav_issues": "Issues",
+    "nav_profile": "Profile",
+    "sign_out": "Sign Out",
+    "active_residents": "Active Residents",
+    "check_ins_today": "Check-Ins Today",
+    "check_outs_today": "Check-Outs Today",
+    "pending_approval": "Pending Approval",
+    "total_students": "Total Students",
+    "students_without_booking": "Without Booking",
+    "pending_payments": "Pending Payments",
+    "overdue_payments": "Overdue",
+    "pending_damages": "Pending Damages",
+    "pending_room_changes": "Room Changes",
+    "occupancy_rate": "Occupancy Rate",
+    "financial_summary": "Financial Summary",
+    "issues_summary": "Open Issues"
+  }
 }
