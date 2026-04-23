@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, UseGuards } from '@nestjs/common';
 import { StatsService } from '../services/stats.service';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { UserContext } from '../../../core/decorators/user-context.decorator';
@@ -10,7 +10,8 @@ export class StatsController {
   constructor(private readonly service: StatsService) {}
 
   @Get('dashboard')
+  @Header('Cache-Control', 'no-store')
   getDashboard(@UserContext() context: AuditUserContext) {
-    return this.service.getDashboard(context.permissions ?? []);
+    return this.service.getDashboard(context.permissions ?? [], context.isRecoveryAdmin);
   }
 }

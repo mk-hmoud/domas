@@ -7,8 +7,9 @@ import { PERMISSIONS } from '../../../common/constants/permissions';
 export class StatsService {
   constructor(private readonly db: DatabaseService) {}
 
-  async getDashboard(permissions: string[]): Promise<DashboardStats> {
-    const has = (p: string) => permissions?.includes(p) || permissions?.includes('*');
+  async getDashboard(permissions: string[], isRecoveryAdmin?: boolean): Promise<DashboardStats> {
+    const has = (p: string) =>
+      isRecoveryAdmin || permissions?.includes(p) || permissions?.includes('*');
 
     const pool = this.db.getPool();
     const result: DashboardStats = {};
