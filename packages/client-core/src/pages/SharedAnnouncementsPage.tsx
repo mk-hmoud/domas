@@ -57,11 +57,13 @@ function AnnouncementModal({
   opened,
   onClose,
   onSubmit,
+  onSuccess,
   initial,
 }: {
   opened: boolean;
   onClose: () => void;
   onSubmit: (values: AnnouncementFormValues) => Promise<string>;
+  onSuccess: () => Promise<void>;
   initial?: Announcement | null;
 }) {
   const { t } = useTranslation();
@@ -150,6 +152,7 @@ function AnnouncementModal({
       if (pendingFiles.length > 0) {
         await announcementsApi.uploadAttachments(id, pendingFiles);
       }
+      await onSuccess();
       onClose();
     } finally {
       setLoading(false);
@@ -382,7 +385,6 @@ export function SharedAnnouncementsPage() {
         defaultValue: "Created successfully",
       }),
     });
-    load();
     return ann.id;
   };
 
@@ -400,7 +402,6 @@ export function SharedAnnouncementsPage() {
       color: "green",
       message: t("saved_successfully", { defaultValue: "Saved successfully" }),
     });
-    load();
     return editing.id;
   };
 
@@ -586,6 +587,7 @@ export function SharedAnnouncementsPage() {
           opened={modalOpened}
           onClose={() => setModalOpened(false)}
           onSubmit={editing ? handleUpdate : handleCreate}
+          onSuccess={load}
           initial={editing}
         />
       </PageShell>
