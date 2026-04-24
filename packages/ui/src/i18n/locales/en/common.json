@@ -871,42 +871,31 @@
   },
   "all_semesters": "All Semesters",
   "onboarding": {
-    "modal_title": "Getting Started",
-    "skip": "Skip Tour",
-    "back": "Back",
     "next": "Next",
-    "finish": "Get Started",
+    "prev": "Back",
+    "done": "Done",
+    "skip": "Skip Tour",
     "steps": {
-      "welcome": "Welcome",
-      "features": "Features",
-      "done": "Ready"
-    },
-    "welcome": {
-      "title": "Welcome to DOMAS",
-      "description": "DOMAS is your central hub for managing dormitory operations — from student bookings to inventory and beyond."
-    },
-    "features": {
-      "intro": "Here's a quick overview of what you can do:",
-      "operations": {
-        "label": "Operations",
-        "desc": "Manage bookings, check-ins, check-outs, accounting, and guest stays."
+      "welcome": {
+        "title": "Welcome to DOMAS 👋",
+        "description": "This quick tour will walk you through the main areas of the system. Click <b>Next</b> to continue or <b>Skip Tour</b> to go straight to your dashboard."
       },
-      "registry": {
-        "label": "Registry",
-        "desc": "View and manage student records and access card assignments."
+      "header": {
+        "title": "Header Bar",
+        "description": "Switch language, toggle dark mode, adjust font size, and view your recent action history from here."
       },
-      "inventory": {
-        "label": "Inventory & Assets",
-        "desc": "Track room inventory, templates, and report damages."
+      "user_menu": {
+        "title": "Your Account",
+        "description": "Click your name to open account settings or sign out."
       },
-      "management": {
-        "label": "Management",
-        "desc": "Configure locations, semesters, users, roles, and announcements."
+      "navbar": {
+        "title": "Navigation",
+        "description": "All modules are accessible from this sidebar — operations, student registry, inventory, and system management."
+      },
+      "content": {
+        "title": "Main Workspace",
+        "description": "This is where pages load. You're all set — start by exploring the navigation on the left."
       }
-    },
-    "done": {
-      "title": "You're all set!",
-      "description": "Your dashboard is ready. Explore the navigation on the left to get started."
     }
   }
 }

@@ -75,7 +75,7 @@ export function HeaderBar({
   const { t } = useTranslation();
 
   return (
-    <header className={classes.header}>
+    <header id="domas-header" className={classes.header}>
       <Group>{logo}</Group>
 
       <Group gap="sm">
@@ -113,7 +113,11 @@ export function HeaderBar({
             transitionProps={{ transition: "pop-top-right" }}
           >
             <Menu.Target>
-              <UserButton name={user.email.split("@")[0]} email={user.email} />
+              <UserButton
+                id="domas-user-menu"
+                name={user.email.split("@")[0]}
+                email={user.email}
+              />
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>{t("application")}</Menu.Label>

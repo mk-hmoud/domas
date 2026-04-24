@@ -12,7 +12,7 @@ import {
   IconDatabase,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth, OnboardingModal } from '@domas/client-core';
+import { useAuth } from '@domas/client-core';
 import { useTranslation } from 'react-i18next';
 import { audit } from '@domas/api-client';
 import { UndoLog } from '@domas/ts-types';
@@ -260,8 +260,6 @@ export function DashboardLayout() {
         currentUserId={user?.id}
         canSeeAll={hasPermission('undo.all')}
       />
-
-      <OnboardingModal />
     </>
   );
 }

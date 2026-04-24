@@ -35,7 +35,7 @@ export function NavbarNested({
   ));
 
   return (
-    <nav className={classes.navbar}>
+    <nav id="domas-navbar" className={classes.navbar}>
       <ScrollArea className={classes.links} scrollbarSize={4}>
         <div className={classes.linksInner}>{links}</div>
       </ScrollArea>

@@ -859,42 +859,31 @@
     "error": "Yatak değiştirilemedi."
   },
   "onboarding": {
-    "modal_title": "Başlarken",
-    "skip": "Turu Atla",
-    "back": "Geri",
     "next": "İleri",
-    "finish": "Başla",
+    "prev": "Geri",
+    "done": "Tamamla",
+    "skip": "Turu Atla",
     "steps": {
-      "welcome": "Hoş Geldiniz",
-      "features": "Özellikler",
-      "done": "Hazır"
-    },
-    "welcome": {
-      "title": "DOMAS'a Hoş Geldiniz",
-      "description": "DOMAS, öğrenci rezervasyonlarından envantere kadar yurt operasyonlarını yönetmek için merkezi platformunuzdur."
-    },
-    "features": {
-      "intro": "Neler yapabileceğinize hızlı bir genel bakış:",
-      "operations": {
-        "label": "Operasyonlar",
-        "desc": "Rezervasyon, check-in, check-out, muhasebe ve misafir konaklamalarını yönetin."
+      "welcome": {
+        "title": "DOMAS'a Hoş Geldiniz 👋",
+        "description": "Bu kısa tur, sistemin ana alanlarını gösterecek. Devam etmek için <b>İleri</b>'ye veya doğrudan panele geçmek için <b>Turu Atla</b>'ya tıklayın."
       },
-      "registry": {
-        "label": "Kayıt",
-        "desc": "Öğrenci kayıtlarını ve erişim kartı atamalarını görüntüleyin ve yönetin."
+      "header": {
+        "title": "Başlık Çubuğu",
+        "description": "Buradan dil değiştirme, karanlık mod, yazı boyutu ve son işlem geçmişini görüntüleyebilirsiniz."
       },
-      "inventory": {
-        "label": "Envanter & Varlıklar",
-        "desc": "Oda envanterini, şablonları takip edin ve hasarları raporlayın."
+      "user_menu": {
+        "title": "Hesabınız",
+        "description": "Hesap ayarlarına erişmek veya çıkış yapmak için adınıza tıklayın."
       },
-      "management": {
-        "label": "Yönetim",
-        "desc": "Konumları, dönemleri, kullanıcıları, rolleri ve duyuruları yapılandırın."
+      "navbar": {
+        "title": "Gezinme Menüsü",
+        "description": "Tüm modüller bu kenar çubuğundan erişilebilir — operasyonlar, öğrenci kaydı, envanter ve sistem yönetimi."
+      },
+      "content": {
+        "title": "Ana Çalışma Alanı",
+        "description": "Sayfalar burada yüklenir. Hazırsınız — sol taraftaki menüyü keşfederek başlayın."
       }
-    },
-    "done": {
-      "title": "Hazırsınız!",
-      "description": "Paneliniz hazır. Başlamak için soldaki menüyü keşfedin."
     }
   }
 }

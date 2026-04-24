@@ -41,6 +41,7 @@ export function DashboardLayout({
           activeLink={activeLink}
         />
         <Box
+          id="domas-content"
           style={{
             flex: 1,
             overflowY: "auto",
