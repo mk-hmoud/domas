@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavStats } from '../hooks/useNavStats';
+import { useOnboardingTour } from '../hooks/useOnboardingTour';
 import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
@@ -21,7 +22,8 @@ import { notifications } from '@mantine/notifications';
 export function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, onboardingNeeded, completeOnboarding } = useAuth();
+  useOnboardingTour({ onboardingNeeded, completeOnboarding });
   const navStats = useNavStats();
   const { t } = useTranslation();
 
