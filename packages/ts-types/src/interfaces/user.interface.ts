@@ -8,6 +8,7 @@ export interface User {
   phoneNumber?: string;
   isActive: boolean;
   isRecoveryAdmin: boolean;
+  onboardingCompleted: boolean;
   roles?: Role[];
   permissions?: string[];
   createdAt: Date;

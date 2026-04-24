@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Patch,
   UseGuards,
   Request,
   Get,
@@ -13,9 +14,13 @@ import { LocalAuthGuard } from '../guards/local-auth.guard';
 import { AuthenticatedGuard } from '../guards/authenticated.guard';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { LoginDto } from '../dto/login.dto';
+import { UsersService } from '../../users/services/users.service';
+import { User } from '../../users/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly usersService: UsersService) {}
+
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -27,6 +32,14 @@ export class AuthController {
   @Get('me')
   getProfile(@Request() req: ExpressRequest) {
     return req.user;
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Patch('onboarding')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async completeOnboarding(@Request() req: ExpressRequest) {
+    const user = req.user as User;
+    await this.usersService.completeOnboarding(user.id);
   }
 
   @Post('logout')

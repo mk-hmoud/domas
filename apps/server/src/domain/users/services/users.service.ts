@@ -203,6 +203,10 @@ export class UsersService {
     return user;
   }
 
+  async completeOnboarding(id: string): Promise<void> {
+    await this.usersRepository.completeOnboarding(id);
+  }
+
   async delete(id: string, context: AuditUserContext, externalClient?: PoolClient): Promise<void> {
     this.logger.log({ userId: id }, 'Attempting to delete user');
 

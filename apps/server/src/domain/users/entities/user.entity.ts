@@ -9,6 +9,7 @@ export class User {
   passwordHash?: string;
   isActive!: boolean;
   isRecoveryAdmin!: boolean;
+  onboardingCompleted!: boolean;
   roles?: Role[];
   permissions?: string[]; // Flattened list for easy access in code
   createdAt!: Date;

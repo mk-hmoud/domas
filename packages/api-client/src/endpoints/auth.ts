@@ -15,4 +15,8 @@ export const auth = {
     const response = await apiClient.get<User>("/auth/me");
     return response.data;
   },
+
+  completeOnboarding: async (): Promise<void> => {
+    await apiClient.patch("/auth/onboarding");
+  },
 };

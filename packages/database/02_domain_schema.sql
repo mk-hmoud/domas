@@ -50,6 +50,7 @@ CREATE TABLE users (
     
     is_active BOOLEAN DEFAULT TRUE,
     is_recovery_admin BOOLEAN DEFAULT FALSE,
+    onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL

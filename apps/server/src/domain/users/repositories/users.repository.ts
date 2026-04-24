@@ -26,6 +26,7 @@ export class UsersRepository {
       `${prefix}phone_number as "phoneNumber"`,
       `${prefix}is_active as "isActive"`,
       `${prefix}is_recovery_admin as "isRecoveryAdmin"`,
+      `${prefix}onboarding_completed as "onboardingCompleted"`,
       `${prefix}created_at as "createdAt"`,
       `${prefix}updated_at as "updatedAt"`,
     ];
@@ -47,6 +48,7 @@ export class UsersRepository {
       passwordHash: row.passwordHash,
       isActive: row.isActive,
       isRecoveryAdmin: row.isRecoveryAdmin,
+      onboardingCompleted: row.onboardingCompleted,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
@@ -236,6 +238,14 @@ export class UsersRepository {
 
     const result = await this.getClient(client).query<User>(query, values);
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
+  }
+
+  async completeOnboarding(id: string, client?: PoolClient): Promise<void> {
+    const query = `
+      UPDATE users SET onboarding_completed = TRUE, updated_at = NOW()
+      WHERE id = $1 AND deleted_at IS NULL
+    `;
+    await this.getClient(client).query(query, [id]);
   }
 
   async delete(id: string, client?: PoolClient): Promise<boolean> {
