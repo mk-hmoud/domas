@@ -857,5 +857,44 @@
     "confirm": "Yatak Değiştir",
     "success": "Yatak başarıyla değiştirildi.",
     "error": "Yatak değiştirilemedi."
+  },
+  "onboarding": {
+    "modal_title": "Başlarken",
+    "skip": "Turu Atla",
+    "back": "Geri",
+    "next": "İleri",
+    "finish": "Başla",
+    "steps": {
+      "welcome": "Hoş Geldiniz",
+      "features": "Özellikler",
+      "done": "Hazır"
+    },
+    "welcome": {
+      "title": "DOMAS'a Hoş Geldiniz",
+      "description": "DOMAS, öğrenci rezervasyonlarından envantere kadar yurt operasyonlarını yönetmek için merkezi platformunuzdur."
+    },
+    "features": {
+      "intro": "Neler yapabileceğinize hızlı bir genel bakış:",
+      "operations": {
+        "label": "Operasyonlar",
+        "desc": "Rezervasyon, check-in, check-out, muhasebe ve misafir konaklamalarını yönetin."
+      },
+      "registry": {
+        "label": "Kayıt",
+        "desc": "Öğrenci kayıtlarını ve erişim kartı atamalarını görüntüleyin ve yönetin."
+      },
+      "inventory": {
+        "label": "Envanter & Varlıklar",
+        "desc": "Oda envanterini, şablonları takip edin ve hasarları raporlayın."
+      },
+      "management": {
+        "label": "Yönetim",
+        "desc": "Konumları, dönemleri, kullanıcıları, rolleri ve duyuruları yapılandırın."
+      }
+    },
+    "done": {
+      "title": "Hazırsınız!",
+      "description": "Paneliniz hazır. Başlamak için soldaki menüyü keşfedin."
+    }
   }
 }

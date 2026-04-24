@@ -2,6 +2,7 @@ export * from "./context/AuthContext";
 export * from "./context/LocationsContext";
 export * from "./components/ProtectedRoute";
 export * from "./components/PermissionRoute";
+export * from "./components/OnboardingModal";
 export * from "./pages/SharedLoginPage";
 export * from "./pages/ForbiddenPage";
 export * from "./pages/SharedLocationsPage";
