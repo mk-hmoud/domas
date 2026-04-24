@@ -4,9 +4,9 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { RectorLayout } from './layouts/RectorLayout';
 import { DashboardHome } from './pages/DashboardHome';
 import { RectorOverviewPage } from './pages/rector/RectorOverviewPage';
-import { RectorOccupancyPage } from './pages/rector/RectorOccupancyPage';
-import { RectorFinancesPage } from './pages/rector/RectorFinancesPage';
-import { RectorIssuesPage } from './pages/rector/RectorIssuesPage';
+import { RectorBedsPage } from './pages/rector/RectorBedsPage';
+import { RectorResidentsPage } from './pages/rector/RectorResidentsPage';
+import { RectorNewBookingPage } from './pages/rector/RectorNewBookingPage';
 import { RectorProfilePage } from './pages/rector/RectorProfilePage';
 import { UsersListPage } from './pages/UsersListPage';
 import { BookingsPage } from './pages/BookingsPage';
@@ -207,9 +207,9 @@ function App() {
           }
         >
           <Route index element={<RectorOverviewPage />} />
-          <Route path="occupancy" element={<RectorOccupancyPage />} />
-          <Route path="finances" element={<RectorFinancesPage />} />
-          <Route path="issues" element={<RectorIssuesPage />} />
+          <Route path="beds" element={<RectorBedsPage />} />
+          <Route path="residents" element={<RectorResidentsPage />} />
+          <Route path="new-booking" element={<RectorNewBookingPage />} />
           <Route path="profile" element={<RectorProfilePage />} />
         </Route>
         <Route path="/" element={<Navigate to="/login" replace />} />

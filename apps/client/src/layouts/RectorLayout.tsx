@@ -18,9 +18,9 @@ import { ThemeToggle, LanguageSwitcher } from '@domas/ui';
 import { useTranslation } from 'react-i18next';
 import {
   IconLayoutDashboard,
-  IconBuildingSkyscraper,
-  IconChartBar,
-  IconAlertTriangle,
+  IconBed,
+  IconUsers,
+  IconCalendarPlus,
   IconUser,
   IconLogout,
 } from '@tabler/icons-react';
@@ -31,14 +31,14 @@ import { useLocation } from 'react-router-dom';
 
 const NAV_ITEMS = [
   { path: '/rector', labelKey: 'rector.nav_overview', icon: IconLayoutDashboard, exact: true },
+  { path: '/rector/beds', labelKey: 'rector.nav_beds', icon: IconBed, exact: false },
+  { path: '/rector/residents', labelKey: 'rector.nav_residents', icon: IconUsers, exact: false },
   {
-    path: '/rector/occupancy',
-    labelKey: 'rector.nav_occupancy',
-    icon: IconBuildingSkyscraper,
+    path: '/rector/new-booking',
+    labelKey: 'rector.nav_new_booking',
+    icon: IconCalendarPlus,
     exact: false,
   },
-  { path: '/rector/finances', labelKey: 'rector.nav_finances', icon: IconChartBar, exact: false },
-  { path: '/rector/issues', labelKey: 'rector.nav_issues', icon: IconAlertTriangle, exact: false },
 ];
 
 // ─── Desktop sidebar nav ──────────────────────────────────────────────────────
