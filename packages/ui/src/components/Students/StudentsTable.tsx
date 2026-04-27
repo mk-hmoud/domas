@@ -56,8 +56,12 @@ export function StudentsTable({
       <Table.Tr
         key={student.id}
         onClick={() => onSelect(student)}
-        style={{ cursor: "pointer" }}
-        bg={isSelected ? "var(--mantine-color-indigo-0)" : undefined}
+        style={{
+          cursor: "pointer",
+          backgroundColor: isSelected
+            ? "light-dark(var(--mantine-color-indigo-0), var(--mantine-color-dark-5))"
+            : undefined,
+        }}
       >
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Checkbox
