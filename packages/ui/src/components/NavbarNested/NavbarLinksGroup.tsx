@@ -1,14 +1,27 @@
 import { useState } from "react";
-import { Group, Box, Collapse, UnstyledButton, rem } from "@mantine/core";
+import {
+  Group,
+  Box,
+  Collapse,
+  UnstyledButton,
+  rem,
+  Badge,
+} from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import classes from "./NavbarLinksGroup.module.css";
+
+interface NavSubLink {
+  label: string;
+  link: string;
+  badge?: number;
+}
 
 interface LinksGroupProps {
   icon: React.FC<any>;
   label: string;
   initiallyOpened?: boolean;
   link?: string;
-  links?: { label: string; link: string }[];
+  links?: NavSubLink[];
   onLinkClick?: (link: string) => void;
   activeLink?: string;
 }
@@ -36,7 +49,14 @@ export function LinksGroup({
         onLinkClick?.(l.link);
       }}
     >
-      {l.label}
+      <Group justify="space-between" gap={4} wrap="nowrap">
+        <span>{l.label}</span>
+        {l.badge != null && l.badge > 0 && (
+          <Badge size="xs" variant="filled" color="red" circle>
+            {l.badge > 99 ? "99+" : l.badge}
+          </Badge>
+        )}
+      </Group>
     </a>
   ));
 

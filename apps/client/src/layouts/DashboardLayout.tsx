@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useNavStats } from '../hooks/useNavStats';
 import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
@@ -21,6 +22,7 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
+  const navStats = useNavStats();
   const { t } = useTranslation();
 
   // Undo History State
@@ -90,16 +92,19 @@ export function DashboardLayout() {
             label: t('nav.check_in'),
             link: '/dashboard/check-in',
             requiredPermission: 'bookings.check_in',
+            badge: navStats.bookings?.checkInsToday,
           },
           {
             label: t('nav.check_out'),
             link: '/dashboard/check-out',
             requiredPermission: 'bookings.check_in',
+            badge: navStats.bookings?.checkOutsToday,
           },
           {
             label: t('nav.accounting'),
             link: '/dashboard/accounting',
             requiredPermission: 'bookings.approve_financial',
+            badge: navStats.finances?.pendingAccounting,
           },
           {
             label: t('nav.guest_stays'),
@@ -110,6 +115,7 @@ export function DashboardLayout() {
             label: t('nav.room_changes'),
             link: '/dashboard/room-changes',
             requiredPermission: 'room_changes.view',
+            badge: navStats.roomChanges?.pendingCount,
           },
         ],
       },
@@ -147,6 +153,7 @@ export function DashboardLayout() {
             label: t('nav.damages'),
             link: '/dashboard/damages',
             requiredPermission: 'damages.view',
+            badge: navStats.damages?.pendingReports,
           },
         ],
       },
@@ -221,7 +228,7 @@ export function DashboardLayout() {
         return null;
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [t, user]);
+  }, [t, user, navStats]);
 
   return (
     <>

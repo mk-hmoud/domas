@@ -57,11 +57,13 @@ function AnnouncementModal({
   opened,
   onClose,
   onSubmit,
+  onSuccess,
   initial,
 }: {
   opened: boolean;
   onClose: () => void;
   onSubmit: (values: AnnouncementFormValues) => Promise<string>;
+  onSuccess: () => Promise<void>;
   initial?: Announcement | null;
 }) {
   const { t } = useTranslation();
@@ -150,6 +152,7 @@ function AnnouncementModal({
       if (pendingFiles.length > 0) {
         await announcementsApi.uploadAttachments(id, pendingFiles);
       }
+      await onSuccess();
       onClose();
     } finally {
       setLoading(false);
@@ -316,19 +319,29 @@ function AnnouncementModal({
                 background: isDragging
                   ? "var(--mantine-color-blue-light)"
                   : undefined,
-                padding: "10px 12px",
+                padding: "32px 24px",
                 transition: "all 0.15s ease",
                 cursor: "pointer",
               }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Text size="xs" c={isDragging ? "blue" : "dimmed"} ta="center">
-                {isDragging
-                  ? t("drop_files_here", { defaultValue: "Drop files here" })
-                  : t("drop_or_click", {
-                      defaultValue: "Drop files here or click to browse",
-                    })}
-              </Text>
+              <Stack gap={6} align="center">
+                <IconPaperclip
+                  size={28}
+                  color={
+                    isDragging
+                      ? "var(--mantine-color-blue-5)"
+                      : "var(--mantine-color-dimmed)"
+                  }
+                />
+                <Text size="sm" c={isDragging ? "blue" : "dimmed"} ta="center">
+                  {isDragging
+                    ? t("drop_files_here", { defaultValue: "Drop files here" })
+                    : t("drop_or_click", {
+                        defaultValue: "Drop files here or click to browse",
+                      })}
+                </Text>
+              </Stack>
             </Box>
           </Box>
 
@@ -382,7 +395,6 @@ export function SharedAnnouncementsPage() {
         defaultValue: "Created successfully",
       }),
     });
-    load();
     return ann.id;
   };
 
@@ -400,7 +412,6 @@ export function SharedAnnouncementsPage() {
       color: "green",
       message: t("saved_successfully", { defaultValue: "Saved successfully" }),
     });
-    load();
     return editing.id;
   };
 
@@ -586,6 +597,7 @@ export function SharedAnnouncementsPage() {
           opened={modalOpened}
           onClose={() => setModalOpened(false)}
           onSubmit={editing ? handleUpdate : handleCreate}
+          onSuccess={load}
           initial={editing}
         />
       </PageShell>

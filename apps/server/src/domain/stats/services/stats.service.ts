@@ -7,8 +7,9 @@ import { PERMISSIONS } from '../../../common/constants/permissions';
 export class StatsService {
   constructor(private readonly db: DatabaseService) {}
 
-  async getDashboard(permissions: string[]): Promise<DashboardStats> {
-    const has = (p: string) => permissions?.includes(p) || permissions?.includes('*');
+  async getDashboard(permissions: string[], isRecoveryAdmin?: boolean): Promise<DashboardStats> {
+    const has = (p: string) =>
+      isRecoveryAdmin || permissions?.includes(p) || permissions?.includes('*');
 
     const pool = this.db.getPool();
     const result: DashboardStats = {};
@@ -185,7 +186,8 @@ export class StatsService {
               COUNT(*) FILTER (
                 WHERE payment_status = 'pending'
                   AND end_date < CURRENT_DATE
-              ) AS overdue_count
+              ) AS overdue_count,
+              COUNT(*) FILTER (WHERE status = 'pending_accounting') AS pending_accounting
             FROM bookings
             WHERE status NOT IN ('cancelled', 'rejected', 'draft')
           `,
@@ -195,6 +197,21 @@ export class StatsService {
             result.finances = {
               pendingPayments: parseInt(row.pending_payments, 10),
               overdueCount: parseInt(row.overdue_count, 10),
+              pendingAccounting: parseInt(row.pending_accounting, 10),
+            };
+          }),
+      );
+    }
+
+    if (has(PERMISSIONS.ROOM_CHANGES_VIEW)) {
+      queries.push(
+        pool
+          .query(
+            `SELECT COUNT(*) AS pending_count FROM room_change_requests WHERE status = 'pending'`,
+          )
+          .then((r) => {
+            result.roomChanges = {
+              pendingCount: parseInt(r.rows[0].pending_count, 10),
             };
           }),
       );

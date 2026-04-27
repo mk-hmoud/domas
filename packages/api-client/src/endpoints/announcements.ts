@@ -56,6 +56,11 @@ export const announcements = {
     const response = await apiClient.post<Announcement>(
       `/announcements/${id}/attachments`,
       fd,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
     );
     return response.data;
   },

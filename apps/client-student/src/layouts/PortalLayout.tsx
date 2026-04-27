@@ -29,6 +29,7 @@ import {
 } from '@tabler/icons-react';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
 import { useNotifications } from '../contexts/NotificationsContext';
+import { useAnnouncements } from '../contexts/AnnouncementsContext';
 
 // ─── Navigation items ─────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ function SidebarNav() {
   const location = useLocation();
   const { student, logout } = useStudentAuth();
   const { unreadCount } = useNotifications();
+  const { unreadCount: announcementCount } = useAnnouncements();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -63,7 +65,13 @@ function SidebarNav() {
         </Text>
         {NAV_ITEM_KEYS.map(({ path, labelKey, icon: Icon }) => {
           const isNotif = path === '/notifications';
+          const isAnn = path === '/announcements';
           const active = location.pathname === path;
+
+          let count = 0;
+          if (isNotif) count = unreadCount;
+          if (isAnn) count = announcementCount;
+
           return (
             <NavLink
               key={path}
@@ -72,10 +80,10 @@ function SidebarNav() {
               label={t(labelKey)}
               active={active}
               leftSection={
-                isNotif && unreadCount > 0 ? (
+                count > 0 ? (
                   <Indicator
                     inline
-                    label={unreadCount > 9 ? '9+' : String(unreadCount)}
+                    label={count > 9 ? '9+' : String(count)}
                     size={16}
                     color="red"
                     offset={4}
@@ -143,6 +151,7 @@ function SidebarNav() {
 function BottomTabBar() {
   const location = useLocation();
   const { unreadCount } = useNotifications();
+  const { unreadCount: announcementCount } = useAnnouncements();
   const { t } = useTranslation();
 
   return (
@@ -164,7 +173,13 @@ function BottomTabBar() {
     >
       {NAV_ITEM_KEYS.map(({ path, labelKey, icon: Icon }) => {
         const isNotif = path === '/notifications';
+        const isAnn = path === '/announcements';
         const active = location.pathname === path;
+
+        let count = 0;
+        if (isNotif) count = unreadCount;
+        if (isAnn) count = announcementCount;
+
         return (
           <RouterNavLink
             key={path}
@@ -183,10 +198,10 @@ function BottomTabBar() {
               transition: 'color 120ms ease',
             }}
           >
-            {isNotif && unreadCount > 0 ? (
+            {count > 0 ? (
               <Indicator
                 inline
-                label={unreadCount > 9 ? '9+' : String(unreadCount)}
+                label={count > 9 ? '9+' : String(count)}
                 size={16}
                 color="red"
                 offset={2}

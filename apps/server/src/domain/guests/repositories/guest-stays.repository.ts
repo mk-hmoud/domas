@@ -23,13 +23,13 @@ export class GuestStaysRepository {
       g.phone              AS guest_phone,
       b.label              AS bed_label,
       r.name               AS room_name,
-      l.path_string        AS location_path,
+      l.tree_path::text    AS location_path,
       u.first_name || ' ' || u.last_name AS created_by_name
     FROM guest_stays gs
     JOIN guests g  ON g.id  = gs.guest_id
     JOIN beds b    ON b.id  = gs.bed_id
     JOIN locations r ON r.id = b.location_id
-    JOIN locations l ON l.tree_path @> r.tree_path AND l.location_type = 'building'
+    JOIN locations l ON l.tree_path @> r.tree_path AND l.type = 'building'
     JOIN users u   ON u.id  = gs.created_by
   `;
 

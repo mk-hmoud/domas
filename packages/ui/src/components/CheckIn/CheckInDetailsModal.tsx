@@ -263,7 +263,7 @@ export function CheckInDetailsModal({
                       </Box>
                       <Box>
                         <Text size="xs" c="dimmed">
-                          {t("bed_label")}
+                          {t("bed_label_field", { defaultValue: "Bed Label" })}
                         </Text>
                         <Badge size="lg" variant="light" color="green">
                           {bed?.label || "-"}

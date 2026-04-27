@@ -2,13 +2,19 @@ import { ScrollArea } from "@mantine/core";
 import { LinksGroup } from "./NavbarLinksGroup";
 import classes from "./NavbarNested.module.css";
 
+interface NavSubLink {
+  label: string;
+  link: string;
+  badge?: number;
+}
+
 interface NavbarNestedProps {
   data: {
     label: string;
     icon: React.FC<any>;
     initiallyOpened?: boolean;
     link?: string;
-    links?: { label: string; link: string }[];
+    links?: NavSubLink[];
   }[];
   onLinkClick?: (link: string) => void;
   activeLink?: string;

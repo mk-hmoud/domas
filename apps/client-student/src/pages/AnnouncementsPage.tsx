@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Box, Button, Group, Paper, Skeleton, Stack, Text, ThemeIcon } from '@domas/ui';
 import { IconFile, IconPaperclip, IconPin, IconSpeakerphone } from '@tabler/icons-react';
 import { Announcement } from '@domas/ts-types';
 import { portalAnnouncements } from '@domas/api-client';
+import { useAnnouncements } from '../contexts/AnnouncementsContext';
 
 function AnnouncementCard({ item }: { item: Announcement }) {
   const { t } = useTranslation();
@@ -104,16 +105,13 @@ function AnnouncementCard({ item }: { item: Announcement }) {
 
 export function AnnouncementsPage() {
   const { t } = useTranslation();
-  const [items, setItems] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items, loading, markAllAsSeen } = useAnnouncements();
 
   useEffect(() => {
-    portalAnnouncements
-      .getAll()
-      .then(setItems)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    if (!loading && items.length > 0) {
+      markAllAsSeen();
+    }
+  }, [items, loading, markAllAsSeen]);
 
   return (
     <Stack gap="lg">

@@ -34,7 +34,6 @@ import {
   BulkActionsBar,
   ComposeEmailModal,
   LabelValue,
-  EmptyState,
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
@@ -322,13 +321,6 @@ export function SharedStudentsPage() {
             onDelete={handleDelete}
             onToggleStatus={handleToggleStatus}
           />
-          {data.data.length === 0 && !loading && (
-            <EmptyState
-              title={t("no_students_found", {
-                defaultValue: "No students found",
-              })}
-            />
-          )}
         </Paper>
 
         <Group justify="flex-end" mt="md">

@@ -15,6 +15,7 @@ interface UsersTableProps {
   onEdit?: (user: User) => void;
   onDelete?: (user: User) => void;
   onRowClick?: (user: User) => void;
+  emptyMessage?: string;
 }
 
 export function UsersTable({
@@ -22,6 +23,7 @@ export function UsersTable({
   onEdit,
   onDelete,
   onRowClick,
+  emptyMessage,
 }: UsersTableProps) {
   const { t } = useTranslation();
 
@@ -96,7 +98,10 @@ export function UsersTable({
           <Table.Tr>
             <Table.Td colSpan={4} style={{ padding: 0 }}>
               <EmptyState
-                title={t("no_users_found", { defaultValue: "No users found" })}
+                title={
+                  emptyMessage ||
+                  t("no_users_found", { defaultValue: "No users found" })
+                }
               />
             </Table.Td>
           </Table.Tr>

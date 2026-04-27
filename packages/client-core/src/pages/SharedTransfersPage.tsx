@@ -20,12 +20,7 @@ import {
   TransferBookingDto,
   BookingOpsStatus,
 } from "@domas/ts-types";
-import {
-  BookingsTable,
-  TransferSemesterModal,
-  LabelValue,
-  EmptyState,
-} from "@domas/ui";
+import { BookingsTable, TransferSemesterModal, LabelValue } from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
@@ -213,14 +208,10 @@ export function SharedTransfersPage() {
                 setSelectedIds([booking.id]);
                 setTransferModalOpened(true);
               }}
+              emptyMessage={t("no_transferable_bookings", {
+                defaultValue: "No transferable bookings found",
+              })}
             />
-            {filteredData.length === 0 && !loading && (
-              <EmptyState
-                title={t("no_transferable_bookings", {
-                  defaultValue: "No transferable bookings found",
-                })}
-              />
-            )}
           </Paper>
         </Stack>
 

@@ -22,6 +22,7 @@ interface StudentsTableProps {
   selectedIds: string[];
   onToggleSelection: (id: string) => void;
   onToggleSelectAll: () => void;
+  emptyMessage?: string;
 }
 
 export function StudentsTable({
@@ -33,6 +34,7 @@ export function StudentsTable({
   selectedIds,
   onToggleSelection,
   onToggleSelectAll,
+  emptyMessage,
 }: StudentsTableProps) {
   const { t } = useTranslation();
 
@@ -54,8 +56,12 @@ export function StudentsTable({
       <Table.Tr
         key={student.id}
         onClick={() => onSelect(student)}
-        style={{ cursor: "pointer" }}
-        bg={isSelected ? "var(--mantine-color-indigo-0)" : undefined}
+        style={{
+          cursor: "pointer",
+          backgroundColor: isSelected
+            ? "light-dark(var(--mantine-color-indigo-0), var(--mantine-color-dark-5))"
+            : undefined,
+        }}
       >
         <Table.Td onClick={(e) => e.stopPropagation()}>
           <Checkbox
@@ -176,9 +182,12 @@ export function StudentsTable({
           <Table.Tr>
             <Table.Td colSpan={7} style={{ padding: 0 }}>
               <EmptyState
-                title={t("no_students_found", {
-                  defaultValue: "No students found",
-                })}
+                title={
+                  emptyMessage ||
+                  t("no_students_found", {
+                    defaultValue: "No students found",
+                  })
+                }
               />
             </Table.Td>
           </Table.Tr>

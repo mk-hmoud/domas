@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, Fragment } from "react";
-import { PageHeader, PageShell, EmptyState } from "@domas/ui";
+import { PageHeader, PageShell } from "@domas/ui";
 import {
   Button,
   Group,
@@ -549,13 +549,6 @@ export function SharedBookingsPage() {
             onEdit={handleEditClick}
             onDelete={(booking) => console.log("Delete", booking)}
           />
-          {filteredData.length === 0 && !loading && (
-            <EmptyState
-              title={t("no_bookings_found", {
-                defaultValue: "No bookings found",
-              })}
-            />
-          )}
         </Paper>
 
         <CreateBookingModal
