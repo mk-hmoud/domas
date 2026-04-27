@@ -319,19 +319,29 @@ function AnnouncementModal({
                 background: isDragging
                   ? "var(--mantine-color-blue-light)"
                   : undefined,
-                padding: "10px 12px",
+                padding: "32px 24px",
                 transition: "all 0.15s ease",
                 cursor: "pointer",
               }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Text size="xs" c={isDragging ? "blue" : "dimmed"} ta="center">
-                {isDragging
-                  ? t("drop_files_here", { defaultValue: "Drop files here" })
-                  : t("drop_or_click", {
-                      defaultValue: "Drop files here or click to browse",
-                    })}
-              </Text>
+              <Stack gap={6} align="center">
+                <IconPaperclip
+                  size={28}
+                  color={
+                    isDragging
+                      ? "var(--mantine-color-blue-5)"
+                      : "var(--mantine-color-dimmed)"
+                  }
+                />
+                <Text size="sm" c={isDragging ? "blue" : "dimmed"} ta="center">
+                  {isDragging
+                    ? t("drop_files_here", { defaultValue: "Drop files here" })
+                    : t("drop_or_click", {
+                        defaultValue: "Drop files here or click to browse",
+                      })}
+                </Text>
+              </Stack>
             </Box>
           </Box>
 

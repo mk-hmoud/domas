@@ -113,7 +113,7 @@ export function CreateBedModal({
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           <TextInput
-            label={t("bed_label", { defaultValue: "Label" })}
+            label={t("bed_label_field", { defaultValue: "Bed Label" })}
             placeholder="e.g. A, B, 1, 2"
             required
             {...form.getInputProps("label")}
