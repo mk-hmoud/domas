@@ -18,7 +18,25 @@ services:
       - domas_net
 
   # ------------------------------------
-  # 2. SERVER
+  # 2. MINIO (Object Storage)
+  # ------------------------------------
+  minio:
+    container_name: domas_minio
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console (http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - domas_net
+
+  # ------------------------------------
+  # 3. SERVER
   # ------------------------------------
   server:
     container_name: domas_server
@@ -30,6 +48,11 @@ services:
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@domas_db:5432/domas
+      - STORAGE_ENDPOINT=http://domas_minio:9000
+      - STORAGE_REGION=us-east-1
+      - STORAGE_ACCESS_KEY=minioadmin
+      - STORAGE_SECRET_KEY=minioadmin
+      - STORAGE_BUCKET=domas-files
     volumes:
       # mapping for HOT RELOAD
       - ./apps/server/src:/app/apps/server/src
@@ -40,9 +63,10 @@ services:
       - domas_net
     depends_on:
       - db
+      - minio
 
   # ------------------------------------
-  # 3. STUDENT CLIENT
+  # 4. STUDENT CLIENT
   # ------------------------------------
   client-student:
     container_name: domas_student
@@ -61,7 +85,7 @@ services:
       - domas_net
 
   # ------------------------------------
-  # 4. MAIN CLIENT (ADMIN)
+  # 5. MAIN CLIENT (ADMIN)
   # ------------------------------------
   client:
     container_name: domas_client
@@ -87,3 +111,4 @@ networks:
 
 volumes:
   postgres_data:
+  minio_data:
