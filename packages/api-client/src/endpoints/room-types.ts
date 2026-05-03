@@ -29,4 +29,24 @@ export const roomTypes = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/room-types/${id}`);
   },
+
+  uploadImage: async (id: number, file: File): Promise<RoomType> => {
+    const fd = new FormData();
+    fd.append("image", file);
+    const response = await apiClient.post<RoomType>(
+      `/room-types/${id}/images`,
+      fd,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+    return response.data;
+  },
+
+  removeImage: async (id: number, index: number): Promise<RoomType> => {
+    const response = await apiClient.delete<RoomType>(
+      `/room-types/${id}/images/${index}`,
+    );
+    return response.data;
+  },
 };

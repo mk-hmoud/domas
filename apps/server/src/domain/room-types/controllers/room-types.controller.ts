@@ -10,13 +10,18 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RoomTypesService } from '../services/room-types.service';
 import { CreateRoomTypeDto, UpdateRoomTypeDto } from '../dto/room-type.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 @Controller('room-types')
 @UseGuards(AuthenticatedGuard, PermissionsGuard)
@@ -45,6 +50,19 @@ export class RoomTypesController {
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoomTypeDto) {
     return this.service.update(id, dto);
+  }
+
+  @Post(':id/images')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: MAX_IMAGE_SIZE } }))
+  uploadImage(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
+    return this.service.uploadImage(id, file);
+  }
+
+  @Delete(':id/images/:index')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  removeImage(@Param('id', ParseIntPipe) id: number, @Param('index', ParseIntPipe) index: number) {
+    return this.service.removeImage(id, index);
   }
 
   @Delete(':id')

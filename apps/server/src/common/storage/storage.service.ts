@@ -8,26 +8,39 @@ import {
   CreateBucketCommand,
   HeadBucketCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private readonly client: S3Client;
+  private readonly presignClient: S3Client;
   private readonly bucket: string;
 
   constructor(private readonly config: ConfigService) {
     this.bucket = config.getOrThrow<string>('STORAGE_BUCKET');
     const endpoint = config.get<string>('STORAGE_ENDPOINT');
+    // Public endpoint is what browsers use to reach MinIO (may differ from internal Docker hostname)
+    const publicEndpoint = config.get<string>('STORAGE_PUBLIC_ENDPOINT') || endpoint;
+
+    const credentials = {
+      accessKeyId: config.getOrThrow<string>('STORAGE_ACCESS_KEY'),
+      secretAccessKey: config.getOrThrow<string>('STORAGE_SECRET_KEY'),
+    };
+    const region = config.get<string>('STORAGE_REGION') ?? 'us-east-1';
 
     this.client = new S3Client({
       endpoint: endpoint || undefined,
-      region: config.get<string>('STORAGE_REGION') ?? 'us-east-1',
-      credentials: {
-        accessKeyId: config.getOrThrow<string>('STORAGE_ACCESS_KEY'),
-        secretAccessKey: config.getOrThrow<string>('STORAGE_SECRET_KEY'),
-      },
-      // Required for MinIO — AWS S3 uses virtual-hosted style by default
+      region,
+      credentials,
       forcePathStyle: !!endpoint,
+    });
+
+    this.presignClient = new S3Client({
+      endpoint: publicEndpoint || undefined,
+      region,
+      credentials,
+      forcePathStyle: !!publicEndpoint,
     });
   }
 
@@ -61,5 +74,14 @@ export class StorageService implements OnModuleInit {
 
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  // Generates a browser-accessible pre-signed URL (default 7-day expiry)
+  async presign(key: string, expiresIn = 604800): Promise<string> {
+    return getSignedUrl(
+      this.presignClient,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { expiresIn },
+    );
   }
 }
