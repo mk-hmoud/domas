@@ -167,13 +167,16 @@ export class StudentPortalController {
     );
     if (!booking.contractSigned)
       throw new NotFoundException('No contract available for this booking');
-    const contract = await this.contractsService.getContract(bookingId, ContractType.CHECK_IN);
+    const { fileSize, buffer } = await this.contractsService.getContract(
+      bookingId,
+      ContractType.CHECK_IN,
+    );
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="contract-${bookingId}.pdf"`,
-      'Content-Length': contract.fileSize,
+      'Content-Length': fileSize,
     });
-    return new StreamableFile(contract.pdfData);
+    return new StreamableFile(buffer);
   }
 
   @UseGuards(StudentAuthGuard)
