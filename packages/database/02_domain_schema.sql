@@ -753,4 +753,20 @@ CREATE TABLE room_change_requests (
 CREATE INDEX idx_room_change_requests_booking   ON room_change_requests(booking_id);
 CREATE INDEX idx_room_change_requests_student   ON room_change_requests(student_id);
 CREATE INDEX idx_room_change_requests_semester  ON room_change_requests(semester_id);
+
+-- =============================================
+-- DAMAGE REPORT IMAGES (Evidence Photos)
+-- =============================================
+
+CREATE TABLE damage_report_images (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    damage_report_id UUID         NOT NULL REFERENCES damage_reports(id) ON DELETE CASCADE,
+    filename         VARCHAR(255) NOT NULL,
+    mime_type        VARCHAR(100) NOT NULL,
+    size             INT          NOT NULL,
+    storage_key      VARCHAR(500) NOT NULL UNIQUE,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_damage_report_images_report_id ON damage_report_images(damage_report_id);
 CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);
