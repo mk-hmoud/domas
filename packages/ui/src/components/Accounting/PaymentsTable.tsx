@@ -87,7 +87,11 @@ export function PaymentsTable({
         key={payment.id}
         onClick={() => onSelect(payment)}
         style={{ cursor: "pointer" }}
-        bg={isSelected ? "var(--mantine-color-indigo-0)" : undefined}
+        bg={
+          isSelected
+            ? "light-dark(var(--mantine-color-indigo-0), var(--mantine-color-dark-5))"
+            : undefined
+        }
       >
         <Table.Td onClick={(e) => e.stopPropagation()}>
           {payment.status === BookingOpsStatus.PENDING_ACCOUNTING &&

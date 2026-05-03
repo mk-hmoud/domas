@@ -36,9 +36,11 @@ export function BulkActionsBar({
             style={{
               ...styles,
               transform: `${styles.transform} translateX(-50%)`,
-              backgroundColor: "#1A1B1E",
+              backgroundColor:
+                "light-dark(#1A1B1E, var(--mantine-color-dark-4))",
               color: "white",
-              border: "1px solid #373A40",
+              border:
+                "light-dark(1px solid #373A40, 1px solid var(--mantine-color-dark-3))",
             }}
             shadow="xl"
             radius="xl"
