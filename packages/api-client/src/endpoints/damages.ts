@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import {
   DamageReport,
+  DamageReportImage,
   CreateDamageReportDto,
   DamageStatus,
 } from "@domas/ts-types";
@@ -39,5 +40,33 @@ export const damages = {
 
   rejectReport: async (id: string): Promise<void> => {
     await apiClient.post(`/damages/reports/${id}/reject`);
+  },
+
+  uploadImages: async (
+    id: string,
+    files: File[],
+  ): Promise<DamageReportImage[]> => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("images", f));
+    const response = await apiClient.post<DamageReportImage[]>(
+      `/damages/reports/${id}/images`,
+      fd,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return response.data;
+  },
+
+  getImageUrl: async (
+    id: string,
+    imageId: string,
+  ): Promise<{ url: string }> => {
+    const response = await apiClient.get<{ url: string }>(
+      `/damages/reports/${id}/images/${imageId}/url`,
+    );
+    return response.data;
+  },
+
+  deleteImage: async (id: string, imageId: string): Promise<void> => {
+    await apiClient.delete(`/damages/reports/${id}/images/${imageId}`);
   },
 };
