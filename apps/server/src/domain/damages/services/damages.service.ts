@@ -5,6 +5,7 @@ import {
   Logger,
   Inject,
   forwardRef,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { DamagesRepository } from '../repositories/damages.repository';
 import { InventoryRepository } from '../../inventory/repositories/inventory.repository';
@@ -355,5 +356,43 @@ export class DamagesService {
         client,
       );
     }, context);
+  }
+
+  // ─── Images ──────────────────────────────────────────────────────────────────
+
+  private static readonly ALLOWED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+  ];
+
+  async addImages(reportId: string, files: Express.Multer.File[]) {
+    const report = await this.repository.findReportById(reportId);
+    if (!report) throw new NotFoundException('Damage report not found');
+
+    for (const file of files) {
+      if (!DamagesService.ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        throw new UnsupportedMediaTypeException(
+          `File "${file.originalname}" has unsupported type ${file.mimetype}. Allowed: JPEG, PNG, GIF, WebP.`,
+        );
+      }
+    }
+
+    return this.repository.insertImages(reportId, files);
+  }
+
+  async getImageUrl(reportId: string, imageId: string): Promise<{ url: string }> {
+    const image = await this.repository.findImageById(imageId, reportId);
+    if (!image) throw new NotFoundException('Image not found');
+    const url = await this.repository.getPresignedUrl(image.storageKey);
+    return { url };
+  }
+
+  async deleteImage(reportId: string, imageId: string): Promise<void> {
+    const report = await this.repository.findReportById(reportId);
+    if (!report) throw new NotFoundException('Damage report not found');
+    const deleted = await this.repository.deleteImage(imageId, reportId);
+    if (!deleted) throw new NotFoundException('Image not found');
   }
 }

@@ -1,14 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
+import { StorageService } from '../../../common/storage/storage.service';
 import { DamageReport } from '../entities/damage-report.entity';
 import { DamageLiability } from '../entities/damage-liability.entity';
+import { DamageReportImage } from '../entities/damage-report-image.entity';
 import { CreateDamageReportDto } from '../dto/create-damage-report.dto';
 import { DamageStatus } from '../../../common/enums/damage-status.enum';
 
 @Injectable()
 export class DamagesRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly storage: StorageService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -119,7 +125,19 @@ export class DamagesRepository {
              dr.created_at as "createdAt", dr.updated_at as "updatedAt",
              l.name as "locationName",
              u.first_name || ' ' || u.last_name as "reportedByName",
-             rev.first_name || ' ' || rev.last_name as "reviewedByName"
+             rev.first_name || ' ' || rev.last_name as "reviewedByName",
+             (
+               SELECT COALESCE(json_agg(json_build_object(
+                 'id', dri.id,
+                 'damageReportId', dri.damage_report_id,
+                 'filename', dri.filename,
+                 'mimeType', dri.mime_type,
+                 'size', dri.size,
+                 'createdAt', dri.created_at
+               ) ORDER BY dri.created_at), '[]'::json)
+               FROM damage_report_images dri
+               WHERE dri.damage_report_id = dr.id
+             ) as images
       FROM damage_reports dr
       JOIN locations l ON dr.location_id = l.id
       JOIN users u ON dr.reported_by = u.id
@@ -212,5 +230,69 @@ export class DamagesRepository {
     `;
     const result = await this.db.query(query, [reportId]);
     return result.rows.map((r) => new DamageLiability(r));
+  }
+
+  // ─── Images ──────────────────────────────────────────────────────────────────
+
+  async insertImages(reportId: string, files: Express.Multer.File[]): Promise<DamageReportImage[]> {
+    const inserted: DamageReportImage[] = [];
+    for (const file of files) {
+      const id = randomUUID();
+      const key = `damages/${reportId}/${id}`;
+      await this.storage.upload(key, file.buffer, file.mimetype);
+      const result = await this.db.getPool().query(
+        `INSERT INTO damage_report_images (id, damage_report_id, filename, mime_type, size, storage_key)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, damage_report_id as "damageReportId", filename, mime_type as "mimeType",
+                   size, storage_key as "storageKey", created_at as "createdAt"`,
+        [id, reportId, file.originalname, file.mimetype, file.size, key],
+      );
+      inserted.push(new DamageReportImage(result.rows[0]));
+    }
+    return inserted;
+  }
+
+  async findImagesByReport(reportId: string): Promise<DamageReportImage[]> {
+    const result = await this.db.getPool().query(
+      `SELECT id, damage_report_id as "damageReportId", filename, mime_type as "mimeType",
+              size, storage_key as "storageKey", created_at as "createdAt"
+       FROM damage_report_images
+       WHERE damage_report_id = $1
+       ORDER BY created_at`,
+      [reportId],
+    );
+    return result.rows.map((r) => new DamageReportImage(r));
+  }
+
+  async findImageById(imageId: string, reportId: string): Promise<DamageReportImage | null> {
+    const result = await this.db.getPool().query(
+      `SELECT id, damage_report_id as "damageReportId", filename, mime_type as "mimeType",
+              size, storage_key as "storageKey", created_at as "createdAt"
+       FROM damage_report_images
+       WHERE id = $1 AND damage_report_id = $2`,
+      [imageId, reportId],
+    );
+    return result.rows[0] ? new DamageReportImage(result.rows[0]) : null;
+  }
+
+  async deleteImage(imageId: string, reportId: string): Promise<boolean> {
+    const result = await this.db.getPool().query(
+      `SELECT storage_key as "storageKey" FROM damage_report_images
+       WHERE id = $1 AND damage_report_id = $2`,
+      [imageId, reportId],
+    );
+    if (!result.rows[0]) return false;
+    await this.storage.delete(result.rows[0].storageKey);
+    await this.db
+      .getPool()
+      .query(`DELETE FROM damage_report_images WHERE id = $1 AND damage_report_id = $2`, [
+        imageId,
+        reportId,
+      ]);
+    return true;
+  }
+
+  async getPresignedUrl(storageKey: string): Promise<string> {
+    return this.storage.presign(storageKey);
   }
 }
