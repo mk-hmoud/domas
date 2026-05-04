@@ -24,6 +24,7 @@ export interface AccessCard {
   returnedAt?: string;
   createdAt: string;
   updatedAt: string;
+  holderName?: string;
 }
 
 export interface AccessCardLog {

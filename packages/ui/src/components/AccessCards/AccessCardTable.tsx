@@ -5,6 +5,7 @@ import {
   IconHistory,
   IconArrowBackUp,
   IconUserShare,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { EmptyState } from "../EmptyState";
 import classes from "../Table/table.module.css";
@@ -13,6 +14,7 @@ interface AccessCardTableProps {
   data: AccessCard[];
   onIssue?: (card: AccessCard) => void;
   onReturn?: (card: AccessCard) => void;
+  onMarkLost?: (card: AccessCard) => void;
   onShowLogs?: (card: AccessCard) => void;
 }
 
@@ -20,6 +22,7 @@ export function AccessCardTable({
   data,
   onIssue,
   onReturn,
+  onMarkLost,
   onShowLogs,
 }: AccessCardTableProps) {
   const { t } = useTranslation();
@@ -48,8 +51,8 @@ export function AccessCardTable({
         </Badge>
       </Table.Td>
       <Table.Td>
-        {card.currentHolderId ? (
-          <Text size="sm">{card.currentHolderId}</Text>
+        {card.holderName || card.currentHolderId ? (
+          <Text size="sm">{card.holderName ?? card.currentHolderId}</Text>
         ) : (
           <Text size="sm" c="dimmed">
             —
@@ -77,6 +80,17 @@ export function AccessCardTable({
                 onClick={() => onReturn(card)}
               >
                 <IconArrowBackUp size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          {card.status === CardStatus.ACTIVE && onMarkLost && (
+            <Tooltip label={t("mark_lost", "Mark as Lost")}>
+              <ActionIcon
+                variant="subtle"
+                color="red"
+                onClick={() => onMarkLost(card)}
+              >
+                <IconAlertTriangle size={16} />
               </ActionIcon>
             </Tooltip>
           )}
