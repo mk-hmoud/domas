@@ -41,6 +41,7 @@ export class StudentsRepository {
       phoneNumber: row.phone_number,
       whatsappNumber: row.whatsapp_number,
       profileData: row.profile_data,
+      photoStorageKey: row.photo_storage_key ?? undefined,
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -267,5 +268,19 @@ export class StudentsRepository {
     `;
     const result = await this.getClient(client).query(query, [locationId]);
     return result.rows;
+  }
+
+  async setPhotoKey(id: string, key: string, client?: PoolClient): Promise<void> {
+    await this.getClient(client).query(
+      `UPDATE students SET photo_storage_key = $1, updated_at = NOW() WHERE id = $2`,
+      [key, id],
+    );
+  }
+
+  async clearPhotoKey(id: string, client?: PoolClient): Promise<void> {
+    await this.getClient(client).query(
+      `UPDATE students SET photo_storage_key = NULL, updated_at = NOW() WHERE id = $1`,
+      [id],
+    );
   }
 }

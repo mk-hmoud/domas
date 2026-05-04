@@ -121,6 +121,7 @@ CREATE TABLE students (
     
     -- 5. Profile Data (Height, weight, habits - strictly domain data)
     profile_data JSONB DEFAULT '{}'::jsonb,
+    photo_storage_key VARCHAR(500),
     
     -- 6. Meta
     is_active BOOLEAN DEFAULT TRUE,

@@ -1,4 +1,11 @@
-import { Table, Badge, ActionIcon, Menu, Checkbox } from "@mantine/core";
+import {
+  Table,
+  Badge,
+  ActionIcon,
+  Menu,
+  Checkbox,
+  Avatar,
+} from "@mantine/core";
 import {
   IconDotsVertical,
   IconEye,
@@ -70,6 +77,14 @@ export function StudentsTable({
           />
         </Table.Td>
         <Table.Td>{student.studentNumber}</Table.Td>
+        <Table.Td>
+          <Avatar
+            size={32}
+            radius="xl"
+            color="initials"
+            name={`${student.firstName} ${student.lastName}`}
+          />
+        </Table.Td>
         <Table.Td>
           {student.firstName} {student.lastName}
         </Table.Td>
@@ -161,6 +176,7 @@ export function StudentsTable({
           <Table.Th className={classes.th}>
             {t("student_number", { defaultValue: "Student No." })}
           </Table.Th>
+          <Table.Th className={classes.th} style={{ width: 48 }} />
           <Table.Th className={classes.th}>
             {t("full_name", { defaultValue: "Full Name" })}
           </Table.Th>
@@ -180,7 +196,7 @@ export function StudentsTable({
         {rows}
         {data.length === 0 && (
           <Table.Tr>
-            <Table.Td colSpan={7} style={{ padding: 0 }}>
+            <Table.Td colSpan={8} style={{ padding: 0 }}>
               <EmptyState
                 title={
                   emptyMessage ||

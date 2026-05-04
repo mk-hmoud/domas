@@ -65,4 +65,21 @@ export const students = {
     );
     return response.data;
   },
+
+  uploadPhoto: async (
+    id: string,
+    file: File,
+  ): Promise<{ photoUrl: string }> => {
+    const form = new FormData();
+    form.append("photo", file);
+    const response = await apiClient.post<{ photoUrl: string }>(
+      `/students/${id}/photo`,
+      form,
+    );
+    return response.data;
+  },
+
+  deletePhoto: async (id: string): Promise<void> => {
+    await apiClient.delete(`/students/${id}/photo`);
+  },
 };

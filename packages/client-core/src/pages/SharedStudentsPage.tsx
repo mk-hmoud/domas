@@ -12,6 +12,10 @@ import {
   Stack,
   Code,
   Badge,
+  Avatar,
+  ActionIcon,
+  Tooltip,
+  Center,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -19,6 +23,8 @@ import {
   IconEdit,
   IconBrandWhatsapp,
   IconMail,
+  IconCamera,
+  IconTrash,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students } from "@domas/api-client";
@@ -50,6 +56,8 @@ export function SharedStudentsPage() {
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   // Selection state
@@ -284,6 +292,52 @@ export function SharedStudentsPage() {
     }
   };
 
+  const handleSelectStudent = async (student: Student) => {
+    setSelectedStudent(student);
+    try {
+      const detail = await students.findOne(student.id);
+      setDetailStudent(detail);
+    } catch {
+      setDetailStudent(student);
+    }
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    if (!detailStudent) return;
+    setPhotoLoading(true);
+    try {
+      const { photoUrl } = await students.uploadPhoto(detailStudent.id, file);
+      setDetailStudent((prev) => (prev ? { ...prev, photoUrl } : prev));
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!detailStudent) return;
+    setPhotoLoading(true);
+    try {
+      await students.deletePhoto(detailStudent.id);
+      setDetailStudent((prev) =>
+        prev ? { ...prev, photoUrl: undefined } : prev,
+      );
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -313,7 +367,7 @@ export function SharedStudentsPage() {
             selectedIds={selectedIds}
             onToggleSelection={handleToggleSelection}
             onToggleSelectAll={handleToggleSelectAll}
-            onSelect={setSelectedStudent}
+            onSelect={handleSelectStudent}
             onEdit={(student) => {
               setEditingStudent(student);
               setEditModalOpened(true);
@@ -358,119 +412,172 @@ export function SharedStudentsPage() {
 
         <Drawer
           opened={!!selectedStudent && !editModalOpened}
-          onClose={() => setSelectedStudent(null)}
+          onClose={() => {
+            setSelectedStudent(null);
+            setDetailStudent(null);
+          }}
           title={t("student_details", { defaultValue: "Student Details" })}
           position="right"
           size="md"
         >
-          {selectedStudent && (
-            <Stack gap="lg">
-              <Group justify="space-between" align="flex-start">
-                <Text fw={700} size="md">
-                  {selectedStudent.firstName} {selectedStudent.lastName}
-                </Text>
-                <Badge color={selectedStudent.isActive ? "green" : "gray"}>
-                  {selectedStudent.isActive ? t("active") : t("inactive")}
-                </Badge>
-              </Group>
+          {selectedStudent &&
+            (() => {
+              const s = detailStudent ?? selectedStudent;
+              return (
+                <Stack gap="lg">
+                  {/* Photo */}
+                  <Center>
+                    <Stack align="center" gap="xs">
+                      <Avatar
+                        src={s.photoUrl}
+                        size={96}
+                        radius="xl"
+                        color="initials"
+                        name={`${s.firstName} ${s.lastName}`}
+                      />
+                      <Group gap="xs">
+                        <Tooltip
+                          label={
+                            s.photoUrl
+                              ? t("replace_photo", "Replace photo")
+                              : t("upload_photo", "Upload photo")
+                          }
+                        >
+                          <ActionIcon
+                            variant="light"
+                            loading={photoLoading}
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/jpeg,image/png,image/webp";
+                              input.onchange = (e) => {
+                                const file = (e.target as HTMLInputElement)
+                                  .files?.[0];
+                                if (file) handlePhotoUpload(file);
+                              };
+                              input.click();
+                            }}
+                          >
+                            <IconCamera size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        {s.photoUrl && (
+                          <Tooltip label={t("delete_photo", "Delete photo")}>
+                            <ActionIcon
+                              variant="light"
+                              color="red"
+                              loading={photoLoading}
+                              onClick={handlePhotoDelete}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
+                      </Group>
+                    </Stack>
+                  </Center>
 
-              <Group grow>
-                <LabelValue label={t("student_number")}>
-                  {selectedStudent.studentNumber}
-                </LabelValue>
-                <LabelValue label={t("national_id")}>
-                  {selectedStudent.nationalId}
-                </LabelValue>
-              </Group>
+                  <Group justify="space-between" align="flex-start">
+                    <Text fw={700} size="md">
+                      {s.firstName} {s.lastName}
+                    </Text>
+                    <Badge color={s.isActive ? "green" : "gray"}>
+                      {s.isActive ? t("active") : t("inactive")}
+                    </Badge>
+                  </Group>
 
-              <Group grow>
-                <LabelValue label={t("gender")}>
-                  {t(selectedStudent.gender)}
-                </LabelValue>
-                <LabelValue label={t("nationality")}>
-                  {getCountryName(selectedStudent.nationalityCode)}
-                </LabelValue>
-              </Group>
+                  <Group grow>
+                    <LabelValue label={t("student_number")}>
+                      {s.studentNumber}
+                    </LabelValue>
+                    <LabelValue label={t("national_id")}>
+                      {s.nationalId}
+                    </LabelValue>
+                  </Group>
 
-              <LabelValue label={t("birth_date")}>
-                {selectedStudent.birthDate
-                  ? new Date(selectedStudent.birthDate).toLocaleDateString(
-                      "en-GB",
-                    )
-                  : "—"}
-              </LabelValue>
+                  <Group grow>
+                    <LabelValue label={t("gender")}>{t(s.gender)}</LabelValue>
+                    <LabelValue label={t("nationality")}>
+                      {getCountryName(s.nationalityCode)}
+                    </LabelValue>
+                  </Group>
 
-              <LabelValue label={t("email")}>
-                {selectedStudent.email || "—"}
-              </LabelValue>
+                  <LabelValue label={t("birth_date")}>
+                    {s.birthDate
+                      ? new Date(s.birthDate).toLocaleDateString("en-GB")
+                      : "—"}
+                  </LabelValue>
 
-              <Group grow>
-                <LabelValue label={t("phone_number")}>
-                  {selectedStudent.phoneNumber || "—"}
-                </LabelValue>
-                <LabelValue
-                  label={t("whatsapp_number", { defaultValue: "WhatsApp" })}
-                >
-                  {selectedStudent.whatsappNumber ? (
-                    <Group gap="xs">
-                      <Text size="sm" fw={500}>
-                        {selectedStudent.whatsappNumber}
-                      </Text>
+                  <LabelValue label={t("email")}>{s.email || "—"}</LabelValue>
+
+                  <Group grow>
+                    <LabelValue label={t("phone_number")}>
+                      {s.phoneNumber || "—"}
+                    </LabelValue>
+                    <LabelValue
+                      label={t("whatsapp_number", { defaultValue: "WhatsApp" })}
+                    >
+                      {s.whatsappNumber ? (
+                        <Group gap="xs">
+                          <Text size="sm" fw={500}>
+                            {s.whatsappNumber}
+                          </Text>
+                          <Button
+                            size="compact-xs"
+                            color="green"
+                            variant="light"
+                            leftSection={<IconBrandWhatsapp size={12} />}
+                            onClick={() =>
+                              window.open(
+                                `https://wa.me/${s.whatsappNumber!.replace(/\D/g, "")}`,
+                                "_blank",
+                              )
+                            }
+                          >
+                            {t("open", { defaultValue: "Open" })}
+                          </Button>
+                        </Group>
+                      ) : (
+                        <Text size="sm" c="dimmed">
+                          —
+                        </Text>
+                      )}
+                    </LabelValue>
+                  </Group>
+
+                  {s.userId && (
+                    <LabelValue label="User ID">
+                      <Code>{s.userId}</Code>
+                    </LabelValue>
+                  )}
+
+                  <Group grow>
+                    <Button
+                      variant="light"
+                      leftSection={<IconEdit size={16} />}
+                      onClick={() => {
+                        setEditingStudent(s);
+                        setEditModalOpened(true);
+                      }}
+                    >
+                      {t("edit")}
+                    </Button>
+                    {s.email && (
                       <Button
-                        size="compact-xs"
-                        color="green"
                         variant="light"
-                        leftSection={<IconBrandWhatsapp size={12} />}
+                        color="blue"
+                        leftSection={<IconMail size={16} />}
                         onClick={() =>
-                          window.open(
-                            `https://wa.me/${selectedStudent.whatsappNumber!.replace(/\D/g, "")}`,
-                            "_blank",
-                          )
+                          window.open(`mailto:${s.email}`, "_blank")
                         }
                       >
-                        {t("open", { defaultValue: "Open" })}
+                        {t("email_verb", { defaultValue: "Email" })}
                       </Button>
-                    </Group>
-                  ) : (
-                    <Text size="sm" c="dimmed">
-                      —
-                    </Text>
-                  )}
-                </LabelValue>
-              </Group>
-
-              {selectedStudent.userId && (
-                <LabelValue label="User ID">
-                  <Code>{selectedStudent.userId}</Code>
-                </LabelValue>
-              )}
-
-              <Group grow>
-                <Button
-                  variant="light"
-                  leftSection={<IconEdit size={16} />}
-                  onClick={() => {
-                    setEditingStudent(selectedStudent);
-                    setEditModalOpened(true);
-                  }}
-                >
-                  {t("edit")}
-                </Button>
-                {selectedStudent.email && (
-                  <Button
-                    variant="light"
-                    color="blue"
-                    leftSection={<IconMail size={16} />}
-                    onClick={() => {
-                      window.open(`mailto:${selectedStudent.email}`, "_blank");
-                    }}
-                  >
-                    {t("email_verb", { defaultValue: "Email" })}
-                  </Button>
-                )}
-              </Group>
-            </Stack>
-          )}
+                    )}
+                  </Group>
+                </Stack>
+              );
+            })()}
         </Drawer>
 
         <ComposeEmailModal

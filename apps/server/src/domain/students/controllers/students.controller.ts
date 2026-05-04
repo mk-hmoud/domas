@@ -10,7 +10,10 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentsService } from '../services/students.service';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
@@ -89,6 +92,20 @@ export class StudentsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.studentsService.update(id, updateStudentDto, context);
+  }
+
+  @Post(':id/photo')
+  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
+  @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  uploadPhoto(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    return this.studentsService.uploadPhoto(id, file);
+  }
+
+  @Delete(':id/photo')
+  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deletePhoto(@Param('id') id: string) {
+    return this.studentsService.deletePhoto(id);
   }
 
   @Delete(':id')

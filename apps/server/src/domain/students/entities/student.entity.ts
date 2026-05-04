@@ -16,6 +16,8 @@ export class Student {
   phoneNumber?: string;
   whatsappNumber?: string;
   profileData?: any; // JSONB
+  photoStorageKey?: string;
+  photoUrl?: string;
   isActive!: boolean;
   createdAt!: Date;
   updatedAt!: Date;

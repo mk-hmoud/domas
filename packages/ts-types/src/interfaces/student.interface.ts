@@ -16,6 +16,7 @@ export interface Student {
   phoneNumber?: string;
   whatsappNumber?: string;
   profileData?: any;
+  photoUrl?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

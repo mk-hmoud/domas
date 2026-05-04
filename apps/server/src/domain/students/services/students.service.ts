@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Inject,
   forwardRef,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ApiException } from '../../../common/exceptions/api.exception';
 import { ErrorCodes } from '../../../common/constants/error-codes';
@@ -18,6 +19,7 @@ import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { Student } from '../entities/student.entity';
 import { ResolvedContact } from '../repositories/students.repository';
 import { DatabaseService } from '../../../core/database/database.service';
+import { StorageService } from '../../../common/storage/storage.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { PoolClient } from 'pg';
@@ -26,11 +28,14 @@ import { PoolClient } from 'pg';
 export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
 
+  private static readonly ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   constructor(
     private readonly studentsRepository: StudentsRepository,
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly storage: StorageService,
   ) {}
 
   private validateNationalId(nationalityCode: string, nationalId: string): void {
@@ -79,7 +84,39 @@ export class StudentsService {
     if (!student) {
       throw new NotFoundException(`Student with ID ${id} not found`);
     }
+    if (student.photoStorageKey) {
+      student.photoUrl = await this.storage.presign(student.photoStorageKey);
+      student.photoStorageKey = undefined;
+    }
     return student;
+  }
+
+  async uploadPhoto(id: string, file: Express.Multer.File): Promise<{ photoUrl: string }> {
+    if (!StudentsService.ALLOWED_PHOTO_TYPES.includes(file.mimetype)) {
+      throw new UnsupportedMediaTypeException('Only JPEG, PNG, and WebP images are accepted');
+    }
+    const student = await this.studentsRepository.findById(id);
+    if (!student) throw new NotFoundException(`Student with ID ${id} not found`);
+
+    if (student.photoStorageKey) {
+      await this.storage.delete(student.photoStorageKey);
+    }
+
+    const key = `students/${id}/photo`;
+    await this.storage.upload(key, file.buffer, file.mimetype);
+    await this.studentsRepository.setPhotoKey(id, key);
+
+    const photoUrl = await this.storage.presign(key);
+    return { photoUrl };
+  }
+
+  async deletePhoto(id: string): Promise<void> {
+    const student = await this.studentsRepository.findById(id);
+    if (!student) throw new NotFoundException(`Student with ID ${id} not found`);
+    if (student.photoStorageKey) {
+      await this.storage.delete(student.photoStorageKey);
+    }
+    await this.studentsRepository.clearPhotoKey(id);
   }
 
   async update(id: string, data: UpdateStudentDto, context: AuditUserContext): Promise<Student> {
