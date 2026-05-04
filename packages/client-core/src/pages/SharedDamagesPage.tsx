@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
-import { Button, Paper, LoadingOverlay, Tabs, Badge } from "@mantine/core";
-import { IconPlus, IconListSearch, IconHistory } from "@tabler/icons-react";
+import {
+  Button,
+  Paper,
+  LoadingOverlay,
+  Tabs,
+  Badge,
+  ActionIcon,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconPlus,
+  IconListSearch,
+  IconHistory,
+  IconCameraFilled,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
   damages,
@@ -350,6 +363,27 @@ export function SharedDamagesPage() {
           onDeleteImage={handleDeleteImage}
         />
       </PageShell>
+
+      {/* Mobile camera FAB — hidden on sm+ where the header button is visible */}
+      {hasPermission("damages.report") && (
+        <Tooltip label={t("report_damage")} position="left">
+          <ActionIcon
+            hiddenFrom="sm"
+            size={56}
+            radius="xl"
+            onClick={() => setModalOpened(true)}
+            style={{
+              position: "fixed",
+              bottom: "var(--mantine-spacing-xl)",
+              right: "var(--mantine-spacing-xl)",
+              zIndex: 200,
+              boxShadow: "var(--mantine-shadow-md)",
+            }}
+          >
+            <IconCameraFilled size={26} />
+          </ActionIcon>
+        </Tooltip>
+      )}
     </>
   );
 }

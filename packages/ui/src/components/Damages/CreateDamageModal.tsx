@@ -5,14 +5,15 @@ import {
   NumberInput,
   MultiSelect,
   Select,
-  FileInput,
   Pill,
   Button,
   Group,
   Alert,
   Divider,
   Loader,
+  Text,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,8 +22,8 @@ import {
   Student,
   InventoryAssignment,
 } from "@domas/ts-types";
-import { IconInfoCircle, IconPhoto } from "@tabler/icons-react";
-import { useState, useEffect } from "react";
+import { IconInfoCircle, IconPhoto, IconCamera } from "@tabler/icons-react";
+import { useState, useEffect, useRef } from "react";
 import { inventory, beds } from "@domas/api-client";
 import { SmartLocationSelector } from "../Locations/SmartLocationSelector";
 
@@ -47,12 +48,24 @@ export function CreateDamageModal({
 }: CreateDamageModalProps) {
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === "tr";
+  const isMobile = useMediaQuery("(max-width: 48em)");
   const [assignments, setAssignments] = useState<InventoryAssignment[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [selectedInventoryKey, setSelectedInventoryKey] = useState<
     string | null
   >(null);
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (picked.length > 0) setEvidenceFiles((prev) => [...prev, ...picked]);
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) =>
+    setEvidenceFiles((prev) => prev.filter((_, i) => i !== index));
 
   const form = useForm<CreateDamageReportDto>({
     initialValues: {
@@ -164,6 +177,7 @@ export function CreateDamageModal({
       onClose={onClose}
       title={t("report_damage")}
       size="lg"
+      fullScreen={isMobile}
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
@@ -219,26 +233,64 @@ export function CreateDamageModal({
             {...form.getInputProps("description")}
           />
 
-          <FileInput
-            label={t("evidence_images", "Evidence Images")}
-            placeholder={t("attach_photos", "Attach photos (optional)")}
-            leftSection={<IconPhoto size={16} />}
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            multiple
-            value={evidenceFiles}
-            onChange={setEvidenceFiles}
-            valueComponent={() =>
-              evidenceFiles.length > 0 ? (
-                <Group gap={4} wrap="wrap">
-                  {evidenceFiles.map((f, i) => (
-                    <Pill key={i} size="sm">
-                      {f.name}
-                    </Pill>
-                  ))}
-                </Group>
-              ) : null
-            }
-          />
+          <Stack gap={6}>
+            <Text size="sm" fw={500}>
+              {t("evidence_images", "Evidence Images")}
+            </Text>
+            <Group gap="xs">
+              <Button
+                variant="default"
+                size="sm"
+                leftSection={<IconCamera size={16} />}
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                {t("take_photo", "Take Photo")}
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                leftSection={<IconPhoto size={16} />}
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                {t("choose_from_gallery", "Gallery")}
+              </Button>
+            </Group>
+
+            {/* Camera — opens directly via capture */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              capture="environment"
+              multiple
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            {/* Gallery — standard file picker */}
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+
+            {evidenceFiles.length > 0 && (
+              <Group gap={4} wrap="wrap">
+                {evidenceFiles.map((f, i) => (
+                  <Pill
+                    key={i}
+                    size="sm"
+                    withRemoveButton
+                    onRemove={() => removeFile(i)}
+                  >
+                    {f.name}
+                  </Pill>
+                ))}
+              </Group>
+            )}
+          </Stack>
 
           <MultiSelect
             label={t("culprits_students", {
