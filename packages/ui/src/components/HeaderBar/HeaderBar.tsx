@@ -9,6 +9,7 @@ import {
   ActionIcon,
   Tooltip,
   Divider,
+  Burger,
 } from "@mantine/core";
 import {
   IconLogout,
@@ -30,6 +31,8 @@ export interface HeaderBarProps {
   onLogout?: () => void;
   onNavigate?: (link: string) => void;
   onShowHistory?: () => void;
+  mobileNavOpened?: boolean;
+  onMobileNavToggle?: () => void;
 }
 
 interface UserButtonProps extends React.ComponentPropsWithoutRef<"button"> {
@@ -71,12 +74,22 @@ export function HeaderBar({
   onLogout,
   onNavigate,
   onShowHistory,
+  mobileNavOpened,
+  onMobileNavToggle,
 }: HeaderBarProps) {
   const { t } = useTranslation();
 
   return (
     <header className={classes.header}>
-      <Group>{logo}</Group>
+      <Group gap="sm">
+        <Burger
+          hiddenFrom="sm"
+          opened={mobileNavOpened ?? false}
+          onClick={onMobileNavToggle}
+          size="sm"
+        />
+        {logo}
+      </Group>
 
       <Group gap="sm">
         <Group gap={4}>
