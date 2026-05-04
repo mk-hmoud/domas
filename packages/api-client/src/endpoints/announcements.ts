@@ -1,7 +1,6 @@
 import { apiClient } from "../client";
 import {
   Announcement,
-  AnnouncementAttachmentMeta,
   CreateAnnouncementDto,
   UpdateAnnouncementDto,
 } from "@domas/ts-types";

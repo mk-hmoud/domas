@@ -4,7 +4,6 @@ import {
   Stack,
   Text,
   UnstyledButton,
-  Group,
   Tooltip,
 } from "@mantine/core";
 import { IconTextSize } from "@tabler/icons-react";
