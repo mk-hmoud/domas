@@ -5,6 +5,8 @@ import {
   NumberInput,
   MultiSelect,
   Select,
+  FileInput,
+  Pill,
   Button,
   Group,
   Alert,
@@ -19,7 +21,7 @@ import {
   Student,
   InventoryAssignment,
 } from "@domas/ts-types";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { IconInfoCircle, IconPhoto } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
 import { inventory, beds } from "@domas/api-client";
 import { SmartLocationSelector } from "../Locations/SmartLocationSelector";
@@ -27,7 +29,7 @@ import { SmartLocationSelector } from "../Locations/SmartLocationSelector";
 interface CreateDamageModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (values: CreateDamageReportDto) => Promise<void>;
+  onSubmit: (values: CreateDamageReportDto, files: File[]) => Promise<void>;
   students: Student[];
   guestStays?: GuestStay[];
   loading?: boolean;
@@ -50,6 +52,7 @@ export function CreateDamageModal({
   const [selectedInventoryKey, setSelectedInventoryKey] = useState<
     string | null
   >(null);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
 
   const form = useForm<CreateDamageReportDto>({
     initialValues: {
@@ -137,10 +140,11 @@ export function CreateDamageModal({
   };
 
   const handleSubmit = async (values: CreateDamageReportDto) => {
-    await onSubmit(values);
+    await onSubmit(values, evidenceFiles);
     form.reset();
     setAssignments([]);
     setSelectedInventoryKey(null);
+    setEvidenceFiles([]);
     onClose();
   };
 
@@ -213,6 +217,27 @@ export function CreateDamageModal({
             required
             minRows={3}
             {...form.getInputProps("description")}
+          />
+
+          <FileInput
+            label={t("evidence_images", "Evidence Images")}
+            placeholder={t("attach_photos", "Attach photos (optional)")}
+            leftSection={<IconPhoto size={16} />}
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
+            value={evidenceFiles}
+            onChange={setEvidenceFiles}
+            valueComponent={() =>
+              evidenceFiles.length > 0 ? (
+                <Group gap={4} wrap="wrap">
+                  {evidenceFiles.map((f, i) => (
+                    <Pill key={i} size="sm">
+                      {f.name}
+                    </Pill>
+                  ))}
+                </Group>
+              ) : null
+            }
           />
 
           <MultiSelect

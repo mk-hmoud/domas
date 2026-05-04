@@ -8,12 +8,26 @@ import {
   Button,
   Table,
   Paper,
+  ActionIcon,
 } from "@mantine/core";
-import { IconCheck, IconX, IconAlertTriangle } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconX,
+  IconAlertTriangle,
+  IconPhoto,
+  IconExternalLink,
+  IconTrash,
+} from "@tabler/icons-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DamageReport, DamageStatus } from "@domas/ts-types";
 import { LabelValue } from "../LabelValue";
 import classes from "../Table/table.module.css";
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 interface DamageDetailsDrawerProps {
   opened: boolean;
@@ -33,6 +47,9 @@ interface DamageDetailsDrawerProps {
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   loading?: boolean;
+  canManage?: boolean;
+  onGetImageUrl?: (imageId: string) => Promise<string>;
+  onDeleteImage?: (imageId: string) => Promise<void>;
 }
 
 export function DamageDetailsDrawer({
@@ -42,8 +59,34 @@ export function DamageDetailsDrawer({
   onApprove,
   onReject,
   loading,
+  canManage,
+  onGetImageUrl,
+  onDeleteImage,
 }: DamageDetailsDrawerProps) {
   const { t } = useTranslation();
+  const [viewingImageId, setViewingImageId] = useState<string | null>(null);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+
+  const handleViewImage = async (imageId: string) => {
+    if (!onGetImageUrl) return;
+    setViewingImageId(imageId);
+    try {
+      const url = await onGetImageUrl(imageId);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } finally {
+      setViewingImageId(null);
+    }
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    if (!onDeleteImage) return;
+    setDeletingImageId(imageId);
+    try {
+      await onDeleteImage(imageId);
+    } finally {
+      setDeletingImageId(null);
+    }
+  };
 
   const getStatusColor = (status: DamageStatus) => {
     switch (status) {
@@ -129,6 +172,67 @@ export function DamageDetailsDrawer({
               )}
             </LabelValue>
           </Stack>
+
+          <Divider
+            label={t("evidence_images", "Evidence Images")}
+            labelPosition="left"
+          />
+
+          {(report.images ?? []).length === 0 ? (
+            <Text size="sm" c="dimmed" fs="italic">
+              {t("no_evidence_images", "No evidence images attached")}
+            </Text>
+          ) : (
+            <Stack gap="xs">
+              {(report.images ?? []).map((img) => (
+                <Paper key={img.id} withBorder p="xs" radius="sm">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                      <IconPhoto
+                        size={16}
+                        color="var(--mantine-color-blue-5)"
+                      />
+                      <Text size="sm" truncate style={{ flex: 1 }}>
+                        {img.filename}
+                      </Text>
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        {formatBytes(img.size)}
+                      </Text>
+                    </Group>
+                    <Group gap={4} wrap="nowrap">
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        loading={viewingImageId === img.id}
+                        disabled={!onGetImageUrl}
+                        onClick={() => handleViewImage(img.id)}
+                        title={t("view", "View")}
+                      >
+                        <IconExternalLink size={14} />
+                      </ActionIcon>
+                      {canManage && (
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          size="sm"
+                          loading={deletingImageId === img.id}
+                          disabled={!onDeleteImage}
+                          onClick={() => handleDeleteImage(img.id)}
+                          title={t("delete", "Delete")}
+                        >
+                          <IconTrash size={14} />
+                        </ActionIcon>
+                      )}
+                    </Group>
+                  </Group>
+                </Paper>
+              ))}
+            </Stack>
+          )}
 
           {report.status === DamageStatus.APPROVED && (
             <>
