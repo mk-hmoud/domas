@@ -7,6 +7,7 @@ import {
   accessCards,
   locations,
   students as studentsApi,
+  inventory,
 } from "@domas/api-client";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -17,6 +18,7 @@ import {
   LocationType,
   Student,
   CardStatus,
+  InventoryCatalogItem,
 } from "@domas/ts-types";
 import {
   CardBatchModal,
@@ -32,6 +34,7 @@ export function SharedAccessCardsPage() {
   const [batches, setBatches] = useState<CardBatch[]>([]);
   const [cards, setCards] = useState<AccessCard[]>([]);
   const [locationList, setLocationList] = useState<Location[]>([]);
+  const [catalogItems, setCatalogItems] = useState<InventoryCatalogItem[]>([]);
   const [, setStudentList] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,15 +45,17 @@ export function SharedAccessCardsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [batchesRes, cardsRes, locationsRes, studentsRes] =
+      const [batchesRes, cardsRes, locationsRes, studentsRes, catalogRes] =
         await Promise.all([
           accessCards.findAllBatches(),
           accessCards.findAllCards(),
           locations.findAll({ limit: 1000 }),
           studentsApi.findAll({ limit: 5000 }),
+          inventory.findAllCatalog(),
         ]);
       setBatches(batchesRes);
       setLocationList(locationsRes.data);
+      setCatalogItems(catalogRes);
       setStudentList(studentsRes.data);
 
       const studMap = new Map(
@@ -207,6 +212,7 @@ export function SharedAccessCardsPage() {
           onClose={() => setModalOpened(false)}
           onSubmit={handleCreateBatch}
           locations={allowedLocations}
+          catalogItems={catalogItems}
         />
 
         <ReportLostCardModal

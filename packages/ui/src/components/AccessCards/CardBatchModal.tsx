@@ -8,13 +8,18 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateCardBatchDto, Location } from "@domas/ts-types";
+import {
+  CreateCardBatchDto,
+  Location,
+  InventoryCatalogItem,
+} from "@domas/ts-types";
 
 interface CardBatchModalProps {
   opened: boolean;
   onClose: () => void;
   onSubmit: (values: CreateCardBatchDto) => Promise<void>;
   locations: Location[];
+  catalogItems?: InventoryCatalogItem[];
   loading?: boolean;
 }
 
@@ -23,6 +28,7 @@ export function CardBatchModal({
   onClose,
   onSubmit,
   locations,
+  catalogItems = [],
   loading,
 }: CardBatchModalProps) {
   const { t } = useTranslation();
@@ -32,6 +38,7 @@ export function CardBatchModal({
       rangeStart: 1,
       rangeEnd: 100,
       locationId: undefined,
+      catalogId: undefined,
     },
     validate: {
       rangeStart: (val) => (val > 0 ? null : t("invalid_number")),
@@ -75,6 +82,30 @@ export function CardBatchModal({
             }
             error={form.errors.locationId}
           />
+
+          {catalogItems.length > 0 && (
+            <Select
+              label={t("card_catalog_item", "Card catalog item")}
+              description={t(
+                "card_catalog_item_description",
+                "If set, issuing a card creates an inventory snapshot — enabling automatic damage report on loss.",
+              )}
+              placeholder={t(
+                "none_no_tracking",
+                "None (no financial tracking)",
+              )}
+              data={catalogItems.map((c) => ({
+                value: c.id.toString(),
+                label: c.nameEn,
+              }))}
+              searchable
+              clearable
+              value={form.values.catalogId?.toString() ?? null}
+              onChange={(val) =>
+                form.setFieldValue("catalogId", val ? parseInt(val) : undefined)
+              }
+            />
+          )}
 
           <Group grow>
             <NumberInput

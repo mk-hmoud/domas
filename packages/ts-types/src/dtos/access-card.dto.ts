@@ -2,6 +2,7 @@ import { CardStatus } from "../enums/card-status.enum";
 
 export interface CreateCardBatchDto {
   locationId?: number;
+  catalogId?: number;
   rangeStart: number;
   rangeEnd: number;
 }

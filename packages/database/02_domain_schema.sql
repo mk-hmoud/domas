@@ -521,14 +521,15 @@ CREATE INDEX idx_liabilities_report ON damage_liabilities(damage_report_id);
 CREATE TABLE card_batches (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     location_id INT REFERENCES locations(id), -- Optional: Link batch to a building
+    catalog_id INT REFERENCES inventory_catalog(id), -- Optional: enables snapshot + damage tracking
     name VARCHAR(100) NOT NULL, -- e.g. "2024 Fall - Block A"
     range_start INT NOT NULL,
     range_end INT NOT NULL,
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     created_by UUID REFERENCES users(id),
-    
+
     CONSTRAINT chk_batch_range CHECK (range_end >= range_start)
 );
 
@@ -547,11 +548,14 @@ CREATE TABLE access_cards (
     current_holder_id UUID REFERENCES students(id),
     current_booking_id UUID REFERENCES bookings(id),
     
+    -- Inventory bridge: snapshot created at issuance for financial tracking
+    snapshot_id BIGINT REFERENCES booking_inventory_snapshots(id),
+
     -- Tracking (Requested Columns)
     issued_at TIMESTAMPTZ,
     issued_by UUID REFERENCES users(id),
     returned_at TIMESTAMPTZ, -- Usually NULL while active, populated upon return
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
