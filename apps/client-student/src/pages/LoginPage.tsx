@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Box, Button, Center, Group, Paper, Stack, Text, TextInput, Title } from '@domas/ui';
+import { Box, Button, Center, Group, Image, Paper, Stack, Text, TextInput, Title } from '@domas/ui';
 import { ThemeToggle, LanguageSwitcher } from '@domas/ui';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
 import { Divider } from '@mantine/core';
-import { IconBed, IconArrowRight } from '@tabler/icons-react';
+import { IconArrowRight } from '@tabler/icons-react';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
+import logo from '../assets/eul-logo.png';
 
 export function LoginPage() {
   const { login } = useStudentAuth();
@@ -61,20 +62,7 @@ export function LoginPage() {
         <Stack align="center" gap="xl" w="100%" maw={420}>
           {/* Brand mark */}
           <Stack align="center" gap="sm">
-            <Box
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 20,
-                background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 12px 32px rgba(25,113,194,0.35)',
-              }}
-            >
-              <IconBed size={34} color="white" />
-            </Box>
+            <Image src={logo} h={120} w="auto" fit="contain" />
             <Stack align="center" gap={4}>
               <Title order={2} ta="center" fw={800} lh={1.2}>
                 {t('portal.login_title')}

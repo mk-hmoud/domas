@@ -52,17 +52,19 @@ const UserButton = forwardRef<HTMLButtonElement, UserButtonProps>(
       }}
       {...others}
     >
-      <Group gap={7}>
+      <Group gap={7} wrap="nowrap">
         <Avatar src={null} alt={name} radius="xl" size={22} />
-        <Box style={{ flex: 1 }}>
+        <Box visibleFrom="sm" style={{ flex: 1 }}>
           <Text size="sm" fw={500} style={{ lineHeight: 1 }}>
             {name}
           </Text>
         </Box>
-        <IconChevronDown
-          style={{ width: rem(12), height: rem(12) }}
-          stroke={1.5}
-        />
+        <Box visibleFrom="sm">
+          <IconChevronDown
+            style={{ width: rem(12), height: rem(12) }}
+            stroke={1.5}
+          />
+        </Box>
       </Group>
     </UnstyledButton>
   ),
@@ -81,7 +83,7 @@ export function HeaderBar({
 
   return (
     <header className={classes.header}>
-      <Group gap="sm">
+      <Group gap="sm" wrap="nowrap">
         <Burger
           hiddenFrom="sm"
           opened={mobileNavOpened ?? false}
@@ -91,11 +93,12 @@ export function HeaderBar({
         {logo}
       </Group>
 
-      <Group gap="sm">
-        <Group gap={4}>
+      <Group gap="sm" wrap="nowrap">
+        <Group gap={4} wrap="nowrap">
           {onShowHistory && (
             <Tooltip label={t("history")} position="bottom">
               <ActionIcon
+                visibleFrom="sm"
                 variant="subtle"
                 color="gray"
                 size="md"
@@ -106,7 +109,9 @@ export function HeaderBar({
               </ActionIcon>
             </Tooltip>
           )}
-          <FontSizeControl />
+          <Box visibleFrom="sm">
+            <FontSizeControl />
+          </Box>
           <LanguageSwitcher />
           <ThemeToggle />
         </Group>
