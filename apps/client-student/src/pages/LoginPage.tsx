@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Button, Center, Group, Paper, Stack, Text, TextInput, Title } from '@domas/ui';
 import { ThemeToggle, LanguageSwitcher } from '@domas/ui';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
+import { Divider } from '@mantine/core';
 import { IconBed, IconArrowRight } from '@tabler/icons-react';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
 
@@ -135,6 +136,16 @@ export function LoginPage() {
               </Stack>
             </form>
           </Paper>
+
+          <Divider
+            label={t('portal.new_student', 'New student?')}
+            labelPosition="center"
+            w="100%"
+          />
+
+          <Button component={Link} to="/register" variant="light" radius="xl" size="md" w="100%">
+            {t('portal.apply_now', 'Apply for accommodation')}
+          </Button>
         </Stack>
       </Center>
     </Box>
