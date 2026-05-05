@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   STUDENTS_CREATE: 'students.create',
   STUDENTS_UPDATE: 'students.update',
   STUDENTS_DELETE: 'students.delete',
+  STUDENTS_REVIEW_APPLICATIONS: 'students.review_applications',
 
   // Locations
   LOCATIONS_VIEW: 'locations.view',

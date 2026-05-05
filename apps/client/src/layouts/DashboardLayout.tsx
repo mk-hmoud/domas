@@ -129,6 +129,11 @@ export function DashboardLayout() {
             requiredPermission: 'students.view',
           },
           {
+            label: t('nav.applications'),
+            link: '/dashboard/applications',
+            requiredPermission: 'students.view',
+          },
+          {
             label: t('nav.access_cards'),
             link: '/dashboard/access-cards',
             requiredPermission: 'access_cards.view',
