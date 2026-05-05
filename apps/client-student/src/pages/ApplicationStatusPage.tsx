@@ -6,6 +6,7 @@ import {
   Button,
   Center,
   Group,
+  Image,
   Loader,
   Paper,
   Stack,
@@ -13,14 +14,8 @@ import {
   ThemeIcon,
   Title,
 } from '@domas/ui';
-import {
-  IconArrowLeft,
-  IconBed,
-  IconCheck,
-  IconClock,
-  IconUserCheck,
-  IconX,
-} from '@tabler/icons-react';
+import { IconArrowLeft, IconCheck, IconClock, IconUserCheck, IconX } from '@tabler/icons-react';
+import logo from '../assets/eul-logo.png';
 import { useTranslation } from 'react-i18next';
 import { portalApplications } from '@domas/api-client';
 import { StudentApplication } from '@domas/ts-types';
@@ -88,12 +83,12 @@ export function ApplicationStatusPage() {
     <Box style={{ minHeight: '100dvh', background: 'var(--mantine-color-body)' }}>
       <Center p="md" pt="xl">
         <Stack w="100%" maw={480} gap="lg" align="center">
-          <Group gap="xs">
-            <IconBed size={24} />
+          <Stack gap={4} align="center">
+            <Image src={logo} h={80} w="auto" fit="contain" />
             <Title order={3} fw={800}>
               {t('portal.application_status_title', 'Application Status')}
             </Title>
-          </Group>
+          </Stack>
 
           <Paper
             radius="xl"

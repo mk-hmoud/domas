@@ -6,6 +6,7 @@ import {
   Button,
   Center,
   Group,
+  Image,
   Paper,
   Select,
   Stack,
@@ -16,11 +17,11 @@ import {
 import {
   IconAlertCircle,
   IconArrowLeft,
-  IconBed,
   IconFileDescription,
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
+import logo from '../assets/eul-logo.png';
 import { useTranslation } from 'react-i18next';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -118,12 +119,10 @@ export function RegisterPage() {
         <Stack w="100%" maw={560} gap="lg">
           {/* Header */}
           <Stack gap={4} align="center">
-            <Group gap="xs">
-              <IconBed size={28} />
-              <Title order={2} fw={800}>
-                {t('portal.register_title', 'Student Registration')}
-              </Title>
-            </Group>
+            <Image src={logo} h={80} w="auto" fit="contain" mb={4} />
+            <Title order={2} fw={800}>
+              {t('portal.register_title', 'Student Registration')}
+            </Title>
             <Text size="sm" c="dimmed" ta="center">
               {t(
                 'portal.register_subtitle',
