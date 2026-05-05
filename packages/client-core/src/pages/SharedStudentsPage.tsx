@@ -122,9 +122,15 @@ export function SharedStudentsPage() {
     fetchData();
   }, [page, debouncedSearch]);
 
-  const handleCreate = async (values: CreateStudentDto) => {
+  const handleCreate = async (
+    values: CreateStudentDto,
+    photo?: File | null,
+  ) => {
     try {
-      await students.create(values);
+      const created = await students.create(values);
+      if (photo) {
+        await students.uploadPhoto(created.id, photo);
+      }
       notifications.show({
         title: t("success"),
         message: t("student_created", "Student created successfully"),
@@ -141,10 +147,16 @@ export function SharedStudentsPage() {
     }
   };
 
-  const handleUpdate = async (values: CreateStudentDto) => {
+  const handleUpdate = async (
+    values: CreateStudentDto,
+    photo?: File | null,
+  ) => {
     if (!editingStudent) return;
     try {
       await students.update(editingStudent.id, values);
+      if (photo) {
+        await students.uploadPhoto(editingStudent.id, photo);
+      }
       notifications.show({
         title: t("success"),
         message: t("student_updated", "Student updated successfully"),
