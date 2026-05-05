@@ -1,6 +1,7 @@
 export * from "@mantine/core";
 export * from "@mantine/hooks";
 export * from "@mantine/form";
+export { DatePickerInput } from "@mantine/dates";
 
 export * from "./theme";
 export * from "./provider";
