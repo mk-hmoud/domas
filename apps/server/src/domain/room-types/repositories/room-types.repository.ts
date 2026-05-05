@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
+import { StorageService } from '../../../common/storage/storage.service';
 import { RoomType } from '../entities/room-type.entity';
 import { CreateRoomTypeDto, UpdateRoomTypeDto } from '../dto/room-type.dto';
 
 @Injectable()
 export class RoomTypesRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly storage: StorageService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -25,14 +29,31 @@ export class RoomTypesRepository {
     `;
   }
 
+  private async mapRow(row: any): Promise<RoomType> {
+    const keys: string[] = row.galleryUrls ?? [];
+    const galleryUrls = keys.length
+      ? await Promise.all(keys.map((k) => this.storage.presign(k)))
+      : [];
+    return new RoomType({ ...row, galleryUrls });
+  }
+
   async findAll(client?: PoolClient): Promise<RoomType[]> {
     const result = await this.getClient(client).query<RoomType>(
       `SELECT ${this.selectColumns} FROM room_types ORDER BY name`,
     );
-    return result.rows.map((r) => new RoomType(r));
+    return Promise.all(result.rows.map((r) => this.mapRow(r)));
   }
 
   async findById(id: number, client?: PoolClient): Promise<RoomType | null> {
+    const result = await this.getClient(client).query<RoomType>(
+      `SELECT ${this.selectColumns} FROM room_types WHERE id = $1`,
+      [id],
+    );
+    return result.rows[0] ? this.mapRow(result.rows[0]) : null;
+  }
+
+  // Returns raw storage keys (not pre-signed) — for internal use only
+  async findByIdRaw(id: number, client?: PoolClient): Promise<RoomType | null> {
     const result = await this.getClient(client).query<RoomType>(
       `SELECT ${this.selectColumns} FROM room_types WHERE id = $1`,
       [id],
@@ -53,7 +74,7 @@ export class RoomTypesRepository {
         data.capacity,
       ],
     );
-    return new RoomType(result.rows[0]);
+    return this.mapRow(result.rows[0]);
   }
 
   async update(id: number, data: UpdateRoomTypeDto, client?: PoolClient): Promise<RoomType | null> {
@@ -82,7 +103,35 @@ export class RoomTypesRepository {
        RETURNING ${this.selectColumns}`,
       values,
     );
-    return result.rows[0] ? new RoomType(result.rows[0]) : null;
+    return result.rows[0] ? this.mapRow(result.rows[0]) : null;
+  }
+
+  async appendImageKey(id: number, key: string, client?: PoolClient): Promise<RoomType> {
+    const result = await this.getClient(client).query<RoomType>(
+      `UPDATE room_types
+       SET gallery_urls = gallery_urls || $2::text, updated_at = NOW()
+       WHERE id = $1
+       RETURNING ${this.selectColumns}`,
+      [id, key],
+    );
+    return this.mapRow(result.rows[0]);
+  }
+
+  async removeImageAtIndex(id: number, index: number, client?: PoolClient): Promise<RoomType> {
+    // PostgreSQL arrays are 1-based; index arrives as 0-based from JS
+    const result = await this.getClient(client).query<RoomType>(
+      `UPDATE room_types
+       SET gallery_urls = (
+         SELECT COALESCE(array_agg(elem ORDER BY ord), '{}')
+         FROM unnest(gallery_urls) WITH ORDINALITY AS t(elem, ord)
+         WHERE ord != $2
+       ),
+       updated_at = NOW()
+       WHERE id = $1
+       RETURNING ${this.selectColumns}`,
+      [id, index + 1],
+    );
+    return this.mapRow(result.rows[0]);
   }
 
   async delete(id: number, client?: PoolClient): Promise<boolean> {

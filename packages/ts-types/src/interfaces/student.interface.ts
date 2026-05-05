@@ -16,6 +16,10 @@ export interface Student {
   phoneNumber?: string;
   whatsappNumber?: string;
   profileData?: any;
+  photoUrl?: string;
+  enrollmentVerified?: boolean;
+  hasActiveBooking?: boolean;
+  hasCompletedBooking?: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

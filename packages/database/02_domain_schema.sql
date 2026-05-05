@@ -121,6 +121,7 @@ CREATE TABLE students (
     
     -- 5. Profile Data (Height, weight, habits - strictly domain data)
     profile_data JSONB DEFAULT '{}'::jsonb,
+    photo_storage_key VARCHAR(500),
     
     -- 6. Meta
     is_active BOOLEAN DEFAULT TRUE,
@@ -445,7 +446,7 @@ CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(bookin
 CREATE TABLE booking_contracts (
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL DEFAULT 'check_in', -- 'check_in', 'check_out'
-    pdf_data BYTEA NOT NULL,
+    storage_key VARCHAR(500) NOT NULL,
     file_size INT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -521,14 +522,15 @@ CREATE INDEX idx_liabilities_report ON damage_liabilities(damage_report_id);
 CREATE TABLE card_batches (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     location_id INT REFERENCES locations(id), -- Optional: Link batch to a building
+    catalog_id INT REFERENCES inventory_catalog(id), -- Optional: enables snapshot + damage tracking
     name VARCHAR(100) NOT NULL, -- e.g. "2024 Fall - Block A"
     range_start INT NOT NULL,
     range_end INT NOT NULL,
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     created_by UUID REFERENCES users(id),
-    
+
     CONSTRAINT chk_batch_range CHECK (range_end >= range_start)
 );
 
@@ -547,11 +549,14 @@ CREATE TABLE access_cards (
     current_holder_id UUID REFERENCES students(id),
     current_booking_id UUID REFERENCES bookings(id),
     
+    -- Inventory bridge: snapshot created at issuance for financial tracking
+    snapshot_id BIGINT REFERENCES booking_inventory_snapshots(id),
+
     -- Tracking (Requested Columns)
     issued_at TIMESTAMPTZ,
     issued_by UUID REFERENCES users(id),
     returned_at TIMESTAMPTZ, -- Usually NULL while active, populated upon return
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
@@ -753,4 +758,73 @@ CREATE TABLE room_change_requests (
 CREATE INDEX idx_room_change_requests_booking   ON room_change_requests(booking_id);
 CREATE INDEX idx_room_change_requests_student   ON room_change_requests(student_id);
 CREATE INDEX idx_room_change_requests_semester  ON room_change_requests(semester_id);
+
+-- =============================================
+-- DAMAGE REPORT IMAGES (Evidence Photos)
+-- =============================================
+
+CREATE TABLE damage_report_images (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    damage_report_id UUID         NOT NULL REFERENCES damage_reports(id) ON DELETE CASCADE,
+    filename         VARCHAR(255) NOT NULL,
+    mime_type        VARCHAR(100) NOT NULL,
+    size             INT          NOT NULL,
+    storage_key      VARCHAR(500) NOT NULL UNIQUE,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_damage_report_images_report_id ON damage_report_images(damage_report_id);
 CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);
+
+CREATE TABLE student_enrollment_verifications (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id       UUID         NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    filename         VARCHAR(255) NOT NULL,
+    mime_type        VARCHAR(100) NOT NULL,
+    size             INT          NOT NULL,
+    storage_key      VARCHAR(500) NOT NULL UNIQUE,
+    status           VARCHAR(20)  NOT NULL DEFAULT 'pending'
+                                  CHECK (status IN ('pending', 'verified', 'rejected')),
+    rejection_reason TEXT,
+    uploaded_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    reviewed_at      TIMESTAMPTZ,
+    reviewed_by      UUID         REFERENCES users(id)
+);
+
+CREATE INDEX idx_enrollment_verifications_student ON student_enrollment_verifications(student_id);
+
+CREATE TABLE student_applications (
+    id                   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- Applicant-supplied identity
+    student_number       VARCHAR(50)  NOT NULL,
+    first_name           VARCHAR(100) NOT NULL,
+    last_name            VARCHAR(100) NOT NULL,
+    gender               VARCHAR(10)  NOT NULL CHECK (gender IN ('male', 'female')),
+    nationality_code     VARCHAR(3)   NOT NULL,
+    national_id          VARCHAR(50)  NOT NULL,
+    birth_date           DATE         NOT NULL,
+    birth_place          VARCHAR(100) NOT NULL,
+    department           VARCHAR(200) NOT NULL,
+    email                VARCHAR(255),
+    phone_number         VARCHAR(50),
+    whatsapp_number      VARCHAR(50),
+    -- Acceptance letter
+    letter_filename      VARCHAR(255) NOT NULL,
+    letter_mime_type     VARCHAR(100) NOT NULL,
+    letter_size          INT          NOT NULL,
+    letter_storage_key   VARCHAR(500) NOT NULL UNIQUE,
+    -- Lifecycle
+    status               VARCHAR(20)  NOT NULL DEFAULT 'pending'
+                                      CHECK (status IN ('pending', 'approved', 'rejected')),
+    rejection_reason     TEXT,
+    submitted_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    reviewed_at          TIMESTAMPTZ,
+    reviewed_by          UUID         REFERENCES users(id),
+    -- Set on approval
+    student_id           UUID         REFERENCES students(id)
+);
+
+CREATE INDEX idx_student_applications_status ON student_applications(status);
+CREATE UNIQUE INDEX idx_student_applications_student_number_pending
+    ON student_applications(student_number)
+    WHERE status = 'pending';

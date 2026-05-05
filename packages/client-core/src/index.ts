@@ -21,3 +21,4 @@ export * from "./pages/SharedDamagesPage";
 export * from "./pages/SharedAnnouncementsPage";
 export * from "./pages/SharedGuestStaysPage";
 export * from "./pages/SharedRoomChangesPage";
+export * from "./pages/SharedStudentApplicationsPage";

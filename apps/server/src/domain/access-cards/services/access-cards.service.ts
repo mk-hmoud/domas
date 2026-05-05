@@ -136,6 +136,19 @@ export class AccessCardsService {
         client,
       );
 
+      // If the batch is linked to a catalog item, create an inventory snapshot
+      // so that a lost card can be tracked as a damage liability at checkout.
+      const batch = await this.repository.findBatchById(card.batchId, client);
+      if (batch?.catalogId) {
+        await this.repository.createCardSnapshot(
+          card.id,
+          data.bookingId,
+          batch.catalogId,
+          context.userId,
+          client,
+        );
+      }
+
       if (!skipUndo) {
         await this.undoService.registerUndo(
           {
@@ -271,8 +284,33 @@ export class AccessCardsService {
         client,
       );
 
-      // Status updates are generally not undone via a specific undo action in this repo's pattern
-      // but we could register it if needed. For now, following existing pattern.
+      // Auto-create a pending damage report so the replacement cost becomes a
+      // student liability that goes through the normal manager-approval flow.
+      if (data.status === CardStatus.LOST && card.snapshotId && card.currentBookingId) {
+        const locationRes = await client.query(
+          `SELECT l.id
+           FROM bookings b
+           JOIN beds bd ON b.bed_id = bd.id
+           JOIN locations l ON bd.location_id = l.id
+           WHERE b.id = $1`,
+          [card.currentBookingId],
+        );
+
+        if (locationRes.rows[0]) {
+          await client.query(
+            `INSERT INTO damage_reports
+               (location_id, snapshot_id, description, reported_by, culprit_ids, status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')`,
+            [
+              locationRes.rows[0].id,
+              card.snapshotId,
+              `Access card #${card.cardNumber} reported lost`,
+              context.userId,
+              card.currentHolderId ? [card.currentHolderId] : null,
+            ],
+          );
+        }
+      }
 
       return updatedCard;
     };

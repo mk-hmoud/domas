@@ -1,4 +1,18 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  UseInterceptors,
+  UploadedFiles,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { DamagesService } from '../services/damages.service';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
@@ -45,5 +59,27 @@ export class DamagesController {
   @RequirePermissions(PERMISSIONS.DAMAGES_MANAGE)
   rejectReport(@Param('id') id: string, @UserContext() context: AuditUserContext) {
     return this.service.rejectReport(id, context);
+  }
+
+  // ─── Images ──────────────────────────────────────────────────────────────────
+
+  @Post('reports/:id/images')
+  @RequirePermissions(PERMISSIONS.DAMAGES_REPORT)
+  @UseInterceptors(FilesInterceptor('images', 10, { limits: { fileSize: 20 * 1024 * 1024 } }))
+  uploadImages(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.service.addImages(id, files);
+  }
+
+  @Get('reports/:id/images/:imageId/url')
+  @RequirePermissions(PERMISSIONS.DAMAGES_VIEW)
+  getImageUrl(@Param('id') id: string, @Param('imageId') imageId: string) {
+    return this.service.getImageUrl(id, imageId);
+  }
+
+  @Delete('reports/:id/images/:imageId')
+  @RequirePermissions(PERMISSIONS.DAMAGES_MANAGE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteImage(@Param('id') id: string, @Param('imageId') imageId: string) {
+    return this.service.deleteImage(id, imageId);
   }
 }

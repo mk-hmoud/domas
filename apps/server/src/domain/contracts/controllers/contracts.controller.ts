@@ -19,7 +19,7 @@ export class ContractsController {
     @Query('type') type: ContractType = ContractType.CHECK_IN,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    const contract = await this.contractsService.getContract(
+    const { fileSize, buffer } = await this.contractsService.getContract(
       bookingId,
       type || ContractType.CHECK_IN,
     );
@@ -27,9 +27,9 @@ export class ContractsController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${type || 'contract'}-${bookingId}.pdf"`,
-      'Content-Length': contract.fileSize,
+      'Content-Length': fileSize,
     });
 
-    return new StreamableFile(contract.pdfData);
+    return new StreamableFile(buffer);
   }
 }

@@ -7,6 +7,7 @@ export class AccessCard {
   status!: CardStatus;
   currentHolderId?: string;
   currentBookingId?: string;
+  snapshotId?: number;
   issuedAt?: Date;
   issuedBy?: string;
   returnedAt?: Date;

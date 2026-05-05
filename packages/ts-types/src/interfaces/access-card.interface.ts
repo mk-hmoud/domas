@@ -4,6 +4,7 @@ import { CardActionType } from "../enums/card-action-type.enum";
 export interface CardBatch {
   id: number;
   locationId?: number;
+  catalogId?: number;
   name: string;
   rangeStart: number;
   rangeEnd: number;
@@ -19,11 +20,13 @@ export interface AccessCard {
   status: CardStatus;
   currentHolderId?: string;
   currentBookingId?: string;
+  snapshotId?: number;
   issuedAt?: string;
   issuedBy?: string;
   returnedAt?: string;
   createdAt: string;
   updatedAt: string;
+  holderName?: string;
 }
 
 export interface AccessCardLog {

@@ -1,5 +1,14 @@
 import { DamageStatus } from "../enums/damage-status.enum";
 
+export interface DamageReportImage {
+  id: string;
+  damageReportId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
 export interface DamageReport {
   id: string;
   locationId: number;
@@ -18,6 +27,7 @@ export interface DamageReport {
   reviewedAt?: string;
   createdAt: string;
   updatedAt: string;
+  images?: DamageReportImage[];
 }
 
 export interface DamageLiability {

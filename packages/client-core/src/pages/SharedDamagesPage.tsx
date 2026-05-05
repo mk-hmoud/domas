@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
-import { Button, Paper, LoadingOverlay, Tabs, Badge } from "@mantine/core";
-import { IconPlus, IconListSearch, IconHistory } from "@tabler/icons-react";
+import {
+  Button,
+  Paper,
+  LoadingOverlay,
+  Tabs,
+  Badge,
+  ActionIcon,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconPlus,
+  IconListSearch,
+  IconHistory,
+  IconCameraFilled,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
   damages,
@@ -117,11 +130,20 @@ export function SharedDamagesPage() {
     fetchInitialData();
   }, []);
 
-  const handleCreateReport = async (values: CreateDamageReportDto) => {
+  const handleCreateReport = async (
+    values: CreateDamageReportDto,
+    files: File[],
+  ) => {
     setActionLoading(true);
     try {
       const canAutoApprove = hasPermission("damages.manage");
-      await damages.createReport({ ...values, autoApprove: canAutoApprove });
+      const report = await damages.createReport({
+        ...values,
+        autoApprove: canAutoApprove,
+      });
+      if (files.length > 0) {
+        await damages.uploadImages(report.id, files);
+      }
       notifications.show({
         title: t("success"),
         message: t("report_created"),
@@ -210,6 +232,24 @@ export function SharedDamagesPage() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleGetImageUrl = async (imageId: string): Promise<string> => {
+    const { url } = await damages.getImageUrl(selectedReport!.id, imageId);
+    return url;
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    if (!selectedReport) return;
+    await damages.deleteImage(selectedReport.id, imageId);
+    setSelectedReport((prev) =>
+      prev
+        ? {
+            ...prev,
+            images: (prev.images ?? []).filter((img) => img.id !== imageId),
+          }
+        : null,
+    );
   };
 
   const handleReject = async (id: string) => {
@@ -318,8 +358,32 @@ export function SharedDamagesPage() {
           onApprove={handleApprove}
           onReject={handleReject}
           loading={actionLoading}
+          canManage={hasPermission("damages.manage")}
+          onGetImageUrl={handleGetImageUrl}
+          onDeleteImage={handleDeleteImage}
         />
       </PageShell>
+
+      {/* Mobile camera FAB — hidden on sm+ where the header button is visible */}
+      {hasPermission("damages.report") && (
+        <Tooltip label={t("report_damage")} position="left">
+          <ActionIcon
+            hiddenFrom="sm"
+            size={56}
+            radius="xl"
+            onClick={() => setModalOpened(true)}
+            style={{
+              position: "fixed",
+              bottom: "var(--mantine-spacing-xl)",
+              right: "var(--mantine-spacing-xl)",
+              zIndex: 200,
+              boxShadow: "var(--mantine-shadow-md)",
+            }}
+          >
+            <IconCameraFilled size={26} />
+          </ActionIcon>
+        </Tooltip>
+      )}
     </>
   );
 }

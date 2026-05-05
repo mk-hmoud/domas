@@ -455,7 +455,7 @@ export function CheckInDetailsModal({
                   withBorder
                   p="xl"
                   radius="md"
-                  bg="var(--mantine-color-indigo-0)"
+                  bg="light-dark(var(--mantine-color-indigo-0), var(--mantine-color-dark-6))"
                 >
                   <Stack gap={0} align="center">
                     <Text size="xs" fw={700} c="blue" tt="uppercase">

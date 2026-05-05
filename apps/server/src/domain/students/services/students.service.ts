@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Inject,
   forwardRef,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ApiException } from '../../../common/exceptions/api.exception';
 import { ErrorCodes } from '../../../common/constants/error-codes';
@@ -18,19 +19,31 @@ import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { Student } from '../entities/student.entity';
 import { ResolvedContact } from '../repositories/students.repository';
 import { DatabaseService } from '../../../core/database/database.service';
+import { StorageService } from '../../../common/storage/storage.service';
+import { EnrollmentVerification } from '../entities/enrollment-verification.entity';
+import {
+  StudentApplication,
+  ApplicationStatus,
+} from '../../student-portal/entities/student-application.entity';
+import { StudentApplicationsRepository } from '../../student-portal/repositories/student-applications.repository';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { BadRequestException } from '@nestjs/common';
 import { PoolClient } from 'pg';
 
 @Injectable()
 export class StudentsService {
   private readonly logger = new Logger(StudentsService.name);
 
+  private static readonly ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   constructor(
     private readonly studentsRepository: StudentsRepository,
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly storage: StorageService,
+    private readonly applicationsRepository: StudentApplicationsRepository,
   ) {}
 
   private validateNationalId(nationalityCode: string, nationalId: string): void {
@@ -79,7 +92,39 @@ export class StudentsService {
     if (!student) {
       throw new NotFoundException(`Student with ID ${id} not found`);
     }
+    if (student.photoStorageKey) {
+      student.photoUrl = await this.storage.presign(student.photoStorageKey);
+      student.photoStorageKey = undefined;
+    }
     return student;
+  }
+
+  async uploadPhoto(id: string, file: Express.Multer.File): Promise<{ photoUrl: string }> {
+    if (!StudentsService.ALLOWED_PHOTO_TYPES.includes(file.mimetype)) {
+      throw new UnsupportedMediaTypeException('Only JPEG, PNG, and WebP images are accepted');
+    }
+    const student = await this.studentsRepository.findById(id);
+    if (!student) throw new NotFoundException(`Student with ID ${id} not found`);
+
+    if (student.photoStorageKey) {
+      await this.storage.delete(student.photoStorageKey);
+    }
+
+    const key = `students/${id}/photo`;
+    await this.storage.upload(key, file.buffer, file.mimetype);
+    await this.studentsRepository.setPhotoKey(id, key);
+
+    const photoUrl = await this.storage.presign(key);
+    return { photoUrl };
+  }
+
+  async deletePhoto(id: string): Promise<void> {
+    const student = await this.studentsRepository.findById(id);
+    if (!student) throw new NotFoundException(`Student with ID ${id} not found`);
+    if (student.photoStorageKey) {
+      await this.storage.delete(student.photoStorageKey);
+    }
+    await this.studentsRepository.clearPhotoKey(id);
   }
 
   async update(id: string, data: UpdateStudentDto, context: AuditUserContext): Promise<Student> {
@@ -179,5 +224,110 @@ export class StudentsService {
       const updated = await this.studentsRepository.update(id, { isActive }, client);
       return updated!;
     }, context);
+  }
+
+  // ─── Enrollment Verifications ─────────────────────────────────────────────────
+
+  async getEnrollmentCerts(
+    studentId: string,
+  ): Promise<(EnrollmentVerification & { url?: string })[]> {
+    const certs = await this.studentsRepository.findEnrollmentCerts(studentId);
+    return Promise.all(
+      certs.map(async (cert) => {
+        const url = await this.storage.presign(cert.storageKey);
+        return { ...cert, url };
+      }),
+    );
+  }
+
+  async reviewEnrollmentCert(
+    studentId: string,
+    certId: string,
+    action: 'verify' | 'reject',
+    reviewerId: string,
+    rejectionReason?: string,
+  ): Promise<EnrollmentVerification> {
+    const cert = await this.studentsRepository.findEnrollmentCertById(certId);
+    if (!cert || cert.studentId !== studentId) {
+      throw new NotFoundException('Certificate not found');
+    }
+    if (action === 'reject' && !rejectionReason) {
+      throw new Error('Rejection reason is required');
+    }
+    return this.studentsRepository.updateEnrollmentCert(certId, {
+      status: action === 'verify' ? 'verified' : 'rejected',
+      rejectionReason,
+      reviewedBy: reviewerId,
+    });
+  }
+
+  async getEnrollmentCertUrl(studentId: string, certId: string): Promise<{ url: string }> {
+    const cert = await this.studentsRepository.findEnrollmentCertById(certId);
+    if (!cert || cert.studentId !== studentId) {
+      throw new NotFoundException('Certificate not found');
+    }
+    const url = await this.storage.presign(cert.storageKey);
+    return { url };
+  }
+
+  // ─── Student Applications ─────────────────────────────────────────────────────
+
+  async listApplications(filter?: {
+    status?: ApplicationStatus;
+  }): Promise<(StudentApplication & { letterUrl: string })[]> {
+    const applications = await this.applicationsRepository.findAll(filter);
+    return Promise.all(
+      applications.map(async (app) => {
+        const letterUrl = await this.storage.presign(app.letterStorageKey);
+        return { ...app, letterUrl };
+      }),
+    );
+  }
+
+  async reviewApplication(
+    id: string,
+    action: 'approve' | 'reject',
+    reviewerId: string,
+    rejectionReason?: string,
+  ): Promise<StudentApplication> {
+    const application = await this.applicationsRepository.findById(id);
+    if (!application) throw new NotFoundException('Application not found');
+    if (application.status !== 'pending') {
+      throw new BadRequestException('Application has already been reviewed');
+    }
+
+    if (action === 'reject') {
+      if (!rejectionReason) throw new BadRequestException('Rejection reason is required');
+      return this.applicationsRepository.reject(id, reviewerId, rejectionReason);
+    }
+
+    return this.db.transaction(async (client) => {
+      const student = await this.studentsRepository.create(
+        {
+          studentNumber: application.studentNumber,
+          firstName: application.firstName,
+          lastName: application.lastName,
+          gender: application.gender as any,
+          nationalityCode: application.nationalityCode,
+          nationalId: application.nationalId,
+          birthDate: application.birthDate.toISOString().split('T')[0],
+          birthPlace: application.birthPlace,
+          department: application.department,
+          email: application.email,
+          phoneNumber: application.phoneNumber,
+          whatsappNumber: application.whatsappNumber,
+        },
+        reviewerId,
+        client,
+      );
+      return this.applicationsRepository.approve(id, reviewerId, student.id, client);
+    });
+  }
+
+  async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
+    const application = await this.applicationsRepository.findById(id);
+    if (!application) throw new NotFoundException('Application not found');
+    const url = await this.storage.presign(application.letterStorageKey);
+    return { url };
   }
 }

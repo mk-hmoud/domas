@@ -1,6 +1,7 @@
 export class CardBatch {
   id!: number;
   locationId?: number;
+  catalogId?: number;
   name!: string;
   rangeStart!: number;
   rangeEnd!: number;

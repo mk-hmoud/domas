@@ -17,6 +17,10 @@ import {
   Announcement,
   StudentCreateRoomChangeDto,
   StudentRoomChangeView,
+  EnrollmentVerification,
+  EnrollmentStatus,
+  StudentApplication,
+  SubmitApplicationDto,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -260,6 +264,29 @@ export const portalAnnouncements = {
 
 // ─── Room Changes ─────────────────────────────────────────────────────────────
 
+// ─── Enrollment ───────────────────────────────────────────────────────────────
+
+export const portalEnrollment = {
+  getStatus: async (): Promise<EnrollmentStatus> => {
+    const response = await apiClient.get<EnrollmentStatus>(
+      "/portal/enrollment/status",
+    );
+    return response.data;
+  },
+
+  uploadCertificate: async (file: File): Promise<EnrollmentVerification> => {
+    const form = new FormData();
+    form.append("certificate", file);
+    const response = await apiClient.post<EnrollmentVerification>(
+      "/portal/enrollment/certificate",
+      form,
+    );
+    return response.data;
+  },
+};
+
+// ─── Room Changes ─────────────────────────────────────────────────────────────
+
 export const portalRoomChanges = {
   getAll: async (): Promise<StudentRoomChangeView[]> => {
     const response = await apiClient.get<StudentRoomChangeView[]>(
@@ -281,5 +308,32 @@ export const portalRoomChanges = {
 
   cancel: async (id: string): Promise<void> => {
     await apiClient.delete(`/portal/room-changes/${id}`);
+  },
+};
+
+// ─── Applications (public — no session required) ──────────────────────────────
+
+export const portalApplications = {
+  submit: async (
+    dto: SubmitApplicationDto,
+    letterFile: File,
+  ): Promise<StudentApplication> => {
+    const form = new FormData();
+    form.append("letter", letterFile);
+    Object.entries(dto).forEach(([key, value]) => {
+      if (value !== undefined) form.append(key, String(value));
+    });
+    const response = await apiClient.post<StudentApplication>(
+      "/portal/applications",
+      form,
+    );
+    return response.data;
+  },
+
+  getStatus: async (id: string): Promise<StudentApplication> => {
+    const response = await apiClient.get<StudentApplication>(
+      `/portal/applications/${id}/status`,
+    );
+    return response.data;
   },
 };

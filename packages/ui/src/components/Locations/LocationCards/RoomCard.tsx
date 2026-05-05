@@ -55,7 +55,7 @@ export function RoomCard({
           ? "var(--mantine-color-blue-filled)"
           : "var(--mantine-color-indigo-filled)",
         backgroundColor: selected
-          ? "var(--mantine-color-blue-light)"
+          ? "light-dark(var(--mantine-color-blue-light), var(--mantine-color-dark-5))"
           : undefined,
       }}
     >

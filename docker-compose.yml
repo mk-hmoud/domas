@@ -19,7 +19,25 @@ services:
       - domas_net
 
   # ------------------------------------
-  # 2. SERVER
+  # 2. MINIO (Object Storage)
+  # ------------------------------------
+  minio:
+    container_name: domas_minio
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console (http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - domas_net
+
+  # ------------------------------------
+  # 3. SERVER
   # ------------------------------------
   server:
     container_name: domas_server
@@ -35,13 +53,20 @@ services:
       - SESSION_SECRET=fee30131828e46e3a2dc70ede1d65251ab342a4d3781c52fdd508191a0f28ea5
       - APP_USER=domas_app
       - APP_USER_PASSWORD=domas_app_pass
+      - STORAGE_ENDPOINT=http://domas_minio:9000
+      - STORAGE_PUBLIC_ENDPOINT=http://localhost:9000
+      - STORAGE_REGION=us-east-1
+      - STORAGE_ACCESS_KEY=minioadmin
+      - STORAGE_SECRET_KEY=minioadmin
+      - STORAGE_BUCKET=domas-files
     networks:
       - domas_net
     depends_on:
       - db
+      - minio
 
   # ------------------------------------
-  # 3. ADMIN CLIENT
+  # 4. ADMIN CLIENT
   # ------------------------------------
   client:
     container_name: domas_client
@@ -57,7 +82,7 @@ services:
       - server
 
   # ------------------------------------
-  # 4. STUDENT CLIENT
+  # 5. STUDENT CLIENT
   # ------------------------------------
   client-student:
     container_name: domas_student
@@ -74,7 +99,7 @@ services:
       - server
 
   # ------------------------------------
-  # 5. REVERSE PROXY  (single entry point)
+  # 6. REVERSE PROXY  (single entry point)
   # ------------------------------------
   proxy:
     container_name: domas_proxy
@@ -97,3 +122,4 @@ networks:
 
 volumes:
   postgres_data:
+  minio_data:

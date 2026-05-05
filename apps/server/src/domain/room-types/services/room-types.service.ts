@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { RoomTypesRepository } from '../repositories/room-types.repository';
+import { StorageService } from '../../../common/storage/storage.service';
 import { CreateRoomTypeDto, UpdateRoomTypeDto } from '../dto/room-type.dto';
 import { RoomType } from '../entities/room-type.entity';
 
 @Injectable()
 export class RoomTypesService {
-  constructor(private readonly repo: RoomTypesRepository) {}
+  constructor(
+    private readonly repo: RoomTypesRepository,
+    private readonly storage: StorageService,
+  ) {}
 
   findAll(): Promise<RoomType[]> {
     return this.repo.findAll();
@@ -27,7 +32,28 @@ export class RoomTypesService {
     return rt;
   }
 
+  async uploadImage(id: number, file: Express.Multer.File): Promise<RoomType> {
+    const rt = await this.repo.findByIdRaw(id);
+    if (!rt) throw new NotFoundException(`Room type ${id} not found`);
+    const key = `room-types/${id}/${randomUUID()}`;
+    await this.storage.upload(key, file.buffer, file.mimetype);
+    return this.repo.appendImageKey(id, key);
+  }
+
+  async removeImage(id: number, index: number): Promise<RoomType> {
+    const rt = await this.repo.findByIdRaw(id);
+    if (!rt) throw new NotFoundException(`Room type ${id} not found`);
+    const key = rt.galleryUrls[index];
+    if (!key) throw new NotFoundException('Image not found');
+    await this.storage.delete(key);
+    return this.repo.removeImageAtIndex(id, index);
+  }
+
   async delete(id: number): Promise<void> {
+    const rt = await this.repo.findByIdRaw(id);
+    if (!rt) throw new NotFoundException(`Room type ${id} not found`);
+    // Clean up all images from storage before deleting the room type
+    await Promise.all(rt.galleryUrls.map((key) => this.storage.delete(key)));
     const deleted = await this.repo.delete(id);
     if (!deleted) throw new NotFoundException(`Room type ${id} not found`);
   }

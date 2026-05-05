@@ -10,7 +10,7 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
   return (
     <Box
-      px="xl"
+      px={{ base: "md", sm: "xl" }}
       py="md"
       style={{
         backgroundColor:
@@ -20,7 +20,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
         flexShrink: 0,
       }}
     >
-      <Group justify="space-between" align="center" wrap="nowrap">
+      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
         <div>
           <Title order={3} style={{ lineHeight: 1.3 }}>
             {title}
@@ -31,11 +31,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
             </Text>
           )}
         </div>
-        {actions && (
-          <Group gap="sm" style={{ flexShrink: 0 }}>
-            {actions}
-          </Group>
-        )}
+        {actions && <Group gap="sm">{actions}</Group>}
       </Group>
     </Box>
   );

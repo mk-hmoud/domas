@@ -8,7 +8,7 @@ interface PageShellProps {
 
 export function PageShell({ children, size = "lg" }: PageShellProps) {
   return (
-    <Box p="xl">
+    <Box p={{ base: "md", sm: "xl" }}>
       <Container size={size} p={0}>
         {children}
       </Container>

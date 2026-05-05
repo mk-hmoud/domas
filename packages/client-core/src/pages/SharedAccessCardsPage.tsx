@@ -3,7 +3,12 @@ import { PageHeader, PageShell } from "@domas/ui";
 import { Button, Paper, LoadingOverlay, Tabs } from "@mantine/core";
 import { IconPlus, IconCards, IconId } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { accessCards, locations } from "@domas/api-client";
+import {
+  accessCards,
+  locations,
+  students as studentsApi,
+  inventory,
+} from "@domas/api-client";
 import { useAuth } from "../context/AuthContext";
 import {
   CardBatch,
@@ -11,8 +16,16 @@ import {
   CreateCardBatchDto,
   Location,
   LocationType,
+  Student,
+  CardStatus,
+  InventoryCatalogItem,
 } from "@domas/ts-types";
-import { CardBatchModal, CardBatchTable, AccessCardTable } from "@domas/ui";
+import {
+  CardBatchModal,
+  CardBatchTable,
+  AccessCardTable,
+  ReportLostCardModal,
+} from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 
 export function SharedAccessCardsPage() {
@@ -21,21 +34,44 @@ export function SharedAccessCardsPage() {
   const [batches, setBatches] = useState<CardBatch[]>([]);
   const [cards, setCards] = useState<AccessCard[]>([]);
   const [locationList, setLocationList] = useState<Location[]>([]);
+  const [catalogItems, setCatalogItems] = useState<InventoryCatalogItem[]>([]);
+  const [, setStudentList] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [modalOpened, setModalOpened] = useState(false);
+  const [lostCard, setLostCard] = useState<AccessCard | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>("batches");
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [batchesRes, cardsRes, locationsRes] = await Promise.all([
-        accessCards.findAllBatches(),
-        accessCards.findAllCards(),
-        locations.findAll({ limit: 1000 }),
-      ]);
+      const [batchesRes, cardsRes, locationsRes, studentsRes, catalogRes] =
+        await Promise.all([
+          accessCards.findAllBatches(),
+          accessCards.findAllCards(),
+          locations.findAll({ limit: 1000 }),
+          studentsApi.findAll({ limit: 5000 }),
+          inventory.findAllCatalog(),
+        ]);
       setBatches(batchesRes);
-      setCards(cardsRes);
       setLocationList(locationsRes.data);
+      setCatalogItems(catalogRes);
+      setStudentList(studentsRes.data);
+
+      const studMap = new Map(
+        studentsRes.data.map((s: Student) => [
+          s.id,
+          `${s.firstName} ${s.lastName}`,
+        ]),
+      );
+      setCards(
+        cardsRes.map((c) => ({
+          ...c,
+          holderName: c.currentHolderId
+            ? studMap.get(c.currentHolderId)
+            : undefined,
+        })),
+      );
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -66,6 +102,54 @@ export function SharedAccessCardsPage() {
         message: t("failed_to_save_batch"),
         color: "red",
       });
+    }
+  };
+
+  const handleMarkLost = async (
+    issueReplacement: boolean,
+    batchId?: number,
+  ) => {
+    if (!lostCard) return;
+    setActionLoading(true);
+    try {
+      await accessCards.updateStatus(lostCard.id, {
+        status: CardStatus.LOST,
+        notes: "Reported lost by staff",
+      });
+
+      if (
+        issueReplacement &&
+        lostCard.currentHolderId &&
+        lostCard.currentBookingId
+      ) {
+        await accessCards.issueCard({
+          studentId: lostCard.currentHolderId,
+          bookingId: lostCard.currentBookingId,
+          batchId,
+        });
+      }
+
+      notifications.show({
+        title: t("success"),
+        message: issueReplacement
+          ? t(
+              "card_marked_lost_replacement_issued",
+              "Card marked as lost and replacement issued.",
+            )
+          : t("card_marked_lost", "Card marked as lost."),
+        color: "green",
+      });
+
+      setLostCard(null);
+      fetchData();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -111,7 +195,14 @@ export function SharedAccessCardsPage() {
           <Tabs.Panel value="all_cards">
             <Paper withBorder radius="md" style={{ position: "relative" }}>
               <LoadingOverlay visible={loading} />
-              <AccessCardTable data={cards} />
+              <AccessCardTable
+                data={cards}
+                onMarkLost={
+                  hasPermission("access_cards.manage")
+                    ? (card) => setLostCard(card)
+                    : undefined
+                }
+              />
             </Paper>
           </Tabs.Panel>
         </Tabs>
@@ -121,6 +212,16 @@ export function SharedAccessCardsPage() {
           onClose={() => setModalOpened(false)}
           onSubmit={handleCreateBatch}
           locations={allowedLocations}
+          catalogItems={catalogItems}
+        />
+
+        <ReportLostCardModal
+          opened={lostCard !== null}
+          onClose={() => setLostCard(null)}
+          card={lostCard}
+          batches={batches}
+          loading={actionLoading}
+          onConfirm={handleMarkLost}
         />
       </PageShell>
     </>

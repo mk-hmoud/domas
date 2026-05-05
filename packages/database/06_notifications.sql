@@ -71,7 +71,7 @@ CREATE TABLE announcement_attachments (
     filename        VARCHAR(255) NOT NULL,
     mime_type       VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
     size            INT          NOT NULL,
-    data            BYTEA        NOT NULL,
+    storage_key     VARCHAR(500) NOT NULL,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 

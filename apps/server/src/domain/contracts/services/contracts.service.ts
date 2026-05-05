@@ -6,6 +6,7 @@ import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import { ContractsRepository } from '../repositories/contracts.repository';
+import { StorageService } from '../../../common/storage/storage.service';
 import { UsersRepository } from '../../users/repositories/users.repository';
 import { ContractType } from '../../../common/enums/contract-type.enum';
 import PDFDocument from 'pdfkit';
@@ -25,6 +26,7 @@ export class ContractsService {
     private readonly bedsRepository: BedsRepository,
     private readonly locationsRepository: LocationsRepository,
     private readonly contractsRepository: ContractsRepository,
+    private readonly storageService: StorageService,
     private readonly usersRepository: UsersRepository,
     private readonly db: DatabaseService,
   ) {}
@@ -144,10 +146,14 @@ export class ContractsService {
     this.logger.log(`Check-out contract generated for booking ${bookingId}`);
   }
 
-  async getContract(bookingId: string, type: string) {
+  async getContract(
+    bookingId: string,
+    type: string,
+  ): Promise<{ fileSize: number; buffer: Buffer }> {
     const contract = await this.contractsRepository.findById(bookingId, type);
     if (!contract) throw new NotFoundException('Contract not found');
-    return contract;
+    const buffer = await this.storageService.download(contract.storageKey);
+    return { fileSize: contract.fileSize, buffer };
   }
 
   private createCheckOutPdf(

@@ -14,7 +14,10 @@ import {
   StreamableFile,
   UseGuards,
   Patch,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { StudentPortalService } from '../services/student-portal.service';
 import { ContractsService } from '../../contracts/services/contracts.service';
@@ -23,6 +26,7 @@ import { StudentAuthGuard } from '../../../common/guards/student-auth.guard';
 import { StudentLoginDto } from '../dto/student-login.dto';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
+import { SubmitApplicationDto } from '../dto/submit-application.dto';
 
 @Controller('portal')
 export class StudentPortalController {
@@ -167,13 +171,16 @@ export class StudentPortalController {
     );
     if (!booking.contractSigned)
       throw new NotFoundException('No contract available for this booking');
-    const contract = await this.contractsService.getContract(bookingId, ContractType.CHECK_IN);
+    const { fileSize, buffer } = await this.contractsService.getContract(
+      bookingId,
+      ContractType.CHECK_IN,
+    );
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="contract-${bookingId}.pdf"`,
-      'Content-Length': contract.fileSize,
+      'Content-Length': fileSize,
     });
-    return new StreamableFile(contract.pdfData);
+    return new StreamableFile(buffer);
   }
 
   @UseGuards(StudentAuthGuard)
@@ -195,5 +202,41 @@ export class StudentPortalController {
   @Get('damages')
   async getMyDamageLiabilities(@Request() req: ExpressRequest) {
     return this.studentPortalService.getMyDamageLiabilities(req.session.studentId!);
+  }
+
+  // ─── Enrollment ───────────────────────────────────────────────────────────────
+
+  @UseGuards(StudentAuthGuard)
+  @Get('enrollment/status')
+  async getEnrollmentStatus(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getEnrollmentStatus(req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Post('enrollment/certificate')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('certificate', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async uploadCertificate(
+    @Request() req: ExpressRequest,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.studentPortalService.uploadEnrollmentCertificate(req.session.studentId!, file);
+  }
+
+  // ─── Applications (public — no auth required) ─────────────────────────────────
+
+  @Post('applications')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('letter', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async submitApplication(
+    @Body() dto: SubmitApplicationDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.studentPortalService.submitApplication(dto, file);
+  }
+
+  @Get('applications/:id/status')
+  async getApplicationStatus(@Param('id') id: string) {
+    return this.studentPortalService.getApplicationStatus(id);
   }
 }

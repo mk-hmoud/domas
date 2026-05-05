@@ -9,6 +9,9 @@ import {
   BulkUpdateStudentStatusDto,
   ResolveContactsDto,
   ResolvedContact,
+  EnrollmentVerification,
+  StudentApplication,
+  ApplicationStatus,
 } from "@domas/ts-types";
 
 export const students = {
@@ -62,6 +65,84 @@ export const students = {
     const response = await apiClient.post<ResolvedContact[]>(
       "/students/resolve-contacts",
       data,
+    );
+    return response.data;
+  },
+
+  uploadPhoto: async (
+    id: string,
+    file: File,
+  ): Promise<{ photoUrl: string }> => {
+    const form = new FormData();
+    form.append("photo", file);
+    const response = await apiClient.post<{ photoUrl: string }>(
+      `/students/${id}/photo`,
+      form,
+    );
+    return response.data;
+  },
+
+  deletePhoto: async (id: string): Promise<void> => {
+    await apiClient.delete(`/students/${id}/photo`);
+  },
+
+  getEnrollmentCerts: async (
+    id: string,
+  ): Promise<(EnrollmentVerification & { url?: string })[]> => {
+    const response = await apiClient.get<
+      (EnrollmentVerification & { url?: string })[]
+    >(`/students/${id}/enrollment`);
+    return response.data;
+  },
+
+  reviewEnrollmentCert: async (
+    id: string,
+    certId: string,
+    action: "verify" | "reject",
+    rejectionReason?: string,
+  ): Promise<EnrollmentVerification> => {
+    const response = await apiClient.patch<EnrollmentVerification>(
+      `/students/${id}/enrollment/${certId}/review`,
+      { action, rejectionReason },
+    );
+    return response.data;
+  },
+
+  getEnrollmentCertUrl: async (
+    id: string,
+    certId: string,
+  ): Promise<{ url: string }> => {
+    const response = await apiClient.get<{ url: string }>(
+      `/students/${id}/enrollment/${certId}/url`,
+    );
+    return response.data;
+  },
+
+  listApplications: async (
+    status?: ApplicationStatus,
+  ): Promise<(StudentApplication & { letterUrl: string })[]> => {
+    const params = status ? { status } : {};
+    const response = await apiClient.get<
+      (StudentApplication & { letterUrl: string })[]
+    >("/students/applications", { params });
+    return response.data;
+  },
+
+  reviewApplication: async (
+    appId: string,
+    action: "approve" | "reject",
+    rejectionReason?: string,
+  ): Promise<StudentApplication> => {
+    const response = await apiClient.patch<StudentApplication>(
+      `/students/applications/${appId}/review`,
+      { action, rejectionReason },
+    );
+    return response.data;
+  },
+
+  getApplicationLetterUrl: async (appId: string): Promise<{ url: string }> => {
+    const response = await apiClient.get<{ url: string }>(
+      `/students/applications/${appId}/letter-url`,
     );
     return response.data;
   },

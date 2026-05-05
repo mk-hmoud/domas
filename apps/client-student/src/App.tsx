@@ -9,6 +9,9 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { FinancialPage } from './pages/FinancialPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { VerifyEnrollmentPage } from './pages/VerifyEnrollmentPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { ApplicationStatusPage } from './pages/ApplicationStatusPage';
 
 function App() {
   return (
@@ -16,6 +19,18 @@ function App() {
       <Routes>
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register/status" element={<ApplicationStatusPage />} />
+
+        {/* Enrollment verification — protected (must be logged in) but outside PortalLayout */}
+        <Route
+          path="/verify-enrollment"
+          element={
+            <ProtectedStudentRoute>
+              <VerifyEnrollmentPage />
+            </ProtectedStudentRoute>
+          }
+        />
 
         {/* Protected portal */}
         <Route

@@ -39,7 +39,7 @@ export function RoomTypesPage() {
     setModalOpen(true);
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: any, pendingFiles: File[]) => {
     if (editing) {
       await roomTypesApi.update(editing.id, values);
       notifications.show({
@@ -47,7 +47,10 @@ export function RoomTypesPage() {
         message: t('updated_successfully', { defaultValue: 'Updated successfully' }),
       });
     } else {
-      await roomTypesApi.create(values);
+      const created = await roomTypesApi.create(values);
+      for (const file of pendingFiles) {
+        await roomTypesApi.uploadImage(created.id, file);
+      }
       notifications.show({
         color: 'green',
         message: t('created_successfully', { defaultValue: 'Created successfully' }),
@@ -67,6 +70,20 @@ export function RoomTypesPage() {
     } catch {
       notifications.show({ color: 'red', message: t('error') });
     }
+  };
+
+  const handleUploadImage = async (file: File): Promise<RoomType> => {
+    const updated = await roomTypesApi.uploadImage(editing!.id, file);
+    setEditing(updated);
+    setData((prev) => prev.map((rt) => (rt.id === updated.id ? updated : rt)));
+    return updated;
+  };
+
+  const handleRemoveImage = async (index: number): Promise<RoomType> => {
+    const updated = await roomTypesApi.removeImage(editing!.id, index);
+    setEditing(updated);
+    setData((prev) => prev.map((rt) => (rt.id === updated.id ? updated : rt)));
+    return updated;
   };
 
   return (
@@ -90,6 +107,8 @@ export function RoomTypesPage() {
           onClose={() => setModalOpen(false)}
           onSubmit={handleSubmit}
           initialValues={editing}
+          onUploadImage={editing ? handleUploadImage : undefined}
+          onRemoveImage={editing ? handleRemoveImage : undefined}
         />
       </PageShell>
     </>

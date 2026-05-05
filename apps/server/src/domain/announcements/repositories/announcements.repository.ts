@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { PoolClient } from 'pg';
+import { randomUUID } from 'crypto';
 import { DatabaseService } from '../../../core/database/database.service';
+import { StorageService } from '../../../common/storage/storage.service';
 import { Announcement } from '../entities/announcement.entity';
 import { CreateAnnouncementDto } from '../dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from '../dto/update-announcement.dto';
 
 @Injectable()
 export class AnnouncementsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly storage: StorageService,
+  ) {}
 
   private map(row: any): Announcement {
     return new Announcement({
@@ -144,10 +148,13 @@ export class AnnouncementsRepository {
 
   async createAttachments(announcementId: string, files: Express.Multer.File[]): Promise<void> {
     for (const file of files) {
+      const id = randomUUID();
+      const key = `announcements/${announcementId}/${id}`;
+      await this.storage.upload(key, file.buffer, file.mimetype);
       await this.db.getPool().query(
-        `INSERT INTO announcement_attachments (announcement_id, filename, mime_type, size, data)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [announcementId, file.originalname, file.mimetype, file.size, file.buffer],
+        `INSERT INTO announcement_attachments (id, announcement_id, filename, mime_type, size, storage_key)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, announcementId, file.originalname, file.mimetype, file.size, key],
       );
     }
   }
@@ -157,21 +164,31 @@ export class AnnouncementsRepository {
     announcementId: string,
   ): Promise<{ id: string; filename: string; mimeType: string; data: Buffer } | null> {
     const result = await this.db.getPool().query(
-      `SELECT id, filename, mime_type AS "mimeType", data
+      `SELECT id, filename, mime_type AS "mimeType", storage_key AS "storageKey"
        FROM announcement_attachments
        WHERE id = $1 AND announcement_id = $2`,
       [attachmentId, announcementId],
     );
-    return result.rows[0] ?? null;
+    if (!result.rows[0]) return null;
+    const { id, filename, mimeType, storageKey } = result.rows[0];
+    const data = await this.storage.download(storageKey);
+    return { id, filename, mimeType, data };
   }
 
   async deleteAttachment(attachmentId: string, announcementId: string): Promise<boolean> {
-    const result = await this.db
+    const result = await this.db.getPool().query(
+      `SELECT storage_key AS "storageKey" FROM announcement_attachments
+       WHERE id = $1 AND announcement_id = $2`,
+      [attachmentId, announcementId],
+    );
+    if (!result.rows[0]) return false;
+    await this.storage.delete(result.rows[0].storageKey);
+    await this.db
       .getPool()
       .query(`DELETE FROM announcement_attachments WHERE id = $1 AND announcement_id = $2`, [
         attachmentId,
         announcementId,
       ]);
-    return (result.rowCount ?? 0) > 0;
+    return true;
   }
 }

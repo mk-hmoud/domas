@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppLoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './core/database/database.module';
+import { StorageModule } from './common/storage/storage.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
 import { UsersModule } from './domain/users/users.module';
@@ -34,6 +35,7 @@ import { RoomChangesModule } from './domain/room-changes/room-changes.module';
     ScheduleModule.forRoot(),
     AppLoggerModule,
     DatabaseModule,
+    StorageModule,
     UsersModule,
     AuthModule,
     SemestersModule,
