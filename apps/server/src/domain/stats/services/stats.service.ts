@@ -163,7 +163,8 @@ export class StatsService {
                   WHERE b.student_id = s.id
                     AND b.status IN ('active', 'ready_for_checkin', 'pending_accounting', 'confirmed')
                 )
-              ) AS without_active_booking
+              ) AS without_active_booking,
+              (SELECT COUNT(*) FROM student_applications WHERE status = 'pending') AS pending_applications
           `,
           )
           .then((r) => {
@@ -171,6 +172,7 @@ export class StatsService {
             result.students = {
               total: parseInt(row.total, 10),
               withoutActiveBooking: parseInt(row.without_active_booking, 10),
+              pendingApplications: parseInt(row.pending_applications, 10),
             };
           }),
       );

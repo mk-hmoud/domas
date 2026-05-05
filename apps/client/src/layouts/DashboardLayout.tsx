@@ -127,11 +127,7 @@ export function DashboardLayout() {
             label: t('nav.students'),
             link: '/dashboard/students',
             requiredPermission: 'students.view',
-          },
-          {
-            label: t('nav.applications'),
-            link: '/dashboard/applications',
-            requiredPermission: 'students.view',
+            badge: navStats.students?.pendingApplications,
           },
           {
             label: t('nav.access_cards'),

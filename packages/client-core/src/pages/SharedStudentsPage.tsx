@@ -18,6 +18,10 @@ import {
   Center,
   Divider,
   Textarea,
+  Tabs,
+  Select,
+  ScrollArea,
+  Table,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -31,6 +35,7 @@ import {
   IconCheck,
   IconX,
   IconFileDescription,
+  IconExternalLink,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students } from "@domas/api-client";
@@ -40,6 +45,8 @@ import {
   PaginatedResult,
   COUNTRIES,
   EnrollmentVerification,
+  ApplicationStatus,
+  StudentApplication,
 } from "@domas/ts-types";
 import {
   StudentModal,
@@ -50,9 +57,18 @@ import {
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
+import { useAuth } from "../context/AuthContext";
+
+const STATUS_COLORS: Record<ApplicationStatus, string> = {
+  pending: "yellow",
+  approved: "green",
+  rejected: "red",
+};
 
 export function SharedStudentsPage() {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  const canReview = hasPermission("students.review_applications");
   const [data, setData] = useState<PaginatedResult<Student>>({
     data: [],
     total: 0,
@@ -81,6 +97,24 @@ export function SharedStudentsPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<string | null>("students");
+
+  // Applications state
+  const [applications, setApplications] = useState<
+    (StudentApplication & { letterUrl: string })[]
+  >([]);
+  const [appLoading, setAppLoading] = useState(false);
+  const [appActionLoading, setAppActionLoading] = useState(false);
+  const [appStatusFilter, setAppStatusFilter] = useState<
+    ApplicationStatus | "all"
+  >("pending");
+  const [appSelected, setAppSelected] = useState<
+    (StudentApplication & { letterUrl: string }) | null
+  >(null);
+  const [appRejectReason, setAppRejectReason] = useState("");
+  const [appShowRejectInput, setAppShowRejectInput] = useState(false);
 
   const getCountryName = (code?: string) => {
     if (!code) return "-";
@@ -121,6 +155,118 @@ export function SharedStudentsPage() {
   useEffect(() => {
     fetchData();
   }, [page, debouncedSearch]);
+
+  const fetchApplications = async () => {
+    setAppLoading(true);
+    try {
+      const result = await students.listApplications(
+        appStatusFilter !== "all" ? appStatusFilter : undefined,
+      );
+      setApplications(result);
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "applications") fetchApplications();
+  }, [activeTab, appStatusFilter]);
+
+  const handleAppApprove = (
+    app: StudentApplication & { letterUrl: string },
+  ) => {
+    modals.openConfirmModal({
+      title: t("approve_application", "Approve Application"),
+      children: (
+        <Text size="sm">
+          {t(
+            "approve_application_confirm",
+            "Approve the application for {{name}} ({{number}})? A student account will be created automatically.",
+            {
+              name: `${app.firstName} ${app.lastName}`,
+              number: app.studentNumber,
+            },
+          )}
+        </Text>
+      ),
+      labels: { confirm: t("approve", "Approve"), cancel: t("cancel") },
+      confirmProps: { color: "green" },
+      onConfirm: async () => {
+        setAppActionLoading(true);
+        try {
+          await students.reviewApplication(app.id, "approve");
+          notifications.show({
+            title: t("success"),
+            message: t(
+              "application_approved",
+              "Application approved — student account created",
+            ),
+            color: "green",
+          });
+          setAppSelected(null);
+          fetchApplications();
+          fetchData();
+        } catch (err: any) {
+          notifications.show({
+            title: t("error"),
+            message:
+              err?.response?.data?.message ??
+              t("action_failed", "Action failed"),
+            color: "red",
+          });
+        } finally {
+          setAppActionLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleAppReject = async (
+    app: StudentApplication & { letterUrl: string },
+  ) => {
+    if (!appRejectReason.trim()) return;
+    setAppActionLoading(true);
+    try {
+      await students.reviewApplication(
+        app.id,
+        "reject",
+        appRejectReason.trim(),
+      );
+      notifications.show({
+        title: t("success"),
+        message: t("application_rejected", "Application rejected"),
+        color: "orange",
+      });
+      setAppSelected(null);
+      setAppRejectReason("");
+      setAppShowRejectInput(false);
+      fetchApplications();
+    } catch (err: any) {
+      notifications.show({
+        title: t("error"),
+        message:
+          err?.response?.data?.message ?? t("action_failed", "Action failed"),
+        color: "red",
+      });
+    } finally {
+      setAppActionLoading(false);
+    }
+  };
+
+  const closeAppDrawer = () => {
+    setAppSelected(null);
+    setAppRejectReason("");
+    setAppShowRejectInput(false);
+  };
+
+  const pendingAppCount =
+    appStatusFilter === "pending" ? applications.length : 0;
 
   const handleCreate = async (
     values: CreateStudentDto,
@@ -417,56 +563,191 @@ export function SharedStudentsPage() {
       <PageHeader
         title={t("students", { defaultValue: "Students" })}
         actions={
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setCreateModalOpened(true)}
-          >
-            {t("create_student", { defaultValue: "Create Student" })}
-          </Button>
+          activeTab === "students" ? (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setCreateModalOpened(true)}
+            >
+              {t("create_student", { defaultValue: "Create Student" })}
+            </Button>
+          ) : undefined
         }
       />
       <PageShell>
-        <TextInput
-          placeholder={t("search_placeholder", { defaultValue: "Search..." })}
-          leftSection={<IconSearch size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          mb="md"
-        />
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List mb="md">
+            <Tabs.Tab value="students">
+              {t("students", { defaultValue: "Students" })}
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="applications"
+              rightSection={
+                pendingAppCount > 0 ? (
+                  <Badge size="xs" circle color="red">
+                    {pendingAppCount}
+                  </Badge>
+                ) : undefined
+              }
+            >
+              {t("student_applications", "Applications")}
+            </Tabs.Tab>
+          </Tabs.List>
 
-        <Paper withBorder radius="md" style={{ position: "relative" }}>
-          <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
-          <StudentsTable
-            data={data.data}
-            selectedIds={selectedIds}
-            onToggleSelection={handleToggleSelection}
-            onToggleSelectAll={handleToggleSelectAll}
-            onSelect={handleSelectStudent}
-            onEdit={(student) => {
-              setEditingStudent(student);
-              setEditModalOpened(true);
-            }}
-            onDelete={handleDelete}
-            onToggleStatus={handleToggleStatus}
-          />
-        </Paper>
+          <Tabs.Panel value="students">
+            <TextInput
+              placeholder={t("search_placeholder", {
+                defaultValue: "Search...",
+              })}
+              leftSection={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.currentTarget.value)}
+              mb="md"
+            />
 
-        <Group justify="flex-end" mt="md">
-          <Pagination
-            total={Math.ceil(data.total / 10)}
-            value={page}
-            onChange={setPage}
-          />
-        </Group>
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
+              <StudentsTable
+                data={data.data}
+                selectedIds={selectedIds}
+                onToggleSelection={handleToggleSelection}
+                onToggleSelectAll={handleToggleSelectAll}
+                onSelect={handleSelectStudent}
+                onEdit={(student) => {
+                  setEditingStudent(student);
+                  setEditModalOpened(true);
+                }}
+                onDelete={handleDelete}
+                onToggleStatus={handleToggleStatus}
+              />
+            </Paper>
 
-        <BulkActionsBar
-          selectedCount={selectedIds.length}
-          onDelete={handleBulkDelete}
-          onActivate={() => handleBulkStatusUpdate(true)}
-          onDeactivate={() => handleBulkStatusUpdate(false)}
-          onSendEmail={() => setComposeEmailOpened(true)}
-          onClear={() => setSelectedIds([])}
-        />
+            <Group justify="flex-end" mt="md">
+              <Pagination
+                total={Math.ceil(data.total / 10)}
+                value={page}
+                onChange={setPage}
+              />
+            </Group>
+
+            <BulkActionsBar
+              selectedCount={selectedIds.length}
+              onDelete={handleBulkDelete}
+              onActivate={() => handleBulkStatusUpdate(true)}
+              onDeactivate={() => handleBulkStatusUpdate(false)}
+              onSendEmail={() => setComposeEmailOpened(true)}
+              onClear={() => setSelectedIds([])}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="applications">
+            <Group mb="md">
+              <Select
+                value={appStatusFilter}
+                onChange={(v) =>
+                  setAppStatusFilter((v as ApplicationStatus | "all") ?? "all")
+                }
+                data={[
+                  { value: "all", label: t("all", "All") },
+                  { value: "pending", label: t("pending", "Pending") },
+                  { value: "approved", label: t("approved", "Approved") },
+                  { value: "rejected", label: t("rejected", "Rejected") },
+                ]}
+                w={160}
+              />
+            </Group>
+
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={appLoading} overlayProps={{ blur: 2 }} />
+              <ScrollArea>
+                <Table highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>{t("student_number")}</Table.Th>
+                      <Table.Th>{t("name")}</Table.Th>
+                      <Table.Th>{t("department")}</Table.Th>
+                      <Table.Th>{t("nationality")}</Table.Th>
+                      <Table.Th>{t("submitted_at", "Submitted")}</Table.Th>
+                      <Table.Th>{t("status")}</Table.Th>
+                      <Table.Th />
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {applications.length === 0 && !appLoading && (
+                      <Table.Tr>
+                        <Table.Td colSpan={7}>
+                          <Text ta="center" c="dimmed" py="lg" size="sm">
+                            {t("no_applications", "No applications found")}
+                          </Text>
+                        </Table.Td>
+                      </Table.Tr>
+                    )}
+                    {applications.map((app) => (
+                      <Table.Tr
+                        key={app.id}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setAppSelected(app)}
+                      >
+                        <Table.Td>
+                          <Text size="sm" fw={500}>
+                            {app.studentNumber}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          {app.firstName} {app.lastName}
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" lineClamp={1}>
+                            {app.department}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>{app.nationalityCode}</Table.Td>
+                        <Table.Td>
+                          {new Date(app.submittedAt).toLocaleDateString(
+                            "en-GB",
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={STATUS_COLORS[app.status]} size="sm">
+                            {t(`app_status_${app.status}`, app.status)}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td onClick={(e) => e.stopPropagation()}>
+                          {app.status === "pending" && canReview && (
+                            <Group gap={4} wrap="nowrap">
+                              <Tooltip label={t("approve", "Approve")}>
+                                <ActionIcon
+                                  color="green"
+                                  variant="light"
+                                  size="sm"
+                                  onClick={() => handleAppApprove(app)}
+                                >
+                                  <IconCheck size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                              <Tooltip label={t("reject", "Reject")}>
+                                <ActionIcon
+                                  color="red"
+                                  variant="light"
+                                  size="sm"
+                                  onClick={() => {
+                                    setAppSelected(app);
+                                    setAppShowRejectInput(true);
+                                  }}
+                                >
+                                  <IconX size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            </Group>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
+            </Paper>
+          </Tabs.Panel>
+        </Tabs>
 
         <StudentModal
           opened={createModalOpened}
@@ -800,6 +1081,161 @@ export function SharedStudentsPage() {
           resolveDto={{ scope: "list", studentIds: selectedIds }}
         />
       </PageShell>
+
+      {/* Application detail drawer */}
+      <Drawer
+        opened={!!appSelected}
+        onClose={closeAppDrawer}
+        title={t("application_details", "Application Details")}
+        position="right"
+        size="md"
+      >
+        {appSelected && (
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Text fw={700} size="lg">
+                {appSelected.firstName} {appSelected.lastName}
+              </Text>
+              <Badge color={STATUS_COLORS[appSelected.status]}>
+                {t(`app_status_${appSelected.status}`, appSelected.status)}
+              </Badge>
+            </Group>
+
+            {appSelected.rejectionReason && (
+              <Paper
+                withBorder
+                p="sm"
+                radius="md"
+                style={{ borderColor: "var(--mantine-color-red-4)" }}
+              >
+                <Text size="xs" fw={600} c="red" mb={4}>
+                  {t("rejection_reason", "Rejection Reason")}
+                </Text>
+                <Text size="sm">{appSelected.rejectionReason}</Text>
+              </Paper>
+            )}
+
+            <Group grow>
+              <LabelValue label={t("student_number")}>
+                {appSelected.studentNumber}
+              </LabelValue>
+              <LabelValue label={t("gender")}>
+                {t(appSelected.gender)}
+              </LabelValue>
+            </Group>
+
+            <Group grow>
+              <LabelValue label={t("nationality")}>
+                {appSelected.nationalityCode}
+              </LabelValue>
+              <LabelValue label={t("national_id")}>
+                {appSelected.nationalId}
+              </LabelValue>
+            </Group>
+
+            <Group grow>
+              <LabelValue label={t("birth_date")}>
+                {new Date(appSelected.birthDate).toLocaleDateString("en-GB")}
+              </LabelValue>
+              <LabelValue label={t("birth_place")}>
+                {appSelected.birthPlace}
+              </LabelValue>
+            </Group>
+
+            <LabelValue label={t("department")}>
+              {appSelected.department}
+            </LabelValue>
+
+            {appSelected.email && (
+              <LabelValue label={t("email")}>{appSelected.email}</LabelValue>
+            )}
+
+            {appSelected.phoneNumber && (
+              <LabelValue label={t("phone_number")}>
+                {appSelected.phoneNumber}
+              </LabelValue>
+            )}
+
+            <LabelValue label={t("submitted_at", "Submitted")}>
+              {new Date(appSelected.submittedAt).toLocaleString("en-GB")}
+            </LabelValue>
+
+            <Divider />
+
+            <Button
+              leftSection={<IconFileDescription size={16} />}
+              rightSection={<IconExternalLink size={14} />}
+              variant="light"
+              onClick={() => window.open(appSelected.letterUrl, "_blank")}
+            >
+              {t("view_acceptance_letter", "View Acceptance Letter")}
+            </Button>
+
+            {appSelected.status === "pending" && canReview && (
+              <>
+                <Divider />
+
+                {!appShowRejectInput ? (
+                  <Group grow>
+                    <Button
+                      color="green"
+                      leftSection={<IconCheck size={16} />}
+                      loading={appActionLoading}
+                      onClick={() => handleAppApprove(appSelected)}
+                    >
+                      {t("approve", "Approve")}
+                    </Button>
+                    <Button
+                      color="red"
+                      variant="light"
+                      leftSection={<IconX size={16} />}
+                      onClick={() => setAppShowRejectInput(true)}
+                    >
+                      {t("reject", "Reject")}
+                    </Button>
+                  </Group>
+                ) : (
+                  <Stack gap="xs">
+                    <Textarea
+                      label={t("rejection_reason", "Rejection Reason")}
+                      placeholder={t(
+                        "rejection_reason_placeholder",
+                        "Explain why this application is being rejected…",
+                      )}
+                      value={appRejectReason}
+                      onChange={(e) =>
+                        setAppRejectReason(e.currentTarget.value)
+                      }
+                      autosize
+                      minRows={3}
+                      required
+                    />
+                    <Group gap="xs">
+                      <Button
+                        color="red"
+                        loading={appActionLoading}
+                        disabled={!appRejectReason.trim()}
+                        onClick={() => handleAppReject(appSelected)}
+                      >
+                        {t("confirm_reject", "Confirm Reject")}
+                      </Button>
+                      <Button
+                        variant="default"
+                        onClick={() => {
+                          setAppShowRejectInput(false);
+                          setAppRejectReason("");
+                        }}
+                      >
+                        {t("cancel")}
+                      </Button>
+                    </Group>
+                  </Stack>
+                )}
+              </>
+            )}
+          </Stack>
+        )}
+      </Drawer>
     </>
   );
 }

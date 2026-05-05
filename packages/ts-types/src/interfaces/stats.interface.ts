@@ -17,6 +17,7 @@ export interface GuestStats {
 export interface StudentStats {
   total: number;
   withoutActiveBooking: number;
+  pendingApplications?: number;
 }
 
 export interface FinanceStats {
