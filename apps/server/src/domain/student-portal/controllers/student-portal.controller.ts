@@ -26,6 +26,7 @@ import { StudentAuthGuard } from '../../../common/guards/student-auth.guard';
 import { StudentLoginDto } from '../dto/student-login.dto';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
+import { SubmitApplicationDto } from '../dto/submit-application.dto';
 
 @Controller('portal')
 export class StudentPortalController {
@@ -220,5 +221,22 @@ export class StudentPortalController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.studentPortalService.uploadEnrollmentCertificate(req.session.studentId!, file);
+  }
+
+  // ─── Applications (public — no auth required) ─────────────────────────────────
+
+  @Post('applications')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('letter', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async submitApplication(
+    @Body() dto: SubmitApplicationDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.studentPortalService.submitApplication(dto, file);
+  }
+
+  @Get('applications/:id/status')
+  async getApplicationStatus(@Param('id') id: string) {
+    return this.studentPortalService.getApplicationStatus(id);
   }
 }

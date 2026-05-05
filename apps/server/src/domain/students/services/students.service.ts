@@ -21,8 +21,14 @@ import { ResolvedContact } from '../repositories/students.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import { StorageService } from '../../../common/storage/storage.service';
 import { EnrollmentVerification } from '../entities/enrollment-verification.entity';
+import {
+  StudentApplication,
+  ApplicationStatus,
+} from '../../student-portal/entities/student-application.entity';
+import { StudentApplicationsRepository } from '../../student-portal/repositories/student-applications.repository';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { BadRequestException } from '@nestjs/common';
 import { PoolClient } from 'pg';
 
 @Injectable()
@@ -37,6 +43,7 @@ export class StudentsService {
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
     private readonly storage: StorageService,
+    private readonly applicationsRepository: StudentApplicationsRepository,
   ) {}
 
   private validateNationalId(nationalityCode: string, nationalId: string): void {
@@ -260,6 +267,67 @@ export class StudentsService {
       throw new NotFoundException('Certificate not found');
     }
     const url = await this.storage.presign(cert.storageKey);
+    return { url };
+  }
+
+  // ─── Student Applications ─────────────────────────────────────────────────────
+
+  async listApplications(filter?: {
+    status?: ApplicationStatus;
+  }): Promise<(StudentApplication & { letterUrl: string })[]> {
+    const applications = await this.applicationsRepository.findAll(filter);
+    return Promise.all(
+      applications.map(async (app) => {
+        const letterUrl = await this.storage.presign(app.letterStorageKey);
+        return { ...app, letterUrl };
+      }),
+    );
+  }
+
+  async reviewApplication(
+    id: string,
+    action: 'approve' | 'reject',
+    reviewerId: string,
+    rejectionReason?: string,
+  ): Promise<StudentApplication> {
+    const application = await this.applicationsRepository.findById(id);
+    if (!application) throw new NotFoundException('Application not found');
+    if (application.status !== 'pending') {
+      throw new BadRequestException('Application has already been reviewed');
+    }
+
+    if (action === 'reject') {
+      if (!rejectionReason) throw new BadRequestException('Rejection reason is required');
+      return this.applicationsRepository.reject(id, reviewerId, rejectionReason);
+    }
+
+    return this.db.transaction(async (client) => {
+      const student = await this.studentsRepository.create(
+        {
+          studentNumber: application.studentNumber,
+          firstName: application.firstName,
+          lastName: application.lastName,
+          gender: application.gender as any,
+          nationalityCode: application.nationalityCode,
+          nationalId: application.nationalId,
+          birthDate: application.birthDate.toISOString().split('T')[0],
+          birthPlace: application.birthPlace,
+          department: application.department,
+          email: application.email,
+          phoneNumber: application.phoneNumber,
+          whatsappNumber: application.whatsappNumber,
+        },
+        reviewerId,
+        client,
+      );
+      return this.applicationsRepository.approve(id, reviewerId, student.id, client);
+    });
+  }
+
+  async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
+    const application = await this.applicationsRepository.findById(id);
+    if (!application) throw new NotFoundException('Application not found');
+    const url = await this.storage.presign(application.letterStorageKey);
     return { url };
   }
 }

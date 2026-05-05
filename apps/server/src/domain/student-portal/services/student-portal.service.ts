@@ -18,6 +18,9 @@ import {
 import { StorageService } from '../../../common/storage/storage.service';
 import { Student } from '../../students/entities/student.entity';
 import { EnrollmentVerification } from '../../students/entities/enrollment-verification.entity';
+import { StudentApplication } from '../entities/student-application.entity';
+import { StudentApplicationsRepository } from '../repositories/student-applications.repository';
+import { SubmitApplicationDto } from '../dto/submit-application.dto';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
@@ -35,6 +38,7 @@ export class StudentPortalService {
   constructor(
     private readonly studentsRepository: StudentsRepository,
     private readonly portalRepository: StudentPortalRepository,
+    private readonly applicationsRepository: StudentApplicationsRepository,
     private readonly db: DatabaseService,
     private readonly notificationsService: NotificationsService,
     private readonly storage: StorageService,
@@ -324,5 +328,35 @@ export class StudentPortalService {
         this.studentsRepository.findLatestEnrollmentCert(studentId),
       ]);
     return { enrollmentVerified, hasActiveBooking, hasCompletedBooking, latestCert };
+  }
+
+  // ─── Applications ─────────────────────────────────────────────────────────────
+
+  async submitApplication(
+    dto: SubmitApplicationDto,
+    file: Express.Multer.File,
+  ): Promise<StudentApplication> {
+    if (!StudentPortalService.ALLOWED_CERT_TYPES.includes(file.mimetype)) {
+      throw new UnsupportedMediaTypeException('Only PDF, JPEG, PNG, and WebP files are accepted');
+    }
+    if (await this.applicationsRepository.hasPendingForStudentNumber(dto.studentNumber)) {
+      throw new ConflictException('A pending application already exists for this student number');
+    }
+    const storageKey = `applications/${randomUUID()}/letter`;
+    await this.storage.upload(storageKey, file.buffer, file.mimetype);
+    return this.applicationsRepository.insert({
+      ...dto,
+      birthDate: new Date(dto.birthDate),
+      letterFilename: file.originalname,
+      letterMimeType: file.mimetype,
+      letterSize: file.size,
+      letterStorageKey: storageKey,
+    });
+  }
+
+  async getApplicationStatus(id: string): Promise<StudentApplication> {
+    const application = await this.applicationsRepository.findById(id);
+    if (!application) throw new NotFoundException('Application not found');
+    return application;
   }
 }

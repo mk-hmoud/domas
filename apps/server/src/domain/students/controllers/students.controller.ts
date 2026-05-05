@@ -22,6 +22,7 @@ import { BulkDeleteStudentsDto, BulkUpdateStudentStatusDto } from '../dto/bulk-s
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
 import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { ReviewEnrollmentDto } from '../../student-portal/dto/review-enrollment.dto';
+import { ReviewApplicationDto } from '../../student-portal/dto/review-application.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
@@ -39,6 +40,37 @@ export class StudentsController {
   create(@Body() createStudentDto: CreateStudentDto, @UserContext() context: AuditUserContext) {
     return this.studentsService.create(createStudentDto, context);
   }
+
+  // ─── Applications — must be before :id routes ─────────────────────────────────
+
+  @Get('applications')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  listApplications(@Query('status') status?: string) {
+    return this.studentsService.listApplications(status ? { status: status as any } : undefined);
+  }
+
+  @Patch('applications/:appId/review')
+  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
+  reviewApplication(
+    @Param('appId') appId: string,
+    @Body() dto: ReviewApplicationDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.studentsService.reviewApplication(
+      appId,
+      dto.action,
+      context.userId,
+      dto.rejectionReason,
+    );
+  }
+
+  @Get('applications/:appId/letter-url')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  getApplicationLetterUrl(@Param('appId') appId: string) {
+    return this.studentsService.getApplicationLetterUrl(appId);
+  }
+
+  // ─── ─────────────────────────────────────────────────────────────────────────
 
   @Post('resolve-contacts')
   @RequirePermissions(PERMISSIONS.MESSAGING_SEND)

@@ -5,11 +5,12 @@ import { ContractsModule } from '../contracts/contracts.module';
 import { StudentPortalService } from './services/student-portal.service';
 import { StudentPortalController } from './controllers/student-portal.controller';
 import { StudentPortalRepository } from './repositories/student-portal.repository';
+import { StudentApplicationsRepository } from './repositories/student-applications.repository';
 
 @Module({
   imports: [StudentsModule, NotificationsModule, ContractsModule],
   controllers: [StudentPortalController],
-  providers: [StudentPortalService, StudentPortalRepository],
+  providers: [StudentPortalService, StudentPortalRepository, StudentApplicationsRepository],
   exports: [StudentPortalService],
 })
 export class StudentPortalModule {}
