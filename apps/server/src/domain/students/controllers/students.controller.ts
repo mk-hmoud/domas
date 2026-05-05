@@ -21,6 +21,7 @@ import { UpdateStudentStatusDto } from '../dto/update-student-status.dto';
 import { BulkDeleteStudentsDto, BulkUpdateStudentStatusDto } from '../dto/bulk-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
 import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
+import { ReviewEnrollmentDto } from '../../student-portal/dto/review-enrollment.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
@@ -113,5 +114,36 @@ export class StudentsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string, @UserContext() context: AuditUserContext) {
     return this.studentsService.delete(id, context);
+  }
+
+  // ─── Enrollment ───────────────────────────────────────────────────────────────
+
+  @Get(':id/enrollment')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  getEnrollmentCerts(@Param('id') id: string) {
+    return this.studentsService.getEnrollmentCerts(id);
+  }
+
+  @Patch(':id/enrollment/:certId/review')
+  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
+  reviewEnrollmentCert(
+    @Param('id') id: string,
+    @Param('certId') certId: string,
+    @Body() dto: ReviewEnrollmentDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.studentsService.reviewEnrollmentCert(
+      id,
+      certId,
+      dto.action,
+      context.userId,
+      dto.rejectionReason,
+    );
+  }
+
+  @Get(':id/enrollment/:certId/url')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  getEnrollmentCertUrl(@Param('id') id: string, @Param('certId') certId: string) {
+    return this.studentsService.getEnrollmentCertUrl(id, certId);
   }
 }

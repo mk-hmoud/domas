@@ -17,6 +17,8 @@ import {
   Announcement,
   StudentCreateRoomChangeDto,
   StudentRoomChangeView,
+  EnrollmentVerification,
+  EnrollmentStatus,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -255,6 +257,29 @@ export const portalAnnouncements = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+};
+
+// ─── Room Changes ─────────────────────────────────────────────────────────────
+
+// ─── Enrollment ───────────────────────────────────────────────────────────────
+
+export const portalEnrollment = {
+  getStatus: async (): Promise<EnrollmentStatus> => {
+    const response = await apiClient.get<EnrollmentStatus>(
+      "/portal/enrollment/status",
+    );
+    return response.data;
+  },
+
+  uploadCertificate: async (file: File): Promise<EnrollmentVerification> => {
+    const form = new FormData();
+    form.append("certificate", file);
+    const response = await apiClient.post<EnrollmentVerification>(
+      "/portal/enrollment/certificate",
+      form,
+    );
+    return response.data;
   },
 };
 

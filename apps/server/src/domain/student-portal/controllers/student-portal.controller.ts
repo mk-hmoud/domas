@@ -14,7 +14,10 @@ import {
   StreamableFile,
   UseGuards,
   Patch,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { StudentPortalService } from '../services/student-portal.service';
 import { ContractsService } from '../../contracts/services/contracts.service';
@@ -198,5 +201,24 @@ export class StudentPortalController {
   @Get('damages')
   async getMyDamageLiabilities(@Request() req: ExpressRequest) {
     return this.studentPortalService.getMyDamageLiabilities(req.session.studentId!);
+  }
+
+  // ─── Enrollment ───────────────────────────────────────────────────────────────
+
+  @UseGuards(StudentAuthGuard)
+  @Get('enrollment/status')
+  async getEnrollmentStatus(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getEnrollmentStatus(req.session.studentId!);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Post('enrollment/certificate')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('certificate', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async uploadCertificate(
+    @Request() req: ExpressRequest,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.studentPortalService.uploadEnrollmentCertificate(req.session.studentId!, file);
   }
 }

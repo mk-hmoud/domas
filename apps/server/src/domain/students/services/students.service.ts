@@ -20,6 +20,7 @@ import { Student } from '../entities/student.entity';
 import { ResolvedContact } from '../repositories/students.repository';
 import { DatabaseService } from '../../../core/database/database.service';
 import { StorageService } from '../../../common/storage/storage.service';
+import { EnrollmentVerification } from '../entities/enrollment-verification.entity';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { PoolClient } from 'pg';
@@ -216,5 +217,49 @@ export class StudentsService {
       const updated = await this.studentsRepository.update(id, { isActive }, client);
       return updated!;
     }, context);
+  }
+
+  // ─── Enrollment Verifications ─────────────────────────────────────────────────
+
+  async getEnrollmentCerts(
+    studentId: string,
+  ): Promise<(EnrollmentVerification & { url?: string })[]> {
+    const certs = await this.studentsRepository.findEnrollmentCerts(studentId);
+    return Promise.all(
+      certs.map(async (cert) => {
+        const url = await this.storage.presign(cert.storageKey);
+        return { ...cert, url };
+      }),
+    );
+  }
+
+  async reviewEnrollmentCert(
+    studentId: string,
+    certId: string,
+    action: 'verify' | 'reject',
+    reviewerId: string,
+    rejectionReason?: string,
+  ): Promise<EnrollmentVerification> {
+    const cert = await this.studentsRepository.findEnrollmentCertById(certId);
+    if (!cert || cert.studentId !== studentId) {
+      throw new NotFoundException('Certificate not found');
+    }
+    if (action === 'reject' && !rejectionReason) {
+      throw new Error('Rejection reason is required');
+    }
+    return this.studentsRepository.updateEnrollmentCert(certId, {
+      status: action === 'verify' ? 'verified' : 'rejected',
+      rejectionReason,
+      reviewedBy: reviewerId,
+    });
+  }
+
+  async getEnrollmentCertUrl(studentId: string, certId: string): Promise<{ url: string }> {
+    const cert = await this.studentsRepository.findEnrollmentCertById(certId);
+    if (!cert || cert.studentId !== studentId) {
+      throw new NotFoundException('Certificate not found');
+    }
+    const url = await this.storage.presign(cert.storageKey);
+    return { url };
   }
 }

@@ -18,6 +18,9 @@ export class Student {
   profileData?: any; // JSONB
   photoStorageKey?: string;
   photoUrl?: string;
+  enrollmentVerified?: boolean;
+  hasActiveBooking?: boolean;
+  hasCompletedBooking?: boolean;
   isActive!: boolean;
   createdAt!: Date;
   updatedAt!: Date;

@@ -9,6 +9,7 @@ import {
   BulkUpdateStudentStatusDto,
   ResolveContactsDto,
   ResolvedContact,
+  EnrollmentVerification,
 } from "@domas/ts-types";
 
 export const students = {
@@ -81,5 +82,37 @@ export const students = {
 
   deletePhoto: async (id: string): Promise<void> => {
     await apiClient.delete(`/students/${id}/photo`);
+  },
+
+  getEnrollmentCerts: async (
+    id: string,
+  ): Promise<(EnrollmentVerification & { url?: string })[]> => {
+    const response = await apiClient.get<
+      (EnrollmentVerification & { url?: string })[]
+    >(`/students/${id}/enrollment`);
+    return response.data;
+  },
+
+  reviewEnrollmentCert: async (
+    id: string,
+    certId: string,
+    action: "verify" | "reject",
+    rejectionReason?: string,
+  ): Promise<EnrollmentVerification> => {
+    const response = await apiClient.patch<EnrollmentVerification>(
+      `/students/${id}/enrollment/${certId}/review`,
+      { action, rejectionReason },
+    );
+    return response.data;
+  },
+
+  getEnrollmentCertUrl: async (
+    id: string,
+    certId: string,
+  ): Promise<{ url: string }> => {
+    const response = await apiClient.get<{ url: string }>(
+      `/students/${id}/enrollment/${certId}/url`,
+    );
+    return response.data;
   },
 };

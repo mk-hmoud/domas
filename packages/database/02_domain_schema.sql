@@ -775,3 +775,20 @@ CREATE TABLE damage_report_images (
 
 CREATE INDEX idx_damage_report_images_report_id ON damage_report_images(damage_report_id);
 CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);
+
+CREATE TABLE student_enrollment_verifications (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id       UUID         NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    filename         VARCHAR(255) NOT NULL,
+    mime_type        VARCHAR(100) NOT NULL,
+    size             INT          NOT NULL,
+    storage_key      VARCHAR(500) NOT NULL UNIQUE,
+    status           VARCHAR(20)  NOT NULL DEFAULT 'pending'
+                                  CHECK (status IN ('pending', 'verified', 'rejected')),
+    rejection_reason TEXT,
+    uploaded_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    reviewed_at      TIMESTAMPTZ,
+    reviewed_by      UUID         REFERENCES users(id)
+);
+
+CREATE INDEX idx_enrollment_verifications_student ON student_enrollment_verifications(student_id);

@@ -5,7 +5,9 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { StudentPortalRepository } from '../repositories/student-portal.repository';
 import { DatabaseService } from '../../../core/database/database.service';
@@ -13,7 +15,9 @@ import {
   NotificationsService,
   NotificationType,
 } from '../../notifications/services/notifications.service';
+import { StorageService } from '../../../common/storage/storage.service';
 import { Student } from '../../students/entities/student.entity';
+import { EnrollmentVerification } from '../../students/entities/enrollment-verification.entity';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
@@ -21,11 +25,19 @@ import { LocationOwnership } from '../../../common/enums/location-ownership.enum
 
 @Injectable()
 export class StudentPortalService {
+  private static readonly ALLOWED_CERT_TYPES = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
+
   constructor(
     private readonly studentsRepository: StudentsRepository,
     private readonly portalRepository: StudentPortalRepository,
     private readonly db: DatabaseService,
     private readonly notificationsService: NotificationsService,
+    private readonly storage: StorageService,
   ) {}
 
   // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -42,9 +54,15 @@ export class StudentPortalService {
 
   async getProfile(studentId: string): Promise<Student> {
     const student = await this.studentsRepository.findById(studentId);
-    if (!student) {
-      throw new NotFoundException('Student not found');
-    }
+    if (!student) throw new NotFoundException('Student not found');
+    const [enrollmentVerified, hasActiveBooking, hasCompletedBooking] = await Promise.all([
+      this.studentsRepository.hasVerifiedEnrollment(studentId),
+      this.portalRepository.hasAnyActiveBooking(studentId),
+      this.portalRepository.hasCompletedBooking(studentId),
+    ]);
+    student.enrollmentVerified = enrollmentVerified;
+    student.hasActiveBooking = hasActiveBooking;
+    student.hasCompletedBooking = hasCompletedBooking;
     return student;
   }
 
@@ -271,5 +289,40 @@ export class StudentPortalService {
 
   async getMyDamageLiabilities(studentId: string): Promise<any[]> {
     return this.portalRepository.findDamageLiabilitiesByStudent(studentId);
+  }
+
+  // ─── Enrollment ───────────────────────────────────────────────────────────────
+
+  async uploadEnrollmentCertificate(
+    studentId: string,
+    file: Express.Multer.File,
+  ): Promise<EnrollmentVerification> {
+    if (!StudentPortalService.ALLOWED_CERT_TYPES.includes(file.mimetype)) {
+      throw new UnsupportedMediaTypeException('Only PDF, JPEG, PNG, and WebP files are accepted');
+    }
+    const storageKey = `students/${studentId}/enrollment/${randomUUID()}`;
+    await this.storage.upload(storageKey, file.buffer, file.mimetype);
+    return this.studentsRepository.insertEnrollmentCert(studentId, {
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      storageKey,
+    });
+  }
+
+  async getEnrollmentStatus(studentId: string): Promise<{
+    enrollmentVerified: boolean;
+    hasActiveBooking: boolean;
+    hasCompletedBooking: boolean;
+    latestCert: EnrollmentVerification | null;
+  }> {
+    const [enrollmentVerified, hasActiveBooking, hasCompletedBooking, latestCert] =
+      await Promise.all([
+        this.studentsRepository.hasVerifiedEnrollment(studentId),
+        this.portalRepository.hasAnyActiveBooking(studentId),
+        this.portalRepository.hasCompletedBooking(studentId),
+        this.studentsRepository.findLatestEnrollmentCert(studentId),
+      ]);
+    return { enrollmentVerified, hasActiveBooking, hasCompletedBooking, latestCert };
   }
 }

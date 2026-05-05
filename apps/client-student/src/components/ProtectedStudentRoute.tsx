@@ -19,5 +19,14 @@ export function ProtectedStudentRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Returning students (have a completed/transferred booking but no active booking)
+  // must verify their current enrollment before accessing the portal.
+  const needsEnrollmentVerification =
+    student.hasCompletedBooking && !student.hasActiveBooking && !student.enrollmentVerified;
+
+  if (needsEnrollmentVerification && location.pathname !== '/verify-enrollment') {
+    return <Navigate to="/verify-enrollment" replace />;
+  }
+
   return children;
 }

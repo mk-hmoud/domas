@@ -480,6 +480,28 @@ export class StudentPortalRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
+  async hasAnyActiveBooking(studentId: string): Promise<boolean> {
+    const result = await this.db.getPool().query(
+      `SELECT 1 FROM bookings
+       WHERE student_id = $1
+         AND status NOT IN ('cancelled', 'rejected', 'completed', 'transferred')
+       LIMIT 1`,
+      [studentId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async hasCompletedBooking(studentId: string): Promise<boolean> {
+    const result = await this.db.getPool().query(
+      `SELECT 1 FROM bookings
+       WHERE student_id = $1
+         AND status IN ('completed', 'transferred')
+       LIMIT 1`,
+      [studentId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async createBooking(
     studentId: string,
     bedId: number,

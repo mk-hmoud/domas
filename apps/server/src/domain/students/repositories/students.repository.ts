@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 import { Student } from '../entities/student.entity';
+import { EnrollmentVerification } from '../entities/enrollment-verification.entity';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
@@ -282,5 +283,86 @@ export class StudentsRepository {
       `UPDATE students SET photo_storage_key = NULL, updated_at = NOW() WHERE id = $1`,
       [id],
     );
+  }
+
+  // ─── Enrollment Verifications ─────────────────────────────────────────────────
+
+  private mapEnrollmentRow(row: any): EnrollmentVerification {
+    return new EnrollmentVerification({
+      id: row.id,
+      studentId: row.student_id,
+      filename: row.filename,
+      mimeType: row.mime_type,
+      size: row.size,
+      storageKey: row.storage_key,
+      status: row.status,
+      rejectionReason: row.rejection_reason ?? undefined,
+      uploadedAt: row.uploaded_at,
+      reviewedAt: row.reviewed_at ?? undefined,
+      reviewedBy: row.reviewed_by ?? undefined,
+    });
+  }
+
+  async insertEnrollmentCert(
+    studentId: string,
+    data: { filename: string; mimeType: string; size: number; storageKey: string },
+  ): Promise<EnrollmentVerification> {
+    const result = await this.db.query(
+      `INSERT INTO student_enrollment_verifications
+         (student_id, filename, mime_type, size, storage_key)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [studentId, data.filename, data.mimeType, data.size, data.storageKey],
+    );
+    return this.mapEnrollmentRow(result.rows[0]);
+  }
+
+  async findEnrollmentCerts(studentId: string): Promise<EnrollmentVerification[]> {
+    const result = await this.db.query(
+      `SELECT * FROM student_enrollment_verifications
+       WHERE student_id = $1 ORDER BY uploaded_at DESC`,
+      [studentId],
+    );
+    return result.rows.map((r) => this.mapEnrollmentRow(r));
+  }
+
+  async findEnrollmentCertById(id: string): Promise<EnrollmentVerification | null> {
+    const result = await this.db.query(
+      `SELECT * FROM student_enrollment_verifications WHERE id = $1`,
+      [id],
+    );
+    return result.rows[0] ? this.mapEnrollmentRow(result.rows[0]) : null;
+  }
+
+  async updateEnrollmentCert(
+    id: string,
+    data: { status: string; rejectionReason?: string; reviewedBy: string },
+  ): Promise<EnrollmentVerification> {
+    const result = await this.db.query(
+      `UPDATE student_enrollment_verifications
+       SET status = $1, rejection_reason = $2, reviewed_by = $3, reviewed_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [data.status, data.rejectionReason ?? null, data.reviewedBy, id],
+    );
+    return this.mapEnrollmentRow(result.rows[0]);
+  }
+
+  async findLatestEnrollmentCert(studentId: string): Promise<EnrollmentVerification | null> {
+    const result = await this.db.query(
+      `SELECT * FROM student_enrollment_verifications
+       WHERE student_id = $1 ORDER BY uploaded_at DESC LIMIT 1`,
+      [studentId],
+    );
+    return result.rows[0] ? this.mapEnrollmentRow(result.rows[0]) : null;
+  }
+
+  async hasVerifiedEnrollment(studentId: string): Promise<boolean> {
+    const result = await this.db.query(
+      `SELECT 1 FROM student_enrollment_verifications
+       WHERE student_id = $1 AND status = 'verified' LIMIT 1`,
+      [studentId],
+    );
+    return (result.rowCount ?? 0) > 0;
   }
 }

@@ -16,6 +16,8 @@ import {
   ActionIcon,
   Tooltip,
   Center,
+  Divider,
+  Textarea,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -25,6 +27,10 @@ import {
   IconMail,
   IconCamera,
   IconTrash,
+  IconEye,
+  IconCheck,
+  IconX,
+  IconFileDescription,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students } from "@domas/api-client";
@@ -33,6 +39,7 @@ import {
   CreateStudentDto,
   PaginatedResult,
   COUNTRIES,
+  EnrollmentVerification,
 } from "@domas/ts-types";
 import {
   StudentModal,
@@ -59,6 +66,12 @@ export function SharedStudentsPage() {
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [enrollmentCerts, setEnrollmentCerts] = useState<
+    (EnrollmentVerification & { url?: string })[]
+  >([]);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectingCertId, setRejectingCertId] = useState<string | null>(null);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -294,12 +307,14 @@ export function SharedStudentsPage() {
 
   const handleSelectStudent = async (student: Student) => {
     setSelectedStudent(student);
+    setEnrollmentCerts([]);
     try {
       const detail = await students.findOne(student.id);
       setDetailStudent(detail);
     } catch {
       setDetailStudent(student);
     }
+    fetchEnrollmentCerts(student.id);
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -335,6 +350,53 @@ export function SharedStudentsPage() {
       });
     } finally {
       setPhotoLoading(false);
+    }
+  };
+
+  const fetchEnrollmentCerts = async (studentId: string) => {
+    setEnrollmentLoading(true);
+    try {
+      const certs = await students.getEnrollmentCerts(studentId);
+      setEnrollmentCerts(certs);
+    } catch {
+      // silently ignore
+    } finally {
+      setEnrollmentLoading(false);
+    }
+  };
+
+  const handleReviewCert = async (
+    studentId: string,
+    certId: string,
+    action: "verify" | "reject",
+  ) => {
+    setEnrollmentLoading(true);
+    try {
+      await students.reviewEnrollmentCert(
+        studentId,
+        certId,
+        action,
+        rejectReason || undefined,
+      );
+      setRejectingCertId(null);
+      setRejectReason("");
+      await fetchEnrollmentCerts(studentId);
+      notifications.show({
+        title: t("success"),
+        message:
+          action === "verify"
+            ? t("cert_verified", "Certificate verified")
+            : t("cert_rejected", "Certificate rejected"),
+        color: action === "verify" ? "green" : "orange",
+      });
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -415,6 +477,9 @@ export function SharedStudentsPage() {
           onClose={() => {
             setSelectedStudent(null);
             setDetailStudent(null);
+            setEnrollmentCerts([]);
+            setRejectingCertId(null);
+            setRejectReason("");
           }}
           title={t("student_details", { defaultValue: "Student Details" })}
           position="right"
@@ -575,6 +640,143 @@ export function SharedStudentsPage() {
                       </Button>
                     )}
                   </Group>
+
+                  <Divider />
+
+                  {/* Enrollment certificates */}
+                  <Stack gap="xs">
+                    <Text fw={600} size="sm">
+                      {t("enrollment_certificates", "Enrollment Certificates")}
+                    </Text>
+
+                    {enrollmentLoading && (
+                      <Text size="xs" c="dimmed">
+                        {t("loading", "Loading…")}
+                      </Text>
+                    )}
+
+                    {!enrollmentLoading && enrollmentCerts.length === 0 && (
+                      <Text size="xs" c="dimmed">
+                        {t("no_enrollment_certs", "No certificates submitted")}
+                      </Text>
+                    )}
+
+                    {enrollmentCerts.map((cert) => (
+                      <Paper key={cert.id} withBorder p="xs" radius="md">
+                        <Group justify="space-between" wrap="nowrap" gap="xs">
+                          <Group gap="xs" style={{ minWidth: 0 }}>
+                            <IconFileDescription size={16} />
+                            <Stack gap={2} style={{ minWidth: 0 }}>
+                              <Text size="xs" fw={500} truncate>
+                                {cert.filename}
+                              </Text>
+                              <Group gap="xs">
+                                <Badge
+                                  size="xs"
+                                  color={
+                                    cert.status === "verified"
+                                      ? "green"
+                                      : cert.status === "rejected"
+                                        ? "red"
+                                        : "yellow"
+                                  }
+                                >
+                                  {t(`cert_status_${cert.status}`, cert.status)}
+                                </Badge>
+                                {cert.rejectionReason && (
+                                  <Text size="xs" c="red" truncate>
+                                    {cert.rejectionReason}
+                                  </Text>
+                                )}
+                              </Group>
+                            </Stack>
+                          </Group>
+                          <Group gap={4} wrap="nowrap">
+                            {cert.url && (
+                              <Tooltip label={t("view", "View")}>
+                                <ActionIcon
+                                  variant="light"
+                                  size="sm"
+                                  onClick={() =>
+                                    window.open(cert.url, "_blank")
+                                  }
+                                >
+                                  <IconEye size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                            {cert.status !== "verified" && (
+                              <Tooltip label={t("verify", "Verify")}>
+                                <ActionIcon
+                                  variant="light"
+                                  color="green"
+                                  size="sm"
+                                  loading={enrollmentLoading}
+                                  onClick={() =>
+                                    handleReviewCert(s.id, cert.id, "verify")
+                                  }
+                                >
+                                  <IconCheck size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                            {cert.status !== "rejected" && (
+                              <Tooltip label={t("reject", "Reject")}>
+                                <ActionIcon
+                                  variant="light"
+                                  color="red"
+                                  size="sm"
+                                  onClick={() => setRejectingCertId(cert.id)}
+                                >
+                                  <IconX size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                          </Group>
+                        </Group>
+
+                        {rejectingCertId === cert.id && (
+                          <Stack gap="xs" mt="xs">
+                            <Textarea
+                              placeholder={t(
+                                "rejection_reason",
+                                "Reason for rejection",
+                              )}
+                              size="xs"
+                              value={rejectReason}
+                              onChange={(e) =>
+                                setRejectReason(e.currentTarget.value)
+                              }
+                              autosize
+                              minRows={2}
+                            />
+                            <Group gap="xs">
+                              <Button
+                                size="compact-xs"
+                                color="red"
+                                loading={enrollmentLoading}
+                                onClick={() =>
+                                  handleReviewCert(s.id, cert.id, "reject")
+                                }
+                              >
+                                {t("confirm_reject", "Confirm Reject")}
+                              </Button>
+                              <Button
+                                size="compact-xs"
+                                variant="default"
+                                onClick={() => {
+                                  setRejectingCertId(null);
+                                  setRejectReason("");
+                                }}
+                              >
+                                {t("cancel")}
+                              </Button>
+                            </Group>
+                          </Stack>
+                        )}
+                      </Paper>
+                    ))}
+                  </Stack>
                 </Stack>
               );
             })()}
