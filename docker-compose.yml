@@ -53,7 +53,7 @@ services:
       - SESSION_SECRET=fee30131828e46e3a2dc70ede1d65251ab342a4d3781c52fdd508191a0f28ea5
       - APP_USER=domas_app
       - APP_USER_PASSWORD=domas_app_pass
-      - STORAGE_ENDPOINT=http://domas_minio:9000
+      - STORAGE_ENDPOINT=http://minio:9000
       - STORAGE_PUBLIC_ENDPOINT=http://localhost:9000
       - STORAGE_REGION=us-east-1
       - STORAGE_ACCESS_KEY=minioadmin
