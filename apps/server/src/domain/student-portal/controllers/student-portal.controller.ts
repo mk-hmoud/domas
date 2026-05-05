@@ -16,8 +16,6 @@ import {
   Patch,
   UploadedFile,
   UseInterceptors,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
@@ -229,7 +227,6 @@ export class StudentPortalController {
 
   @Post('applications')
   @HttpCode(HttpStatus.CREATED)
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @UseInterceptors(FileInterceptor('letter', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async submitApplication(
     @Body() dto: SubmitApplicationDto,

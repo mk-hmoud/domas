@@ -6,9 +6,6 @@ const apiUrl =
 export const apiClient = axios.create({
   baseURL: apiUrl,
   withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
   paramsSerializer: (params) => {
     const searchParams = new URLSearchParams();
     for (const key in params) {
