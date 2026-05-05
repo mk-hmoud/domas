@@ -792,3 +792,39 @@ CREATE TABLE student_enrollment_verifications (
 );
 
 CREATE INDEX idx_enrollment_verifications_student ON student_enrollment_verifications(student_id);
+
+CREATE TABLE student_applications (
+    id                   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- Applicant-supplied identity
+    student_number       VARCHAR(50)  NOT NULL,
+    first_name           VARCHAR(100) NOT NULL,
+    last_name            VARCHAR(100) NOT NULL,
+    gender               VARCHAR(10)  NOT NULL CHECK (gender IN ('male', 'female')),
+    nationality_code     VARCHAR(3)   NOT NULL,
+    national_id          VARCHAR(50)  NOT NULL,
+    birth_date           DATE         NOT NULL,
+    birth_place          VARCHAR(100) NOT NULL,
+    department           VARCHAR(200) NOT NULL,
+    email                VARCHAR(255),
+    phone_number         VARCHAR(50),
+    whatsapp_number      VARCHAR(50),
+    -- Acceptance letter
+    letter_filename      VARCHAR(255) NOT NULL,
+    letter_mime_type     VARCHAR(100) NOT NULL,
+    letter_size          INT          NOT NULL,
+    letter_storage_key   VARCHAR(500) NOT NULL UNIQUE,
+    -- Lifecycle
+    status               VARCHAR(20)  NOT NULL DEFAULT 'pending'
+                                      CHECK (status IN ('pending', 'approved', 'rejected')),
+    rejection_reason     TEXT,
+    submitted_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    reviewed_at          TIMESTAMPTZ,
+    reviewed_by          UUID         REFERENCES users(id),
+    -- Set on approval
+    student_id           UUID         REFERENCES students(id)
+);
+
+CREATE INDEX idx_student_applications_status ON student_applications(status);
+CREATE UNIQUE INDEX idx_student_applications_student_number_pending
+    ON student_applications(student_number)
+    WHERE status = 'pending';
