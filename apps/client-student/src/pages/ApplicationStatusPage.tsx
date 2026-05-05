@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Center,
-  Group,
   Image,
   Loader,
   Paper,
