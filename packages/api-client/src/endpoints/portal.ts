@@ -19,6 +19,8 @@ import {
   StudentRoomChangeView,
   EnrollmentVerification,
   EnrollmentStatus,
+  StudentApplication,
+  SubmitApplicationDto,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -306,5 +308,32 @@ export const portalRoomChanges = {
 
   cancel: async (id: string): Promise<void> => {
     await apiClient.delete(`/portal/room-changes/${id}`);
+  },
+};
+
+// ─── Applications (public — no session required) ──────────────────────────────
+
+export const portalApplications = {
+  submit: async (
+    dto: SubmitApplicationDto,
+    letterFile: File,
+  ): Promise<StudentApplication> => {
+    const form = new FormData();
+    form.append("letter", letterFile);
+    Object.entries(dto).forEach(([key, value]) => {
+      if (value !== undefined) form.append(key, String(value));
+    });
+    const response = await apiClient.post<StudentApplication>(
+      "/portal/applications",
+      form,
+    );
+    return response.data;
+  },
+
+  getStatus: async (id: string): Promise<StudentApplication> => {
+    const response = await apiClient.get<StudentApplication>(
+      `/portal/applications/${id}/status`,
+    );
+    return response.data;
   },
 };

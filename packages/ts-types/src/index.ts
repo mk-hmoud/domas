@@ -22,6 +22,7 @@ export * from "./interfaces/role.interface";
 export * from "./interfaces/permission.interface";
 export * from "./interfaces/student.interface";
 export * from "./interfaces/enrollment-verification.interface";
+export * from "./interfaces/student-application.interface";
 export * from "./interfaces/location.interface";
 export * from "./interfaces/bed.interface";
 export * from "./interfaces/booking.interface";

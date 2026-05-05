@@ -10,6 +10,8 @@ import {
   ResolveContactsDto,
   ResolvedContact,
   EnrollmentVerification,
+  StudentApplication,
+  ApplicationStatus,
 } from "@domas/ts-types";
 
 export const students = {
@@ -112,6 +114,35 @@ export const students = {
   ): Promise<{ url: string }> => {
     const response = await apiClient.get<{ url: string }>(
       `/students/${id}/enrollment/${certId}/url`,
+    );
+    return response.data;
+  },
+
+  listApplications: async (
+    status?: ApplicationStatus,
+  ): Promise<(StudentApplication & { letterUrl: string })[]> => {
+    const params = status ? { status } : {};
+    const response = await apiClient.get<
+      (StudentApplication & { letterUrl: string })[]
+    >("/students/applications", { params });
+    return response.data;
+  },
+
+  reviewApplication: async (
+    appId: string,
+    action: "approve" | "reject",
+    rejectionReason?: string,
+  ): Promise<StudentApplication> => {
+    const response = await apiClient.patch<StudentApplication>(
+      `/students/applications/${appId}/review`,
+      { action, rejectionReason },
+    );
+    return response.data;
+  },
+
+  getApplicationLetterUrl: async (appId: string): Promise<{ url: string }> => {
+    const response = await apiClient.get<{ url: string }>(
+      `/students/applications/${appId}/letter-url`,
     );
     return response.data;
   },
