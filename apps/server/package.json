@@ -25,6 +25,7 @@
     "db:seed:prod": "node dist/apps/server/scripts/seed.js",
     "db:reset:prod": "node dist/apps/server/scripts/reset-db.js",
     "db:debug": "ts-node scripts/debug-db.ts",
+    "db:seed:inventory:prod": "node dist/apps/server/scripts/seed-inventory.ts",
     "db:seed:transfer": "ts-node scripts/seed-transfer.ts",
     "init:prod": "ts-node scripts/init-production.ts",
     "init:prod:prod": "node dist/apps/server/scripts/init-production.js"
