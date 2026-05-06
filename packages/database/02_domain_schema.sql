@@ -454,6 +454,26 @@ CREATE TABLE booking_contracts (
 );
 
 -- =============================================
+-- DOCUMENT TEMPLATES
+-- =============================================
+-- Editable content sections for generated PDF documents.
+-- One row per type+language; sections is a JSONB array of typed section objects.
+
+CREATE TABLE document_templates (
+    id          SERIAL PRIMARY KEY,
+    type        document_template_type NOT NULL,
+    language    document_language      NOT NULL,
+    title       VARCHAR(200)           NOT NULL,
+    sections    JSONB                  NOT NULL DEFAULT '[]'::jsonb,
+    is_active   BOOLEAN                NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ            NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ            NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_document_template UNIQUE (type, language)
+);
+
+CREATE INDEX idx_doc_templates_type_lang ON document_templates(type, language);
+
+-- =============================================
 -- DAMAGES SYSTEM
 -- =============================================
 

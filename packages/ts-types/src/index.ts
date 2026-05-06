@@ -105,3 +105,4 @@ export * from "./interfaces/portal.interface";
 export * from "./interfaces/room-change.interface";
 export * from "./interfaces/stats.interface";
 export * from "./interfaces/room-type.interface";
+export * from "./interfaces/document-template.interface";

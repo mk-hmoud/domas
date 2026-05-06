@@ -46,6 +46,14 @@ DO $$ BEGIN
     CREATE TYPE guest_stay_status AS ENUM ('confirmed', 'active', 'completed', 'cancelled');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+    CREATE TYPE document_template_type AS ENUM ('check_in', 'check_out');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE document_language AS ENUM ('TR', 'EN');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- =============================================
 -- EXTENSIONS
 -- =============================================
