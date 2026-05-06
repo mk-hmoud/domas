@@ -70,6 +70,9 @@ export const PERMISSIONS = {
   // Room Changes
   ROOM_CHANGES_VIEW: 'room_changes.view',
   ROOM_CHANGES_MANAGE: 'room_changes.manage',
+
+  // Document Templates
+  DOCUMENT_TEMPLATES_MANAGE: 'document_templates.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
