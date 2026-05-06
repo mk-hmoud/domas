@@ -25,6 +25,7 @@ import { GuestsModule } from './domain/guests/guests.module';
 import { StatsModule } from './domain/stats/stats.module';
 import { RoomTypesModule } from './domain/room-types/room-types.module';
 import { RoomChangesModule } from './domain/room-changes/room-changes.module';
+import { DocumentTemplatesModule } from './domain/document-templates/document-templates.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { RoomChangesModule } from './domain/room-changes/room-changes.module';
     StatsModule,
     RoomTypesModule,
     RoomChangesModule,
+    DocumentTemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
