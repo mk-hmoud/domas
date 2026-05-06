@@ -50,7 +50,7 @@ export class StudentsController {
   }
 
   @Patch('applications/:appId/review')
-  @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
+  @RequirePermissions(PERMISSIONS.STUDENTS_REVIEW_APPLICATIONS)
   reviewApplication(
     @Param('appId') appId: string,
     @Body() dto: ReviewApplicationDto,

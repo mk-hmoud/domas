@@ -54,6 +54,7 @@ function App() {
               </PermissionRoute>
             }
           />
+          <Route path="applications" element={<Navigate to="/dashboard/students" replace />} />
           <Route
             path="bookings"
             element={

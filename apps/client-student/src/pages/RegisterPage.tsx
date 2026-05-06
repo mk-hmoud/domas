@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  ActionIcon,
   Alert,
+  Avatar,
   Box,
   Button,
   Center,
+  DatePickerInput,
   Group,
   Image,
   Paper,
@@ -13,10 +16,12 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@domas/ui';
 import {
   IconAlertCircle,
   IconArrowLeft,
+  IconCamera,
   IconFileDescription,
   IconUpload,
   IconX,
@@ -33,12 +38,17 @@ export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [letterFile, setLetterFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [birthDateError, setBirthDateError] = useState('');
 
-  const form = useForm<SubmitApplicationDto>({
+  const form = useForm<Omit<SubmitApplicationDto, 'birthDate'>>({
     initialValues: {
       studentNumber: '',
       firstName: '',
@@ -46,7 +56,6 @@ export function RegisterPage() {
       gender: GenderType.MALE,
       nationalityCode: '',
       nationalId: '',
-      birthDate: '',
       birthPlace: '',
       department: '',
       email: '',
@@ -60,7 +69,6 @@ export function RegisterPage() {
       gender: (v) => (v ? null : t('required_field', 'Required')),
       nationalityCode: (v) => (v ? null : t('required_field', 'Required')),
       nationalId: (v) => (v.trim() ? null : t('required_field', 'Required')),
-      birthDate: (v) => (v ? null : t('required_field', 'Required')),
       birthPlace: (v) => (v.trim() ? null : t('required_field', 'Required')),
       department: (v) => (v ? null : t('required_field', 'Required')),
     },
@@ -77,21 +85,30 @@ export function RegisterPage() {
     }
   };
 
-  const handleSubmit = async (values: SubmitApplicationDto) => {
+  const handleSubmit = async (values: Omit<SubmitApplicationDto, 'birthDate'>) => {
+    if (!birthDate) {
+      setBirthDateError(t('required_field', 'Required'));
+      return;
+    }
+    setBirthDateError('');
     if (!letterFile) {
       setFileError(t('letter_required', 'Acceptance letter is required'));
       return;
     }
+    const d = birthDate;
+    const birthDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     setSubmitting(true);
     try {
       const application = await portalApplications.submit(
         {
           ...values,
+          birthDate: birthDateStr,
           email: values.email || undefined,
           phoneNumber: values.phoneNumber || undefined,
           whatsappNumber: values.whatsappNumber || undefined,
         },
         letterFile,
+        photo,
       );
       navigate(`/register/status?id=${application.id}`, { replace: true });
     } catch (err: any) {
@@ -141,6 +158,56 @@ export function RegisterPage() {
           >
             <form onSubmit={form.onSubmit(handleSubmit)}>
               <Stack gap="md">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setPhoto(file);
+                    setPhotoPreview(URL.createObjectURL(file));
+                    e.target.value = '';
+                  }}
+                />
+
+                <Center>
+                  <Stack align="center" gap="xs">
+                    <Avatar src={photoPreview} size={80} radius="xl" color="initials" />
+                    <Group gap="xs">
+                      <Tooltip
+                        label={
+                          photoPreview
+                            ? t('replace_photo', 'Replace photo')
+                            : t('upload_photo', 'Upload photo')
+                        }
+                      >
+                        <ActionIcon variant="light" onClick={() => photoInputRef.current?.click()}>
+                          <IconCamera size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      {photo && (
+                        <Tooltip label={t('remove_photo', 'Remove photo')}>
+                          <ActionIcon
+                            variant="light"
+                            color="red"
+                            onClick={() => {
+                              setPhoto(null);
+                              setPhotoPreview(null);
+                            }}
+                          >
+                            <IconX size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      {t('portal.photo_optional', 'Photo (optional)')}
+                    </Text>
+                  </Stack>
+                </Center>
+
                 <Text fw={700} size="sm">
                   {t('portal.identity', 'Identity')}
                 </Text>
@@ -195,12 +262,14 @@ export function RegisterPage() {
                     radius="lg"
                     {...form.getInputProps('nationalId')}
                   />
-                  <TextInput
+                  <DatePickerInput
                     label={t('birth_date')}
                     required
                     radius="lg"
-                    type="date"
-                    {...form.getInputProps('birthDate')}
+                    valueFormat="DD/MM/YYYY"
+                    value={birthDate}
+                    onChange={setBirthDate}
+                    error={birthDateError}
                   />
                 </Group>
 

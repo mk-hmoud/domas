@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Modal,
   TextInput,
@@ -6,6 +6,11 @@ import {
   Group,
   Select,
   SimpleGrid,
+  Avatar,
+  ActionIcon,
+  Tooltip,
+  Center,
+  Stack,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -17,13 +22,18 @@ import {
   COUNTRIES,
   DEPARTMENTS,
 } from "@domas/ts-types";
-import { IconPhone, IconBrandWhatsapp } from "@tabler/icons-react";
+import {
+  IconPhone,
+  IconBrandWhatsapp,
+  IconCamera,
+  IconX,
+} from "@tabler/icons-react";
 import dayjs from "dayjs";
 
 interface StudentModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (values: CreateStudentDto) => Promise<void>;
+  onSubmit: (values: CreateStudentDto, photo?: File | null) => Promise<void>;
   initialValues?: Student | null;
 }
 
@@ -35,6 +45,9 @@ export function StudentModal({
 }: StudentModalProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const countryOptions = useMemo(
     () => COUNTRIES.map(([code, name]) => ({ value: code, label: name })),
@@ -103,6 +116,8 @@ export function StudentModal({
       } else {
         form.reset();
       }
+      setPhoto(null);
+      setPhotoPreview(initialValues?.photoUrl ?? null);
     }
   }, [opened, initialValues]);
 
@@ -131,7 +146,7 @@ export function StudentModal({
           : undefined,
       };
 
-      await onSubmit(payload);
+      await onSubmit(payload, photo);
       onClose();
     } catch (error) {
       console.error(error);
@@ -152,6 +167,65 @@ export function StudentModal({
       size="lg"
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setPhoto(file);
+            setPhotoPreview(URL.createObjectURL(file));
+            e.target.value = "";
+          }}
+        />
+        <Center mb="md">
+          <Stack align="center" gap="xs">
+            <Avatar
+              src={photoPreview}
+              size={80}
+              radius="xl"
+              color="initials"
+              name={
+                form.values.firstName || form.values.lastName
+                  ? `${form.values.firstName} ${form.values.lastName}`
+                  : undefined
+              }
+            />
+            <Group gap="xs">
+              <Tooltip
+                label={
+                  photoPreview
+                    ? t("replace_photo", "Replace photo")
+                    : t("upload_photo", "Upload photo")
+                }
+              >
+                <ActionIcon
+                  variant="light"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  <IconCamera size={16} />
+                </ActionIcon>
+              </Tooltip>
+              {photo && (
+                <Tooltip label={t("remove_photo", "Remove photo")}>
+                  <ActionIcon
+                    variant="light"
+                    color="red"
+                    onClick={() => {
+                      setPhoto(null);
+                      setPhotoPreview(initialValues?.photoUrl ?? null);
+                    }}
+                  >
+                    <IconX size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </Group>
+          </Stack>
+        </Center>
+
         <SimpleGrid cols={2}>
           <TextInput
             label={t("student_number", { defaultValue: "Student Number" })}

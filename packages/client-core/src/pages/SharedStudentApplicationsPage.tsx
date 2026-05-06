@@ -24,6 +24,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../context/AuthContext";
 import { students } from "@domas/api-client";
 import { ApplicationStatus, StudentApplication } from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
@@ -38,6 +39,8 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
 
 export function SharedStudentApplicationsPage() {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  const canReview = hasPermission("students.review_applications");
   const [applications, setApplications] = useState<
     (StudentApplication & { letterUrl: string })[]
   >([]);
@@ -228,7 +231,7 @@ export function SharedStudentApplicationsPage() {
                       </Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
-                      {app.status === "pending" && (
+                      {app.status === "pending" && canReview && (
                         <Group gap={4} wrap="nowrap">
                           <Tooltip label={t("approve", "Approve")}>
                             <ActionIcon
@@ -350,7 +353,7 @@ export function SharedStudentApplicationsPage() {
               {t("view_acceptance_letter", "View Acceptance Letter")}
             </Button>
 
-            {selected.status === "pending" && (
+            {selected.status === "pending" && canReview && (
               <>
                 <Divider />
 

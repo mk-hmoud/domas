@@ -317,9 +317,11 @@ export const portalApplications = {
   submit: async (
     dto: SubmitApplicationDto,
     letterFile: File,
+    photoFile?: File | null,
   ): Promise<StudentApplication> => {
     const form = new FormData();
     form.append("letter", letterFile);
+    if (photoFile) form.append("photo", photoFile);
     Object.entries(dto).forEach(([key, value]) => {
       if (value !== undefined) form.append(key, String(value));
     });
