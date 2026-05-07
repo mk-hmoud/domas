@@ -268,7 +268,7 @@ export function RegisterPage() {
                     radius="lg"
                     valueFormat="DD/MM/YYYY"
                     value={birthDate}
-                    onChange={setBirthDate}
+                    onChange={(value) => setBirthDate(value ? new Date(value) : null)}
                     error={birthDateError}
                   />
                 </Group>
