@@ -2,13 +2,13 @@ import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator'
 
 export class CreatePreReservationDto {
   @IsInt()
-  semesterId: number;
+  semesterId!: number;
 
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @IsDateString()
-  endDate: string;
+  endDate!: string;
 
   @IsOptional()
   @IsInt()
