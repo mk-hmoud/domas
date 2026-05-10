@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ResolveRoomChangeDto {
   @IsBoolean()
@@ -8,4 +8,8 @@ export class ResolveRoomChangeDto {
   @IsString()
   @MaxLength(500)
   rejectionReason?: string;
+
+  @IsOptional()
+  @IsInt()
+  assignedBedId?: number;
 }

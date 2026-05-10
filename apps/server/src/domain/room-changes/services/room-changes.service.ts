@@ -64,50 +64,52 @@ export class RoomChangesService {
         throw new ConflictException('You already have a pending room change request');
       }
 
-      // 4. Can't request the bed you already have
-      if (dto.requestedBedId === booking.bedId) {
+      // 4. Can't request the bed you already have (only for specific requests)
+      if (dto.requestedBedId != null && dto.requestedBedId === booking.bedId) {
         throw new BadRequestException('You are already assigned to this bed');
       }
 
-      // 5. Validate the requested bed
-      const bedWithRoom = await this.roomChangesRepo.findBedWithRoom(dto.requestedBedId, client);
-      if (!bedWithRoom) throw new NotFoundException('Requested bed not found');
-
-      const { bed, room } = bedWithRoom;
+      // 5–6. Validate the requested bed (skipped for open requests)
       const isTr = student.nationalityCode === 'TR';
+      if (dto.requestedBedId != null) {
+        const bedWithRoom = await this.roomChangesRepo.findBedWithRoom(dto.requestedBedId, client);
+        if (!bedWithRoom) throw new NotFoundException('Requested bed not found');
 
-      if (bed.status !== BedStatus.AVAILABLE) {
-        throw new BadRequestException('The requested bed is not available');
-      }
-      if (bed.isGuestZone || room.isGuestZone) {
-        throw new ForbiddenException('Guest zone beds are not available');
-      }
-      if (
-        bed.ownership === LocationOwnership.RECTORATE ||
-        room.ownership === LocationOwnership.RECTORATE
-      ) {
-        throw new ForbiddenException('This bed is not available for student bookings');
-      }
+        const { bed, room } = bedWithRoom;
 
-      if ((bed.isTrOnly || room.isTrOnly) && !isTr) {
-        throw new BadRequestException('This bed is reserved for Turkish citizens only');
-      }
-      if ((bed.isForeignerOnly || room.isForeignerOnly) && isTr) {
-        throw new BadRequestException('This bed is reserved for foreign students only');
-      }
-      if (room.genderLock && room.genderLock !== student.gender) {
-        throw new BadRequestException(`This room is reserved for ${room.genderLock} students only`);
-      }
+        if (bed.status !== BedStatus.AVAILABLE) {
+          throw new BadRequestException('The requested bed is not available');
+        }
+        if (bed.isGuestZone || room.isGuestZone) {
+          throw new ForbiddenException('Guest zone beds are not available');
+        }
+        if (
+          bed.ownership === LocationOwnership.RECTORATE ||
+          room.ownership === LocationOwnership.RECTORATE
+        ) {
+          throw new ForbiddenException('This bed is not available for student bookings');
+        }
+        if ((bed.isTrOnly || room.isTrOnly) && !isTr) {
+          throw new BadRequestException('This bed is reserved for Turkish citizens only');
+        }
+        if ((bed.isForeignerOnly || room.isForeignerOnly) && isTr) {
+          throw new BadRequestException('This bed is reserved for foreign students only');
+        }
+        if (room.genderLock && room.genderLock !== student.gender) {
+          throw new BadRequestException(
+            `This room is reserved for ${room.genderLock} students only`,
+          );
+        }
 
-      // 6. Check bed isn't already occupied in this semester
-      const taken = await this.roomChangesRepo.isBedTaken(
-        dto.requestedBedId,
-        semesterId,
-        undefined,
-        client,
-      );
-      if (taken) {
-        throw new ConflictException('This bed is already occupied');
+        const taken = await this.roomChangesRepo.isBedTaken(
+          dto.requestedBedId,
+          semesterId,
+          undefined,
+          client,
+        );
+        if (taken) {
+          throw new ConflictException('This bed is already occupied');
+        }
       }
 
       // 7. Determine whether payment is required for this request
@@ -135,7 +137,7 @@ export class RoomChangesService {
           bookingId: booking.id,
           studentId,
           semesterId,
-          requestedBedId: dto.requestedBedId,
+          requestedBedId: dto.requestedBedId ?? null,
           currentBedId: booking.bedId,
           note: dto.note,
           requiresPayment,
@@ -168,10 +170,20 @@ export class RoomChangesService {
         throw new BadRequestException('This request has already been resolved');
       }
 
-      if (dto.approved && !request.requiresPayment) {
-        // No payment needed — move bed immediately
+      const isOpenRequest = request.requestedBedId == null;
+      const effectiveBedId: number | undefined = isOpenRequest
+        ? dto.assignedBedId
+        : request.requestedBedId;
+
+      if (dto.approved) {
+        if (isOpenRequest && effectiveBedId == null) {
+          throw new BadRequestException(
+            'A bed must be assigned when approving an open room change request',
+          );
+        }
+
         const taken = await this.roomChangesRepo.isBedTaken(
-          request.requestedBedId,
+          effectiveBedId!,
           request.semesterId,
           request.bookingId,
           client,
@@ -179,19 +191,9 @@ export class RoomChangesService {
         if (taken) {
           throw new ConflictException('The requested bed is no longer available');
         }
-        await this.roomChangesRepo.moveBed(request.bookingId, request.requestedBedId, true, client);
-      }
 
-      if (dto.approved && request.requiresPayment) {
-        // Verify bed is still available before handing off to accounting
-        const taken = await this.roomChangesRepo.isBedTaken(
-          request.requestedBedId,
-          request.semesterId,
-          request.bookingId,
-          client,
-        );
-        if (taken) {
-          throw new ConflictException('The requested bed is no longer available');
+        if (!request.requiresPayment) {
+          await this.roomChangesRepo.moveBed(request.bookingId, effectiveBedId!, true, client);
         }
       }
 
@@ -202,6 +204,7 @@ export class RoomChangesService {
           requiresPayment: request.requiresPayment,
           resolvedBy,
           rejectionReason: dto.rejectionReason,
+          assignedBedId: isOpenRequest ? dto.assignedBedId : undefined,
         },
         client,
       );

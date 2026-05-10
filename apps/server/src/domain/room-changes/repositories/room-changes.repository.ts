@@ -74,8 +74,8 @@ export class RoomChangesRepository {
       JOIN  semesters  s  ON rc.semester_id    = s.id
       JOIN  beds       cb ON rc.current_bed_id = cb.id
       JOIN  locations  cl ON cb.location_id    = cl.id
-      JOIN  beds       rb ON rc.requested_bed_id = rb.id
-      JOIN  locations  rl ON rb.location_id    = rl.id
+      LEFT JOIN  beds       rb ON rc.requested_bed_id = rb.id
+      LEFT JOIN  locations  rl ON rb.location_id    = rl.id
       ${where}
       ORDER BY rc.created_at DESC
     `;
@@ -103,8 +103,8 @@ export class RoomChangesRepository {
           WHERE  anc.tree_path @> rl.tree_path AND anc.deleted_at IS NULL
         )                         AS "requestedLocationPath"
       FROM  room_change_requests rc
-      JOIN  beds      rb ON rc.requested_bed_id = rb.id
-      JOIN  locations rl ON rb.location_id      = rl.id
+      LEFT JOIN  beds      rb ON rc.requested_bed_id = rb.id
+      LEFT JOIN  locations rl ON rb.location_id      = rl.id
       WHERE rc.student_id = $1
       ORDER BY rc.created_at DESC
     `;
@@ -138,7 +138,7 @@ export class RoomChangesRepository {
       bookingId: string;
       studentId: string;
       semesterId: number;
-      requestedBedId: number;
+      requestedBedId?: number | null;
       currentBedId: number;
       note?: string | null;
       requiresPayment?: boolean;
@@ -239,16 +239,24 @@ export class RoomChangesRepository {
       requiresPayment: boolean;
       resolvedBy: string;
       rejectionReason?: string | null;
+      assignedBedId?: number | null;
     },
     client?: PoolClient,
   ): Promise<any | null> {
-    // If approved and payment is required, move to pending_payment (bed not moved yet).
-    // Otherwise resolve immediately.
     const status = data.approved
       ? data.requiresPayment
         ? 'pending_payment'
         : 'approved'
       : 'rejected';
+
+    const params: any[] = [status, data.resolvedBy, data.rejectionReason ?? null];
+    let bedClause = '';
+    if (data.assignedBedId != null) {
+      params.push(data.assignedBedId);
+      bedClause = `, requested_bed_id = $${params.length}`;
+    }
+    params.push(id);
+
     const query = `
       WITH rc AS (
         UPDATE room_change_requests
@@ -256,19 +264,14 @@ export class RoomChangesRepository {
           status           = $1,
           resolved_by      = $2,
           resolved_at      = NOW(),
-          rejection_reason = $3,
+          rejection_reason = $3${bedClause},
           updated_at       = NOW()
-        WHERE id = $4 AND status = 'pending'
+        WHERE id = $${params.length} AND status = 'pending'
         RETURNING *
       )
       SELECT ${this.selectColumns} FROM rc
     `;
-    const result = await this.getClient(client).query(query, [
-      status,
-      data.resolvedBy,
-      data.rejectionReason ?? null,
-      id,
-    ]);
+    const result = await this.getClient(client).query(query, params);
     return result.rows[0] ?? null;
   }
 
