@@ -9,7 +9,7 @@ export interface RoomChangeRequest {
   bookingId: string;
   studentId: string;
   semesterId: number;
-  requestedBedId: number;
+  requestedBedId: number | null;
   currentBedId: number;
   status: RoomChangeStatus;
   note: string | null;
@@ -34,8 +34,8 @@ export interface RoomChangeRequestView extends RoomChangeRequest {
   semesterDisplayName: string;
   currentBedLabel: string;
   currentLocationPath: string;
-  requestedBedLabel: string;
-  requestedLocationPath: string;
+  requestedBedLabel: string | null;
+  requestedLocationPath: string | null;
 }
 
 // Student-facing view
@@ -43,8 +43,8 @@ export interface StudentRoomChangeView {
   id: string;
   status: RoomChangeStatus;
   note: string | null;
-  requestedBedLabel: string;
-  requestedLocationPath: string;
+  requestedBedLabel: string | null;
+  requestedLocationPath: string | null;
   rejectionReason: string | null;
   requiresPayment: boolean;
   paymentAmount: number | null;
@@ -66,13 +66,14 @@ export interface StaffAvailableBed {
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
 
 export interface StudentCreateRoomChangeDto {
-  requestedBedId: number;
+  requestedBedId?: number;
   note?: string;
 }
 
 export interface ResolveRoomChangeDto {
   approved: boolean;
   rejectionReason?: string;
+  assignedBedId?: number;
 }
 
 export interface ApproveRoomChangePaymentDto {

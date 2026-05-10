@@ -742,8 +742,8 @@ CREATE TABLE room_change_requests (
     student_id      UUID NOT NULL REFERENCES students(id),
     semester_id     INT  NOT NULL REFERENCES semesters(id),
 
-    -- The bed the student wants to move to
-    requested_bed_id INT NOT NULL REFERENCES beds(id),
+    -- The bed the student wants to move to (NULL = open request, staff assigns at approval)
+    requested_bed_id INT REFERENCES beds(id),
 
     -- Snapshot of the bed they are leaving (set at creation time)
     current_bed_id   INT NOT NULL REFERENCES beds(id),
