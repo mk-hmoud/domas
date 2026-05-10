@@ -26,7 +26,11 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { roomChanges, semesters } from "@domas/api-client";
-import { RoomChangeRequestView, Semester } from "@domas/ts-types";
+import {
+  RoomChangeRequestView,
+  Semester,
+  StaffAvailableBed,
+} from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../context/AuthContext";
 
@@ -42,6 +46,9 @@ export function SharedRoomChangesPage() {
   // Resolve drawer
   const [selected, setSelected] = useState<RoomChangeRequestView | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [assignedBedId, setAssignedBedId] = useState<string | null>(null);
+  const [availableBeds, setAvailableBeds] = useState<StaffAvailableBed[]>([]);
+  const [bedsLoading, setBedsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchRequests = async (semesterId?: number) => {
@@ -77,6 +84,25 @@ export function SharedRoomChangesPage() {
     [requests],
   );
 
+  const openDrawer = (req: RoomChangeRequestView) => {
+    setSelected(req);
+    setRejectionReason("");
+    setAssignedBedId(null);
+    if (req.requestedBedId == null) {
+      setBedsLoading(true);
+      roomChanges
+        .getAvailableBeds(req.bookingId)
+        .then(setAvailableBeds)
+        .catch(() =>
+          notifications.show({
+            message: t("failed_to_fetch_data"),
+            color: "red",
+          }),
+        )
+        .finally(() => setBedsLoading(false));
+    }
+  };
+
   const handleResolve = async (approved: boolean) => {
     if (!selected) return;
     setActionLoading(true);
@@ -84,6 +110,10 @@ export function SharedRoomChangesPage() {
       await roomChanges.resolve(selected.id, {
         approved,
         rejectionReason: approved ? undefined : rejectionReason || undefined,
+        assignedBedId:
+          approved && selected.requestedBedId == null && assignedBedId
+            ? parseInt(assignedBedId, 10)
+            : undefined,
       });
       notifications.show({
         message: approved
@@ -162,8 +192,10 @@ export function SharedRoomChangesPage() {
                 {req.currentLocationPath}
               </Text>
               <Text size="xs" lineClamp={1}>
-                {t("room_change.to_label")}: {req.requestedBedLabel} —{" "}
-                {req.requestedLocationPath}
+                {t("room_change.to_label")}:{" "}
+                {req.requestedBedLabel
+                  ? `${req.requestedBedLabel} — ${req.requestedLocationPath}`
+                  : t("room_change.open_request")}
               </Text>
               {req.note && (
                 <Text size="xs" c="dimmed" fs="italic" mt={2}>
@@ -186,14 +218,7 @@ export function SharedRoomChangesPage() {
               {new Date(req.createdAt).toLocaleDateString()}
             </Text>
             {isPending && hasPermission("room_changes.manage") && (
-              <Button
-                size="xs"
-                variant="light"
-                onClick={() => {
-                  setSelected(req);
-                  setRejectionReason("");
-                }}
-              >
+              <Button size="xs" variant="light" onClick={() => openDrawer(req)}>
                 {t("review")}
               </Button>
             )}
@@ -266,6 +291,8 @@ export function SharedRoomChangesPage() {
         onClose={() => {
           setSelected(null);
           setRejectionReason("");
+          setAssignedBedId(null);
+          setAvailableBeds([]);
         }}
         title={<Text fw={700}>{t("room_change.review_title")}</Text>}
         position="right"
@@ -311,14 +338,39 @@ export function SharedRoomChangesPage() {
                 <Text size="xs" c="dimmed">
                   {t("room_change.requested_bed")}
                 </Text>
-                <Text size="sm" fw={600}>
-                  {selected.requestedBedLabel}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {selected.requestedLocationPath}
-                </Text>
+                {selected.requestedBedLabel ? (
+                  <>
+                    <Text size="sm" fw={600}>
+                      {selected.requestedBedLabel}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {selected.requestedLocationPath}
+                    </Text>
+                  </>
+                ) : (
+                  <Text size="sm" c="dimmed" fs="italic">
+                    {t("room_change.open_request")}
+                  </Text>
+                )}
               </Box>
             </Group>
+
+            {selected.requestedBedId == null && (
+              <Select
+                label={t("room_change.assign_bed_label")}
+                placeholder={t("room_change.assign_bed_placeholder")}
+                data={availableBeds.map((b) => ({
+                  value: String(b.id),
+                  label: `${b.label} — ${b.locationPath}`,
+                }))}
+                value={assignedBedId}
+                onChange={setAssignedBedId}
+                disabled={bedsLoading}
+                searchable
+                required
+                withAsterisk
+              />
+            )}
 
             {selected.note && (
               <Alert
@@ -358,6 +410,7 @@ export function SharedRoomChangesPage() {
                 color="green"
                 onClick={() => handleResolve(true)}
                 loading={actionLoading}
+                disabled={selected.requestedBedId == null && !assignedBedId}
                 leftSection={<IconCheck size={14} />}
               >
                 {t("room_change.approve")}
