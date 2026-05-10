@@ -142,12 +142,22 @@ export function RoomChangeTab({ booking, onRefetch }: Props) {
                         })
                       : t('portal.room_change_pending_title')}
                   </Text>
-                  <Text size="sm" fw={600} lineClamp={1}>
-                    {t('portal.bed_label', { label: pendingRequest.requestedBedLabel })}
-                  </Text>
-                  <Text size="xs" c="dimmed" lineClamp={1}>
-                    {pendingRequest.requestedLocationPath}
-                  </Text>
+                  {pendingRequest.requestedBedLabel ? (
+                    <>
+                      <Text size="sm" fw={600} lineClamp={1}>
+                        {t('portal.bed_label', { label: pendingRequest.requestedBedLabel })}
+                      </Text>
+                      <Text size="xs" c="dimmed" lineClamp={1}>
+                        {pendingRequest.requestedLocationPath}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text size="sm" c="dimmed" fs="italic">
+                      {t('portal.room_change_open_request', {
+                        defaultValue: 'Open request — staff will assign a bed',
+                      })}
+                    </Text>
+                  )}
                   {pendingRequest.note && (
                     <Text size="xs" c="dimmed" mt={2}>
                       "{pendingRequest.note}"
@@ -214,12 +224,20 @@ export function RoomChangeTab({ booking, onRefetch }: Props) {
                         {req.status === 'approved' ? <IconCheck size={13} /> : <IconX size={13} />}
                       </ThemeIcon>
                       <Box style={{ minWidth: 0 }}>
-                        <Text size="xs" fw={600} lineClamp={1}>
-                          {t('portal.bed_label', { label: req.requestedBedLabel })}
-                        </Text>
-                        <Text size="xs" c="dimmed" lineClamp={1}>
-                          {req.requestedLocationPath}
-                        </Text>
+                        {req.requestedBedLabel ? (
+                          <>
+                            <Text size="xs" fw={600} lineClamp={1}>
+                              {t('portal.bed_label', { label: req.requestedBedLabel })}
+                            </Text>
+                            <Text size="xs" c="dimmed" lineClamp={1}>
+                              {req.requestedLocationPath}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text size="xs" c="dimmed" fs="italic" lineClamp={1}>
+                            {t('portal.room_change_open_request', { defaultValue: 'Open request' })}
+                          </Text>
+                        )}
                         {req.rejectionReason && (
                           <Text size="xs" c="red.7" mt={2}>
                             {req.rejectionReason}
