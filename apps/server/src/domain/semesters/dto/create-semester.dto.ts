@@ -2,12 +2,14 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Length,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { SemesterType } from '../../../common/enums/semester-type.enum';
 import { SemesterStatus } from '../../../common/enums/semester-status.enum';
@@ -59,4 +61,26 @@ export class CreateSemesterDto {
   @IsEnum(SemesterStatus)
   @IsOptional()
   status?: SemesterStatus = SemesterStatus.PLANNED;
+
+  @IsOptional()
+  @ValidateIf((o) => o.maxRoomChanges !== null)
+  @IsInt()
+  @Min(0)
+  maxRoomChanges?: number | null;
+
+  @IsOptional()
+  @ValidateIf((o) => o.paidRoomChangeAfter !== null)
+  @IsInt()
+  @Min(1)
+  paidRoomChangeAfter?: number | null;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  roomChangeAmountTry: number = 0;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  roomChangeAmountForeign: number = 0;
 }

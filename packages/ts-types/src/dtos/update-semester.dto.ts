@@ -13,4 +13,7 @@ export interface UpdateSemesterDto {
   foreignCurrencyCode?: string;
   paymentDeadlineDate?: string;
   status?: SemesterStatus;
+  paidRoomChangeAfter?: number | null;
+  roomChangeAmountTry?: number;
+  roomChangeAmountForeign?: number;
 }

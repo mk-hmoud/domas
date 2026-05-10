@@ -9,6 +9,7 @@ import { DatabaseService } from '../../../core/database/database.service';
 import {
   NotificationsService,
   NotificationType,
+  NotificationTypeValue,
 } from '../../notifications/services/notifications.service';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { RoomChangesRepository } from '../repositories/room-changes.repository';
@@ -73,6 +74,7 @@ export class RoomChangesService {
       if (!bedWithRoom) throw new NotFoundException('Requested bed not found');
 
       const { bed, room } = bedWithRoom;
+      const isTr = student.nationalityCode === 'TR';
 
       if (bed.status !== BedStatus.AVAILABLE) {
         throw new BadRequestException('The requested bed is not available');
@@ -87,7 +89,6 @@ export class RoomChangesService {
         throw new ForbiddenException('This bed is not available for student bookings');
       }
 
-      const isTr = student.nationalityCode === 'TR';
       if ((bed.isTrOnly || room.isTrOnly) && !isTr) {
         throw new BadRequestException('This bed is reserved for Turkish citizens only');
       }
@@ -109,7 +110,26 @@ export class RoomChangesService {
         throw new ConflictException('This bed is already occupied');
       }
 
-      // 7. Create request
+      // 7. Determine whether payment is required for this request
+      let requiresPayment = false;
+      let paymentAmount: number | null = null;
+      let paymentCurrency: string | null = null;
+
+      if (
+        booking.paidRoomChangeAfter != null &&
+        booking.roomChangesCount >= booking.paidRoomChangeAfter
+      ) {
+        requiresPayment = true;
+        if (isTr) {
+          paymentAmount = Number(booking.roomChangeAmountTry);
+          paymentCurrency = 'TRY';
+        } else {
+          paymentAmount = Number(booking.roomChangeAmountForeign);
+          paymentCurrency = booking.foreignCurrencyCode ?? 'EUR';
+        }
+      }
+
+      // 8. Create request
       return this.roomChangesRepo.create(
         {
           bookingId: booking.id,
@@ -118,6 +138,9 @@ export class RoomChangesService {
           requestedBedId: dto.requestedBedId,
           currentBedId: booking.bedId,
           note: dto.note,
+          requiresPayment,
+          paymentAmount,
+          paymentCurrency,
         },
         client,
       );
@@ -145,8 +168,8 @@ export class RoomChangesService {
         throw new BadRequestException('This request has already been resolved');
       }
 
-      if (dto.approved) {
-        // Verify the target bed is still available (exclude current booking)
+      if (dto.approved && !request.requiresPayment) {
+        // No payment needed — move bed immediately
         const taken = await this.roomChangesRepo.isBedTaken(
           request.requestedBedId,
           request.semesterId,
@@ -156,15 +179,27 @@ export class RoomChangesService {
         if (taken) {
           throw new ConflictException('The requested bed is no longer available');
         }
-
-        // Move the booking to the new bed and increment counter
         await this.roomChangesRepo.moveBed(request.bookingId, request.requestedBedId, true, client);
+      }
+
+      if (dto.approved && request.requiresPayment) {
+        // Verify bed is still available before handing off to accounting
+        const taken = await this.roomChangesRepo.isBedTaken(
+          request.requestedBedId,
+          request.semesterId,
+          request.bookingId,
+          client,
+        );
+        if (taken) {
+          throw new ConflictException('The requested bed is no longer available');
+        }
       }
 
       const resolved = await this.roomChangesRepo.resolve(
         id,
         {
           approved: dto.approved,
+          requiresPayment: request.requiresPayment,
           resolvedBy,
           rejectionReason: dto.rejectionReason,
         },
@@ -174,14 +209,23 @@ export class RoomChangesService {
       if (!resolved)
         throw new NotFoundException('Room change request not found or already resolved');
 
-      // Notify student (fire-and-forget after commit)
-      const notificationType = dto.approved
-        ? NotificationType.ROOM_CHANGE_APPROVED
-        : NotificationType.ROOM_CHANGE_REJECTED;
-      const title = dto.approved ? 'Room Change Approved' : 'Room Change Rejected';
-      const body = dto.approved
-        ? 'Your room change request has been approved.'
-        : `Your room change request was rejected${dto.rejectionReason ? ': ' + dto.rejectionReason : '.'}`;
+      let notificationType: NotificationTypeValue;
+      let title: string;
+      let body: string;
+
+      if (!dto.approved) {
+        notificationType = NotificationType.ROOM_CHANGE_REJECTED;
+        title = 'Room Change Rejected';
+        body = `Your room change request was rejected${dto.rejectionReason ? ': ' + dto.rejectionReason : '.'}`;
+      } else if (request.requiresPayment) {
+        notificationType = NotificationType.ROOM_CHANGE_PENDING_PAYMENT;
+        title = 'Room Change Approved — Payment Required';
+        body = `Your room change request has been approved. A fee of ${request.paymentAmount} ${request.paymentCurrency} is required and pending accounting confirmation.`;
+      } else {
+        notificationType = NotificationType.ROOM_CHANGE_APPROVED;
+        title = 'Room Change Approved';
+        body = 'Your room change request has been approved.';
+      }
 
       setImmediate(() =>
         this.notificationsService.create(request.studentId, notificationType, title, body, {
@@ -192,6 +236,48 @@ export class RoomChangesService {
 
       return resolved;
     });
+  }
+
+  async approvePayment(
+    id: string,
+    dto: { approved: boolean; rejectionReason?: string },
+    approvedBy: string,
+  ): Promise<any> {
+    const request = await this.roomChangesRepo.findById(id);
+    if (!request) throw new NotFoundException('Room change request not found');
+    if (!request.requiresPayment) {
+      throw new BadRequestException('This request does not require payment approval');
+    }
+    if (request.status !== 'pending_payment') {
+      throw new BadRequestException(
+        'This request is not awaiting payment approval (must be approved by staff first)',
+      );
+    }
+
+    const result = await this.roomChangesRepo.approvePayment(id, {
+      approved: dto.approved,
+      approvedBy,
+      rejectionReason: dto.rejectionReason,
+    });
+
+    if (!result) throw new NotFoundException('Room change request not found or cannot be updated');
+
+    const notificationType = dto.approved
+      ? NotificationType.ROOM_CHANGE_APPROVED
+      : NotificationType.ROOM_CHANGE_REJECTED;
+    const title = dto.approved ? 'Room Change Confirmed' : 'Room Change Cancelled';
+    const body = dto.approved
+      ? 'Your payment has been confirmed and your room change is complete.'
+      : `Your room change was cancelled: ${dto.rejectionReason ?? 'Payment not confirmed'}.`;
+
+    setImmediate(() =>
+      this.notificationsService.create(request.studentId, notificationType, title, body, {
+        roomChangeId: id,
+        bookingId: request.bookingId,
+      }),
+    );
+
+    return result;
   }
 
   async getAvailableBedsForBooking(bookingId: string): Promise<any[]> {

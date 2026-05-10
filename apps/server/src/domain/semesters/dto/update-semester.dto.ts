@@ -66,4 +66,20 @@ export class UpdateSemesterDto {
   @IsInt()
   @Min(0)
   maxRoomChanges?: number | null;
+
+  @IsOptional()
+  @ValidateIf((o) => o.paidRoomChangeAfter !== null)
+  @IsInt()
+  @Min(1)
+  paidRoomChangeAfter?: number | null;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  roomChangeAmountTry?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  roomChangeAmountForeign?: number;
 }

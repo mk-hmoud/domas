@@ -2,6 +2,7 @@ import { apiClient } from "../client";
 import {
   RoomChangeRequestView,
   ResolveRoomChangeDto,
+  ApproveRoomChangePaymentDto,
   StaffAvailableBed,
 } from "@domas/ts-types";
 
@@ -38,6 +39,17 @@ export const roomChanges = {
   getAvailableBeds: async (bookingId: string): Promise<StaffAvailableBed[]> => {
     const response = await apiClient.get<StaffAvailableBed[]>(
       `/room-changes/bookings/${bookingId}/available-beds`,
+    );
+    return response.data;
+  },
+
+  approvePayment: async (
+    id: string,
+    dto: ApproveRoomChangePaymentDto,
+  ): Promise<RoomChangeRequestView> => {
+    const response = await apiClient.patch<RoomChangeRequestView>(
+      `/room-changes/${id}/approve-payment`,
+      dto,
     );
     return response.data;
   },

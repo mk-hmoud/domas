@@ -721,10 +721,20 @@ CREATE TABLE semester_room_pricing (
 ALTER TABLE semesters
     ADD COLUMN IF NOT EXISTS max_room_changes INT DEFAULT NULL;
 
+-- Paid room change configuration: requests beyond this count require payment (NULL = always free)
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS paid_room_change_after INT DEFAULT NULL;
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS room_change_amount_try NUMERIC(10,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS room_change_amount_foreign NUMERIC(10,2) NOT NULL DEFAULT 0;
+
 ALTER TABLE bookings
     ADD COLUMN IF NOT EXISTS room_changes_count INT NOT NULL DEFAULT 0;
 
-CREATE TYPE room_change_status_enum AS ENUM ('pending', 'approved', 'rejected');
+CREATE TYPE room_change_status_enum AS ENUM ('pending', 'pending_payment', 'approved', 'rejected');
 
 CREATE TABLE room_change_requests (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -745,6 +755,14 @@ CREATE TABLE room_change_requests (
     resolved_by     UUID REFERENCES users(id),
     resolved_at     TIMESTAMPTZ,
     rejection_reason TEXT,
+
+    -- Payment fields (set when the request exceeds the free quota)
+    requires_payment        BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_amount          NUMERIC(10,2),
+    payment_currency        CHAR(3),
+    is_accounting_approved  BOOLEAN,
+    accounting_approved_by  UUID REFERENCES users(id),
+    accounting_approved_at  TIMESTAMPTZ,
 
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW(),

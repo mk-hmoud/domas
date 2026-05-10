@@ -14,4 +14,7 @@ export interface CreateSemesterDto {
   paymentDeadlineDate?: string;
   status?: SemesterStatus;
   maxRoomChanges?: number | null;
+  paidRoomChangeAfter?: number | null;
+  roomChangeAmountTry?: number;
+  roomChangeAmountForeign?: number;
 }

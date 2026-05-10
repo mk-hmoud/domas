@@ -16,6 +16,9 @@ export class Semester {
   paymentDeadlineDate?: Date;
   status!: SemesterStatus;
   maxRoomChanges?: number | null;
+  paidRoomChangeAfter?: number | null;
+  roomChangeAmountTry!: number;
+  roomChangeAmountForeign!: number;
   createdAt!: Date;
   updatedAt!: Date;
   createdBy?: string;

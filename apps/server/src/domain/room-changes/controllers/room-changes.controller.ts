@@ -18,6 +18,7 @@ import { PERMISSIONS } from '../../../common/constants/permissions';
 import { RoomChangesService } from '../services/room-changes.service';
 import { ResolveRoomChangeDto } from '../dto/resolve-room-change.dto';
 import { StaffMoveBedDto } from '../dto/staff-move-bed.dto';
+import { ApproveRoomChangePaymentDto } from '../dto/approve-room-change-payment.dto';
 
 @UseGuards(AuthenticatedGuard, PermissionsGuard)
 @Controller('room-changes')
@@ -41,6 +42,16 @@ export class RoomChangesController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.roomChangesService.resolve(id, dto, context.userId);
+  }
+
+  @RequirePermissions(PERMISSIONS.ROOM_CHANGES_APPROVE_PAYMENT)
+  @Patch(':id/approve-payment')
+  approvePayment(
+    @Param('id') id: string,
+    @Body() dto: ApproveRoomChangePaymentDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.roomChangesService.approvePayment(id, dto, context.userId);
   }
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)

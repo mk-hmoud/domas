@@ -1,4 +1,8 @@
-export type RoomChangeStatus = "pending" | "approved" | "rejected";
+export type RoomChangeStatus =
+  | "pending"
+  | "pending_payment"
+  | "approved"
+  | "rejected";
 
 export interface RoomChangeRequest {
   id: string;
@@ -12,6 +16,12 @@ export interface RoomChangeRequest {
   resolvedBy: string | null;
   resolvedAt: string | null;
   rejectionReason: string | null;
+  requiresPayment: boolean;
+  paymentAmount: number | null;
+  paymentCurrency: string | null;
+  isAccountingApproved: boolean | null;
+  accountingApprovedBy: string | null;
+  accountingApprovedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +30,7 @@ export interface RoomChangeRequest {
 export interface RoomChangeRequestView extends RoomChangeRequest {
   studentName: string;
   studentNumber: string;
+  studentNationalityCode: string;
   semesterDisplayName: string;
   currentBedLabel: string;
   currentLocationPath: string;
@@ -35,6 +46,10 @@ export interface StudentRoomChangeView {
   requestedBedLabel: string;
   requestedLocationPath: string;
   rejectionReason: string | null;
+  requiresPayment: boolean;
+  paymentAmount: number | null;
+  paymentCurrency: string | null;
+  isAccountingApproved: boolean | null;
   createdAt: string;
   resolvedAt: string | null;
 }
@@ -56,6 +71,11 @@ export interface StudentCreateRoomChangeDto {
 }
 
 export interface ResolveRoomChangeDto {
+  approved: boolean;
+  rejectionReason?: string;
+}
+
+export interface ApproveRoomChangePaymentDto {
   approved: boolean;
   rejectionReason?: string;
 }

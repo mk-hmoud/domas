@@ -44,8 +44,9 @@ export function RoomChangeTab({ booking, onRefetch }: Props) {
     fetchRequests();
   }, []);
 
-  const pendingRequest = requests.find((r) => r.status === 'pending') ?? null;
-  const history = requests.filter((r) => r.status !== 'pending');
+  const pendingRequest =
+    requests.find((r) => r.status === 'pending' || r.status === 'pending_payment') ?? null;
+  const history = requests.filter((r) => r.status !== 'pending' && r.status !== 'pending_payment');
 
   const { roomChangesCount, maxRoomChanges } = booking;
   const atLimit = maxRoomChanges !== null && roomChangesCount >= maxRoomChanges;
@@ -125,12 +126,21 @@ export function RoomChangeTab({ booking, onRefetch }: Props) {
           <Paper radius="lg" p="sm" withBorder>
             <Group justify="space-between" wrap="nowrap" align="flex-start">
               <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-                <ThemeIcon size={28} radius="md" variant="light" color="yellow">
+                <ThemeIcon
+                  size={28}
+                  radius="md"
+                  variant="light"
+                  color={pendingRequest.status === 'pending_payment' ? 'blue' : 'yellow'}
+                >
                   <IconClock size={15} />
                 </ThemeIcon>
                 <Box style={{ minWidth: 0 }}>
                   <Text size="xs" c="dimmed">
-                    {t('portal.room_change_pending_title')}
+                    {pendingRequest.status === 'pending_payment'
+                      ? t('portal.room_change_pending_payment_title', {
+                          defaultValue: 'Approved — Awaiting Payment',
+                        })
+                      : t('portal.room_change_pending_title')}
                   </Text>
                   <Text size="sm" fw={600} lineClamp={1}>
                     {t('portal.bed_label', { label: pendingRequest.requestedBedLabel })}
@@ -143,17 +153,31 @@ export function RoomChangeTab({ booking, onRefetch }: Props) {
                       "{pendingRequest.note}"
                     </Text>
                   )}
+                  {pendingRequest.status === 'pending_payment' && (
+                    <Badge size="xs" color="orange" variant="light" mt={4}>
+                      {t('portal.room_change_fee_label', {
+                        defaultValue: `Fee: ${new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: pendingRequest.paymentCurrency ?? 'TRY',
+                        }).format(
+                          pendingRequest.paymentAmount ?? 0,
+                        )} — awaiting accounting confirmation`,
+                      })}
+                    </Badge>
+                  )}
                 </Box>
               </Group>
-              <Button
-                size="xs"
-                variant="subtle"
-                color="red"
-                loading={cancelling === pendingRequest.id}
-                onClick={() => handleCancel(pendingRequest.id)}
-              >
-                {t('portal.room_change_cancel_request')}
-              </Button>
+              {pendingRequest.status === 'pending' && (
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  loading={cancelling === pendingRequest.id}
+                  onClick={() => handleCancel(pendingRequest.id)}
+                >
+                  {t('portal.room_change_cancel_request')}
+                </Button>
+              )}
             </Group>
           </Paper>
         ) : (
