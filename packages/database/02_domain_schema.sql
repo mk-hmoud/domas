@@ -794,6 +794,50 @@ CREATE TABLE damage_report_images (
 CREATE INDEX idx_damage_report_images_report_id ON damage_report_images(damage_report_id);
 CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);
 
+-- =============================================
+-- PRE-RESERVATIONS
+-- =============================================
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS allow_pre_reservations BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE pre_reservations (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id      UUID NOT NULL REFERENCES students(id),
+    semester_id     INT  NOT NULL REFERENCES semesters(id),
+
+    start_date      DATE NOT NULL,
+    end_date        DATE NOT NULL,
+
+    -- Optional room type preference (not binding; admin can override)
+    room_type_id    INT REFERENCES room_types(id),
+
+    note            TEXT,
+    status          pre_reservation_status NOT NULL DEFAULT 'pending',
+
+    -- Filled automatically when admin assigns a bed and a booking is created
+    booking_id      UUID REFERENCES bookings(id),
+
+    -- Resolution audit
+    resolved_by     UUID REFERENCES users(id),
+    resolved_at     TIMESTAMPTZ,
+    rejection_reason TEXT,
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT pre_res_date_order CHECK (end_date > start_date),
+
+    -- One pending pre-reservation per student per semester
+    CONSTRAINT uq_one_pending_pre_res_per_student_semester
+        EXCLUDE USING btree (student_id WITH =, semester_id WITH =)
+        WHERE (status = 'pending')
+);
+
+CREATE INDEX idx_pre_reservations_student  ON pre_reservations(student_id);
+CREATE INDEX idx_pre_reservations_semester ON pre_reservations(semester_id);
+CREATE INDEX idx_pre_reservations_status   ON pre_reservations(status);
+
 CREATE TABLE student_enrollment_verifications (
     id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id       UUID         NOT NULL REFERENCES students(id) ON DELETE CASCADE,

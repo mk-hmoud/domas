@@ -21,6 +21,7 @@ export interface PortalSemester {
   foreignCurrencyCode: string;
   paymentDeadlineDate: string | null;
   status: SemesterStatus;
+  allowPreReservations: boolean;
 }
 
 // ─── Available Beds ───────────────────────────────────────────────────────────

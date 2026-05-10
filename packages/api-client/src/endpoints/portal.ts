@@ -21,6 +21,8 @@ import {
   EnrollmentStatus,
   StudentApplication,
   SubmitApplicationDto,
+  StudentCreatePreReservationDto,
+  StudentPreReservationView,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -308,6 +310,31 @@ export const portalRoomChanges = {
 
   cancel: async (id: string): Promise<void> => {
     await apiClient.delete(`/portal/room-changes/${id}`);
+  },
+};
+
+// ─── Pre-Reservations ─────────────────────────────────────────────────────────
+
+export const portalPreReservations = {
+  getAll: async (): Promise<StudentPreReservationView[]> => {
+    const response = await apiClient.get<StudentPreReservationView[]>(
+      "/portal/pre-reservations",
+    );
+    return response.data;
+  },
+
+  create: async (
+    dto: StudentCreatePreReservationDto,
+  ): Promise<StudentPreReservationView> => {
+    const response = await apiClient.post<StudentPreReservationView>(
+      "/portal/pre-reservations",
+      dto,
+    );
+    return response.data;
+  },
+
+  cancel: async (id: string): Promise<void> => {
+    await apiClient.patch(`/portal/pre-reservations/${id}/cancel`);
   },
 };
 

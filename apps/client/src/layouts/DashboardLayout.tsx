@@ -117,6 +117,11 @@ export function DashboardLayout() {
             requiredPermission: 'room_changes.view',
             badge: navStats.roomChanges?.pendingCount,
           },
+          {
+            label: t('nav.pre_reservations', { defaultValue: 'Pre-Reservations' }),
+            link: '/dashboard/pre-reservations',
+            requiredPermission: 'pre_reservations.view',
+          },
         ],
       },
       {

@@ -71,6 +71,10 @@ export const PERMISSIONS = {
   ROOM_CHANGES_VIEW: 'room_changes.view',
   ROOM_CHANGES_MANAGE: 'room_changes.manage',
   ROOM_CHANGES_APPROVE_PAYMENT: 'room_changes.approve_payment',
+
+  // Pre-Reservations
+  PRE_RESERVATIONS_VIEW: 'pre_reservations.view',
+  PRE_RESERVATIONS_MANAGE: 'pre_reservations.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

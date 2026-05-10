@@ -46,6 +46,10 @@ DO $$ BEGIN
     CREATE TYPE guest_stay_status AS ENUM ('confirmed', 'active', 'completed', 'cancelled');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+    CREATE TYPE pre_reservation_status AS ENUM ('pending', 'assigned', 'cancelled', 'rejected');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- =============================================
 -- EXTENSIONS
 -- =============================================

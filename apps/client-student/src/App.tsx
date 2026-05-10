@@ -4,6 +4,7 @@ import { PortalLayout } from './layouts/PortalLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ApplyPage } from './pages/ApplyPage';
+import { PreReservePage } from './pages/PreReservePage';
 import { BookingPage } from './pages/BookingPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { FinancialPage } from './pages/FinancialPage';
@@ -44,6 +45,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="apply" element={<ApplyPage />} />
+          <Route path="pre-reserve" element={<PreReservePage />} />
           <Route path="booking" element={<BookingPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
