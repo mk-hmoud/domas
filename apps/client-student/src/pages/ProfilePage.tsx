@@ -8,7 +8,6 @@ import {
   IconLogout,
   IconMail,
   IconPhone,
-  IconUser,
 } from '@tabler/icons-react';
 import { portalProfile } from '@domas/api-client';
 import { useStudentAuth } from '../contexts/StudentAuthContext';

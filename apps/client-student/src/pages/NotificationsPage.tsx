@@ -1,6 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Box, Button, Group, Paper, Stack, Table, Text, ThemeIcon } from '@domas/ui';
+import {
+  ActionIcon,
+  Box,
+  Button,
+  Divider,
+  EmptyState,
+  Group,
+  Paper,
+  Stack,
+  Table,
+  Text,
+  ThemeIcon,
+} from '@domas/ui';
 import { IconBell, IconBellOff, IconCheck, IconCircleFilled } from '@tabler/icons-react';
 import { StudentNotification } from '@domas/ts-types';
 import { portalNotifications } from '@domas/api-client';
@@ -8,6 +20,29 @@ import { useNotifications } from '../contexts/NotificationsContext';
 import { PageHero } from '../components/PageHero';
 
 const PAGE_SIZE = 20;
+
+// ─── Date grouping helpers ────────────────────────────────────────────────────
+
+function getDateGroup(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'today';
+  if (diffDays <= 6) return 'this_week';
+  return 'earlier';
+}
+
+function groupNotifications(
+  items: StudentNotification[],
+): { key: string; items: StudentNotification[] }[] {
+  const groups: Record<string, StudentNotification[]> = { today: [], this_week: [], earlier: [] };
+  for (const n of items) {
+    groups[getDateGroup(n.createdAt)].push(n);
+  }
+  return (['today', 'this_week', 'earlier'] as const)
+    .filter((k) => groups[k].length > 0)
+    .map((k) => ({ key: k, items: groups[k] }));
+}
 
 function useTimeAgo() {
   const { t } = useTranslation();
@@ -118,15 +153,11 @@ function NotificationsTable({
 
   if (items.length === 0) {
     return (
-      <Stack align="center" gap="sm" py="xl">
-        <ThemeIcon size={52} radius="xl" variant="light" color="gray">
-          <IconBell size={26} />
-        </ThemeIcon>
-        <Text fw={600}>{t('portal.no_notifications')}</Text>
-        <Text size="sm" c="dimmed" ta="center">
-          {t('portal.no_notifications_description')}
-        </Text>
-      </Stack>
+      <EmptyState
+        icon={<IconBell size={26} />}
+        title={t('portal.no_notifications')}
+        description={t('portal.no_notifications_description')}
+      />
     );
   }
 
@@ -294,15 +325,11 @@ export function NotificationsPage() {
   );
 
   const emptyState = (
-    <Stack align="center" gap="sm" py="xl">
-      <ThemeIcon size={52} radius="xl" variant="light" color="gray">
-        <IconBell size={26} />
-      </ThemeIcon>
-      <Text fw={600}>{t('portal.no_notifications')}</Text>
-      <Text size="sm" c="dimmed" ta="center">
-        {t('portal.no_notifications_description')}
-      </Text>
-    </Stack>
+    <EmptyState
+      icon={<IconBell size={26} />}
+      title={t('portal.no_notifications')}
+      description={t('portal.no_notifications_description')}
+    />
   );
 
   if (isLoading) {
@@ -414,14 +441,34 @@ export function NotificationsPage() {
         )}
       </Box>
 
-      {/* Mobile — card list */}
+      {/* Mobile — grouped card list */}
       <Box hiddenFrom="sm">
         {items.length === 0 ? (
           emptyState
         ) : (
-          <Stack gap="sm">
-            {items.map((n) => (
-              <NotificationCard key={n.id} notification={n} onMarkRead={handleMarkRead} />
+          <Stack gap="md">
+            {groupNotifications(items).map(({ key, items: group }) => (
+              <Stack key={key} gap="xs">
+                <Group gap="xs" align="center">
+                  <Divider style={{ flex: 1 }} />
+                  <Text
+                    size="xs"
+                    fw={600}
+                    c="dimmed"
+                    tt="uppercase"
+                    style={{ letterSpacing: '0.05em' }}
+                  >
+                    {t(`portal.notif_group_${key}`, {
+                      defaultValue:
+                        key === 'today' ? 'Today' : key === 'this_week' ? 'This week' : 'Earlier',
+                    })}
+                  </Text>
+                  <Divider style={{ flex: 1 }} />
+                </Group>
+                {group.map((n) => (
+                  <NotificationCard key={n.id} notification={n} onMarkRead={handleMarkRead} />
+                ))}
+              </Stack>
             ))}
             {loadMoreButton}
           </Stack>

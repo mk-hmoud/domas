@@ -1,6 +1,17 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Box, Button, Group, Paper, Skeleton, Stack, Text, ThemeIcon } from '@domas/ui';
+import {
+  Badge,
+  Box,
+  Button,
+  EmptyState,
+  Group,
+  Paper,
+  Skeleton,
+  Stack,
+  Text,
+  ThemeIcon,
+} from '@domas/ui';
 import { IconFile, IconPaperclip, IconPin, IconSpeakerphone } from '@tabler/icons-react';
 import { Announcement } from '@domas/ts-types';
 import { portalAnnouncements } from '@domas/api-client';
@@ -133,27 +144,16 @@ export function AnnouncementsPage() {
           ))}
         </Stack>
       ) : items.length === 0 ? (
-        <Paper
-          radius="xl"
-          p="xl"
-          style={{
-            border: '1px solid var(--mantine-color-default-border)',
-            textAlign: 'center',
-          }}
-        >
-          <Stack align="center" gap="sm" py="md">
-            <ThemeIcon size={52} radius="xl" variant="light" color="gray">
-              <IconSpeakerphone size={26} />
-            </ThemeIcon>
-            <Text fw={600} size="lg">
-              {t('portal.no_announcements', {
-                defaultValue: 'No announcements at the moment.',
-              })}
-            </Text>
-            <Text size="sm" c="dimmed">
-              Check back later for updates from management.
-            </Text>
-          </Stack>
+        <Paper radius="xl" style={{ border: '1px solid var(--mantine-color-default-border)' }}>
+          <EmptyState
+            icon={<IconSpeakerphone size={26} />}
+            title={t('portal.no_announcements', {
+              defaultValue: 'No announcements at the moment.',
+            })}
+            description={t('portal.no_announcements_desc', {
+              defaultValue: 'Check back later for updates from management.',
+            })}
+          />
         </Paper>
       ) : (
         <Stack gap="md">

@@ -590,6 +590,73 @@ function ActiveResidentCard({
   );
 }
 
+// ─── Quick Actions ────────────────────────────────────────────────────────────
+
+function QuickActions({ booking }: { booking: StudentCurrentBooking }) {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const actions = [
+    {
+      icon: IconDoor,
+      label: t('portal.action_my_room', { defaultValue: 'My Room' }),
+      color: 'blue',
+      onClick: () => navigate('/booking'),
+    },
+    {
+      icon: IconCreditCard,
+      label: t('portal.action_payments', { defaultValue: 'Payments' }),
+      color: 'teal',
+      onClick: () => navigate('/financial'),
+    },
+    ...(booking.contractSigned
+      ? [
+          {
+            icon: IconFileDownload,
+            label: t('portal.action_contract', { defaultValue: 'Contract' }),
+            color: 'grape',
+            onClick: () => portalBookings.downloadContract(booking.id),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <SimpleGrid cols={{ base: 3, xs: actions.length }} spacing="sm">
+      {actions.map((a) => (
+        <Paper
+          key={a.label}
+          radius="xl"
+          p="md"
+          style={{
+            border: '1px solid var(--mantine-color-default-border)',
+            cursor: 'pointer',
+            textAlign: 'center',
+            transition: 'background 0.12s ease',
+          }}
+          onClick={a.onClick}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background =
+              'var(--mantine-color-default-hover)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = '';
+          }}
+        >
+          <Stack align="center" gap={6}>
+            <ThemeIcon size={40} radius="xl" variant="light" color={a.color}>
+              <a.icon size={20} />
+            </ThemeIcon>
+            <Text size="xs" fw={600}>
+              {a.label}
+            </Text>
+          </Stack>
+        </Paper>
+      ))}
+    </SimpleGrid>
+  );
+}
+
 // ─── Announcements panel ──────────────────────────────────────────────────────
 
 function AnnouncementsPanel({ limit = 3 }: { limit?: number }) {
@@ -875,6 +942,8 @@ export function DashboardPage() {
       ) : (
         <>
           {booking && <StatsBand booking={booking} />}
+
+          {isActive && booking && <QuickActions booking={booking} />}
 
           <Grid gutter="lg" align="flex-start">
             <Grid.Col span={{ base: 12, md: 7 }}>

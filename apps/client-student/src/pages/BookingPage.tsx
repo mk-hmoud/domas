@@ -16,7 +16,6 @@ import {
   Tabs,
   Text,
   ThemeIcon,
-  Title,
 } from '@domas/ui';
 import {
   IconArrowsExchange,
