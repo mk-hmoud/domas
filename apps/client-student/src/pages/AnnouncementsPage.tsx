@@ -1,21 +1,11 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Badge,
-  Box,
-  Button,
-  Group,
-  Paper,
-  Skeleton,
-  Stack,
-  Text,
-  ThemeIcon,
-} from '@domas/ui';
+import { Badge, Box, Button, Group, Paper, Skeleton, Stack, Text, ThemeIcon } from '@domas/ui';
 import { IconFile, IconPaperclip, IconPin, IconSpeakerphone } from '@tabler/icons-react';
 import { Announcement } from '@domas/ts-types';
 import { portalAnnouncements } from '@domas/api-client';
 import { useAnnouncements } from '../contexts/AnnouncementsContext';
+import { PageHero } from '../components/PageHero';
 
 function AnnouncementCard({ item }: { item: Announcement }) {
   const { t } = useTranslation();
@@ -126,55 +116,15 @@ export function AnnouncementsPage() {
 
   return (
     <Stack gap="lg">
-      {/* Page hero */}
-      <Paper
-        radius="xl"
-        px="xl"
-        py="lg"
-        style={{
-          background: 'linear-gradient(135deg, #862E9C 0%, #9C36B5 50%, #7048BD 100%)',
-          boxShadow: '0 6px 24px rgba(134,46,156,0.25)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Box>
-            <Text
-              size="xs"
-              c="white"
-              fw={600}
-              style={{
-                opacity: 0.75,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                fontSize: 11,
-                marginBottom: 4,
-              }}
-            >
-              Student Housing Portal
-            </Text>
-            <Text fw={800} c="white" size="xl" lh={1.2}>
-              {t('portal.nav_announcements', { defaultValue: 'Announcements' })}
-            </Text>
-            <Text size="sm" c="white" style={{ opacity: 0.78, marginTop: 4 }}>
-              {t('portal.announcements_subtitle', {
-                defaultValue: 'Important notices from management',
-              })}
-            </Text>
-          </Box>
-          <ThemeIcon
-            size={56}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            <IconSpeakerphone size={28} />
-          </ThemeIcon>
-        </Group>
-      </Paper>
+      <PageHero
+        color="purple"
+        label="Student Housing Portal"
+        title={t('portal.nav_announcements', { defaultValue: 'Announcements' })}
+        subtitle={t('portal.announcements_subtitle', {
+          defaultValue: 'Important notices from management',
+        })}
+        icon={<IconSpeakerphone size={28} />}
+      />
 
       {loading ? (
         <Stack gap="md">

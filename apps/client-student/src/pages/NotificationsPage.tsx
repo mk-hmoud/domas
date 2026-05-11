@@ -5,6 +5,7 @@ import { IconBell, IconBellOff, IconCheck, IconCircleFilled } from '@tabler/icon
 import { StudentNotification } from '@domas/ts-types';
 import { portalNotifications } from '@domas/api-client';
 import { useNotifications } from '../contexts/NotificationsContext';
+import { PageHero } from '../components/PageHero';
 
 const PAGE_SIZE = 20;
 
@@ -239,43 +240,18 @@ export function NotificationsPage() {
   const unreadCount = items.filter((n) => !n.readAt).length;
 
   const header = (
-    <Paper
-      radius="xl"
-      px="xl"
-      py="lg"
-      style={{
-        background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-        boxShadow: '0 6px 24px rgba(25,113,194,0.22)',
-      }}
-    >
-      <Group justify="space-between" align="center" wrap="nowrap">
-        <Box>
-          <Text
-            size="xs"
-            c="white"
-            fw={600}
-            style={{
-              opacity: 0.75,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              fontSize: 11,
-              marginBottom: 4,
-            }}
-          >
-            Student Housing Portal
-          </Text>
-          <Text fw={800} c="white" size="xl" lh={1.2}>
-            {t('portal.notifications_title')}
-          </Text>
-          {unreadCount > 0 && (
-            <Text size="sm" c="white" style={{ opacity: 0.8, marginTop: 4 }}>
-              {unreadCount === 1
-                ? t('portal.unread_count_singular')
-                : t('portal.unread_count_plural', { count: unreadCount })}
-            </Text>
-          )}
-        </Box>
-        <Group gap="sm" style={{ flexShrink: 0 }}>
+    <PageHero
+      label="Student Housing Portal"
+      title={t('portal.notifications_title')}
+      subtitle={
+        unreadCount > 0
+          ? unreadCount === 1
+            ? t('portal.unread_count_singular')
+            : t('portal.unread_count_plural', { count: unreadCount })
+          : undefined
+      }
+      rightSection={
+        <Group gap="sm">
           {unreadCount > 0 && (
             <Button
               variant="white"
@@ -300,8 +276,8 @@ export function NotificationsPage() {
             <IconBell size={26} />
           </ThemeIcon>
         </Group>
-      </Group>
-    </Paper>
+      }
+    />
   );
 
   const loadMoreButton = hasMore && (

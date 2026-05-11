@@ -1,19 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Card,
-  Divider,
-  Grid,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  TextInput,
-} from '@domas/ui';
+import { Alert, Avatar, Box, Button, Grid, Group, Paper, Stack, Text, TextInput } from '@domas/ui';
 import {
   IconCheck,
   IconDeviceFloppy,
@@ -25,6 +12,8 @@ import {
 } from '@tabler/icons-react';
 import { portalProfile } from '@domas/api-client';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
+import { PageHero } from '../components/PageHero';
+import { SectionTitle } from '../components/SectionTitle';
 
 export function ProfilePage() {
   const { student, logout } = useStudentAuth();
@@ -65,16 +54,8 @@ export function ProfilePage() {
 
   return (
     <Stack gap="lg">
-      {/* Hero header */}
-      <Paper
-        radius="xl"
-        style={{
-          overflow: 'hidden',
-          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-          boxShadow: '0 6px 24px rgba(25,113,194,0.22)',
-        }}
-      >
-        <Box px="xl" py="lg">
+      <PageHero
+        leftSection={
           <Group gap="lg" align="center" wrap="nowrap">
             <Avatar
               size={64}
@@ -102,8 +83,8 @@ export function ProfilePage() {
               </Text>
             </Box>
           </Group>
-        </Box>
-      </Paper>
+        }
+      />
 
       <Grid gutter="md" align="flex-start">
         {/* Left — identity (read-only) */}
@@ -116,19 +97,7 @@ export function ProfilePage() {
               boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
             }}
           >
-            <Group gap="sm" mb="md">
-              <Box
-                style={{
-                  width: 6,
-                  height: 20,
-                  borderRadius: 3,
-                  background: 'linear-gradient(180deg, #228BE6, #0C8599)',
-                }}
-              />
-              <Text fw={700} size="sm">
-                {t('portal.profile_title')}
-              </Text>
-            </Group>
+            <SectionTitle mb="md">{t('portal.profile_title')}</SectionTitle>
 
             <Stack gap="sm">
               {[
@@ -165,19 +134,7 @@ export function ProfilePage() {
               }}
             >
               <Stack gap="lg">
-                <Group gap="sm">
-                  <Box
-                    style={{
-                      width: 6,
-                      height: 20,
-                      borderRadius: 3,
-                      background: 'linear-gradient(180deg, #228BE6, #0C8599)',
-                    }}
-                  />
-                  <Text fw={700} size="sm">
-                    {t('portal.contact_information')}
-                  </Text>
-                </Group>
+                <SectionTitle>{t('portal.contact_information')}</SectionTitle>
 
                 <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="lg">
                   {t('portal.contact_info_hint')}
@@ -251,19 +208,7 @@ export function ProfilePage() {
               }}
             >
               <Stack gap="sm">
-                <Group gap="sm">
-                  <Box
-                    style={{
-                      width: 6,
-                      height: 20,
-                      borderRadius: 3,
-                      background: 'var(--mantine-color-red-5)',
-                    }}
-                  />
-                  <Text fw={700} size="sm">
-                    {t('portal.session')}
-                  </Text>
-                </Group>
+                <SectionTitle>{t('portal.session')}</SectionTitle>
                 <Text size="xs" c="dimmed">
                   {t('portal.signed_in_as', { number: student.studentNumber })}
                 </Text>

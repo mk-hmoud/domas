@@ -4,7 +4,6 @@ import {
   Alert,
   Badge,
   Box,
-  Card,
   Group,
   Paper,
   SimpleGrid,
@@ -24,6 +23,7 @@ import {
 } from '@tabler/icons-react';
 import { StudentDamageLiability, StudentTransaction } from '@domas/ts-types';
 import { portalFinancial } from '@domas/api-client';
+import { PageHero } from '../components/PageHero';
 
 function useTransactionTypeLabel() {
   const { t } = useTranslation();
@@ -365,53 +365,13 @@ export function FinancialPage() {
 
   return (
     <Stack gap="lg">
-      {/* Page hero */}
-      <Paper
-        radius="xl"
-        px="xl"
-        py="lg"
-        style={{
-          background: 'linear-gradient(135deg, #0B7285 0%, #1098AD 50%, #0C8599 100%)',
-          boxShadow: '0 6px 24px rgba(16,152,173,0.25)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Box>
-            <Text
-              size="xs"
-              c="white"
-              fw={600}
-              style={{
-                opacity: 0.75,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                fontSize: 11,
-                marginBottom: 4,
-              }}
-            >
-              Student Housing Portal
-            </Text>
-            <Text fw={800} c="white" size="xl" lh={1.2}>
-              {t('portal.financial_title')}
-            </Text>
-            <Text size="sm" c="white" style={{ opacity: 0.78, marginTop: 4 }}>
-              {t('portal.financial_subtitle')}
-            </Text>
-          </Box>
-          <ThemeIcon
-            size={56}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            <IconCreditCard size={28} />
-          </ThemeIcon>
-        </Group>
-      </Paper>
+      <PageHero
+        color="teal"
+        label="Student Housing Portal"
+        title={t('portal.financial_title')}
+        subtitle={t('portal.financial_subtitle')}
+        icon={<IconCreditCard size={28} />}
+      />
 
       {isLoading ? (
         <Stack gap="md">

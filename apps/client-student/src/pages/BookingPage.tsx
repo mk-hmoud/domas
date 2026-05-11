@@ -37,6 +37,7 @@ import { useCurrentBooking } from '../hooks/useCurrentBooking';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
 import { RoomShowcase } from '../components/RoomShowcase';
 import { RoomChangeTab } from '../components/RoomChangeTab';
+import { PageHero, type PageHeroColor } from '../components/PageHero';
 
 function usePaymentLabel() {
   const { t } = useTranslation();
@@ -102,67 +103,57 @@ export function BookingPage() {
         ? t('portal.status_ready_checkin')
         : t('portal.status_under_review');
 
-  const headerColor = isActive ? 'green' : isRejected ? 'red' : 'blue';
-  const headerGradient = isActive
-    ? 'linear-gradient(135deg, #2F9E44 0%, #37B24D 50%, #2B8A3E 100%)'
-    : isRejected
-      ? 'linear-gradient(135deg, #C92A2A 0%, #E03131 50%, #C92A2A 100%)'
-      : 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)';
+  const headerColor: PageHeroColor = isActive ? 'green' : isRejected ? 'red' : 'blue';
+  const badgeTextColor = isRejected ? '#C92A2A' : isActive ? '#2F9E44' : '#1971C2';
 
   return (
     <Stack gap="lg">
-      {/* Page hero */}
-      <Paper
-        radius="xl"
-        style={{
-          overflow: 'hidden',
-          boxShadow: '0 6px 24px rgba(0,0,0,0.1)',
-        }}
-      >
-        <Box px="xl" py="lg" style={{ background: headerGradient }}>
-          <Group justify="space-between" align="flex-start" wrap="nowrap">
-            <Box>
-              <Text
-                size="xs"
-                c="white"
-                fw={600}
-                style={{
-                  opacity: 0.75,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  fontSize: 11,
-                  marginBottom: 4,
-                }}
-              >
-                {t('portal.my_booking')}
+      <PageHero
+        color={headerColor}
+        leftSection={
+          <>
+            <Text
+              size="xs"
+              c="white"
+              fw={600}
+              style={{
+                opacity: 0.75,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                fontSize: 11,
+                marginBottom: 4,
+              }}
+            >
+              {t('portal.my_booking')}
+            </Text>
+            <Text fw={800} c="white" size="xl" lh={1.2}>
+              {booking.roomName}
+            </Text>
+            <Group gap={4} mt={4}>
+              <IconMapPin size={13} color="rgba(255,255,255,0.7)" />
+              <Text size="xs" c="white" style={{ opacity: 0.8 }}>
+                {booking.locationPath} · {t('portal.bed_label', { label: booking.bedLabel })}
               </Text>
-              <Text fw={800} c="white" size="xl" lh={1.2}>
-                {booking.roomName}
-              </Text>
-              <Group gap={4} mt={4}>
-                <IconMapPin size={13} color="rgba(255,255,255,0.7)" />
-                <Text size="xs" c="white" style={{ opacity: 0.8 }}>
-                  {booking.locationPath} · {t('portal.bed_label', { label: booking.bedLabel })}
-                </Text>
-              </Group>
-            </Box>
-            <Stack gap={6} align="flex-end" style={{ flexShrink: 0 }}>
-              <Badge
-                color="white"
-                variant="filled"
-                size="lg"
-                radius="xl"
-                style={{ color: isRejected ? '#C92A2A' : isActive ? '#2F9E44' : '#1971C2' }}
-              >
-                {statusBadgeLabel}
-              </Badge>
-              <Text size="xs" c="white" style={{ opacity: 0.75 }}>
-                {booking.semesterDisplayName}
-              </Text>
-            </Stack>
-          </Group>
-        </Box>
-      </Paper>
+            </Group>
+          </>
+        }
+        rightSection={
+          <Stack gap={6} align="flex-end">
+            <Badge
+              color="white"
+              variant="filled"
+              size="lg"
+              radius="xl"
+              style={{ color: badgeTextColor }}
+            >
+              {statusBadgeLabel}
+            </Badge>
+            <Text size="xs" c="white" style={{ opacity: 0.75 }}>
+              {booking.semesterDisplayName}
+            </Text>
+          </Stack>
+        }
+      />
 
       <Grid gutter="lg" align="flex-start">
         {/* Left — status stepper */}

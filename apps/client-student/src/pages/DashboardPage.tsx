@@ -15,6 +15,8 @@ import {
   ThemeIcon,
   Title,
 } from '@domas/ui';
+import styles from './DashboardPage.module.css';
+import { PageHero } from '../components/PageHero';
 import {
   IconBell,
   IconBed,
@@ -143,26 +145,7 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
   return (
     <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
       {stats.map((s) => (
-        <Paper
-          key={s.label}
-          radius="xl"
-          style={{
-            cursor: 'pointer',
-            border: '1px solid var(--mantine-color-default-border)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            overflow: 'hidden',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          onClick={s.onClick}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'none';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-          }}
-        >
+        <Paper key={s.label} radius="xl" className={styles.statCard} onClick={s.onClick}>
           <Group gap={0} wrap="nowrap">
             <Box
               style={{
@@ -838,18 +821,9 @@ export function DashboardPage() {
 
   return (
     <Stack gap="lg">
-      {/* Greeting hero */}
-      <Paper
-        radius="xl"
-        px="xl"
-        py="lg"
-        style={{
-          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-          boxShadow: '0 6px 24px rgba(25,113,194,0.22)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Box>
+      <PageHero
+        leftSection={
+          <>
             <Text
               size="xs"
               c="white"
@@ -876,21 +850,10 @@ export function DashboardPage() {
                 {student.studentNumber} · {student.department}
               </Text>
             )}
-          </Box>
-          <ThemeIcon
-            size={56}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            <IconBed size={28} />
-          </ThemeIcon>
-        </Group>
-      </Paper>
+          </>
+        }
+        icon={<IconBed size={28} />}
+      />
 
       {isLoading ? (
         <>
