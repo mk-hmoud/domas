@@ -45,7 +45,7 @@ export function DormCertificatePage() {
 
   const [requesting, setRequesting] = useState(false);
   const [certFile, setCertFile] = useState<File | null>(null);
-  const [expiryDate, setExpiryDate] = useState<Date | null>(null);
+  const [expiryDate, setExpiryDate] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -71,11 +71,7 @@ export function DormCertificatePage() {
   const handleRequest = async () => {
     setRequesting(true);
     try {
-      let expiryDateStr: string | undefined;
-      if (expiryDate) {
-        expiryDateStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`;
-      }
-      await portalDormCertificates.request(certFile ?? undefined, expiryDateStr);
+      await portalDormCertificates.request(certFile ?? undefined, expiryDate ?? undefined);
       notifications.show({
         title: t('success'),
         message: t('portal.dorm_cert_requested', 'Dorm certificate request submitted.'),

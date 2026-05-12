@@ -43,10 +43,10 @@ export function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
-  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [birthDate, setBirthDate] = useState<string | null>(null);
   const [birthDateError, setBirthDateError] = useState('');
   const [documentType, setDocumentType] = useState<ApplicationDocumentType>('freshman');
-  const [certExpiryDate, setCertExpiryDate] = useState<Date | null>(null);
+  const [certExpiryDate, setCertExpiryDate] = useState<string | null>(null);
   const [certExpiryError, setCertExpiryError] = useState('');
 
   const form = useForm<
@@ -112,21 +112,15 @@ export function RegisterPage() {
       return;
     }
 
-    const d = birthDate;
-    const birthDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-    let documentExpiryDateStr: string | undefined;
-    if (documentType === 'returning' && certExpiryDate) {
-      const e = certExpiryDate;
-      documentExpiryDateStr = `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, '0')}-${String(e.getDate()).padStart(2, '0')}`;
-    }
+    const documentExpiryDateStr =
+      documentType === 'returning' && certExpiryDate ? certExpiryDate : undefined;
 
     setSubmitting(true);
     try {
       const application = await portalApplications.submit(
         {
           ...values,
-          birthDate: birthDateStr,
+          birthDate: birthDate!,
           documentType,
           documentExpiryDate: documentExpiryDateStr,
           email: values.email || undefined,

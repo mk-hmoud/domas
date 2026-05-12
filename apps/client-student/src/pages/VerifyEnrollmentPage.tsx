@@ -35,7 +35,7 @@ export function VerifyEnrollmentPage() {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [expiryDate, setExpiryDate] = useState<Date | null>(null);
+  const [expiryDate, setExpiryDate] = useState<string | null>(null);
 
   const fetchStatus = async () => {
     try {
@@ -67,10 +67,7 @@ export function VerifyEnrollmentPage() {
   const handleSubmitCert = async () => {
     if (!selectedFile) return;
 
-    let expiryDateStr: string | undefined;
-    if (expiryDate) {
-      expiryDateStr = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}-${String(expiryDate.getDate()).padStart(2, '0')}`;
-    }
+    const expiryDateStr = expiryDate ?? undefined;
 
     setUploading(true);
     try {
