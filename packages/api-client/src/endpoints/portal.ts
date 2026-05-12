@@ -367,4 +367,11 @@ export const portalApplications = {
     );
     return response.data;
   },
+
+  getMine: async (): Promise<StudentApplication> => {
+    const response = await apiClient.get<StudentApplication>(
+      "/portal/applications/mine",
+    );
+    return response.data;
+  },
 };

@@ -14,6 +14,7 @@ import { VerifyEnrollmentPage } from './pages/VerifyEnrollmentPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ApplicationStatusPage } from './pages/ApplicationStatusPage';
 import { DormCertificatePage } from './pages/DormCertificatePage';
+import { ApplicationStatusPortalPage } from './pages/ApplicationStatusPortalPage';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           <Route path="financial" element={<FinancialPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="dorm-certificate" element={<DormCertificatePage />} />
+          <Route path="application-status" element={<ApplicationStatusPortalPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
