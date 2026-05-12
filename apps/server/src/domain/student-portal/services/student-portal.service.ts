@@ -356,21 +356,58 @@ export class StudentPortalService {
     const documentType = dto.documentType ?? 'freshman';
     const storageKey = `applications/${randomUUID()}/document`;
     await this.storage.upload(storageKey, file.buffer, file.mimetype);
-    return this.applicationsRepository.insert({
-      ...dto,
-      birthDate: new Date(dto.birthDate),
-      documentType,
-      documentExpiryDate: dto.documentExpiryDate ? new Date(dto.documentExpiryDate) : undefined,
-      documentFilename: file.originalname,
-      documentMimeType: file.mimetype,
-      documentSize: file.size,
-      documentStorageKey: storageKey,
+
+    return this.db.transaction(async (client) => {
+      // Create or find the student record so they can log in while pending
+      let student = await this.studentsRepository.findByStudentNumber(dto.studentNumber, client);
+      if (!student) {
+        student = await this.studentsRepository.create(
+          {
+            studentNumber: dto.studentNumber,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            gender: dto.gender as any,
+            nationalityCode: dto.nationalityCode,
+            nationalId: dto.nationalId,
+            birthDate: dto.birthDate,
+            birthPlace: dto.birthPlace,
+            department: dto.department,
+            email: dto.email,
+            phoneNumber: dto.phoneNumber,
+            whatsappNumber: dto.whatsappNumber,
+          },
+          'system',
+          client,
+          'pending',
+        );
+      }
+
+      return this.applicationsRepository.insert(
+        {
+          ...dto,
+          birthDate: new Date(dto.birthDate),
+          documentType,
+          documentExpiryDate: dto.documentExpiryDate ? new Date(dto.documentExpiryDate) : undefined,
+          documentFilename: file.originalname,
+          documentMimeType: file.mimetype,
+          documentSize: file.size,
+          documentStorageKey: storageKey,
+          studentId: student.id,
+        },
+        client,
+      );
     });
   }
 
   async getApplicationStatus(id: string): Promise<StudentApplication> {
     const application = await this.applicationsRepository.findById(id);
     if (!application) throw new NotFoundException('Application not found');
+    return application;
+  }
+
+  async getMyApplication(studentId: string): Promise<StudentApplication> {
+    const application = await this.applicationsRepository.findByStudentId(studentId);
+    if (!application) throw new NotFoundException('No application found');
     return application;
   }
 }

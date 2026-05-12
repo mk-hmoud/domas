@@ -44,16 +44,18 @@ export class StudentApplicationsRepository {
   async insert(
     data: Omit<
       StudentApplication,
-      'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'reviewedBy' | 'studentId' | 'documentUrl'
+      'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'reviewedBy' | 'documentUrl'
     >,
+    client?: PoolClient,
   ): Promise<StudentApplication> {
-    const result = await this.db.query(
+    const db = client ?? this.db.getPool();
+    const result = await db.query(
       `INSERT INTO student_applications
          (student_number, first_name, last_name, gender, nationality_code, national_id,
           birth_date, birth_place, department, email, phone_number, whatsapp_number,
           document_filename, document_mime_type, document_size, document_storage_key,
-          document_type, document_expiry_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+          document_type, document_expiry_date, student_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING *`,
       [
         data.studentNumber,
@@ -74,6 +76,7 @@ export class StudentApplicationsRepository {
         data.documentStorageKey,
         data.documentType,
         data.documentExpiryDate ?? null,
+        data.studentId ?? null,
       ],
     );
     return this.map(result.rows[0]);
@@ -81,6 +84,14 @@ export class StudentApplicationsRepository {
 
   async findById(id: string): Promise<StudentApplication | null> {
     const result = await this.db.query(`SELECT * FROM student_applications WHERE id = $1`, [id]);
+    return result.rows[0] ? this.map(result.rows[0]) : null;
+  }
+
+  async findByStudentId(studentId: string): Promise<StudentApplication | null> {
+    const result = await this.db.query(
+      `SELECT * FROM student_applications WHERE student_id = $1 ORDER BY submitted_at DESC LIMIT 1`,
+      [studentId],
+    );
     return result.rows[0] ? this.map(result.rows[0]) : null;
   }
 

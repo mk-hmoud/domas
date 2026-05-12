@@ -302,33 +302,16 @@ export class StudentsService {
     }
 
     return this.db.transaction(async (client) => {
-      const existing = await this.studentsRepository.findByStudentNumber(
+      // Student record is always created at submission time; find it by student number.
+      // Fall back to creating one here only for applications that pre-date this behaviour
+      // (e.g. manually entered or legacy data).
+      let student = await this.studentsRepository.findByStudentNumber(
         application.studentNumber,
         client,
       );
 
-      let studentId: string;
-
-      if (existing) {
-        // Returning student — re-activate their account
-        await this.studentsRepository.setEnrollmentStatus(existing.id, 'enrolled', client);
-        // If the application included a certificate, store it as a new enrollment verification
-        if (application.documentType === 'returning') {
-          await this.studentsRepository.insertEnrollmentCert(
-            existing.id,
-            {
-              filename: application.documentFilename,
-              mimeType: application.documentMimeType,
-              size: application.documentSize,
-              storageKey: application.documentStorageKey,
-              expiryDate: application.documentExpiryDate,
-            },
-            client,
-          );
-        }
-        studentId = existing.id;
-      } else {
-        const student = await this.studentsRepository.create(
+      if (!student) {
+        student = await this.studentsRepository.create(
           {
             studentNumber: application.studentNumber,
             firstName: application.firstName,
@@ -346,24 +329,27 @@ export class StudentsService {
           reviewerId,
           client,
         );
-        // If a returning student who wasn't in the system yet submitted a certificate, store it
-        if (application.documentType === 'returning') {
-          await this.studentsRepository.insertEnrollmentCert(
-            student.id,
-            {
-              filename: application.documentFilename,
-              mimeType: application.documentMimeType,
-              size: application.documentSize,
-              storageKey: application.documentStorageKey,
-              expiryDate: application.documentExpiryDate,
-            },
-            client,
-          );
-        }
-        studentId = student.id;
       }
 
-      return this.applicationsRepository.approve(id, reviewerId, studentId, client);
+      // Activate the account
+      await this.studentsRepository.setEnrollmentStatus(student.id, 'enrolled', client);
+
+      // Store the submitted certificate for returning students
+      if (application.documentType === 'returning') {
+        await this.studentsRepository.insertEnrollmentCert(
+          student.id,
+          {
+            filename: application.documentFilename,
+            mimeType: application.documentMimeType,
+            size: application.documentSize,
+            storageKey: application.documentStorageKey,
+            expiryDate: application.documentExpiryDate,
+          },
+          client,
+        );
+      }
+
+      return this.applicationsRepository.approve(id, reviewerId, student.id, client);
     });
   }
 

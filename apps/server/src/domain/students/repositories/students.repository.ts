@@ -55,14 +55,15 @@ export class StudentsRepository {
     data: CreateStudentDto,
     createdByUserId: string,
     client?: PoolClient,
+    enrollmentStatus: 'pending' | 'enrolled' = 'enrolled',
   ): Promise<Student> {
     const query = `
       INSERT INTO students (
         student_number, first_name, last_name, gender, nationality_code, national_id,
         birth_date, birth_place, department,
-        email, phone_number, whatsapp_number, user_id, created_by_user_id
+        email, phone_number, whatsapp_number, user_id, created_by_user_id, enrollment_status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `;
     const values = [
@@ -80,6 +81,7 @@ export class StudentsRepository {
       data.whatsappNumber || null,
       data.userId || null,
       createdByUserId,
+      enrollmentStatus,
     ];
     const result = await this.getClient(client).query(query, values);
     return this.mapRowToEntity(result.rows[0]);

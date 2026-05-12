@@ -245,4 +245,10 @@ export class StudentPortalController {
   async getApplicationStatus(@Param('id') id: string) {
     return this.studentPortalService.getApplicationStatus(id);
   }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('applications/mine')
+  async getMyApplication(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getMyApplication(req.session.studentId!);
+  }
 }
