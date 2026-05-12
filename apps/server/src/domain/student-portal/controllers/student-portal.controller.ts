@@ -219,8 +219,14 @@ export class StudentPortalController {
   async uploadCertificate(
     @Request() req: ExpressRequest,
     @UploadedFile() file: Express.Multer.File,
+    @Body('expiryDate') expiryDate?: string,
   ) {
-    return this.studentPortalService.uploadEnrollmentCertificate(req.session.studentId!, file);
+    const expiry = expiryDate ? new Date(expiryDate) : undefined;
+    return this.studentPortalService.uploadEnrollmentCertificate(
+      req.session.studentId!,
+      file,
+      expiry,
+    );
   }
 
   // ─── Applications (public — no auth required) ─────────────────────────────────

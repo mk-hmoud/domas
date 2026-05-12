@@ -26,6 +26,7 @@ import { StatsModule } from './domain/stats/stats.module';
 import { RoomTypesModule } from './domain/room-types/room-types.module';
 import { RoomChangesModule } from './domain/room-changes/room-changes.module';
 import { PreReservationsModule } from './domain/pre-reservations/pre-reservations.module';
+import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certificates.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { PreReservationsModule } from './domain/pre-reservations/pre-reservation
     RoomTypesModule,
     RoomChangesModule,
     PreReservationsModule,
+    DormCertificatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

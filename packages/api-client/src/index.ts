@@ -21,3 +21,4 @@ export * from "./endpoints/stats";
 export * from "./endpoints/room-types";
 export * from "./endpoints/room-changes";
 export * from "./endpoints/pre-reservations";
+export * from "./endpoints/dorm-certificates";

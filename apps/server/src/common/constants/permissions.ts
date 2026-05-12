@@ -75,6 +75,10 @@ export const PERMISSIONS = {
   // Pre-Reservations
   PRE_RESERVATIONS_VIEW: 'pre_reservations.view',
   PRE_RESERVATIONS_MANAGE: 'pre_reservations.manage',
+
+  // Dorm Certificates
+  DORM_CERTIFICATES_VIEW: 'dorm_certificates.view',
+  DORM_CERTIFICATES_MANAGE: 'dorm_certificates.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

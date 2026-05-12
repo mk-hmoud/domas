@@ -103,7 +103,7 @@ export function SharedStudentsPage() {
 
   // Applications state
   const [applications, setApplications] = useState<
-    (StudentApplication & { letterUrl: string })[]
+    (StudentApplication & { documentUrl: string })[]
   >([]);
   const [appLoading, setAppLoading] = useState(false);
   const [appActionLoading, setAppActionLoading] = useState(false);
@@ -111,7 +111,7 @@ export function SharedStudentsPage() {
     ApplicationStatus | "all"
   >("pending");
   const [appSelected, setAppSelected] = useState<
-    (StudentApplication & { letterUrl: string }) | null
+    (StudentApplication & { documentUrl: string }) | null
   >(null);
   const [appRejectReason, setAppRejectReason] = useState("");
   const [appShowRejectInput, setAppShowRejectInput] = useState(false);
@@ -179,7 +179,7 @@ export function SharedStudentsPage() {
   }, [activeTab, appStatusFilter]);
 
   const handleAppApprove = (
-    app: StudentApplication & { letterUrl: string },
+    app: StudentApplication & { documentUrl: string },
   ) => {
     modals.openConfirmModal({
       title: t("approve_application", "Approve Application"),
@@ -228,7 +228,7 @@ export function SharedStudentsPage() {
   };
 
   const handleAppReject = async (
-    app: StudentApplication & { letterUrl: string },
+    app: StudentApplication & { documentUrl: string },
   ) => {
     if (!appRejectReason.trim()) return;
     setAppActionLoading(true);
@@ -839,9 +839,24 @@ export function SharedStudentsPage() {
                     <Text fw={700} size="md">
                       {s.firstName} {s.lastName}
                     </Text>
-                    <Badge color={s.isActive ? "green" : "gray"}>
-                      {s.isActive ? t("active") : t("inactive")}
-                    </Badge>
+                    <Group gap={4}>
+                      {s.enrollmentStatus === "pending" && (
+                        <Badge color="yellow" size="sm">
+                          {t("pending_approval", "Pending Approval")}
+                        </Badge>
+                      )}
+                      {s.enrollmentStatus === "enrolled" &&
+                        s.hasActiveBooking && (
+                          <Badge color="teal" size="sm">
+                            {t("active", "Active")}
+                          </Badge>
+                        )}
+                      <Badge color={s.isActive ? "green" : "gray"} size="sm">
+                        {s.isActive
+                          ? t("enabled", "Enabled")
+                          : t("disabled", "Disabled")}
+                      </Badge>
+                    </Group>
                   </Group>
 
                   <Group grow>
@@ -1166,9 +1181,11 @@ export function SharedStudentsPage() {
               leftSection={<IconFileDescription size={16} />}
               rightSection={<IconExternalLink size={14} />}
               variant="light"
-              onClick={() => window.open(appSelected.letterUrl, "_blank")}
+              onClick={() => window.open(appSelected.documentUrl, "_blank")}
             >
-              {t("view_acceptance_letter", "View Acceptance Letter")}
+              {appSelected.documentType === "returning"
+                ? t("view_student_certificate", "View Student Certificate")
+                : t("view_acceptance_letter", "View Acceptance Letter")}
             </Button>
 
             {appSelected.status === "pending" && canReview && (

@@ -125,10 +125,12 @@ CREATE TABLE students (
     
     -- 6. Meta
     is_active BOOLEAN DEFAULT TRUE,
+    enrollment_status VARCHAR(20) NOT NULL DEFAULT 'enrolled'
+        CHECK (enrollment_status IN ('pending', 'enrolled')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL,
-    
+
     -- Audit: Who created this profile? (Important for Manual Entry)
     created_by_user_id UUID REFERENCES users(id)
 );
@@ -848,6 +850,7 @@ CREATE TABLE student_enrollment_verifications (
     status           VARCHAR(20)  NOT NULL DEFAULT 'pending'
                                   CHECK (status IN ('pending', 'verified', 'rejected')),
     rejection_reason TEXT,
+    expiry_date      DATE,
     uploaded_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     reviewed_at      TIMESTAMPTZ,
     reviewed_by      UUID         REFERENCES users(id)
@@ -870,11 +873,14 @@ CREATE TABLE student_applications (
     email                VARCHAR(255),
     phone_number         VARCHAR(50),
     whatsapp_number      VARCHAR(50),
-    -- Acceptance letter
-    letter_filename      VARCHAR(255) NOT NULL,
-    letter_mime_type     VARCHAR(100) NOT NULL,
-    letter_size          INT          NOT NULL,
-    letter_storage_key   VARCHAR(500) NOT NULL UNIQUE,
+    -- Acceptance letter / student certificate
+    document_filename      VARCHAR(255) NOT NULL,
+    document_mime_type     VARCHAR(100) NOT NULL,
+    document_size          INT          NOT NULL,
+    document_storage_key   VARCHAR(500) NOT NULL UNIQUE,
+    document_type          VARCHAR(20)  NOT NULL DEFAULT 'freshman'
+                                        CHECK (document_type IN ('freshman', 'returning')),
+    document_expiry_date   DATE,
     -- Lifecycle
     status               VARCHAR(20)  NOT NULL DEFAULT 'pending'
                                       CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -890,3 +896,24 @@ CREATE INDEX idx_student_applications_status ON student_applications(status);
 CREATE UNIQUE INDEX idx_student_applications_student_number_pending
     ON student_applications(student_number)
     WHERE status = 'pending';
+
+-- =============================================
+-- DORM CERTIFICATE REQUESTS
+-- =============================================
+
+CREATE TABLE dorm_certificate_requests (
+    id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id                  UUID        NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    enrollment_verification_id  UUID        REFERENCES student_enrollment_verifications(id),
+    status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
+                                            CHECK (status IN ('pending', 'approved', 'rejected')),
+    rejection_reason            TEXT,
+    certificate_storage_key     VARCHAR(500),
+    certificate_filename        VARCHAR(255),
+    requested_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at                 TIMESTAMPTZ,
+    reviewed_by                 UUID        REFERENCES users(id)
+);
+
+CREATE INDEX idx_dorm_cert_requests_student ON dorm_certificate_requests(student_id);
+CREATE INDEX idx_dorm_cert_requests_status  ON dorm_certificate_requests(status);

@@ -276,9 +276,13 @@ export const portalEnrollment = {
     return response.data;
   },
 
-  uploadCertificate: async (file: File): Promise<EnrollmentVerification> => {
+  uploadCertificate: async (
+    file: File,
+    expiryDate?: string,
+  ): Promise<EnrollmentVerification> => {
     const form = new FormData();
     form.append("certificate", file);
+    if (expiryDate) form.append("expiryDate", expiryDate);
     const response = await apiClient.post<EnrollmentVerification>(
       "/portal/enrollment/certificate",
       form,
@@ -343,12 +347,10 @@ export const portalPreReservations = {
 export const portalApplications = {
   submit: async (
     dto: SubmitApplicationDto,
-    letterFile: File,
-    photoFile?: File | null,
+    documentFile: File,
   ): Promise<StudentApplication> => {
     const form = new FormData();
-    form.append("letter", letterFile);
-    if (photoFile) form.append("photo", photoFile);
+    form.append("letter", documentFile);
     Object.entries(dto).forEach(([key, value]) => {
       if (value !== undefined) form.append(key, String(value));
     });

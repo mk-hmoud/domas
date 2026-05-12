@@ -1,5 +1,7 @@
 import { GenderType } from "../enums/gender-type.enum";
 
+export type StudentEnrollmentStatus = "pending" | "enrolled";
+
 export interface Student {
   id: string;
   userId?: string;
@@ -21,6 +23,7 @@ export interface Student {
   hasActiveBooking?: boolean;
   hasCompletedBooking?: boolean;
   isActive: boolean;
+  enrollmentStatus: StudentEnrollmentStatus;
   createdAt: string;
   updatedAt: string;
   createdByUserId?: string;

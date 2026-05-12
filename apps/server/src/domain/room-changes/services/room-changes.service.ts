@@ -41,6 +41,9 @@ export class RoomChangesService {
   ): Promise<any> {
     const student = await this.studentsRepo.findById(studentId);
     if (!student) throw new NotFoundException('Student not found');
+    if (student.enrollmentStatus === 'pending') {
+      throw new ForbiddenException('Your enrollment is pending approval');
+    }
 
     return this.db.transaction(async (client) => {
       // 1. Find the student's active booking for this semester

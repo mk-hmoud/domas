@@ -274,12 +274,12 @@ export class StudentsService {
 
   async listApplications(filter?: {
     status?: ApplicationStatus;
-  }): Promise<(StudentApplication & { letterUrl: string })[]> {
+  }): Promise<(StudentApplication & { documentUrl: string })[]> {
     const applications = await this.applicationsRepository.findAll(filter);
     return Promise.all(
       applications.map(async (app) => {
-        const letterUrl = await this.storage.presign(app.letterStorageKey);
-        return { ...app, letterUrl };
+        const documentUrl = await this.storage.presign(app.documentStorageKey);
+        return { ...app, documentUrl };
       }),
     );
   }
@@ -302,32 +302,79 @@ export class StudentsService {
     }
 
     return this.db.transaction(async (client) => {
-      const student = await this.studentsRepository.create(
-        {
-          studentNumber: application.studentNumber,
-          firstName: application.firstName,
-          lastName: application.lastName,
-          gender: application.gender as any,
-          nationalityCode: application.nationalityCode,
-          nationalId: application.nationalId,
-          birthDate: application.birthDate.toISOString().split('T')[0],
-          birthPlace: application.birthPlace,
-          department: application.department,
-          email: application.email,
-          phoneNumber: application.phoneNumber,
-          whatsappNumber: application.whatsappNumber,
-        },
-        reviewerId,
+      const existing = await this.studentsRepository.findByStudentNumber(
+        application.studentNumber,
         client,
       );
-      return this.applicationsRepository.approve(id, reviewerId, student.id, client);
+
+      let studentId: string;
+
+      if (existing) {
+        // Returning student — re-activate their account
+        await this.studentsRepository.setEnrollmentStatus(existing.id, 'enrolled', client);
+        // If the application included a certificate, store it as a new enrollment verification
+        if (application.documentType === 'returning') {
+          await this.studentsRepository.insertEnrollmentCert(
+            existing.id,
+            {
+              filename: application.documentFilename,
+              mimeType: application.documentMimeType,
+              size: application.documentSize,
+              storageKey: application.documentStorageKey,
+              expiryDate: application.documentExpiryDate,
+            },
+            client,
+          );
+        }
+        studentId = existing.id;
+      } else {
+        const student = await this.studentsRepository.create(
+          {
+            studentNumber: application.studentNumber,
+            firstName: application.firstName,
+            lastName: application.lastName,
+            gender: application.gender as any,
+            nationalityCode: application.nationalityCode,
+            nationalId: application.nationalId,
+            birthDate: application.birthDate.toISOString().split('T')[0],
+            birthPlace: application.birthPlace,
+            department: application.department,
+            email: application.email,
+            phoneNumber: application.phoneNumber,
+            whatsappNumber: application.whatsappNumber,
+          },
+          reviewerId,
+          client,
+        );
+        // If a returning student who wasn't in the system yet submitted a certificate, store it
+        if (application.documentType === 'returning') {
+          await this.studentsRepository.insertEnrollmentCert(
+            student.id,
+            {
+              filename: application.documentFilename,
+              mimeType: application.documentMimeType,
+              size: application.documentSize,
+              storageKey: application.documentStorageKey,
+              expiryDate: application.documentExpiryDate,
+            },
+            client,
+          );
+        }
+        studentId = student.id;
+      }
+
+      return this.applicationsRepository.approve(id, reviewerId, studentId, client);
     });
   }
 
-  async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
+  async getApplicationDocumentUrl(id: string): Promise<{ url: string }> {
     const application = await this.applicationsRepository.findById(id);
     if (!application) throw new NotFoundException('Application not found');
-    const url = await this.storage.presign(application.letterStorageKey);
+    const url = await this.storage.presign(application.documentStorageKey);
     return { url };
+  }
+
+  async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
+    return this.getApplicationDocumentUrl(id);
   }
 }

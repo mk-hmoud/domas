@@ -135,6 +135,11 @@ export function DashboardLayout() {
             badge: navStats.students?.pendingApplications,
           },
           {
+            label: t('nav.dorm_certificates', 'Dorm Certificates'),
+            link: '/dashboard/dorm-certificates',
+            requiredPermission: 'students.view',
+          },
+          {
             label: t('nav.access_cards'),
             link: '/dashboard/access-cards',
             requiredPermission: 'access_cards.view',

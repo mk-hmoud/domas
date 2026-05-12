@@ -23,6 +23,7 @@ import { PreReservationsPage } from './pages/PreReservationsPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
+import { DormCertificatesPage } from './pages/DormCertificatesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -190,6 +191,14 @@ function App() {
             element={
               <PermissionRoute permission="guests.manage">
                 <GuestStaysPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="dorm-certificates"
+            element={
+              <PermissionRoute permission="students.view">
+                <DormCertificatesPage />
               </PermissionRoute>
             }
           />

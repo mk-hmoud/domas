@@ -54,6 +54,14 @@ export class StudentPortalService {
     return student;
   }
 
+  private requireEnrolled(student: Student): void {
+    if (student.enrollmentStatus === 'pending') {
+      throw new ForbiddenException(
+        'Your account is pending admin approval. You cannot perform this action yet.',
+      );
+    }
+  }
+
   // ─── Profile ──────────────────────────────────────────────────────────────────
 
   async getProfile(studentId: string): Promise<Student> {
@@ -185,6 +193,7 @@ export class StudentPortalService {
   async createBooking(studentId: string, dto: StudentCreateBookingDto): Promise<any> {
     const student = await this.studentsRepository.findById(studentId);
     if (!student) throw new NotFoundException('Student not found');
+    this.requireEnrolled(student);
 
     return this.db.transaction(async (client) => {
       // 1. Validate semester
@@ -300,6 +309,7 @@ export class StudentPortalService {
   async uploadEnrollmentCertificate(
     studentId: string,
     file: Express.Multer.File,
+    expiryDate?: Date,
   ): Promise<EnrollmentVerification> {
     if (!StudentPortalService.ALLOWED_CERT_TYPES.includes(file.mimetype)) {
       throw new UnsupportedMediaTypeException('Only PDF, JPEG, PNG, and WebP files are accepted');
@@ -311,6 +321,7 @@ export class StudentPortalService {
       mimeType: file.mimetype,
       size: file.size,
       storageKey,
+      expiryDate,
     });
   }
 
@@ -342,15 +353,18 @@ export class StudentPortalService {
     if (await this.applicationsRepository.hasPendingForStudentNumber(dto.studentNumber)) {
       throw new ConflictException('A pending application already exists for this student number');
     }
-    const storageKey = `applications/${randomUUID()}/letter`;
+    const documentType = dto.documentType ?? 'freshman';
+    const storageKey = `applications/${randomUUID()}/document`;
     await this.storage.upload(storageKey, file.buffer, file.mimetype);
     return this.applicationsRepository.insert({
       ...dto,
       birthDate: new Date(dto.birthDate),
-      letterFilename: file.originalname,
-      letterMimeType: file.mimetype,
-      letterSize: file.size,
-      letterStorageKey: storageKey,
+      documentType,
+      documentExpiryDate: dto.documentExpiryDate ? new Date(dto.documentExpiryDate) : undefined,
+      documentFilename: file.originalname,
+      documentMimeType: file.mimetype,
+      documentSize: file.size,
+      documentStorageKey: storageKey,
     });
   }
 

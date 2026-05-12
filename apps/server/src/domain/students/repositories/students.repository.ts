@@ -44,6 +44,7 @@ export class StudentsRepository {
       profileData: row.profile_data,
       photoStorageKey: row.photo_storage_key ?? undefined,
       isActive: row.is_active,
+      enrollmentStatus: row.enrollment_status ?? 'enrolled',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       createdByUserId: row.created_by_user_id,
@@ -108,6 +109,8 @@ export class StudentsRepository {
     if (data.whatsappNumber !== undefined) addUpdate('whatsapp_number', data.whatsappNumber);
     if (data.userId !== undefined) addUpdate('user_id', data.userId);
     if (data.isActive !== undefined) addUpdate('is_active', data.isActive);
+    if ((data as any).enrollmentStatus !== undefined)
+      addUpdate('enrollment_status', (data as any).enrollmentStatus);
 
     if (updates.length === 0) return this.findById(id, client);
 
@@ -141,12 +144,18 @@ export class StudentsRepository {
     if (search) {
       const idx = values.length + 1;
       conditions.push(`(
-            student_number ILIKE $${idx} OR 
-            first_name ILIKE $${idx} OR 
-            last_name ILIKE $${idx} OR 
+            student_number ILIKE $${idx} OR
+            first_name ILIKE $${idx} OR
+            last_name ILIKE $${idx} OR
             email ILIKE $${idx}
         )`);
       values.push(`%${search}%`);
+    }
+
+    if ((dto as any).enrollmentStatus) {
+      const idx = values.length + 1;
+      conditions.push(`enrollment_status = $${idx}`);
+      values.push((dto as any).enrollmentStatus);
     }
 
     if (conditions.length > 0) {
@@ -296,6 +305,7 @@ export class StudentsRepository {
       size: row.size,
       storageKey: row.storage_key,
       status: row.status,
+      expiryDate: row.expiry_date ?? undefined,
       rejectionReason: row.rejection_reason ?? undefined,
       uploadedAt: row.uploaded_at,
       reviewedAt: row.reviewed_at ?? undefined,
@@ -305,14 +315,28 @@ export class StudentsRepository {
 
   async insertEnrollmentCert(
     studentId: string,
-    data: { filename: string; mimeType: string; size: number; storageKey: string },
+    data: {
+      filename: string;
+      mimeType: string;
+      size: number;
+      storageKey: string;
+      expiryDate?: Date;
+    },
+    client?: PoolClient,
   ): Promise<EnrollmentVerification> {
-    const result = await this.db.query(
+    const result = await this.getClient(client).query(
       `INSERT INTO student_enrollment_verifications
-         (student_id, filename, mime_type, size, storage_key)
-       VALUES ($1, $2, $3, $4, $5)
+         (student_id, filename, mime_type, size, storage_key, expiry_date)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [studentId, data.filename, data.mimeType, data.size, data.storageKey],
+      [
+        studentId,
+        data.filename,
+        data.mimeType,
+        data.size,
+        data.storageKey,
+        data.expiryDate ?? null,
+      ],
     );
     return this.mapEnrollmentRow(result.rows[0]);
   }
@@ -364,5 +388,28 @@ export class StudentsRepository {
       [studentId],
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async findValidEnrollmentCert(studentId: string): Promise<EnrollmentVerification | null> {
+    const result = await this.db.query(
+      `SELECT * FROM student_enrollment_verifications
+       WHERE student_id = $1
+         AND status = 'verified'
+         AND (expiry_date IS NULL OR expiry_date > CURRENT_DATE)
+       ORDER BY uploaded_at DESC LIMIT 1`,
+      [studentId],
+    );
+    return result.rows[0] ? this.mapEnrollmentRow(result.rows[0]) : null;
+  }
+
+  async setEnrollmentStatus(
+    id: string,
+    status: 'pending' | 'enrolled',
+    client?: PoolClient,
+  ): Promise<void> {
+    await this.getClient(client).query(
+      `UPDATE students SET enrollment_status = $1, updated_at = NOW() WHERE id = $2`,
+      [status, id],
+    );
   }
 }

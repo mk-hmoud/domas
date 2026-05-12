@@ -1,10 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../../core/database/database.service';
+import { StudentsRepository } from '../../students/repositories/students.repository';
 import { PreReservationsRepository } from '../repositories/pre-reservations.repository';
 import { CreatePreReservationDto } from '../dto/create-pre-reservation.dto';
 import { AssignPreReservationDto } from '../dto/assign-pre-reservation.dto';
@@ -15,6 +17,7 @@ export class PreReservationsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly preReservationsRepo: PreReservationsRepository,
+    private readonly studentsRepo: StudentsRepository,
   ) {}
 
   // ─── Student Portal ───────────────────────────────────────────────────────────
@@ -26,6 +29,12 @@ export class PreReservationsService {
   async create(studentId: string, dto: CreatePreReservationDto): Promise<any> {
     if (dto.endDate <= dto.startDate) {
       throw new BadRequestException('end_date must be after start_date');
+    }
+
+    const student = await this.studentsRepo.findById(studentId);
+    if (!student) throw new NotFoundException('Student not found');
+    if (student.enrollmentStatus === 'pending') {
+      throw new ForbiddenException('Your enrollment is pending approval');
     }
 
     return this.db.transaction(async (client) => {

@@ -1,6 +1,7 @@
 import { GenderType } from "../enums/gender-type.enum";
 
 export type ApplicationStatus = "pending" | "approved" | "rejected";
+export type ApplicationDocumentType = "freshman" | "returning";
 
 export interface StudentApplication {
   id: string;
@@ -16,10 +17,12 @@ export interface StudentApplication {
   email?: string;
   phoneNumber?: string;
   whatsappNumber?: string;
-  letterFilename: string;
-  letterMimeType: string;
-  letterSize: number;
-  letterUrl?: string;
+  documentFilename: string;
+  documentMimeType: string;
+  documentSize: number;
+  documentType: ApplicationDocumentType;
+  documentExpiryDate?: string;
+  documentUrl?: string;
   status: ApplicationStatus;
   rejectionReason?: string;
   submittedAt: string;
@@ -41,4 +44,6 @@ export interface SubmitApplicationDto {
   email?: string;
   phoneNumber?: string;
   whatsappNumber?: string;
+  documentType?: ApplicationDocumentType;
+  documentExpiryDate?: string;
 }

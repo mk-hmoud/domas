@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Badge,
   Box,
   Button,
@@ -21,6 +22,7 @@ import {
   IconCalendarCheck,
   IconCalendarPlus,
   IconCheck,
+  IconClockHour4,
   IconCreditCard,
   IconDoor,
   IconFileDownload,
@@ -891,6 +893,21 @@ export function DashboardPage() {
           </ThemeIcon>
         </Group>
       </Paper>
+
+      {student?.enrollmentStatus === 'pending' && (
+        <Alert
+          icon={<IconClockHour4 size={18} />}
+          color="yellow"
+          variant="light"
+          radius="xl"
+          title={t('portal.enrollment_pending_title', 'Enrollment Pending Approval')}
+        >
+          {t(
+            'portal.enrollment_pending_body',
+            'Your registration is being reviewed by dormitory staff. Booking and other actions will be available once approved.',
+          )}
+        </Alert>
+      )}
 
       {isLoading ? (
         <>
