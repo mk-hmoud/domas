@@ -274,12 +274,12 @@ export class StudentsService {
 
   async listApplications(filter?: {
     status?: ApplicationStatus;
-  }): Promise<(StudentApplication & { letterUrl: string })[]> {
+  }): Promise<(StudentApplication & { documentUrl: string })[]> {
     const applications = await this.applicationsRepository.findAll(filter);
     return Promise.all(
       applications.map(async (app) => {
-        const letterUrl = await this.storage.presign(app.letterStorageKey);
-        return { ...app, letterUrl };
+        const documentUrl = await this.storage.presign(app.documentStorageKey);
+        return { ...app, documentUrl };
       }),
     );
   }
@@ -302,32 +302,65 @@ export class StudentsService {
     }
 
     return this.db.transaction(async (client) => {
-      const student = await this.studentsRepository.create(
-        {
-          studentNumber: application.studentNumber,
-          firstName: application.firstName,
-          lastName: application.lastName,
-          gender: application.gender as any,
-          nationalityCode: application.nationalityCode,
-          nationalId: application.nationalId,
-          birthDate: application.birthDate.toISOString().split('T')[0],
-          birthPlace: application.birthPlace,
-          department: application.department,
-          email: application.email,
-          phoneNumber: application.phoneNumber,
-          whatsappNumber: application.whatsappNumber,
-        },
-        reviewerId,
+      // Student record is always created at submission time; find it by student number.
+      // Fall back to creating one here only for applications that pre-date this behaviour
+      // (e.g. manually entered or legacy data).
+      let student = await this.studentsRepository.findByStudentNumber(
+        application.studentNumber,
         client,
       );
+
+      if (!student) {
+        student = await this.studentsRepository.create(
+          {
+            studentNumber: application.studentNumber,
+            firstName: application.firstName,
+            lastName: application.lastName,
+            gender: application.gender as any,
+            nationalityCode: application.nationalityCode,
+            nationalId: application.nationalId,
+            birthDate: application.birthDate.toISOString().split('T')[0],
+            birthPlace: application.birthPlace,
+            department: application.department,
+            email: application.email,
+            phoneNumber: application.phoneNumber,
+            whatsappNumber: application.whatsappNumber,
+          },
+          reviewerId,
+          client,
+        );
+      }
+
+      // Activate the account
+      await this.studentsRepository.setEnrollmentStatus(student.id, 'enrolled', client);
+
+      // Store the submitted certificate for returning students
+      if (application.documentType === 'returning') {
+        await this.studentsRepository.insertEnrollmentCert(
+          student.id,
+          {
+            filename: application.documentFilename,
+            mimeType: application.documentMimeType,
+            size: application.documentSize,
+            storageKey: application.documentStorageKey,
+            expiryDate: application.documentExpiryDate,
+          },
+          client,
+        );
+      }
+
       return this.applicationsRepository.approve(id, reviewerId, student.id, client);
     });
   }
 
-  async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
+  async getApplicationDocumentUrl(id: string): Promise<{ url: string }> {
     const application = await this.applicationsRepository.findById(id);
     if (!application) throw new NotFoundException('Application not found');
-    const url = await this.storage.presign(application.letterStorageKey);
+    const url = await this.storage.presign(application.documentStorageKey);
     return { url };
+  }
+
+  async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
+    return this.getApplicationDocumentUrl(id);
   }
 }

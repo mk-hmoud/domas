@@ -36,6 +36,9 @@ export interface Semester {
   autoActivate: boolean;
   autoClose: boolean;
   maxRoomChanges: number | null;
+  paidRoomChangeAfter: number | null;
+  roomChangeAmountTry: number;
+  roomChangeAmountForeign: number;
   createdAt: string;
   updatedAt: string;
 }

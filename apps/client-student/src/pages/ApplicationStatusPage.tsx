@@ -118,12 +118,17 @@ export function ApplicationStatusPage() {
               </Stack>
 
               {application.status === 'pending' && (
-                <Alert color="yellow" variant="light" radius="lg" style={{ width: '100%' }}>
-                  {t(
-                    'portal.status_pending_body',
-                    'Your application is being reviewed by our staff. This usually takes 1–3 business days. Check back here using the link in your browser.',
-                  )}
-                </Alert>
+                <Stack gap="sm" w="100%">
+                  <Alert color="yellow" variant="light" radius="lg">
+                    {t(
+                      'portal.status_pending_body',
+                      'Your application is being reviewed by our staff. This usually takes 1–3 business days.',
+                    )}
+                  </Alert>
+                  <Button component={Link} to="/login" variant="light" radius="xl" size="sm">
+                    {t('portal.login_to_check_status', 'Log in to check your status')}
+                  </Button>
+                </Stack>
               )}
 
               {application.status === 'approved' && (
@@ -178,10 +183,6 @@ export function ApplicationStatusPage() {
                   </Button>
                 </Stack>
               )}
-
-              <Text size="xs" c="dimmed" ta="center">
-                {t('portal.save_this_url', 'Save this page URL to check your status later.')}
-              </Text>
             </Stack>
           </Paper>
 

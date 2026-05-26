@@ -31,6 +31,9 @@ export class SemestersRepository {
       payment_deadline_date as "paymentDeadlineDate",
       status,
       max_room_changes as "maxRoomChanges",
+      paid_room_change_after as "paidRoomChangeAfter",
+      room_change_amount_try::numeric as "roomChangeAmountTry",
+      room_change_amount_foreign::numeric as "roomChangeAmountForeign",
       created_at as "createdAt",
       updated_at as "updatedAt",
       created_by as "createdBy"
@@ -49,9 +52,9 @@ export class SemestersRepository {
       INSERT INTO semesters (
         type, academic_year, display_name, start_date, end_date, booking_start_date, booking_end_date,
         deposit_amount_try, deposit_amount_foreign, foreign_currency_code, payment_deadline_date,
-        status
+        status, max_room_changes, paid_room_change_after, room_change_amount_try, room_change_amount_foreign
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -67,6 +70,10 @@ export class SemestersRepository {
       data.foreignCurrencyCode || 'EUR',
       data.paymentDeadlineDate || null,
       data.status,
+      data.maxRoomChanges ?? null,
+      data.paidRoomChangeAfter ?? null,
+      data.roomChangeAmountTry ?? 0,
+      data.roomChangeAmountForeign ?? 0,
     ];
     const result = await this.getClient(client).query<Semester>(query, values);
     return new Semester(result.rows[0]);
@@ -149,6 +156,12 @@ export class SemestersRepository {
     if (data.status) addUpdate('status', data.status);
     if (data.maxRoomChanges !== undefined)
       addUpdate('max_room_changes', data.maxRoomChanges ?? null);
+    if (data.paidRoomChangeAfter !== undefined)
+      addUpdate('paid_room_change_after', data.paidRoomChangeAfter ?? null);
+    if (data.roomChangeAmountTry !== undefined)
+      addUpdate('room_change_amount_try', data.roomChangeAmountTry);
+    if (data.roomChangeAmountForeign !== undefined)
+      addUpdate('room_change_amount_foreign', data.roomChangeAmountForeign);
 
     if (updates.length === 0) {
       return this.findById(id, client);

@@ -1,9 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ActionIcon,
   Alert,
-  Avatar,
   Box,
   Button,
   Center,
@@ -16,12 +14,10 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
 } from '@domas/ui';
 import {
   IconAlertCircle,
   IconArrowLeft,
-  IconCamera,
   IconFileDescription,
   IconUpload,
   IconX,
@@ -31,24 +27,31 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { portalApplications } from '@domas/api-client';
-import { DEPARTMENTS, GenderType, SubmitApplicationDto } from '@domas/ts-types';
+import {
+  ApplicationDocumentType,
+  DEPARTMENTS,
+  GenderType,
+  SubmitApplicationDto,
+} from '@domas/ts-types';
 import { COUNTRIES } from '@domas/ts-types';
 
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [submitting, setSubmitting] = useState(false);
-  const [letterFile, setLetterFile] = useState<File | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [birthDate, setBirthDate] = useState<string | null>(null);
   const [birthDateError, setBirthDateError] = useState('');
+  const [documentType, setDocumentType] = useState<ApplicationDocumentType>('freshman');
+  const [certExpiryDate, setCertExpiryDate] = useState<string | null>(null);
+  const [certExpiryError, setCertExpiryError] = useState('');
 
-  const form = useForm<Omit<SubmitApplicationDto, 'birthDate'>>({
+  const form = useForm<
+    Omit<SubmitApplicationDto, 'birthDate' | 'documentType' | 'documentExpiryDate'>
+  >({
     initialValues: {
       studentNumber: '',
       firstName: '',
@@ -80,35 +83,51 @@ export function RegisterPage() {
     const file = e.target.files?.[0] ?? null;
     e.target.value = '';
     if (file) {
-      setLetterFile(file);
+      setDocumentFile(file);
       setFileError('');
     }
   };
 
-  const handleSubmit = async (values: Omit<SubmitApplicationDto, 'birthDate'>) => {
+  const handleSubmit = async (
+    values: Omit<SubmitApplicationDto, 'birthDate' | 'documentType' | 'documentExpiryDate'>,
+  ) => {
     if (!birthDate) {
       setBirthDateError(t('required_field', 'Required'));
       return;
     }
     setBirthDateError('');
-    if (!letterFile) {
-      setFileError(t('letter_required', 'Acceptance letter is required'));
+
+    if (documentType === 'returning' && !certExpiryDate) {
+      setCertExpiryError(t('required_field', 'Required'));
       return;
     }
-    const d = birthDate;
-    const birthDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setCertExpiryError('');
+
+    if (!documentFile) {
+      setFileError(
+        documentType === 'returning'
+          ? t('certificate_required', 'Student certificate is required')
+          : t('letter_required', 'Acceptance letter is required'),
+      );
+      return;
+    }
+
+    const documentExpiryDateStr =
+      documentType === 'returning' && certExpiryDate ? certExpiryDate : undefined;
+
     setSubmitting(true);
     try {
       const application = await portalApplications.submit(
         {
           ...values,
-          birthDate: birthDateStr,
+          birthDate: birthDate!,
+          documentType,
+          documentExpiryDate: documentExpiryDateStr,
           email: values.email || undefined,
           phoneNumber: values.phoneNumber || undefined,
           whatsappNumber: values.whatsappNumber || undefined,
         },
-        letterFile,
-        photo,
+        documentFile,
       );
       navigate(`/register/status?id=${application.id}`, { replace: true });
     } catch (err: any) {
@@ -123,28 +142,22 @@ export function RegisterPage() {
     }
   };
 
-  const countryData = COUNTRIES.map(([code, name]) => ({
-    value: code,
-    label: name,
-  }));
-
+  const countryData = COUNTRIES.map(([code, name]) => ({ value: code, label: name }));
   const departmentData = DEPARTMENTS.map((d) => ({ value: d, label: d }));
+
+  const isReturning = documentType === 'returning';
 
   return (
     <Box style={{ minHeight: '100dvh', background: 'var(--mantine-color-body)' }}>
       <Center p="md" pt="xl">
         <Stack w="100%" maw={560} gap="lg">
-          {/* Header */}
           <Stack gap={4} align="center">
             <Image src={logo} h={80} w="auto" fit="contain" mb={4} />
             <Title order={2} fw={800}>
               {t('portal.register_title', 'Student Registration')}
             </Title>
             <Text size="sm" c="dimmed" ta="center">
-              {t(
-                'portal.register_subtitle',
-                'Fill in your details and upload your university acceptance letter to apply for accommodation.',
-              )}
+              {t('portal.register_subtitle', 'Fill in your details to apply for accommodation.')}
             </Text>
           </Stack>
 
@@ -158,57 +171,38 @@ export function RegisterPage() {
           >
             <form onSubmit={form.onSubmit(handleSubmit)}>
               <Stack gap="md">
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setPhoto(file);
-                    setPhotoPreview(URL.createObjectURL(file));
-                    e.target.value = '';
+                {/* Document type selector */}
+                <Select
+                  label={t('portal.registration_type', 'Registration Type')}
+                  required
+                  radius="lg"
+                  value={documentType}
+                  onChange={(v) => {
+                    setDocumentType((v as ApplicationDocumentType) ?? 'freshman');
+                    setDocumentFile(null);
+                    setFileError('');
+                    setCertExpiryDate(null);
+                    setCertExpiryError('');
                   }}
+                  data={[
+                    {
+                      value: 'freshman',
+                      label: t(
+                        'portal.doc_type_freshman',
+                        'New Student — I have an acceptance letter',
+                      ),
+                    },
+                    {
+                      value: 'returning',
+                      label: t(
+                        'portal.doc_type_returning',
+                        'Registered Student — I have a student certificate',
+                      ),
+                    },
+                  ]}
                 />
 
-                <Center>
-                  <Stack align="center" gap="xs">
-                    <Avatar src={photoPreview} size={80} radius="xl" color="initials" />
-                    <Group gap="xs">
-                      <Tooltip
-                        label={
-                          photoPreview
-                            ? t('replace_photo', 'Replace photo')
-                            : t('upload_photo', 'Upload photo')
-                        }
-                      >
-                        <ActionIcon variant="light" onClick={() => photoInputRef.current?.click()}>
-                          <IconCamera size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                      {photo && (
-                        <Tooltip label={t('remove_photo', 'Remove photo')}>
-                          <ActionIcon
-                            variant="light"
-                            color="red"
-                            onClick={() => {
-                              setPhoto(null);
-                              setPhotoPreview(null);
-                            }}
-                          >
-                            <IconX size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      )}
-                    </Group>
-                    <Text size="xs" c="dimmed">
-                      {t('portal.photo_optional', 'Photo (optional)')}
-                    </Text>
-                  </Stack>
-                </Center>
-
-                <Text fw={700} size="sm">
+                <Text fw={700} size="sm" mt="xs">
                   {t('portal.identity', 'Identity')}
                 </Text>
 
@@ -310,8 +304,23 @@ export function RegisterPage() {
                 </Group>
 
                 <Text fw={700} size="sm" mt="xs">
-                  {t('portal.acceptance_letter', 'Acceptance Letter')}
+                  {isReturning
+                    ? t('portal.student_certificate', 'Student Certificate')
+                    : t('portal.acceptance_letter', 'Acceptance Letter')}
                 </Text>
+
+                {isReturning && (
+                  <DatePickerInput
+                    label={t('portal.certificate_expiry', 'Certificate Expiry Date')}
+                    required
+                    radius="lg"
+                    valueFormat="DD/MM/YYYY"
+                    value={certExpiryDate}
+                    onChange={setCertExpiryDate}
+                    error={certExpiryError}
+                    minDate={new Date()}
+                  />
+                )}
 
                 <input
                   ref={fileInputRef}
@@ -321,23 +330,23 @@ export function RegisterPage() {
                   onChange={handleFileChange}
                 />
 
-                {letterFile ? (
+                {documentFile ? (
                   <Paper withBorder p="sm" radius="md">
                     <Group justify="space-between" wrap="nowrap">
                       <Group gap="xs">
                         <IconFileDescription size={16} />
                         <Text size="sm" fw={500} truncate>
-                          {letterFile.name}
+                          {documentFile.name}
                         </Text>
                         <Text size="xs" c="dimmed">
-                          ({(letterFile.size / 1024).toFixed(0)} KB)
+                          ({(documentFile.size / 1024).toFixed(0)} KB)
                         </Text>
                       </Group>
                       <Button
                         size="compact-xs"
                         variant="subtle"
                         color="red"
-                        onClick={() => setLetterFile(null)}
+                        onClick={() => setDocumentFile(null)}
                       >
                         <IconX size={14} />
                       </Button>
@@ -351,7 +360,9 @@ export function RegisterPage() {
                     onClick={() => fileInputRef.current?.click()}
                     color={fileError ? 'red' : undefined}
                   >
-                    {t('portal.upload_letter', 'Upload Acceptance Letter')}
+                    {isReturning
+                      ? t('portal.upload_certificate', 'Upload Student Certificate')
+                      : t('portal.upload_letter', 'Upload Acceptance Letter')}
                   </Button>
                 )}
 

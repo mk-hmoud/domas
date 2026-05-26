@@ -12,11 +12,21 @@ import {
   Divider,
   Paper,
   LoadingOverlay,
+  Table,
+  ActionIcon,
+  Tooltip,
 } from '@mantine/core';
-import { IconClock, IconCircleCheck, IconSearch, IconX, IconCheck } from '@tabler/icons-react';
+import {
+  IconClock,
+  IconCircleCheck,
+  IconSearch,
+  IconX,
+  IconCheck,
+  IconArrowsExchange,
+} from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import { bookings, students, semesters } from '@domas/api-client';
-import { BookingOpsStatus, PaymentStatus } from '@domas/ts-types';
+import { bookings, students, semesters, roomChanges } from '@domas/api-client';
+import { BookingOpsStatus, PaymentStatus, RoomChangeRequestView } from '@domas/ts-types';
 import { notifications } from '@mantine/notifications';
 import {
   PaymentsTable,
@@ -37,6 +47,9 @@ export function AccountingPage() {
   const [selectedPayment, setSelectedPayment] = useState<StudentPayment | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const [roomChangeRequests, setRoomChangeRequests] = useState<RoomChangeRequestView[]>([]);
+  const [roomChangeLoading, setRoomChangeLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
@@ -85,8 +98,21 @@ export function AccountingPage() {
     }
   };
 
+  const fetchRoomChangeRequests = async () => {
+    setRoomChangeLoading(true);
+    try {
+      const all = await roomChanges.getAll();
+      setRoomChangeRequests(all.filter((r) => r.requiresPayment));
+    } catch {
+      notifications.show({ title: t('error'), message: t('failed_to_fetch_data'), color: 'red' });
+    } finally {
+      setRoomChangeLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchRoomChangeRequests();
   }, []);
 
   const { pendingPayments, processedPayments } = useMemo(() => {
@@ -286,6 +312,63 @@ export function AccountingPage() {
     }).format(amount);
   };
 
+  const pendingRoomChangePayments = useMemo(
+    () => roomChangeRequests.filter((r) => r.status === 'pending_payment'),
+    [roomChangeRequests],
+  );
+  const processedRoomChangePayments = useMemo(
+    () =>
+      roomChangeRequests.filter((r) => r.status !== 'pending_payment' && r.status !== 'pending'),
+    [roomChangeRequests],
+  );
+
+  const handleApproveRoomChangePayment = async (request: RoomChangeRequestView) => {
+    try {
+      await roomChanges.approvePayment(request.id, { approved: true });
+      notifications.show({ title: t('success'), message: t('payment_accepted'), color: 'green' });
+      fetchRoomChangeRequests();
+    } catch {
+      notifications.show({
+        title: t('error'),
+        message: t('failed_to_accept_payment'),
+        color: 'red',
+      });
+    }
+  };
+
+  const handleRejectRoomChangePayment = (request: RoomChangeRequestView) => {
+    modals.openConfirmModal({
+      title: t('reject_payment', { defaultValue: 'Reject Payment' }),
+      children: (
+        <Text size="sm">
+          {t('reject_room_change_payment_confirm', {
+            defaultValue: `Reject the payment for ${request.studentName}'s room change? This will also reject their request.`,
+            name: request.studentName,
+          })}
+        </Text>
+      ),
+      labels: { confirm: t('reject'), cancel: t('cancel') },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        try {
+          await roomChanges.approvePayment(request.id, { approved: false });
+          notifications.show({
+            title: t('success'),
+            message: t('payment_rejected'),
+            color: 'blue',
+          });
+          fetchRoomChangeRequests();
+        } catch {
+          notifications.show({
+            title: t('error'),
+            message: t('failed_to_reject_payment'),
+            color: 'red',
+          });
+        }
+      },
+    });
+  };
+
   return (
     <>
       <PageHeader
@@ -330,6 +413,19 @@ export function AccountingPage() {
             >
               {t('history')}
             </Tabs.Tab>
+            <Tabs.Tab
+              value="room-changes"
+              leftSection={<IconArrowsExchange size={14} />}
+              rightSection={
+                pendingRoomChangePayments.length > 0 ? (
+                  <Badge size="xs" color="orange" variant="filled">
+                    {pendingRoomChangePayments.length}
+                  </Badge>
+                ) : undefined
+              }
+            >
+              {t('room_change_payments', { defaultValue: 'Room Change Fees' })}
+            </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="pending">
@@ -360,6 +456,114 @@ export function AccountingPage() {
                 <EmptyState title={t('no_history_found', { defaultValue: 'No history found' })} />
               )}
             </Paper>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="room-changes">
+            <Stack gap="md">
+              <Paper withBorder radius="md" style={{ position: 'relative' }}>
+                <LoadingOverlay visible={roomChangeLoading} overlayProps={{ blur: 2 }} />
+                {pendingRoomChangePayments.length === 0 && !roomChangeLoading ? (
+                  <EmptyState
+                    title={t('no_pending_room_change_payments', {
+                      defaultValue: 'No pending room change fee approvals',
+                    })}
+                  />
+                ) : (
+                  <Table striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>{t('student')}</Table.Th>
+                        <Table.Th>{t('student_number')}</Table.Th>
+                        <Table.Th>{t('requested_bed', { defaultValue: 'Requested Bed' })}</Table.Th>
+                        <Table.Th>{t('amount')}</Table.Th>
+                        <Table.Th>{t('date')}</Table.Th>
+                        <Table.Th></Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {pendingRoomChangePayments.map((r) => (
+                        <Table.Tr key={r.id}>
+                          <Table.Td>{r.studentName}</Table.Td>
+                          <Table.Td>{r.studentNumber}</Table.Td>
+                          <Table.Td>
+                            {r.requestedBedLabel}
+                            <Text size="xs" c="dimmed">
+                              {r.requestedLocationPath}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text fw={600} c="blue">
+                              {formatCurrency(r.paymentAmount ?? 0, r.paymentCurrency ?? 'TRY')}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>{new Date(r.createdAt).toLocaleDateString()}</Table.Td>
+                          <Table.Td>
+                            <Group gap="xs" justify="flex-end">
+                              <Tooltip label={t('reject')}>
+                                <ActionIcon
+                                  color="red"
+                                  variant="light"
+                                  onClick={() => handleRejectRoomChangePayment(r)}
+                                >
+                                  <IconX size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                              <Tooltip label={t('accept')}>
+                                <ActionIcon
+                                  color="green"
+                                  variant="light"
+                                  onClick={() => handleApproveRoomChangePayment(r)}
+                                >
+                                  <IconCheck size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            </Group>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Paper>
+
+              {processedRoomChangePayments.length > 0 && (
+                <Paper withBorder radius="md">
+                  <Text size="sm" fw={600} p="sm" c="dimmed">
+                    {t('processed', { defaultValue: 'Processed' })}
+                  </Text>
+                  <Table striped>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>{t('student')}</Table.Th>
+                        <Table.Th>{t('requested_bed', { defaultValue: 'Requested Bed' })}</Table.Th>
+                        <Table.Th>{t('amount')}</Table.Th>
+                        <Table.Th>{t('status')}</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {processedRoomChangePayments.map((r) => (
+                        <Table.Tr key={r.id}>
+                          <Table.Td>{r.studentName}</Table.Td>
+                          <Table.Td>{r.requestedBedLabel}</Table.Td>
+                          <Table.Td>
+                            {formatCurrency(r.paymentAmount ?? 0, r.paymentCurrency ?? 'TRY')}
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge
+                              size="xs"
+                              color={r.isAccountingApproved ? 'green' : 'red'}
+                              variant="light"
+                            >
+                              {r.isAccountingApproved ? t('approved') : t('rejected')}
+                            </Badge>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </Paper>
+              )}
+            </Stack>
           </Tabs.Panel>
         </Tabs>
 

@@ -125,10 +125,12 @@ CREATE TABLE students (
     
     -- 6. Meta
     is_active BOOLEAN DEFAULT TRUE,
+    enrollment_status VARCHAR(20) NOT NULL DEFAULT 'enrolled'
+        CHECK (enrollment_status IN ('pending', 'enrolled')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL,
-    
+
     -- Audit: Who created this profile? (Important for Manual Entry)
     created_by_user_id UUID REFERENCES users(id)
 );
@@ -721,10 +723,20 @@ CREATE TABLE semester_room_pricing (
 ALTER TABLE semesters
     ADD COLUMN IF NOT EXISTS max_room_changes INT DEFAULT NULL;
 
+-- Paid room change configuration: requests beyond this count require payment (NULL = always free)
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS paid_room_change_after INT DEFAULT NULL;
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS room_change_amount_try NUMERIC(10,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS room_change_amount_foreign NUMERIC(10,2) NOT NULL DEFAULT 0;
+
 ALTER TABLE bookings
     ADD COLUMN IF NOT EXISTS room_changes_count INT NOT NULL DEFAULT 0;
 
-CREATE TYPE room_change_status_enum AS ENUM ('pending', 'approved', 'rejected');
+CREATE TYPE room_change_status_enum AS ENUM ('pending', 'pending_payment', 'approved', 'rejected');
 
 CREATE TABLE room_change_requests (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -732,8 +744,8 @@ CREATE TABLE room_change_requests (
     student_id      UUID NOT NULL REFERENCES students(id),
     semester_id     INT  NOT NULL REFERENCES semesters(id),
 
-    -- The bed the student wants to move to
-    requested_bed_id INT NOT NULL REFERENCES beds(id),
+    -- The bed the student wants to move to (NULL = open request, staff assigns at approval)
+    requested_bed_id INT REFERENCES beds(id),
 
     -- Snapshot of the bed they are leaving (set at creation time)
     current_bed_id   INT NOT NULL REFERENCES beds(id),
@@ -745,6 +757,14 @@ CREATE TABLE room_change_requests (
     resolved_by     UUID REFERENCES users(id),
     resolved_at     TIMESTAMPTZ,
     rejection_reason TEXT,
+
+    -- Payment fields (set when the request exceeds the free quota)
+    requires_payment        BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_amount          NUMERIC(10,2),
+    payment_currency        CHAR(3),
+    is_accounting_approved  BOOLEAN,
+    accounting_approved_by  UUID REFERENCES users(id),
+    accounting_approved_at  TIMESTAMPTZ,
 
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -776,6 +796,50 @@ CREATE TABLE damage_report_images (
 CREATE INDEX idx_damage_report_images_report_id ON damage_report_images(damage_report_id);
 CREATE INDEX idx_room_change_requests_status    ON room_change_requests(status);
 
+-- =============================================
+-- PRE-RESERVATIONS
+-- =============================================
+
+ALTER TABLE semesters
+    ADD COLUMN IF NOT EXISTS allow_pre_reservations BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE pre_reservations (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id      UUID NOT NULL REFERENCES students(id),
+    semester_id     INT  NOT NULL REFERENCES semesters(id),
+
+    start_date      DATE NOT NULL,
+    end_date        DATE NOT NULL,
+
+    -- Optional room type preference (not binding; admin can override)
+    room_type_id    INT REFERENCES room_types(id),
+
+    note            TEXT,
+    status          pre_reservation_status NOT NULL DEFAULT 'pending',
+
+    -- Filled automatically when admin assigns a bed and a booking is created
+    booking_id      UUID REFERENCES bookings(id),
+
+    -- Resolution audit
+    resolved_by     UUID REFERENCES users(id),
+    resolved_at     TIMESTAMPTZ,
+    rejection_reason TEXT,
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT pre_res_date_order CHECK (end_date > start_date),
+
+    -- One pending pre-reservation per student per semester
+    CONSTRAINT uq_one_pending_pre_res_per_student_semester
+        EXCLUDE USING btree (student_id WITH =, semester_id WITH =)
+        WHERE (status = 'pending')
+);
+
+CREATE INDEX idx_pre_reservations_student  ON pre_reservations(student_id);
+CREATE INDEX idx_pre_reservations_semester ON pre_reservations(semester_id);
+CREATE INDEX idx_pre_reservations_status   ON pre_reservations(status);
+
 CREATE TABLE student_enrollment_verifications (
     id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id       UUID         NOT NULL REFERENCES students(id) ON DELETE CASCADE,
@@ -786,6 +850,7 @@ CREATE TABLE student_enrollment_verifications (
     status           VARCHAR(20)  NOT NULL DEFAULT 'pending'
                                   CHECK (status IN ('pending', 'verified', 'rejected')),
     rejection_reason TEXT,
+    expiry_date      DATE,
     uploaded_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     reviewed_at      TIMESTAMPTZ,
     reviewed_by      UUID         REFERENCES users(id)
@@ -808,11 +873,14 @@ CREATE TABLE student_applications (
     email                VARCHAR(255),
     phone_number         VARCHAR(50),
     whatsapp_number      VARCHAR(50),
-    -- Acceptance letter
-    letter_filename      VARCHAR(255) NOT NULL,
-    letter_mime_type     VARCHAR(100) NOT NULL,
-    letter_size          INT          NOT NULL,
-    letter_storage_key   VARCHAR(500) NOT NULL UNIQUE,
+    -- Acceptance letter / student certificate
+    document_filename      VARCHAR(255) NOT NULL,
+    document_mime_type     VARCHAR(100) NOT NULL,
+    document_size          INT          NOT NULL,
+    document_storage_key   VARCHAR(500) NOT NULL UNIQUE,
+    document_type          VARCHAR(20)  NOT NULL DEFAULT 'freshman'
+                                        CHECK (document_type IN ('freshman', 'returning')),
+    document_expiry_date   DATE,
     -- Lifecycle
     status               VARCHAR(20)  NOT NULL DEFAULT 'pending'
                                       CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -828,3 +896,24 @@ CREATE INDEX idx_student_applications_status ON student_applications(status);
 CREATE UNIQUE INDEX idx_student_applications_student_number_pending
     ON student_applications(student_number)
     WHERE status = 'pending';
+
+-- =============================================
+-- DORM CERTIFICATE REQUESTS
+-- =============================================
+
+CREATE TABLE dorm_certificate_requests (
+    id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id                  UUID        NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    enrollment_verification_id  UUID        REFERENCES student_enrollment_verifications(id),
+    status                      VARCHAR(20) NOT NULL DEFAULT 'pending'
+                                            CHECK (status IN ('pending', 'approved', 'rejected')),
+    rejection_reason            TEXT,
+    certificate_storage_key     VARCHAR(500),
+    certificate_filename        VARCHAR(255),
+    requested_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at                 TIMESTAMPTZ,
+    reviewed_by                 UUID        REFERENCES users(id)
+);
+
+CREATE INDEX idx_dorm_cert_requests_student ON dorm_certificate_requests(student_id);
+CREATE INDEX idx_dorm_cert_requests_status  ON dorm_certificate_requests(status);

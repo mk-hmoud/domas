@@ -8,6 +8,7 @@ export class EnrollmentVerification {
   size!: number;
   storageKey!: string;
   status!: EnrollmentVerificationStatus;
+  expiryDate?: Date;
   rejectionReason?: string;
   uploadedAt!: Date;
   reviewedAt?: Date;

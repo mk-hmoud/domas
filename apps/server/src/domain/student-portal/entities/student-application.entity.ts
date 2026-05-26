@@ -1,4 +1,5 @@
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+export type ApplicationDocumentType = 'freshman' | 'returning';
 
 export class StudentApplication {
   id!: string;
@@ -14,17 +15,19 @@ export class StudentApplication {
   email?: string;
   phoneNumber?: string;
   whatsappNumber?: string;
-  letterFilename!: string;
-  letterMimeType!: string;
-  letterSize!: number;
-  letterStorageKey!: string;
+  documentFilename!: string;
+  documentMimeType!: string;
+  documentSize!: number;
+  documentStorageKey!: string;
+  documentType!: ApplicationDocumentType;
+  documentExpiryDate?: Date;
   status!: ApplicationStatus;
   rejectionReason?: string;
   submittedAt!: Date;
   reviewedAt?: Date;
   reviewedBy?: string;
   studentId?: string;
-  letterUrl?: string; // transient — presigned on demand
+  documentUrl?: string; // transient — presigned on demand
 
   constructor(partial: Partial<StudentApplication>) {
     Object.assign(this, partial);

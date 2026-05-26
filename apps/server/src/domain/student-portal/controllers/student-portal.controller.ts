@@ -219,8 +219,14 @@ export class StudentPortalController {
   async uploadCertificate(
     @Request() req: ExpressRequest,
     @UploadedFile() file: Express.Multer.File,
+    @Body('expiryDate') expiryDate?: string,
   ) {
-    return this.studentPortalService.uploadEnrollmentCertificate(req.session.studentId!, file);
+    const expiry = expiryDate ? new Date(expiryDate) : undefined;
+    return this.studentPortalService.uploadEnrollmentCertificate(
+      req.session.studentId!,
+      file,
+      expiry,
+    );
   }
 
   // ─── Applications (public — no auth required) ─────────────────────────────────
@@ -238,5 +244,11 @@ export class StudentPortalController {
   @Get('applications/:id/status')
   async getApplicationStatus(@Param('id') id: string) {
     return this.studentPortalService.getApplicationStatus(id);
+  }
+
+  @UseGuards(StudentAuthGuard)
+  @Get('applications/mine')
+  async getMyApplication(@Request() req: ExpressRequest) {
+    return this.studentPortalService.getMyApplication(req.session.studentId!);
   }
 }

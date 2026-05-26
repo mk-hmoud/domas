@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 import { DEPARTMENTS } from '../../../common/constants/departments';
+import type { ApplicationDocumentType } from '../entities/student-application.entity';
 
 export class SubmitApplicationDto {
   @IsString()
@@ -57,4 +58,12 @@ export class SubmitApplicationDto {
   @IsString()
   @IsOptional()
   whatsappNumber?: string;
+
+  @IsEnum(['freshman', 'returning'] as ApplicationDocumentType[])
+  @IsOptional()
+  documentType?: ApplicationDocumentType;
+
+  @IsDateString()
+  @IsOptional()
+  documentExpiryDate?: string;
 }

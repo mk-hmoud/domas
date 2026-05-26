@@ -19,9 +19,11 @@ import { CheckOutPage } from './pages/CheckOutPage';
 import { AccessCardsPage } from './pages/AccessCardsPage';
 import { DamagesPage } from './pages/DamagesPage';
 import { RoomChangesPage } from './pages/RoomChangesPage';
+import { PreReservationsPage } from './pages/PreReservationsPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
+import { DormCertificatesPage } from './pages/DormCertificatesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -137,6 +139,14 @@ function App() {
             }
           />
           <Route
+            path="pre-reservations"
+            element={
+              <PermissionRoute permission="pre_reservations.view">
+                <PreReservationsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
             path="locations"
             element={
               <PermissionRoute permission="locations.view">
@@ -181,6 +191,14 @@ function App() {
             element={
               <PermissionRoute permission="guests.manage">
                 <GuestStaysPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="dorm-certificates"
+            element={
+              <PermissionRoute permission="students.view">
+                <DormCertificatesPage />
               </PermissionRoute>
             }
           />

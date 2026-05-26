@@ -26,7 +26,8 @@ export class StudentPortalRepository {
         deposit_amount_foreign::numeric AS "depositAmountForeign",
         foreign_currency_code          AS "foreignCurrencyCode",
         payment_deadline_date          AS "paymentDeadlineDate",
-        status
+        status,
+        allow_pre_reservations AS "allowPreReservations"
       FROM semesters
       WHERE status IN ('open', 'active')
       ORDER BY start_date DESC
@@ -50,7 +51,8 @@ export class StudentPortalRepository {
         deposit_amount_foreign::numeric AS "depositAmountForeign",
         foreign_currency_code          AS "foreignCurrencyCode",
         payment_deadline_date          AS "paymentDeadlineDate",
-        status
+        status,
+        allow_pre_reservations AS "allowPreReservations"
       FROM semesters
       WHERE id = $1
     `;

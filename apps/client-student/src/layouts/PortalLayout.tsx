@@ -21,6 +21,7 @@ import {
   IconBell,
   IconBed,
   IconCalendarPlus,
+  IconCertificate,
   IconCreditCard,
   IconHome2,
   IconLogout,
@@ -40,6 +41,7 @@ const NAV_ITEM_KEYS = [
   { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
   { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
   { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
+  { path: '/dorm-certificate', labelKey: 'portal.nav_dorm_certificate', icon: IconCertificate },
 ];
 
 // ─── Desktop sidebar nav ──────────────────────────────────────────────────────

@@ -1,8 +1,9 @@
 import { IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class StudentCreateRoomChangeDto {
+  @IsOptional()
   @IsInt()
-  requestedBedId!: number;
+  requestedBedId?: number;
 
   @IsOptional()
   @IsString()

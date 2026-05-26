@@ -117,6 +117,11 @@ export function DashboardLayout() {
             requiredPermission: 'room_changes.view',
             badge: navStats.roomChanges?.pendingCount,
           },
+          {
+            label: t('nav.pre_reservations', { defaultValue: 'Pre-Reservations' }),
+            link: '/dashboard/pre-reservations',
+            requiredPermission: 'pre_reservations.view',
+          },
         ],
       },
       {
@@ -128,6 +133,11 @@ export function DashboardLayout() {
             link: '/dashboard/students',
             requiredPermission: 'students.view',
             badge: navStats.students?.pendingApplications,
+          },
+          {
+            label: t('nav.dorm_certificates', 'Dorm Certificates'),
+            link: '/dashboard/dorm-certificates',
+            requiredPermission: 'students.view',
           },
           {
             label: t('nav.access_cards'),

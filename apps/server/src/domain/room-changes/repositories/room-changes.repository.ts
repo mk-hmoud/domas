@@ -13,18 +13,24 @@ export class RoomChangesRepository {
   private get selectColumns(): string {
     return `
       rc.id,
-      rc.booking_id          AS "bookingId",
-      rc.student_id          AS "studentId",
-      rc.semester_id         AS "semesterId",
-      rc.requested_bed_id    AS "requestedBedId",
-      rc.current_bed_id      AS "currentBedId",
+      rc.booking_id               AS "bookingId",
+      rc.student_id               AS "studentId",
+      rc.semester_id              AS "semesterId",
+      rc.requested_bed_id         AS "requestedBedId",
+      rc.current_bed_id           AS "currentBedId",
       rc.status,
       rc.note,
-      rc.resolved_by         AS "resolvedBy",
-      rc.resolved_at         AS "resolvedAt",
-      rc.rejection_reason    AS "rejectionReason",
-      rc.created_at          AS "createdAt",
-      rc.updated_at          AS "updatedAt"
+      rc.resolved_by              AS "resolvedBy",
+      rc.resolved_at              AS "resolvedAt",
+      rc.rejection_reason         AS "rejectionReason",
+      rc.requires_payment         AS "requiresPayment",
+      rc.payment_amount           AS "paymentAmount",
+      rc.payment_currency         AS "paymentCurrency",
+      rc.is_accounting_approved   AS "isAccountingApproved",
+      rc.accounting_approved_by   AS "accountingApprovedBy",
+      rc.accounting_approved_at   AS "accountingApprovedAt",
+      rc.created_at               AS "createdAt",
+      rc.updated_at               AS "updatedAt"
     `;
   }
 
@@ -49,6 +55,7 @@ export class RoomChangesRepository {
         ${this.selectColumns},
         st.first_name || ' ' || st.last_name  AS "studentName",
         st.student_number                      AS "studentNumber",
+        st.nationality_code                    AS "studentNationalityCode",
         s.display_name                         AS "semesterDisplayName",
         cb.label                               AS "currentBedLabel",
         (
@@ -67,8 +74,8 @@ export class RoomChangesRepository {
       JOIN  semesters  s  ON rc.semester_id    = s.id
       JOIN  beds       cb ON rc.current_bed_id = cb.id
       JOIN  locations  cl ON cb.location_id    = cl.id
-      JOIN  beds       rb ON rc.requested_bed_id = rb.id
-      JOIN  locations  rl ON rb.location_id    = rl.id
+      LEFT JOIN  beds       rb ON rc.requested_bed_id = rb.id
+      LEFT JOIN  locations  rl ON rb.location_id    = rl.id
       ${where}
       ORDER BY rc.created_at DESC
     `;
@@ -82,18 +89,22 @@ export class RoomChangesRepository {
         rc.id,
         rc.status,
         rc.note,
-        rc.rejection_reason AS "rejectionReason",
-        rc.created_at       AS "createdAt",
-        rc.resolved_at      AS "resolvedAt",
-        rb.label            AS "requestedBedLabel",
+        rc.rejection_reason       AS "rejectionReason",
+        rc.requires_payment       AS "requiresPayment",
+        rc.payment_amount         AS "paymentAmount",
+        rc.payment_currency       AS "paymentCurrency",
+        rc.is_accounting_approved AS "isAccountingApproved",
+        rc.created_at             AS "createdAt",
+        rc.resolved_at            AS "resolvedAt",
+        rb.label                  AS "requestedBedLabel",
         (
           SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
           FROM   locations anc
           WHERE  anc.tree_path @> rl.tree_path AND anc.deleted_at IS NULL
-        )                   AS "requestedLocationPath"
+        )                         AS "requestedLocationPath"
       FROM  room_change_requests rc
-      JOIN  beds      rb ON rc.requested_bed_id = rb.id
-      JOIN  locations rl ON rb.location_id      = rl.id
+      LEFT JOIN  beds      rb ON rc.requested_bed_id = rb.id
+      LEFT JOIN  locations rl ON rb.location_id      = rl.id
       WHERE rc.student_id = $1
       ORDER BY rc.created_at DESC
     `;
@@ -127,17 +138,24 @@ export class RoomChangesRepository {
       bookingId: string;
       studentId: string;
       semesterId: number;
-      requestedBedId: number;
+      requestedBedId?: number | null;
       currentBedId: number;
       note?: string | null;
+      requiresPayment?: boolean;
+      paymentAmount?: number | null;
+      paymentCurrency?: string | null;
     },
     client?: PoolClient,
   ): Promise<any> {
     const query = `
-      INSERT INTO room_change_requests
-        (booking_id, student_id, semester_id, requested_bed_id, current_bed_id, note)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING ${this.selectColumns}
+      WITH rc AS (
+        INSERT INTO room_change_requests
+          (booking_id, student_id, semester_id, requested_bed_id, current_bed_id, note,
+           requires_payment, payment_amount, payment_currency)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      )
+      SELECT ${this.selectColumns} FROM rc
     `;
     const result = await this.getClient(client).query(query, [
       data.bookingId,
@@ -146,37 +164,114 @@ export class RoomChangesRepository {
       data.requestedBedId,
       data.currentBedId,
       data.note ?? null,
+      data.requiresPayment ?? false,
+      data.paymentAmount ?? null,
+      data.paymentCurrency ?? null,
     ]);
     return result.rows[0];
+  }
+
+  async approvePayment(
+    id: string,
+    data: {
+      approved: boolean;
+      approvedBy: string;
+      rejectionReason?: string | null;
+    },
+    client?: PoolClient,
+  ): Promise<any | null> {
+    if (data.approved) {
+      // Confirm payment: mark approved, then move the bed and increment counter
+      const updateQuery = `
+        WITH rc AS (
+          UPDATE room_change_requests
+          SET
+            status                  = 'approved',
+            is_accounting_approved  = TRUE,
+            accounting_approved_by  = $1,
+            accounting_approved_at  = NOW(),
+            updated_at              = NOW()
+          WHERE id = $2
+            AND requires_payment = TRUE
+            AND status = 'pending_payment'
+          RETURNING *
+        )
+        SELECT ${this.selectColumns} FROM rc
+      `;
+      const result = await this.getClient(client).query(updateQuery, [data.approvedBy, id]);
+      const row = result.rows[0] ?? null;
+      if (row) {
+        await this.moveBed(row.bookingId, row.requestedBedId, true, client);
+      }
+      return row;
+    } else {
+      // Reject payment → reject the whole request
+      const updateQuery = `
+        WITH rc AS (
+          UPDATE room_change_requests
+          SET
+            status                  = 'rejected',
+            is_accounting_approved  = FALSE,
+            accounting_approved_by  = $1,
+            accounting_approved_at  = NOW(),
+            rejection_reason        = $2,
+            updated_at              = NOW()
+          WHERE id = $3
+            AND requires_payment = TRUE
+            AND status = 'pending_payment'
+          RETURNING *
+        )
+        SELECT ${this.selectColumns} FROM rc
+      `;
+      const result = await this.getClient(client).query(updateQuery, [
+        data.approvedBy,
+        data.rejectionReason ?? 'Payment not confirmed by accounting',
+        id,
+      ]);
+      return result.rows[0] ?? null;
+    }
   }
 
   async resolve(
     id: string,
     data: {
       approved: boolean;
+      requiresPayment: boolean;
       resolvedBy: string;
       rejectionReason?: string | null;
+      assignedBedId?: number | null;
     },
     client?: PoolClient,
   ): Promise<any | null> {
-    const status = data.approved ? 'approved' : 'rejected';
+    const status = data.approved
+      ? data.requiresPayment
+        ? 'pending_payment'
+        : 'approved'
+      : 'rejected';
+
+    const params: any[] = [status, data.resolvedBy, data.rejectionReason ?? null];
+    let bedClause = '';
+    if (data.assignedBedId != null) {
+      params.push(data.assignedBedId);
+      bedClause = `, requested_bed_id = $${params.length}`;
+    }
+    params.push(id);
+
     const query = `
-      UPDATE room_change_requests
-      SET
-        status           = $1,
-        resolved_by      = $2,
-        resolved_at      = NOW(),
-        rejection_reason = $3,
-        updated_at       = NOW()
-      WHERE id = $4 AND status = 'pending'
-      RETURNING ${this.selectColumns}
+      WITH rc AS (
+        UPDATE room_change_requests
+        SET
+          status           = $1,
+          resolved_by      = $2,
+          resolved_at      = NOW(),
+          rejection_reason = $3${bedClause},
+          updated_at       = NOW()
+        WHERE id = $${params.length} AND status = 'pending'
+        RETURNING *
+      )
+      SELECT ${this.selectColumns} FROM rc
     `;
-    const result = await this.getClient(client).query(query, [
-      status,
-      data.resolvedBy,
-      data.rejectionReason ?? null,
-      id,
-    ]);
+    const result = await this.getClient(client).query(query, params);
     return result.rows[0] ?? null;
   }
 
@@ -250,11 +345,15 @@ export class RoomChangesRepository {
     const query = `
       SELECT
         bk.id,
-        bk.bed_id        AS "bedId",
-        bk.semester_id   AS "semesterId",
+        bk.bed_id                       AS "bedId",
+        bk.semester_id                  AS "semesterId",
         bk.status,
-        bk.room_changes_count AS "roomChangesCount",
-        s.max_room_changes    AS "maxRoomChanges"
+        bk.room_changes_count           AS "roomChangesCount",
+        s.max_room_changes              AS "maxRoomChanges",
+        s.paid_room_change_after        AS "paidRoomChangeAfter",
+        s.room_change_amount_try        AS "roomChangeAmountTry",
+        s.room_change_amount_foreign    AS "roomChangeAmountForeign",
+        s.foreign_currency_code         AS "foreignCurrencyCode"
       FROM bookings bk
       JOIN semesters s ON bk.semester_id = s.id
       WHERE bk.student_id = $1

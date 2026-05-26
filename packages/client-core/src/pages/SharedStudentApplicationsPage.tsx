@@ -26,10 +26,19 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { students } from "@domas/api-client";
-import { ApplicationStatus, StudentApplication } from "@domas/ts-types";
+import {
+  ApplicationDocumentType,
+  ApplicationStatus,
+  StudentApplication,
+} from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
 import { LabelValue } from "@domas/ui";
+
+const DOC_TYPE_COLORS: Record<ApplicationDocumentType, string> = {
+  freshman: "blue",
+  returning: "orange",
+};
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   pending: "yellow",
@@ -42,7 +51,7 @@ export function SharedStudentApplicationsPage() {
   const { hasPermission } = useAuth();
   const canReview = hasPermission("students.review_applications");
   const [applications, setApplications] = useState<
-    (StudentApplication & { letterUrl: string })[]
+    (StudentApplication & { documentUrl: string })[]
   >([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -50,7 +59,7 @@ export function SharedStudentApplicationsPage() {
     "pending",
   );
   const [selected, setSelected] = useState<
-    (StudentApplication & { letterUrl: string }) | null
+    (StudentApplication & { documentUrl: string }) | null
   >(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectInput, setShowRejectInput] = useState(false);
@@ -187,6 +196,7 @@ export function SharedStudentApplicationsPage() {
                   <Table.Th>{t("name")}</Table.Th>
                   <Table.Th>{t("department")}</Table.Th>
                   <Table.Th>{t("nationality")}</Table.Th>
+                  <Table.Th>{t("type", "Type")}</Table.Th>
                   <Table.Th>{t("submitted_at", "Submitted")}</Table.Th>
                   <Table.Th>{t("status")}</Table.Th>
                   <Table.Th />
@@ -222,6 +232,20 @@ export function SharedStudentApplicationsPage() {
                       </Text>
                     </Table.Td>
                     <Table.Td>{app.nationalityCode}</Table.Td>
+                    <Table.Td>
+                      <Badge
+                        color={DOC_TYPE_COLORS[app.documentType ?? "freshman"]}
+                        size="sm"
+                        variant="light"
+                      >
+                        {t(
+                          `doc_type_${app.documentType ?? "freshman"}`,
+                          app.documentType === "returning"
+                            ? "Returning"
+                            : "Freshman",
+                        )}
+                      </Badge>
+                    </Table.Td>
                     <Table.Td>
                       {new Date(app.submittedAt).toLocaleDateString("en-GB")}
                     </Table.Td>
@@ -280,9 +304,19 @@ export function SharedStudentApplicationsPage() {
               <Text fw={700} size="lg">
                 {selected.firstName} {selected.lastName}
               </Text>
-              <Badge color={STATUS_COLORS[selected.status]}>
-                {t(`app_status_${selected.status}`, selected.status)}
-              </Badge>
+              <Group gap={6}>
+                <Badge
+                  color={DOC_TYPE_COLORS[selected.documentType ?? "freshman"]}
+                  variant="light"
+                >
+                  {selected.documentType === "returning"
+                    ? t("returning", "Returning")
+                    : t("freshman", "Freshman")}
+                </Badge>
+                <Badge color={STATUS_COLORS[selected.status]}>
+                  {t(`app_status_${selected.status}`, selected.status)}
+                </Badge>
+              </Group>
             </Group>
 
             {selected.rejectionReason && (
@@ -348,10 +382,21 @@ export function SharedStudentApplicationsPage() {
               leftSection={<IconFileDescription size={16} />}
               rightSection={<IconExternalLink size={14} />}
               variant="light"
-              onClick={() => window.open(selected.letterUrl, "_blank")}
+              onClick={() => window.open(selected.documentUrl, "_blank")}
             >
-              {t("view_acceptance_letter", "View Acceptance Letter")}
+              {selected.documentType === "returning"
+                ? t("view_student_certificate", "View Student Certificate")
+                : t("view_acceptance_letter", "View Acceptance Letter")}
             </Button>
+            {selected.documentType === "returning" &&
+              selected.documentExpiryDate && (
+                <Text size="xs" c="dimmed">
+                  {t("certificate_expires", "Certificate expires")}:{" "}
+                  {new Date(selected.documentExpiryDate).toLocaleDateString(
+                    "en-GB",
+                  )}
+                </Text>
+              )}
 
             {selected.status === "pending" && canReview && (
               <>

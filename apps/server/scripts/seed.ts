@@ -67,6 +67,10 @@ async function bootstrap() {
           depositAmountTry: 6000,
           depositAmountForeign: 250,
           foreignCurrencyCode: 'EUR',
+          maxRoomChanges: 3,
+          paidRoomChangeAfter: 2,
+          roomChangeAmountTry: 500,
+          roomChangeAmountForeign: 50,
         },
         seedContext,
       );

@@ -7,6 +7,7 @@ import {
   Group,
   Modal,
   Paper,
+  SegmentedControl,
   Skeleton,
   Stack,
   Text,
@@ -26,6 +27,7 @@ interface Props {
 
 export function RoomChangeBedModal({ opened, onClose, semesterId, onSuccess }: Props) {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<'specific' | 'open'>('specific');
   const [beds, setBeds] = useState<AvailableBed[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +37,7 @@ export function RoomChangeBedModal({ opened, onClose, semesterId, onSuccess }: P
 
   useEffect(() => {
     if (!opened) return;
+    setMode('specific');
     setSelectedBedId(null);
     setNote('');
     setError(null);
@@ -70,12 +73,12 @@ export function RoomChangeBedModal({ opened, onClose, semesterId, onSuccess }: P
   }, [beds]);
 
   const handleSubmit = async () => {
-    if (!selectedBedId) return;
+    if (mode === 'specific' && !selectedBedId) return;
     setSubmitting(true);
     setError(null);
     try {
       await portalRoomChanges.create(semesterId, {
-        requestedBedId: selectedBedId,
+        requestedBedId: mode === 'specific' ? selectedBedId! : undefined,
         note: note || undefined,
       });
       onSuccess();
@@ -102,7 +105,32 @@ export function RoomChangeBedModal({ opened, onClose, semesterId, onSuccess }: P
           </Alert>
         )}
 
-        {loading ? (
+        <SegmentedControl
+          value={mode}
+          onChange={(v) => {
+            setMode(v as 'specific' | 'open');
+            setSelectedBedId(null);
+          }}
+          data={[
+            {
+              label: t('portal.room_change_mode_specific', { defaultValue: 'Choose a bed' }),
+              value: 'specific',
+            },
+            {
+              label: t('portal.room_change_mode_open', { defaultValue: 'Open request' }),
+              value: 'open',
+            },
+          ]}
+          fullWidth
+        />
+
+        {mode === 'open' ? (
+          <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="md">
+            {t('portal.room_change_open_hint', {
+              defaultValue: 'Staff will assign you a bed when they review your request.',
+            })}
+          </Alert>
+        ) : loading ? (
           <Stack gap="sm">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} height={60} radius="lg" />
@@ -185,7 +213,7 @@ export function RoomChangeBedModal({ opened, onClose, semesterId, onSuccess }: P
           </Stack>
         )}
 
-        {selectedBedId && (
+        {(mode === 'open' || selectedBedId) && (
           <Textarea
             label={t('portal.room_change_note_label')}
             placeholder={t('portal.room_change_note_placeholder')}
@@ -202,7 +230,11 @@ export function RoomChangeBedModal({ opened, onClose, semesterId, onSuccess }: P
           <Button variant="default" onClick={onClose} disabled={submitting}>
             {t('cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!selectedBedId} loading={submitting}>
+          <Button
+            onClick={handleSubmit}
+            disabled={mode === 'specific' && !selectedBedId}
+            loading={submitting}
+          >
             {t('portal.room_change_submit')}
           </Button>
         </Group>

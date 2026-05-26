@@ -21,6 +21,8 @@ import {
   EnrollmentStatus,
   StudentApplication,
   SubmitApplicationDto,
+  StudentCreatePreReservationDto,
+  StudentPreReservationView,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -274,9 +276,13 @@ export const portalEnrollment = {
     return response.data;
   },
 
-  uploadCertificate: async (file: File): Promise<EnrollmentVerification> => {
+  uploadCertificate: async (
+    file: File,
+    expiryDate?: string,
+  ): Promise<EnrollmentVerification> => {
     const form = new FormData();
     form.append("certificate", file);
+    if (expiryDate) form.append("expiryDate", expiryDate);
     const response = await apiClient.post<EnrollmentVerification>(
       "/portal/enrollment/certificate",
       form,
@@ -311,17 +317,40 @@ export const portalRoomChanges = {
   },
 };
 
+// ─── Pre-Reservations ─────────────────────────────────────────────────────────
+
+export const portalPreReservations = {
+  getAll: async (): Promise<StudentPreReservationView[]> => {
+    const response = await apiClient.get<StudentPreReservationView[]>(
+      "/portal/pre-reservations",
+    );
+    return response.data;
+  },
+
+  create: async (
+    dto: StudentCreatePreReservationDto,
+  ): Promise<StudentPreReservationView> => {
+    const response = await apiClient.post<StudentPreReservationView>(
+      "/portal/pre-reservations",
+      dto,
+    );
+    return response.data;
+  },
+
+  cancel: async (id: string): Promise<void> => {
+    await apiClient.patch(`/portal/pre-reservations/${id}/cancel`);
+  },
+};
+
 // ─── Applications (public — no session required) ──────────────────────────────
 
 export const portalApplications = {
   submit: async (
     dto: SubmitApplicationDto,
-    letterFile: File,
-    photoFile?: File | null,
+    documentFile: File,
   ): Promise<StudentApplication> => {
     const form = new FormData();
-    form.append("letter", letterFile);
-    if (photoFile) form.append("photo", photoFile);
+    form.append("letter", documentFile);
     Object.entries(dto).forEach(([key, value]) => {
       if (value !== undefined) form.append(key, String(value));
     });
@@ -335,6 +364,13 @@ export const portalApplications = {
   getStatus: async (id: string): Promise<StudentApplication> => {
     const response = await apiClient.get<StudentApplication>(
       `/portal/applications/${id}/status`,
+    );
+    return response.data;
+  },
+
+  getMine: async (): Promise<StudentApplication> => {
+    const response = await apiClient.get<StudentApplication>(
+      "/portal/applications/mine",
     );
     return response.data;
   },

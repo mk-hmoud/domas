@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Center,
+  DatePickerInput,
   Group,
   Loader,
   Paper,
@@ -33,6 +34,8 @@ export function VerifyEnrollmentPage() {
   const [status, setStatus] = useState<EnrollmentStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [expiryDate, setExpiryDate] = useState<string | null>(null);
 
   const fetchStatus = async () => {
     try {
@@ -54,14 +57,21 @@ export function VerifyEnrollmentPage() {
     fetchStatus();
   }, []);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    setSelectedFile(file);
+  };
+
+  const handleSubmitCert = async () => {
+    if (!selectedFile) return;
+
+    const expiryDateStr = expiryDate ?? undefined;
 
     setUploading(true);
     try {
-      await portalEnrollment.uploadCertificate(file);
+      await portalEnrollment.uploadCertificate(selectedFile, expiryDateStr);
       notifications.show({
         title: t('portal.cert_uploaded_title', 'Certificate submitted'),
         message: t(
@@ -70,6 +80,8 @@ export function VerifyEnrollmentPage() {
         ),
         color: 'green',
       });
+      setSelectedFile(null);
+      setExpiryDate(null);
       await fetchStatus();
     } catch {
       notifications.show({
@@ -177,7 +189,7 @@ export function VerifyEnrollmentPage() {
             </Box>
           )}
 
-          {/* Upload button */}
+          {/* Upload section */}
           {showUpload && (
             <>
               <input
@@ -187,20 +199,74 @@ export function VerifyEnrollmentPage() {
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
               />
-              <Button
-                leftSection={<IconUpload size={16} />}
-                loading={uploading}
-                radius="xl"
-                size="md"
-                variant="gradient"
-                gradient={{ from: 'blue', to: 'cyan' }}
-                onClick={() => fileInputRef.current?.click()}
-                style={{ alignSelf: 'stretch' }}
-              >
-                {isRejected
-                  ? t('portal.resubmit_certificate', 'Resubmit Certificate')
-                  : t('portal.submit_certificate', 'Submit Certificate')}
-              </Button>
+
+              {selectedFile ? (
+                <Box
+                  style={{
+                    width: '100%',
+                    borderRadius: 12,
+                    border: '1px solid var(--mantine-color-default-border)',
+                    padding: '12px 16px',
+                  }}
+                >
+                  <Stack gap="sm">
+                    <Group justify="space-between" wrap="nowrap">
+                      <Group gap="xs">
+                        <IconFileDescription size={16} />
+                        <Text size="sm" fw={500} truncate>
+                          {selectedFile.name}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          ({(selectedFile.size / 1024).toFixed(0)} KB)
+                        </Text>
+                      </Group>
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        color="red"
+                        onClick={() => setSelectedFile(null)}
+                      >
+                        <IconX size={14} />
+                      </Button>
+                    </Group>
+                    <DatePickerInput
+                      label={t('portal.certificate_expiry', 'Certificate Expiry Date')}
+                      placeholder={t('portal.cert_expiry_placeholder', 'Leave blank if unknown')}
+                      radius="lg"
+                      valueFormat="DD/MM/YYYY"
+                      value={expiryDate}
+                      onChange={setExpiryDate}
+                      minDate={new Date()}
+                      clearable
+                    />
+                    <Button
+                      loading={uploading}
+                      radius="xl"
+                      size="md"
+                      variant="gradient"
+                      gradient={{ from: 'blue', to: 'cyan' }}
+                      onClick={handleSubmitCert}
+                      style={{ alignSelf: 'stretch' }}
+                    >
+                      {t('portal.submit_certificate', 'Submit Certificate')}
+                    </Button>
+                  </Stack>
+                </Box>
+              ) : (
+                <Button
+                  leftSection={<IconUpload size={16} />}
+                  radius="xl"
+                  size="md"
+                  variant="gradient"
+                  gradient={{ from: 'blue', to: 'cyan' }}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ alignSelf: 'stretch' }}
+                >
+                  {isRejected
+                    ? t('portal.resubmit_certificate', 'Resubmit Certificate')
+                    : t('portal.upload_certificate', 'Upload Student Certificate')}
+                </Button>
+              )}
               <Text size="xs" c="dimmed" ta="center">
                 {t('portal.cert_formats', 'Accepted formats: PDF, JPEG, PNG, WebP — max 10 MB')}
               </Text>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Badge,
   Box,
   Button,
@@ -18,8 +19,10 @@ import {
 import {
   IconBell,
   IconBed,
+  IconCalendarCheck,
   IconCalendarPlus,
   IconCheck,
+  IconClockHour4,
   IconCreditCard,
   IconDoor,
   IconFileDownload,
@@ -202,9 +205,11 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
 function NoBookingCard({
   semesters,
   onApply,
+  onPreReserve,
 }: {
   semesters: PortalSemester[];
   onApply: () => void;
+  onPreReserve: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -314,16 +319,29 @@ function NoBookingCard({
             </Text>
           </Group>
         </Stack>
-        <Button
-          leftSection={<IconCalendarPlus size={16} />}
-          onClick={onApply}
-          radius="xl"
-          variant="gradient"
-          gradient={{ from: 'blue', to: 'cyan' }}
-          style={{ boxShadow: '0 4px 14px rgba(34,139,230,0.35)' }}
-        >
-          {t('portal.apply_now')}
-        </Button>
+        <Group gap="sm" wrap="wrap">
+          <Button
+            leftSection={<IconCalendarPlus size={16} />}
+            onClick={onApply}
+            radius="xl"
+            variant="gradient"
+            gradient={{ from: 'blue', to: 'cyan' }}
+            style={{ boxShadow: '0 4px 14px rgba(34,139,230,0.35)' }}
+          >
+            {t('portal.apply_now')}
+          </Button>
+          {semesters.some((s) => s.allowPreReservations) && (
+            <Button
+              leftSection={<IconCalendarCheck size={16} />}
+              onClick={onPreReserve}
+              radius="xl"
+              variant="light"
+              color="teal"
+            >
+              {t('portal.pre_reserve', { defaultValue: 'Pre-Reserve' })}
+            </Button>
+          )}
+        </Group>
       </Box>
     </Paper>
   );
@@ -876,6 +894,21 @@ export function DashboardPage() {
         </Group>
       </Paper>
 
+      {student?.enrollmentStatus === 'pending' && (
+        <Alert
+          icon={<IconClockHour4 size={18} />}
+          color="yellow"
+          variant="light"
+          radius="xl"
+          title={t('portal.enrollment_pending_title', 'Enrollment Pending Approval')}
+        >
+          {t(
+            'portal.enrollment_pending_body',
+            'Your registration is being reviewed by dormitory staff. Booking and other actions will be available once approved.',
+          )}
+        </Alert>
+      )}
+
       {isLoading ? (
         <>
           <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
@@ -904,7 +937,11 @@ export function DashboardPage() {
               ) : hasPending ? (
                 <PendingBookingCard booking={booking!} />
               ) : (
-                <NoBookingCard semesters={semesters} onApply={() => navigate('/apply')} />
+                <NoBookingCard
+                  semesters={semesters}
+                  onApply={() => navigate('/apply')}
+                  onPreReserve={() => navigate('/pre-reserve')}
+                />
               )}
             </Grid.Col>
 

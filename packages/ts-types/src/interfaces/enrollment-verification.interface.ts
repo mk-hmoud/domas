@@ -9,6 +9,7 @@ export interface EnrollmentVerification {
   storageKey?: string;
   url?: string;
   status: EnrollmentVerificationStatus;
+  expiryDate?: string;
   rejectionReason?: string;
   uploadedAt: string;
   reviewedAt?: string;

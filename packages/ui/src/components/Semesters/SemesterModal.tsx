@@ -53,6 +53,9 @@ export function SemesterModal({
       foreignCurrencyCode: "USD",
       status: SemesterStatus.PLANNED,
       maxRoomChanges: null as number | null,
+      paidRoomChangeAfter: null as number | null,
+      roomChangeAmountTry: 0,
+      roomChangeAmountForeign: 0,
     },
     validate: {
       academicYear: (val) => (val ? null : t("field_required")),
@@ -93,6 +96,9 @@ export function SemesterModal({
           foreignCurrencyCode: initialValues.foreignCurrencyCode,
           status: initialValues.status,
           maxRoomChanges: initialValues.maxRoomChanges ?? null,
+          paidRoomChangeAfter: initialValues.paidRoomChangeAfter ?? null,
+          roomChangeAmountTry: initialValues.roomChangeAmountTry ?? 0,
+          roomChangeAmountForeign: initialValues.roomChangeAmountForeign ?? 0,
         });
       } else if (lastSemester) {
         // Smart Pre-fill Logic
@@ -131,6 +137,9 @@ export function SemesterModal({
           foreignCurrencyCode: lastSemester.foreignCurrencyCode,
           status: SemesterStatus.PLANNED,
           maxRoomChanges: null,
+          paidRoomChangeAfter: null,
+          roomChangeAmountTry: 0,
+          roomChangeAmountForeign: 0,
         });
       } else {
         form.reset();
@@ -159,6 +168,12 @@ export function SemesterModal({
         values.maxRoomChanges != null && values.maxRoomChanges !== ""
           ? Number(values.maxRoomChanges)
           : null,
+      paidRoomChangeAfter:
+        values.paidRoomChangeAfter != null && values.paidRoomChangeAfter !== ""
+          ? Number(values.paidRoomChangeAfter)
+          : null,
+      roomChangeAmountTry: Number(values.roomChangeAmountTry ?? 0),
+      roomChangeAmountForeign: Number(values.roomChangeAmountForeign ?? 0),
     };
     await onSubmit(payload);
     onClose();
@@ -324,6 +339,51 @@ export function SemesterModal({
               )
             }
           />
+
+          <Divider
+            label={t("semester.paid_room_change_title", {
+              defaultValue: "Paid Room Change Policy",
+            })}
+            labelPosition="center"
+          />
+
+          <NumberInput
+            label={t("semester.paid_room_change_after", {
+              defaultValue: "Require Payment After (# of free changes)",
+            })}
+            description={t("semester.paid_room_change_after_hint", {
+              defaultValue:
+                "Students exceeding this many approved changes must pay. Leave empty to never charge.",
+            })}
+            placeholder={t("never", { defaultValue: "Never (always free)" })}
+            min={1}
+            value={form.values.paidRoomChangeAfter ?? ""}
+            onChange={(v) =>
+              form.setFieldValue(
+                "paidRoomChangeAfter",
+                v === "" ? null : (v as number),
+              )
+            }
+          />
+
+          <SimpleGrid cols={2}>
+            <NumberInput
+              label={t("semester.room_change_amount_try", {
+                defaultValue: "Room Change Fee (TRY)",
+              })}
+              min={0}
+              disabled={form.values.paidRoomChangeAfter == null}
+              {...form.getInputProps("roomChangeAmountTry")}
+            />
+            <NumberInput
+              label={t("semester.room_change_amount_foreign", {
+                defaultValue: "Room Change Fee (Foreign)",
+              })}
+              min={0}
+              disabled={form.values.paidRoomChangeAfter == null}
+              {...form.getInputProps("roomChangeAmountForeign")}
+            />
+          </SimpleGrid>
 
           <Select
             label={t("status")}
