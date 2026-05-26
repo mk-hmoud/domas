@@ -196,7 +196,7 @@ export function RegisterPage() {
                       value: 'returning',
                       label: t(
                         'portal.doc_type_returning',
-                        'Returning / Transfer — I have a student certificate',
+                        'Registered Student — I have a student certificate',
                       ),
                     },
                   ]}

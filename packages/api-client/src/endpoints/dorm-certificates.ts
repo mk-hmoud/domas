@@ -54,15 +54,9 @@ export const dormCertificates = {
     return response.data;
   },
 
-  approve: async (
-    id: string,
-    pdfFile: File,
-  ): Promise<DormCertificateRequest> => {
-    const form = new FormData();
-    form.append("certificate", pdfFile);
+  approve: async (id: string): Promise<DormCertificateRequest> => {
     const response = await apiClient.post<DormCertificateRequest>(
       `/dorm-certificates/${id}/approve`,
-      form,
     );
     return response.data;
   },

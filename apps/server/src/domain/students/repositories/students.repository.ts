@@ -53,7 +53,7 @@ export class StudentsRepository {
 
   async create(
     data: CreateStudentDto,
-    createdByUserId: string,
+    createdByUserId: string | null,
     client?: PoolClient,
     enrollmentStatus: 'pending' | 'enrolled' = 'enrolled',
   ): Promise<Student> {

@@ -7,13 +7,8 @@ import {
   Param,
   Post,
   Query,
-  Request,
-  UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request as ExpressRequest } from 'express';
 import { DormCertificatesService } from '../services/dorm-certificates.service';
 import { ReviewDormCertificateDto } from '../dto/review-dorm-certificate.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
@@ -37,13 +32,8 @@ export class DormCertificatesController {
   @Post(':id/approve')
   @RequirePermissions(PERMISSIONS.STUDENTS_REVIEW_APPLICATIONS)
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('certificate', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  approve(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-    @UserContext() context: AuditUserContext,
-  ) {
-    return this.dormCertificatesService.approve(id, context.userId, file);
+  approve(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.dormCertificatesService.approve(id, context.userId);
   }
 
   @Post(':id/reject')

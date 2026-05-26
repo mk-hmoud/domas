@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader, PageShell, LabelValue } from "@domas/ui";
 import {
   ActionIcon,
@@ -6,7 +6,6 @@ import {
   Button,
   Divider,
   Drawer,
-  FileButton,
   Group,
   LoadingOverlay,
   Paper,
@@ -22,7 +21,6 @@ import {
   IconCheck,
   IconDownload,
   IconExternalLink,
-  IconUpload,
   IconX,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -54,7 +52,6 @@ export function SharedDormCertificatesPage() {
   const [selected, setSelected] = useState<DormCertificateRequest | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectInput, setShowRejectInput] = useState(false);
-  const resetRef = useRef<() => void>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -80,10 +77,10 @@ export function SharedDormCertificatesPage() {
     fetchData();
   }, [statusFilter]);
 
-  const handleApprove = async (req: DormCertificateRequest, file: File) => {
+  const handleApprove = async (req: DormCertificateRequest) => {
     setActionLoading(true);
     try {
-      await dormCertificates.approve(req.id, file);
+      await dormCertificates.approve(req.id);
       notifications.show({
         title: t("success"),
         message: t("certificate_issued", "Certificate issued successfully"),
@@ -206,30 +203,17 @@ export function SharedDormCertificatesPage() {
                     <Table.Td onClick={(e) => e.stopPropagation()}>
                       {req.status === "pending" && canManage && (
                         <Group gap={4} wrap="nowrap">
-                          <FileButton
-                            resetRef={resetRef}
-                            onChange={(f) => f && handleApprove(req, f)}
-                            accept="application/pdf"
-                          >
-                            {(props) => (
-                              <Tooltip
-                                label={t(
-                                  "approve_and_upload",
-                                  "Approve & Upload",
-                                )}
-                              >
-                                <ActionIcon
-                                  color="green"
-                                  variant="light"
-                                  size="sm"
-                                  loading={actionLoading}
-                                  {...props}
-                                >
-                                  <IconUpload size={14} />
-                                </ActionIcon>
-                              </Tooltip>
-                            )}
-                          </FileButton>
+                          <Tooltip label={t("approve", "Approve")}>
+                            <ActionIcon
+                              color="green"
+                              variant="light"
+                              size="sm"
+                              loading={actionLoading}
+                              onClick={() => handleApprove(req)}
+                            >
+                              <IconCheck size={14} />
+                            </ActionIcon>
+                          </Tooltip>
                           <Tooltip label={t("reject", "Reject")}>
                             <ActionIcon
                               color="red"
@@ -348,22 +332,14 @@ export function SharedDormCertificatesPage() {
                 <Divider />
                 {!showRejectInput ? (
                   <Group grow>
-                    <FileButton
-                      resetRef={resetRef}
-                      onChange={(f) => f && handleApprove(selected, f)}
-                      accept="application/pdf"
+                    <Button
+                      color="green"
+                      leftSection={<IconCheck size={16} />}
+                      loading={actionLoading}
+                      onClick={() => handleApprove(selected)}
                     >
-                      {(props) => (
-                        <Button
-                          color="green"
-                          leftSection={<IconCheck size={16} />}
-                          loading={actionLoading}
-                          {...props}
-                        >
-                          {t("approve_and_upload", "Approve & Upload PDF")}
-                        </Button>
-                      )}
-                    </FileButton>
+                      {t("approve", "Approve")}
+                    </Button>
                     <Button
                       color="red"
                       variant="light"
