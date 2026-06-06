@@ -41,7 +41,7 @@ export class RoomChangesController {
     @Body() dto: ResolveRoomChangeDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.roomChangesService.resolve(id, dto, context.userId);
+    return this.roomChangesService.resolve(id, dto, context);
   }
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_APPROVE_PAYMENT)
@@ -51,7 +51,7 @@ export class RoomChangesController {
     @Body() dto: ApproveRoomChangePaymentDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.roomChangesService.approvePayment(id, dto, context.userId);
+    return this.roomChangesService.approvePayment(id, dto, context);
   }
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)
@@ -62,7 +62,11 @@ export class RoomChangesController {
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)
   @Post('bookings/:bookingId/move-bed')
-  staffMoveBed(@Param('bookingId') bookingId: string, @Body() dto: StaffMoveBedDto) {
-    return this.roomChangesService.staffMoveBed(bookingId, dto);
+  staffMoveBed(
+    @Param('bookingId') bookingId: string,
+    @Body() dto: StaffMoveBedDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.roomChangesService.staffMoveBed(bookingId, dto, context);
   }
 }

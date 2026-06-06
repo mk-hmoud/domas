@@ -54,4 +54,13 @@ export enum UndoActionType {
 
   // Bulk Import
   BULK_IMPORT_STUDENT = 'bulk_import_student',
+
+  // Pre-Reservations
+  ASSIGN_PRE_RESERVATION = 'assign_pre_reservation',
+  REJECT_PRE_RESERVATION = 'reject_pre_reservation',
+
+  // Room Changes
+  RESOLVE_ROOM_CHANGE = 'resolve_room_change',
+  APPROVE_ROOM_CHANGE_PAYMENT = 'approve_room_change_payment',
+  STAFF_MOVE_BED = 'staff_move_bed',
 }

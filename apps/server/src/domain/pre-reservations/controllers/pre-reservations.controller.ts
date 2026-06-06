@@ -49,7 +49,7 @@ export class PreReservationsController {
     @Body() dto: AssignPreReservationDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.preReservationsService.assign(id, dto, context.userId);
+    return this.preReservationsService.assign(id, dto, context);
   }
 
   @RequirePermissions(PERMISSIONS.PRE_RESERVATIONS_MANAGE)
@@ -59,6 +59,6 @@ export class PreReservationsController {
     @Body() dto: RejectPreReservationDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.preReservationsService.reject(id, dto, context.userId);
+    return this.preReservationsService.reject(id, dto, context);
   }
 }

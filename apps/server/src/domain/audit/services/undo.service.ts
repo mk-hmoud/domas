@@ -278,6 +278,20 @@ export class UndoService {
       case UndoActionType.BULK_IMPORT_STUDENT:
         return this.undoBulkImport(log, client);
 
+      // Pre-Reservations
+      case UndoActionType.ASSIGN_PRE_RESERVATION:
+        return this.undoAssignPreReservation(log, client);
+      case UndoActionType.REJECT_PRE_RESERVATION:
+        return this.undoRejectPreReservation(log, client);
+
+      // Room Changes
+      case UndoActionType.RESOLVE_ROOM_CHANGE:
+        return this.undoResolveRoomChange(log, client);
+      case UndoActionType.APPROVE_ROOM_CHANGE_PAYMENT:
+        return this.undoApproveRoomChangePayment(log, client);
+      case UndoActionType.STAFF_MOVE_BED:
+        return this.undoStaffMoveBed(log, client);
+
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
     }
@@ -1257,6 +1271,86 @@ export class UndoService {
   // ===========================================================================
   // Bulk Import Handlers
   // ===========================================================================
+
+  // ===========================================================================
+  // Pre-Reservation Handlers
+  // ===========================================================================
+
+  private async undoAssignPreReservation(log: UndoLog, client: PoolClient): Promise<void> {
+    const { bookingId } = log.undoData;
+    const preReservationId = log.entityId;
+
+    if (bookingId) {
+      await client.query('DELETE FROM bookings WHERE id = $1', [bookingId]);
+    }
+    await client.query(
+      `UPDATE pre_reservations SET status = 'pending', resolved_by = NULL, resolved_at = NULL,
+       booking_id = NULL, updated_at = NOW() WHERE id = $1`,
+      [preReservationId],
+    );
+  }
+
+  private async undoRejectPreReservation(log: UndoLog, client: PoolClient): Promise<void> {
+    const preReservationId = log.entityId;
+    await client.query(
+      `UPDATE pre_reservations SET status = 'pending', resolved_by = NULL, resolved_at = NULL,
+       rejection_reason = NULL, updated_at = NOW() WHERE id = $1`,
+      [preReservationId],
+    );
+  }
+
+  // ===========================================================================
+  // Room Change Handlers
+  // ===========================================================================
+
+  private async undoResolveRoomChange(log: UndoLog, client: PoolClient): Promise<void> {
+    const { bookingId, previousBedId, bedWasMoved } = log.undoData;
+    const requestId = log.entityId;
+
+    if (bedWasMoved && bookingId && previousBedId) {
+      await client.query(
+        `UPDATE bookings SET bed_id = $1, room_changes_count = GREATEST(room_changes_count - 1, 0),
+         updated_at = NOW() WHERE id = $2`,
+        [previousBedId, bookingId],
+      );
+    }
+
+    await client.query(
+      `UPDATE room_change_requests SET status = 'pending', resolved_by = NULL, resolved_at = NULL,
+       rejection_reason = NULL, updated_at = NOW() WHERE id = $1`,
+      [requestId],
+    );
+  }
+
+  private async undoApproveRoomChangePayment(log: UndoLog, client: PoolClient): Promise<void> {
+    const { bookingId, previousBedId, bedWasMoved } = log.undoData;
+    const requestId = log.entityId;
+
+    if (bedWasMoved && bookingId && previousBedId) {
+      await client.query(
+        `UPDATE bookings SET bed_id = $1, room_changes_count = GREATEST(room_changes_count - 1, 0),
+         updated_at = NOW() WHERE id = $2`,
+        [previousBedId, bookingId],
+      );
+    }
+
+    await client.query(
+      `UPDATE room_change_requests SET status = 'pending_payment', is_accounting_approved = FALSE,
+       accounting_approved_by = NULL, accounting_approved_at = NULL, rejection_reason = NULL,
+       updated_at = NOW() WHERE id = $1`,
+      [requestId],
+    );
+  }
+
+  private async undoStaffMoveBed(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousBedId } = log.undoData;
+    const bookingId = log.entityId;
+
+    await client.query(`UPDATE bookings SET bed_id = $1, updated_at = NOW() WHERE id = $2`, [
+      previousBedId,
+      bookingId,
+    ]);
+  }
 
   private async undoBulkImport(log: UndoLog, client: PoolClient): Promise<void> {
     const { batchId, createdStudentIds, createdBookingIds } = log.undoData;
