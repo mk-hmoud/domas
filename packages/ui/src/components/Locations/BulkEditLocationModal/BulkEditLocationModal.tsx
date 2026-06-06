@@ -14,6 +14,7 @@ import {
   UpdateLocationDto,
   LocationOwnership,
   GenderType,
+  StudentYearLock,
 } from "@domas/ts-types";
 
 interface BulkEditLocationModalProps {
@@ -38,6 +39,7 @@ export function BulkEditLocationModal({
   const [updateForeignerOnly, setUpdateForeignerOnly] = useState(false);
   const [updateGuestZone, setUpdateGuestZone] = useState(false);
   const [updateGenderLock, setUpdateGenderLock] = useState(false);
+  const [updateStudentYearLock, setUpdateStudentYearLock] = useState(false);
 
   const form = useForm<UpdateLocationDto>({
     initialValues: {
@@ -46,6 +48,7 @@ export function BulkEditLocationModal({
       isForeignerOnly: false,
       isGuestZone: false,
       genderLock: undefined,
+      studentYearLock: undefined,
     },
   });
 
@@ -58,6 +61,8 @@ export function BulkEditLocationModal({
       if (updateForeignerOnly) payload.isForeignerOnly = values.isForeignerOnly;
       if (updateGuestZone) payload.isGuestZone = values.isGuestZone;
       if (updateGenderLock) payload.genderLock = values.genderLock;
+      if (updateStudentYearLock)
+        payload.studentYearLock = values.studentYearLock ?? null;
 
       if (Object.keys(payload).length > 0) {
         await onSubmit(payload);
@@ -69,6 +74,7 @@ export function BulkEditLocationModal({
       setUpdateForeignerOnly(false);
       setUpdateGuestZone(false);
       setUpdateGenderLock(false);
+      setUpdateStudentYearLock(false);
       onClose();
     } catch (error) {
       console.error(error);
@@ -86,6 +92,16 @@ export function BulkEditLocationModal({
     value: g,
     label: t(g),
   }));
+  const studentYearLockOptions = [
+    {
+      value: StudentYearLock.NEW,
+      label: t("student_year_lock_new", "New students"),
+    },
+    {
+      value: StudentYearLock.CURRENT,
+      label: t("student_year_lock_current", "Current students"),
+    },
+  ];
 
   return (
     <Modal
@@ -165,6 +181,25 @@ export function BulkEditLocationModal({
               {...form.getInputProps("genderLock")}
             />
           </Group>
+
+          <Group align="flex-end">
+            <Checkbox
+              checked={updateStudentYearLock}
+              onChange={(e) =>
+                setUpdateStudentYearLock(e.currentTarget.checked)
+              }
+              label={t("student_year_lock_label", "Student year")}
+              style={{ width: 150 }}
+            />
+            <Select
+              placeholder={t("none")}
+              data={studentYearLockOptions}
+              disabled={!updateStudentYearLock}
+              clearable
+              style={{ flex: 1 }}
+              {...form.getInputProps("studentYearLock")}
+            />
+          </Group>
         </SimpleGrid>
 
         <Group justify="flex-end" mt="xl">
@@ -179,7 +214,8 @@ export function BulkEditLocationModal({
               !updateTrOnly &&
               !updateForeignerOnly &&
               !updateGuestZone &&
-              !updateGenderLock
+              !updateGenderLock &&
+              !updateStudentYearLock
             }
           >
             {t("save")}

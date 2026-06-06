@@ -15,6 +15,7 @@ import {
   CreateLocationDto,
   LocationType,
   GenderType,
+  StudentYearLock,
   LocationOwnership,
   RoomType,
 } from "@domas/ts-types";
@@ -59,6 +60,7 @@ export function CreateLocationModal({
       type: LocationType.CAMPUS,
       parentId: parentId || undefined,
       genderLock: undefined,
+      studentYearLock: undefined,
       isGuestZone: false,
       isTrOnly: false,
       isForeignerOnly: false,
@@ -117,6 +119,7 @@ export function CreateLocationModal({
           name: initialValues.name,
           type: initialValues.type,
           genderLock: initialValues.genderLock || undefined,
+          studentYearLock: initialValues.studentYearLock || undefined,
           isGuestZone: initialValues.isGuestZone || false,
           isTrOnly: initialValues.isTrOnly || false,
           isForeignerOnly: initialValues.isForeignerOnly || false,
@@ -170,6 +173,16 @@ export function CreateLocationModal({
     value: t,
     label: t,
   }));
+  const studentYearLockOptions = [
+    {
+      value: StudentYearLock.NEW,
+      label: t("student_year_lock_new", "New students"),
+    },
+    {
+      value: StudentYearLock.CURRENT,
+      label: t("student_year_lock_current", "Current students"),
+    },
+  ];
   const ownershipOptions = Object.values(LocationOwnership).map((o) => ({
     value: o,
     label: t(`ownerships.${o}`),
@@ -307,6 +320,15 @@ export function CreateLocationModal({
               data={genderOptions}
               clearable
               {...form.getInputProps("genderLock")}
+            />
+          )}
+          {showRoomFields && (
+            <Select
+              label={t("student_year_lock_label", "Student year")}
+              placeholder={t("none")}
+              data={studentYearLockOptions}
+              clearable
+              {...form.getInputProps("studentYearLock")}
             />
           )}
         </SimpleGrid>

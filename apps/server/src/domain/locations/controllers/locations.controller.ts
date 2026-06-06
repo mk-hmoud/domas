@@ -17,6 +17,7 @@ import { CreateLocationDto } from '../dto/create-location.dto';
 import { UpdateLocationDto } from '../dto/update-location.dto';
 import {
   UpdateGenderLockDto,
+  UpdateStudentYearLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,
@@ -193,6 +194,21 @@ export class LocationsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.locationsService.updateGenderLock(id, dto.genderLock, dto.cascade ?? true, context);
+  }
+
+  @Patch(':id/student-year-lock')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  updateStudentYearLock(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateStudentYearLockDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.updateStudentYearLock(
+      id,
+      dto.studentYearLock,
+      dto.cascade ?? true,
+      context,
+    );
   }
 
   @Patch(':id/guest-zone')

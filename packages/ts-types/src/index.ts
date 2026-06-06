@@ -74,6 +74,7 @@ export * from "./interfaces/announcement.interface";
 export * from "./dtos/announcement.dto";
 export type {
   UpdateGenderLockDto,
+  UpdateStudentYearLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,

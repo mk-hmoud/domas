@@ -1050,6 +1050,17 @@ function LocationsContent() {
                       INT Only
                     </Badge>
                   )}
+                  {selectedNode.studentYearLock && (
+                    <Badge
+                      variant="light"
+                      color="violet"
+                      leftSection={<IconUser size={14} />}
+                    >
+                      {selectedNode.studentYearLock === "new"
+                        ? t("student_year_lock_new", "New students")
+                        : t("student_year_lock_current", "Current students")}
+                    </Badge>
+                  )}
                   {selectedNode.isGuestZone && (
                     <Badge
                       variant="light"

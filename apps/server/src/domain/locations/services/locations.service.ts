@@ -331,6 +331,33 @@ export class LocationsService {
     return this.db.transaction(operation, context);
   }
 
+  async updateStudentYearLock(
+    id: number,
+    studentYearLock: string | null,
+    cascade: boolean,
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ): Promise<Location> {
+    const operation = async (client: PoolClient) => {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+
+      const updated = await this.locationsRepository.updateStudentYearLock(
+        id,
+        studentYearLock,
+        cascade,
+        client,
+      );
+
+      return updated;
+    };
+
+    if (externalClient) return operation(externalClient);
+
+    this.logger.log({ locationId: id, studentYearLock, cascade }, 'Updating student year lock');
+    return this.db.transaction(operation, context);
+  }
+
   async updateGuestZone(
     id: number,
     isGuestZone: boolean,

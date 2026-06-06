@@ -1,11 +1,22 @@
 import { IsBoolean, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
+import { StudentYearLock } from '../../../common/enums/student-year-lock.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class UpdateGenderLockDto {
   @IsEnum(GenderType)
   @IsOptional() // Allow null to unlock
   genderLock!: GenderType | null;
+
+  @IsBoolean()
+  @IsOptional()
+  cascade?: boolean = true;
+}
+
+export class UpdateStudentYearLockDto {
+  @IsEnum(StudentYearLock)
+  @IsOptional()
+  studentYearLock!: StudentYearLock | null;
 
   @IsBoolean()
   @IsOptional()
