@@ -95,6 +95,12 @@ export class StudentPortalService {
     return this.portalRepository.findBookableSemesters();
   }
 
+  private isNewStudent(studentNumber: string, academicYear: string): boolean {
+    const enrollmentYear = 2000 + parseInt(studentNumber.slice(0, 2), 10);
+    const semesterStartYear = parseInt(academicYear.split('-')[0], 10);
+    return enrollmentYear === semesterStartYear;
+  }
+
   async getAvailableBedsForSemester(
     semesterId: number,
     studentId: string,
@@ -112,6 +118,7 @@ export class StudentPortalService {
       semesterId,
       student.nationalityCode,
       student.gender,
+      this.isNewStudent(student.studentNumber, semester.academicYear),
       roomTypeId,
     );
   }
@@ -133,6 +140,7 @@ export class StudentPortalService {
       semesterId,
       student.nationalityCode,
       student.gender,
+      this.isNewStudent(student.studentNumber, semester.academicYear),
       roomTypeId,
     );
   }
@@ -146,7 +154,12 @@ export class StudentPortalService {
       throw new BadRequestException('Semester is not open for bookings');
     }
 
-    return this.portalRepository.findBuildings(semesterId, student.nationalityCode, student.gender);
+    return this.portalRepository.findBuildings(
+      semesterId,
+      student.nationalityCode,
+      student.gender,
+      this.isNewStudent(student.studentNumber, semester.academicYear),
+    );
   }
 
   async getRoomCatalog(
@@ -167,6 +180,7 @@ export class StudentPortalService {
       semesterId,
       student.nationalityCode,
       student.gender,
+      this.isNewStudent(student.studentNumber, semester.academicYear),
       buildingId,
       capacity,
     );
