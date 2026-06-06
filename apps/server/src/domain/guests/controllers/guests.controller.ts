@@ -75,17 +75,17 @@ export class GuestsController {
   }
 
   @Post('guest-stays/:id/check-in')
-  checkIn(@Param('id') id: string) {
-    return this.service.checkIn(id);
+  checkIn(@Param('id') id: string, @UserContext() user: AuditUserContext) {
+    return this.service.checkIn(id, user.userId);
   }
 
   @Post('guest-stays/:id/check-out')
-  checkOut(@Param('id') id: string) {
-    return this.service.checkOut(id);
+  checkOut(@Param('id') id: string, @UserContext() user: AuditUserContext) {
+    return this.service.checkOut(id, user.userId);
   }
 
   @Post('guest-stays/:id/cancel')
-  cancel(@Param('id') id: string) {
-    return this.service.cancel(id);
+  cancel(@Param('id') id: string, @UserContext() user: AuditUserContext) {
+    return this.service.cancel(id, user.userId);
   }
 }

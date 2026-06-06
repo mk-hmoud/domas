@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { RoomTypesRepository } from '../repositories/room-types.repository';
 import { StorageService } from '../../../common/storage/storage.service';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateRoomTypeDto, UpdateRoomTypeDto } from '../dto/room-type.dto';
 import { RoomType } from '../entities/room-type.entity';
 
@@ -10,6 +12,7 @@ export class RoomTypesService {
   constructor(
     private readonly repo: RoomTypesRepository,
     private readonly storage: StorageService,
+    private readonly undoService: UndoService,
   ) {}
 
   findAll(): Promise<RoomType[]> {
@@ -22,13 +25,41 @@ export class RoomTypesService {
     return rt;
   }
 
-  create(data: CreateRoomTypeDto): Promise<RoomType> {
-    return this.repo.create(data);
+  async create(data: CreateRoomTypeDto, userId?: string): Promise<RoomType> {
+    const result = await this.repo.create(data);
+    if (userId) {
+      await this.undoService.registerUndo({
+        userId,
+        actionType: UndoActionType.CREATE_ROOM_TYPE,
+        entityType: 'room_type',
+        entityId: String(result.id),
+        undoData: {},
+        description: `Created room type "${result.name}"`,
+      });
+    }
+    return result;
   }
 
-  async update(id: number, data: UpdateRoomTypeDto): Promise<RoomType> {
+  async update(id: number, data: UpdateRoomTypeDto, userId?: string): Promise<RoomType> {
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new NotFoundException(`Room type ${id} not found`);
     const rt = await this.repo.update(id, data);
     if (!rt) throw new NotFoundException(`Room type ${id} not found`);
+    if (userId) {
+      await this.undoService.registerUndo({
+        userId,
+        actionType: UndoActionType.UPDATE_ROOM_TYPE,
+        entityType: 'room_type',
+        entityId: String(id),
+        undoData: {
+          name: existing.name,
+          description: existing.description,
+          capacity: existing.capacity,
+          amenities: existing.amenities,
+        },
+        description: `Updated room type "${existing.name}"`,
+      });
+    }
     return rt;
   }
 
@@ -49,12 +80,26 @@ export class RoomTypesService {
     return this.repo.removeImageAtIndex(id, index);
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: number, userId?: string): Promise<void> {
     const rt = await this.repo.findByIdRaw(id);
     if (!rt) throw new NotFoundException(`Room type ${id} not found`);
-    // Clean up all images from storage before deleting the room type
     await Promise.all(rt.galleryUrls.map((key) => this.storage.delete(key)));
     const deleted = await this.repo.delete(id);
     if (!deleted) throw new NotFoundException(`Room type ${id} not found`);
+    if (userId) {
+      await this.undoService.registerUndo({
+        userId,
+        actionType: UndoActionType.DELETE_ROOM_TYPE,
+        entityType: 'room_type',
+        entityId: String(id),
+        undoData: {
+          name: rt.name,
+          description: rt.description,
+          capacity: rt.capacity,
+          amenities: rt.amenities,
+        },
+        description: `Deleted room type "${rt.name}"`,
+      });
+    }
   }
 }

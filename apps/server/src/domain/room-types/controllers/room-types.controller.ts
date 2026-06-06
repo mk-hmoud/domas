@@ -19,6 +19,8 @@ import { CreateRoomTypeDto, UpdateRoomTypeDto } from '../dto/room-type.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 import { RequirePermissions } from '../../../core/decorators/require-permissions.decorator';
+import { UserContext } from '../../../core/decorators/user-context.decorator';
+import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -42,14 +44,18 @@ export class RoomTypesController {
 
   @Post()
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
-  create(@Body() dto: CreateRoomTypeDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateRoomTypeDto, @UserContext() ctx: AuditUserContext) {
+    return this.service.create(dto, ctx.userId);
   }
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoomTypeDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateRoomTypeDto,
+    @UserContext() ctx: AuditUserContext,
+  ) {
+    return this.service.update(id, dto, ctx.userId);
   }
 
   @Post(':id/images')
@@ -68,7 +74,7 @@ export class RoomTypesController {
   @Delete(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.service.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @UserContext() ctx: AuditUserContext) {
+    return this.service.delete(id, ctx.userId);
   }
 }

@@ -63,4 +63,26 @@ export enum UndoActionType {
   RESOLVE_ROOM_CHANGE = 'resolve_room_change',
   APPROVE_ROOM_CHANGE_PAYMENT = 'approve_room_change_payment',
   STAFF_MOVE_BED = 'staff_move_bed',
+
+  // Dorm Certificates
+  APPROVE_DORM_CERT = 'approve_dorm_cert',
+  REJECT_DORM_CERT = 'reject_dorm_cert',
+
+  // Announcements
+  CREATE_ANNOUNCEMENT = 'create_announcement',
+  UPDATE_ANNOUNCEMENT = 'update_announcement',
+  DELETE_ANNOUNCEMENT = 'delete_announcement',
+  PUBLISH_ANNOUNCEMENT = 'publish_announcement',
+  UNPUBLISH_ANNOUNCEMENT = 'unpublish_announcement',
+
+  // Room Types
+  CREATE_ROOM_TYPE = 'create_room_type',
+  UPDATE_ROOM_TYPE = 'update_room_type',
+  DELETE_ROOM_TYPE = 'delete_room_type',
+
+  // Guest Stays
+  CREATE_GUEST_STAY = 'create_guest_stay',
+  CHECK_IN_GUEST_STAY = 'check_in_guest_stay',
+  CHECK_OUT_GUEST_STAY = 'check_out_guest_stay',
+  CANCEL_GUEST_STAY = 'cancel_guest_stay',
 }
