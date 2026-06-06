@@ -24,6 +24,7 @@ export class LocationsRepository implements ILocationsRepository {
       tree_path as "treePath",
       type,
       gender_lock as "genderLock",
+      student_year_lock as "studentYearLock",
       is_guest_zone as "isGuestZone",
       is_tr_only as "isTrOnly",
       is_foreigner_only as "isForeignerOnly",
@@ -37,9 +38,9 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, tree_path, type, gender_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
+        name, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING ${this.selectColumns}
     `;
     const values = [
@@ -47,6 +48,7 @@ export class LocationsRepository implements ILocationsRepository {
       data.treePath,
       data.type,
       data.genderLock || null,
+      data.studentYearLock || null,
       data.isGuestZone || false,
       data.isTrOnly || false,
       data.isForeignerOnly || false,
@@ -125,6 +127,7 @@ export class LocationsRepository implements ILocationsRepository {
     let baseQuery = `
       SELECT
         l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
+        l.student_year_lock as "studentYearLock",
         l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
         l.room_type_id as "roomTypeId", rt.name as "roomTypeName",
         l.created_at as "createdAt", l.updated_at as "updatedAt",
@@ -256,6 +259,7 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
+    if ('studentYearLock' in data) addUpdate('student_year_lock', data.studentYearLock ?? null);
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
     if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
     if (data.isForeignerOnly !== undefined) addUpdate('is_foreigner_only', data.isForeignerOnly);
@@ -404,6 +408,31 @@ export class LocationsRepository implements ILocationsRepository {
 
     await this.getClient(client).query(query, params);
     target.genderLock = genderLock;
+    return target;
+  }
+
+  async updateStudentYearLock(
+    id: number,
+    studentYearLock: string | null,
+    cascade: boolean,
+    client?: PoolClient,
+  ): Promise<Location> {
+    const target = await this.findById(id, client);
+    if (!target) throw new Error('Location not found');
+
+    let query = '';
+    let params: any[] = [];
+
+    if (cascade) {
+      query = `UPDATE locations SET student_year_lock = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`;
+      params = [studentYearLock, target.treePath];
+    } else {
+      query = `UPDATE locations SET student_year_lock = $1 WHERE id = $2 AND deleted_at IS NULL`;
+      params = [studentYearLock, id];
+    }
+
+    await this.getClient(client).query(query, params);
+    target.studentYearLock = studentYearLock as any;
     return target;
   }
 
