@@ -15,11 +15,12 @@ import {
   Title,
   UnstyledButton,
 } from '@domas/ui';
-import { ThemeToggle, LanguageSwitcher } from '@domas/ui';
+import { ThemeToggle, LanguageSwitcher, FontSizeControl } from '@domas/ui';
 import { useTranslation } from 'react-i18next';
 import {
   IconBell,
   IconBed,
+  IconBuildingSkyscraper,
   IconCalendarPlus,
   IconCertificate,
   IconCreditCard,
@@ -236,9 +237,12 @@ function TopBar() {
 
   return (
     <Group h="100%" px="md" justify="space-between">
-      <Title order={4} style={{ cursor: 'default', userSelect: 'none', letterSpacing: -0.5 }}>
-        DOMAS
-      </Title>
+      <Group gap={8} style={{ cursor: 'default', userSelect: 'none' }}>
+        <IconBuildingSkyscraper size={22} stroke={1.5} color="var(--mantine-color-indigo-6)" />
+        <Text fw={700} size="md" style={{ letterSpacing: '-0.01em' }}>
+          DOMAS
+        </Text>
+      </Group>
 
       <Group gap="xs">
         {/* Notification bell — mobile only */}
@@ -264,6 +268,7 @@ function TopBar() {
         {/* Desktop: language + theme + user menu */}
         <Box visibleFrom="sm">
           <Group gap="xs">
+            <FontSizeControl />
             <LanguageSwitcher />
             <ThemeToggle />
             <Menu shadow="md" width={200} position="bottom-end">
