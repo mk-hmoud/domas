@@ -120,10 +120,10 @@ export const students = {
 
   listApplications: async (
     status?: ApplicationStatus,
-  ): Promise<(StudentApplication & { letterUrl: string })[]> => {
+  ): Promise<(StudentApplication & { documentUrl: string })[]> => {
     const params = status ? { status } : {};
     const response = await apiClient.get<
-      (StudentApplication & { letterUrl: string })[]
+      (StudentApplication & { documentUrl: string })[]
     >("/students/applications", { params });
     return response.data;
   },

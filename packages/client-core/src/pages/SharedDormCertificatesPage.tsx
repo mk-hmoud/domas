@@ -197,7 +197,7 @@ export function SharedDormCertificatesPage() {
                         }
                         size="sm"
                       >
-                        {t(`cert_status_${req.status}`, req.status)}
+                        {String(t(`cert_status_${req.status}`, req.status))}
                       </Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
