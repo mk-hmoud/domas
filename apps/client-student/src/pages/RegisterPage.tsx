@@ -262,7 +262,17 @@ export function RegisterPage() {
                     radius="lg"
                     valueFormat="DD/MM/YYYY"
                     value={birthDate}
-                    onChange={(value) => setBirthDate(value ? new Date(value) : null)}
+                    onChange={(value) => {
+                      if (!value) {
+                        setBirthDate(null);
+                        return;
+                      }
+                      setBirthDate(
+                        typeof value === 'string'
+                          ? value
+                          : (value as Date).toISOString().split('T')[0],
+                      );
+                    }}
                     error={birthDateError}
                   />
                 </Group>

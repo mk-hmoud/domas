@@ -102,7 +102,6 @@ export function DormCertificatePage() {
 
   const needsCert = eligibility?.reason === 'no_valid_certificate';
   const isPending = eligibility?.reason === 'account_pending';
-  const canRequest = eligibility?.eligible && !hasPendingRequest;
   const canRequestWithCert = needsCert && !hasPendingRequest;
 
   return (
