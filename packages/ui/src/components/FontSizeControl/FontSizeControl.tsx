@@ -13,9 +13,17 @@ import { useTranslation } from "react-i18next";
 const STORAGE_KEY = "domas-font-size";
 
 const SIZES = [
-  { key: "normal", label: "A", fontSize: "100%", title: "Normal" },
-  { key: "large", label: "A", fontSize: "112%", title: "Large" },
-  { key: "xl", label: "A", fontSize: "125%", title: "X-Large" },
+  { key: "xs", label: "A", fontSize: "88%", previewPx: 12, title: "X-Small" },
+  { key: "sm", label: "A", fontSize: "100%", previewPx: 14, title: "Small" },
+  {
+    key: "normal",
+    label: "A",
+    fontSize: "112%",
+    previewPx: 16,
+    title: "Normal",
+  },
+  { key: "lg", label: "A", fontSize: "125%", previewPx: 19, title: "Large" },
+  { key: "xl", label: "A", fontSize: "140%", previewPx: 22, title: "X-Large" },
 ] as const;
 
 type SizeKey = (typeof SIZES)[number]["key"];
@@ -51,7 +59,7 @@ export function FontSizeControl() {
       position="bottom"
       withArrow
       shadow="md"
-      width={160}
+      width={170}
     >
       <Popover.Target>
         <Tooltip
@@ -66,7 +74,7 @@ export function FontSizeControl() {
             onClick={() => setOpened((o) => !o)}
             aria-label="Change font size"
           >
-            <IconTextSize size={16} stroke={1.5} />
+            <IconTextSize size="1em" stroke={1.5} />
           </ActionIcon>
         </Tooltip>
       </Popover.Target>
@@ -99,9 +107,9 @@ export function FontSizeControl() {
               >
                 <Text
                   style={{
-                    fontSize: size.fontSize,
+                    fontSize: size.previewPx,
                     lineHeight: 1,
-                    minWidth: 20,
+                    minWidth: 22,
                     textAlign: "center",
                   }}
                   fw={700}

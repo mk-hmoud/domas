@@ -1,5 +1,5 @@
 .header {
-  height: 52px;
+  height: 3.25rem;
   padding: 0 var(--mantine-spacing-lg);
   background-color: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));

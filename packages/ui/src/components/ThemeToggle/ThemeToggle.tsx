@@ -23,9 +23,9 @@ export function ThemeToggle() {
       aria-label="Toggle color scheme"
     >
       {computedColorScheme === "dark" ? (
-        <IconSun size={16} stroke={1.5} />
+        <IconSun size="1em" stroke={1.5} />
       ) : (
-        <IconMoon size={16} stroke={1.5} />
+        <IconMoon size="1em" stroke={1.5} />
       )}
     </ActionIcon>
   );
