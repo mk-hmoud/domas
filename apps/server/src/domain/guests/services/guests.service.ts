@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { GuestsRepository } from '../repositories/guests.repository';
 import { GuestStaysRepository } from '../repositories/guest-stays.repository';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { CreateGuestDto } from '../dto/create-guest.dto';
 import { UpdateGuestDto } from '../dto/update-guest.dto';
 import { CreateGuestStayDto } from '../dto/create-guest-stay.dto';
@@ -12,6 +14,7 @@ export class GuestsService {
   constructor(
     private readonly guestsRepository: GuestsRepository,
     private readonly staysRepository: GuestStaysRepository,
+    private readonly undoService: UndoService,
   ) {}
 
   // ─── Guests ──────────────���─────────────────────────────────────────────────
@@ -60,7 +63,16 @@ export class GuestsService {
       throw new BadRequestException('Check-out date must be after check-in date');
     }
 
-    return this.staysRepository.create(data, context.userId);
+    const result = await this.staysRepository.create(data, context.userId);
+    await this.undoService.registerUndo({
+      userId: context.userId,
+      actionType: UndoActionType.CREATE_GUEST_STAY,
+      entityType: 'guest_stay',
+      entityId: result.id,
+      undoData: {},
+      description: `Created guest stay for guest ${data.guestId}`,
+    });
+    return result;
   }
 
   async updateStay(id: string, data: UpdateGuestStayDto) {
@@ -72,30 +84,64 @@ export class GuestsService {
     return this.staysRepository.update(id, data);
   }
 
-  async checkIn(id: string) {
+  async checkIn(id: string, userId?: string) {
     const stay = await this.staysRepository.findById(id);
     if (!stay) throw new NotFoundException('Guest stay not found');
     if (stay.status !== 'confirmed') {
       throw new BadRequestException(`Cannot check in a stay with status '${stay.status}'`);
     }
-    return this.staysRepository.checkIn(id);
+    const result = await this.staysRepository.checkIn(id);
+    if (userId) {
+      await this.undoService.registerUndo({
+        userId,
+        actionType: UndoActionType.CHECK_IN_GUEST_STAY,
+        entityType: 'guest_stay',
+        entityId: id,
+        undoData: {},
+        description: `Checked in guest stay ${id}`,
+      });
+    }
+    return result;
   }
 
-  async checkOut(id: string) {
+  async checkOut(id: string, userId?: string) {
     const stay = await this.staysRepository.findById(id);
     if (!stay) throw new NotFoundException('Guest stay not found');
     if (stay.status !== 'active') {
       throw new BadRequestException(`Cannot check out a stay with status '${stay.status}'`);
     }
-    return this.staysRepository.checkOut(id);
+    const result = await this.staysRepository.checkOut(id);
+    if (userId) {
+      await this.undoService.registerUndo({
+        userId,
+        actionType: UndoActionType.CHECK_OUT_GUEST_STAY,
+        entityType: 'guest_stay',
+        entityId: id,
+        undoData: {},
+        description: `Checked out guest stay ${id}`,
+      });
+    }
+    return result;
   }
 
-  async cancel(id: string) {
+  async cancel(id: string, userId?: string) {
     const stay = await this.staysRepository.findById(id);
     if (!stay) throw new NotFoundException('Guest stay not found');
     if (stay.status === 'completed' || stay.status === 'cancelled') {
       throw new BadRequestException(`Stay is already ${stay.status}`);
     }
-    return this.staysRepository.cancel(id);
+    const previousStatus = stay.status;
+    const result = await this.staysRepository.cancel(id);
+    if (userId) {
+      await this.undoService.registerUndo({
+        userId,
+        actionType: UndoActionType.CANCEL_GUEST_STAY,
+        entityType: 'guest_stay',
+        entityId: id,
+        undoData: { previousStatus },
+        description: `Cancelled guest stay ${id}`,
+      });
+    }
+    return result;
   }
 }

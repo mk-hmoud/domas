@@ -19,7 +19,11 @@ CREATE TABLE locations (
     -- GENDER LOCK
     -- Can be set at ANY level. If NULL, it is open/inherited.
     gender_lock gender_type DEFAULT NULL,
-    
+
+    -- STUDENT YEAR LOCK
+    -- 'new' = first-year students only, 'current' = continuing students only, NULL = unrestricted.
+    student_year_lock VARCHAR(10) DEFAULT NULL CHECK (student_year_lock IN ('new', 'current')),
+
     -- Guest Isolation
     is_guest_zone BOOLEAN DEFAULT FALSE,
     is_tr_only BOOLEAN DEFAULT FALSE,

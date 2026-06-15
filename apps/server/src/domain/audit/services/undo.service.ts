@@ -278,6 +278,56 @@ export class UndoService {
       case UndoActionType.BULK_IMPORT_STUDENT:
         return this.undoBulkImport(log, client);
 
+      // Pre-Reservations
+      case UndoActionType.ASSIGN_PRE_RESERVATION:
+        return this.undoAssignPreReservation(log, client);
+      case UndoActionType.REJECT_PRE_RESERVATION:
+        return this.undoRejectPreReservation(log, client);
+
+      // Room Changes
+      case UndoActionType.RESOLVE_ROOM_CHANGE:
+        return this.undoResolveRoomChange(log, client);
+      case UndoActionType.APPROVE_ROOM_CHANGE_PAYMENT:
+        return this.undoApproveRoomChangePayment(log, client);
+      case UndoActionType.STAFF_MOVE_BED:
+        return this.undoStaffMoveBed(log, client);
+
+      // Dorm Certificates
+      case UndoActionType.APPROVE_DORM_CERT:
+        return this.undoApproveDormCert(log, client);
+      case UndoActionType.REJECT_DORM_CERT:
+        return this.undoRejectDormCert(log, client);
+
+      // Announcements
+      case UndoActionType.CREATE_ANNOUNCEMENT:
+        return this.undoCreateAnnouncement(log, client);
+      case UndoActionType.UPDATE_ANNOUNCEMENT:
+        return this.undoUpdateAnnouncement(log, client);
+      case UndoActionType.DELETE_ANNOUNCEMENT:
+        return this.undoDeleteAnnouncement(log, client);
+      case UndoActionType.PUBLISH_ANNOUNCEMENT:
+        return this.undoPublishAnnouncement(log, client);
+      case UndoActionType.UNPUBLISH_ANNOUNCEMENT:
+        return this.undoUnpublishAnnouncement(log, client);
+
+      // Room Types
+      case UndoActionType.CREATE_ROOM_TYPE:
+        return this.undoCreateRoomType(log, client);
+      case UndoActionType.UPDATE_ROOM_TYPE:
+        return this.undoUpdateRoomType(log, client);
+      case UndoActionType.DELETE_ROOM_TYPE:
+        return this.undoDeleteRoomType(log, client);
+
+      // Guest Stays
+      case UndoActionType.CREATE_GUEST_STAY:
+        return this.undoCreateGuestStay(log, client);
+      case UndoActionType.CHECK_IN_GUEST_STAY:
+        return this.undoCheckInGuestStay(log, client);
+      case UndoActionType.CHECK_OUT_GUEST_STAY:
+        return this.undoCheckOutGuestStay(log, client);
+      case UndoActionType.CANCEL_GUEST_STAY:
+        return this.undoCancelGuestStay(log, client);
+
       default:
         throw new BadRequestException(`Unsupported undo action: ${log.actionType}`);
     }
@@ -1257,6 +1307,210 @@ export class UndoService {
   // ===========================================================================
   // Bulk Import Handlers
   // ===========================================================================
+
+  // ===========================================================================
+  // Pre-Reservation Handlers
+  // ===========================================================================
+
+  private async undoAssignPreReservation(log: UndoLog, client: PoolClient): Promise<void> {
+    const { bookingId } = log.undoData;
+    const preReservationId = log.entityId;
+
+    if (bookingId) {
+      await client.query('DELETE FROM bookings WHERE id = $1', [bookingId]);
+    }
+    await client.query(
+      `UPDATE pre_reservations SET status = 'pending', resolved_by = NULL, resolved_at = NULL,
+       booking_id = NULL, updated_at = NOW() WHERE id = $1`,
+      [preReservationId],
+    );
+  }
+
+  private async undoRejectPreReservation(log: UndoLog, client: PoolClient): Promise<void> {
+    const preReservationId = log.entityId;
+    await client.query(
+      `UPDATE pre_reservations SET status = 'pending', resolved_by = NULL, resolved_at = NULL,
+       rejection_reason = NULL, updated_at = NOW() WHERE id = $1`,
+      [preReservationId],
+    );
+  }
+
+  // ===========================================================================
+  // Room Change Handlers
+  // ===========================================================================
+
+  private async undoResolveRoomChange(log: UndoLog, client: PoolClient): Promise<void> {
+    const { bookingId, previousBedId, bedWasMoved } = log.undoData;
+    const requestId = log.entityId;
+
+    if (bedWasMoved && bookingId && previousBedId) {
+      await client.query(
+        `UPDATE bookings SET bed_id = $1, room_changes_count = GREATEST(room_changes_count - 1, 0),
+         updated_at = NOW() WHERE id = $2`,
+        [previousBedId, bookingId],
+      );
+    }
+
+    await client.query(
+      `UPDATE room_change_requests SET status = 'pending', resolved_by = NULL, resolved_at = NULL,
+       rejection_reason = NULL, updated_at = NOW() WHERE id = $1`,
+      [requestId],
+    );
+  }
+
+  private async undoApproveRoomChangePayment(log: UndoLog, client: PoolClient): Promise<void> {
+    const { bookingId, previousBedId, bedWasMoved } = log.undoData;
+    const requestId = log.entityId;
+
+    if (bedWasMoved && bookingId && previousBedId) {
+      await client.query(
+        `UPDATE bookings SET bed_id = $1, room_changes_count = GREATEST(room_changes_count - 1, 0),
+         updated_at = NOW() WHERE id = $2`,
+        [previousBedId, bookingId],
+      );
+    }
+
+    await client.query(
+      `UPDATE room_change_requests SET status = 'pending_payment', is_accounting_approved = FALSE,
+       accounting_approved_by = NULL, accounting_approved_at = NULL, rejection_reason = NULL,
+       updated_at = NOW() WHERE id = $1`,
+      [requestId],
+    );
+  }
+
+  private async undoStaffMoveBed(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousBedId } = log.undoData;
+    const bookingId = log.entityId;
+
+    await client.query(`UPDATE bookings SET bed_id = $1, updated_at = NOW() WHERE id = $2`, [
+      previousBedId,
+      bookingId,
+    ]);
+  }
+
+  // ===========================================================================
+  // Dorm Certificate Handlers
+  // ===========================================================================
+
+  private async undoApproveDormCert(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE dorm_certificate_requests
+       SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL,
+           certificate_storage_key = NULL, certificate_filename = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [log.entityId],
+    );
+  }
+
+  private async undoRejectDormCert(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE dorm_certificate_requests
+       SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL,
+           rejection_reason = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [log.entityId],
+    );
+  }
+
+  // ===========================================================================
+  // Announcement Handlers
+  // ===========================================================================
+
+  private async undoCreateAnnouncement(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(`DELETE FROM announcements WHERE id = $1`, [log.entityId]);
+  }
+
+  private async undoUpdateAnnouncement(log: UndoLog, client: PoolClient): Promise<void> {
+    const { title, body, pinned, expiresAt } = log.undoData;
+    await client.query(
+      `UPDATE announcements SET title = $1, body = $2, pinned = $3, expires_at = $4,
+       updated_at = NOW() WHERE id = $5`,
+      [title, body, pinned, expiresAt ?? null, log.entityId],
+    );
+  }
+
+  private async undoDeleteAnnouncement(log: UndoLog, client: PoolClient): Promise<void> {
+    const { title, body, pinned, isPublished, expiresAt, createdBy } = log.undoData;
+    await client.query(
+      `INSERT INTO announcements (id, title, body, pinned, is_published, expires_at, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO NOTHING`,
+      [log.entityId, title, body, pinned, isPublished, expiresAt ?? null, createdBy],
+    );
+  }
+
+  private async undoPublishAnnouncement(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE announcements SET is_published = FALSE, updated_at = NOW() WHERE id = $1`,
+      [log.entityId],
+    );
+  }
+
+  private async undoUnpublishAnnouncement(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE announcements SET is_published = TRUE, updated_at = NOW() WHERE id = $1`,
+      [log.entityId],
+    );
+  }
+
+  // ===========================================================================
+  // Room Type Handlers
+  // ===========================================================================
+
+  private async undoCreateRoomType(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(`DELETE FROM room_types WHERE id = $1`, [log.entityId]);
+  }
+
+  private async undoUpdateRoomType(log: UndoLog, client: PoolClient): Promise<void> {
+    const { name, description, capacity, amenities } = log.undoData;
+    await client.query(
+      `UPDATE room_types SET name = $1, description = $2, capacity = $3, amenities = $4,
+       updated_at = NOW() WHERE id = $5`,
+      [name, description, capacity, amenities, log.entityId],
+    );
+  }
+
+  private async undoDeleteRoomType(log: UndoLog, client: PoolClient): Promise<void> {
+    const { name, description, capacity, amenities } = log.undoData;
+    await client.query(
+      `INSERT INTO room_types (id, name, description, capacity, amenities)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO NOTHING`,
+      [log.entityId, name, description, capacity, JSON.stringify(amenities ?? [])],
+    );
+  }
+
+  // ===========================================================================
+  // Guest Stay Handlers
+  // ===========================================================================
+
+  private async undoCreateGuestStay(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(`DELETE FROM guest_stays WHERE id = $1`, [log.entityId]);
+  }
+
+  private async undoCheckInGuestStay(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE guest_stays SET status = 'confirmed', checked_in_at = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [log.entityId],
+    );
+  }
+
+  private async undoCheckOutGuestStay(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE guest_stays SET status = 'active', checked_out_at = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [log.entityId],
+    );
+  }
+
+  private async undoCancelGuestStay(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousStatus } = log.undoData;
+    await client.query(`UPDATE guest_stays SET status = $1, updated_at = NOW() WHERE id = $2`, [
+      previousStatus,
+      log.entityId,
+    ]);
+  }
 
   private async undoBulkImport(log: UndoLog, client: PoolClient): Promise<void> {
     const { batchId, createdStudentIds, createdBookingIds } = log.undoData;

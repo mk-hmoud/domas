@@ -1,8 +1,14 @@
 import { GenderType } from "../enums/gender-type.enum";
+import { StudentYearLock } from "../enums/student-year-lock.enum";
 import { LocationOwnership } from "../enums/location-ownership.enum";
 
 export interface UpdateGenderLockDto {
   genderLock: GenderType | null;
+  cascade?: boolean;
+}
+
+export interface UpdateStudentYearLockDto {
+  studentYearLock: StudentYearLock | null;
   cascade?: boolean;
 }
 

@@ -72,6 +72,7 @@ export class StudentPortalRepository {
     semesterId: number,
     nationalityCode: string,
     gender: GenderType,
+    isNewStudent: boolean,
     roomTypeId?: number | null,
   ): Promise<any[]> {
     const isTr = nationalityCode === 'TR';
@@ -113,17 +114,20 @@ export class StudentPortalRepository {
         AND NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
         AND NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
         AND NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
+        AND (l.student_year_lock IS NULL
+          OR (l.student_year_lock = 'new'     AND $4 = TRUE)
+          OR (l.student_year_lock = 'current' AND $4 = FALSE))
         AND b.id NOT IN (
           SELECT bed_id FROM bookings
           WHERE  semester_id = $3
             AND  status NOT IN ('cancelled', 'rejected')
         )
-        AND ($4::int IS NULL OR l.room_type_id = $4)
+        AND ($5::int IS NULL OR l.room_type_id = $5)
       ORDER BY l.name, b.label
     `;
     const result = await this.db
       .getPool()
-      .query(query, [gender, isTr, semesterId, roomTypeId ?? null]);
+      .query(query, [gender, isTr, semesterId, isNewStudent, roomTypeId ?? null]);
     return result.rows;
   }
 
@@ -136,6 +140,7 @@ export class StudentPortalRepository {
     semesterId: number,
     nationalityCode: string,
     gender: GenderType,
+    isNewStudent: boolean,
     roomTypeId?: number | null,
   ): Promise<any[]> {
     const isTr = nationalityCode === 'TR';
@@ -184,12 +189,15 @@ export class StudentPortalRepository {
         AND NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
         AND NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
         AND NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
-        AND ($4::int IS NULL OR l.room_type_id = $4)
+        AND (l.student_year_lock IS NULL
+          OR (l.student_year_lock = 'new'     AND $4 = TRUE)
+          OR (l.student_year_lock = 'current' AND $4 = FALSE))
+        AND ($5::int IS NULL OR l.room_type_id = $5)
       ORDER BY l.name, b.label
     `;
     const result = await this.db
       .getPool()
-      .query(query, [gender, isTr, semesterId, roomTypeId ?? null]);
+      .query(query, [gender, isTr, semesterId, isNewStudent, roomTypeId ?? null]);
     return result.rows;
   }
 
@@ -201,6 +209,7 @@ export class StudentPortalRepository {
     semesterId: number,
     nationalityCode: string,
     gender: GenderType,
+    isNewStudent: boolean,
   ): Promise<any[]> {
     const isTr = nationalityCode === 'TR';
 
@@ -224,6 +233,9 @@ export class StudentPortalRepository {
           AND  NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
           AND  NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
           AND  NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
+          AND  (l.student_year_lock IS NULL
+            OR (l.student_year_lock = 'new'     AND $4 = TRUE)
+            OR (l.student_year_lock = 'current' AND $4 = FALSE))
           AND  b.id NOT IN (
             SELECT bed_id FROM bookings
             WHERE  semester_id = $3
@@ -242,7 +254,7 @@ export class StudentPortalRepository {
       HAVING COUNT(ab.bed_id) > 0
       ORDER  BY bldg.name
     `;
-    const result = await this.db.getPool().query(query, [gender, isTr, semesterId]);
+    const result = await this.db.getPool().query(query, [gender, isTr, semesterId, isNewStudent]);
     return result.rows;
   }
 
@@ -255,6 +267,7 @@ export class StudentPortalRepository {
     semesterId: number,
     nationalityCode: string,
     gender: GenderType,
+    isNewStudent: boolean,
     buildingId?: number | null,
     capacity?: number | null,
   ): Promise<any[]> {
@@ -283,14 +296,17 @@ export class StudentPortalRepository {
           AND  NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
           AND  NOT (l.is_tr_only        = TRUE AND $2 = FALSE)
           AND  NOT (l.is_foreigner_only = TRUE AND $2 = TRUE)
+          AND  (l.student_year_lock IS NULL
+            OR (l.student_year_lock = 'new'     AND $4 = TRUE)
+            OR (l.student_year_lock = 'current' AND $4 = FALSE))
           AND  b.id NOT IN (
             SELECT bed_id FROM bookings
             WHERE  semester_id = $3
               AND  status NOT IN ('cancelled', 'rejected')
           )
           -- optional building filter
-          AND  ($4::int IS NULL OR l.tree_path <@ (
-            SELECT tree_path FROM locations WHERE id = $4
+          AND  ($5::int IS NULL OR l.tree_path <@ (
+            SELECT tree_path FROM locations WHERE id = $5
           ))
       )
       SELECT
@@ -308,7 +324,7 @@ export class StudentPortalRepository {
       JOIN   semester_room_pricing srp
         ON   srp.room_type_id = rt.id
         AND  srp.semester_id  = $3
-      WHERE  ($5::int IS NULL OR rt.capacity = $5)
+      WHERE  ($6::int IS NULL OR rt.capacity = $6)
       GROUP  BY rt.id, rt.name, rt.description, rt.gallery_urls, rt.amenities, rt.capacity,
                 srp.price_try, srp.price_foreign
       HAVING COUNT(ab.bed_id) > 0
@@ -316,7 +332,7 @@ export class StudentPortalRepository {
     `;
     const result = await this.db
       .getPool()
-      .query(query, [gender, isTr, semesterId, buildingId ?? null, capacity ?? null]);
+      .query(query, [gender, isTr, semesterId, isNewStudent, buildingId ?? null, capacity ?? null]);
     return result.rows;
   }
 

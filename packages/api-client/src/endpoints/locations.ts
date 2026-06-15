@@ -9,6 +9,7 @@ import {
   BulkUpdateLocationDto,
   BulkDeleteLocationDto,
   UpdateGenderLockDto,
+  UpdateStudentYearLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,
@@ -113,6 +114,17 @@ export const locations = {
   ): Promise<Location> => {
     const response = await apiClient.patch<Location>(
       `/locations/${id}/gender-lock`,
+      data,
+    );
+    return response.data;
+  },
+
+  updateStudentYearLock: async (
+    id: number,
+    data: UpdateStudentYearLockDto,
+  ): Promise<Location> => {
+    const response = await apiClient.patch<Location>(
+      `/locations/${id}/student-year-lock`,
       data,
     );
     return response.data;

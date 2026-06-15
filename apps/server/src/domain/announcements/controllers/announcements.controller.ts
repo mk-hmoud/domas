@@ -47,27 +47,31 @@ export class AnnouncementsController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
-  update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAnnouncementDto,
+    @UserContext() ctx: AuditUserContext,
+  ) {
+    return this.service.update(id, dto, ctx.userId);
   }
 
   @Post(':id/publish')
   @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
-  publish(@Param('id') id: string) {
-    return this.service.publish(id);
+  publish(@Param('id') id: string, @UserContext() ctx: AuditUserContext) {
+    return this.service.publish(id, ctx.userId);
   }
 
   @Post(':id/unpublish')
   @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
-  unpublish(@Param('id') id: string) {
-    return this.service.unpublish(id);
+  unpublish(@Param('id') id: string, @UserContext() ctx: AuditUserContext) {
+    return this.service.unpublish(id, ctx.userId);
   }
 
   @Delete(':id')
   @RequirePermissions(PERMISSIONS.ANNOUNCEMENTS_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id') id: string) {
-    return this.service.delete(id);
+  delete(@Param('id') id: string, @UserContext() ctx: AuditUserContext) {
+    return this.service.delete(id, ctx.userId);
   }
 
   // ─── Attachments ─────────────────────────────────────────────────────────────

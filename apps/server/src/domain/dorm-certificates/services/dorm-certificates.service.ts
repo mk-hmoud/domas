@@ -17,6 +17,8 @@ import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { StorageService } from '../../../common/storage/storage.service';
 import { DatabaseService } from '../../../core/database/database.service';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { DormCertificateRequest } from '../entities/dorm-certificate-request.entity';
 import { EnrollmentVerification } from '../../students/entities/enrollment-verification.entity';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
@@ -42,6 +44,7 @@ export class DormCertificatesService {
     private readonly locationsRepository: LocationsRepository,
     private readonly storage: StorageService,
     private readonly db: DatabaseService,
+    private readonly undoService: UndoService,
   ) {}
 
   async getEligibility(studentId: string): Promise<{
@@ -149,7 +152,6 @@ export class DormCertificatesService {
     const student = await this.studentsRepository.findById(request.studentId);
     if (!student) throw new NotFoundException('Student not found');
 
-    // Look up the student's current active booking for room details
     const bookings = await this.bookingsRepository.findAll({ studentId: student.id });
     const activeBooking = bookings.find((b) =>
       [
@@ -166,7 +168,6 @@ export class DormCertificatesService {
       if (bed) room = await this.locationsRepository.findById(bed.locationId);
     }
 
-    // Fetch the dorm manager for the signature line
     const managerRes = await this.db.query(`
       SELECT u.* FROM users u
       JOIN user_roles ur ON u.id = ur.user_id
@@ -183,7 +184,18 @@ export class DormCertificatesService {
     await this.storage.upload(storageKey, pdfBuffer, 'application/pdf');
 
     this.logger.log(`Dorm certificate generated for student ${student.studentNumber}`);
-    return this.dormCertsRepository.approve(id, reviewerId, storageKey, filename);
+    const result = await this.dormCertsRepository.approve(id, reviewerId, storageKey, filename);
+
+    await this.undoService.registerUndo({
+      userId: reviewerId,
+      actionType: UndoActionType.APPROVE_DORM_CERT,
+      entityType: 'dorm_certificate_request',
+      entityId: id,
+      undoData: { storageKey },
+      description: `Approved dorm certificate request ${id}`,
+    });
+
+    return result;
   }
 
   private generateDormCertPdf(
@@ -294,6 +306,17 @@ export class DormCertificatesService {
       throw new BadRequestException('Request has already been reviewed');
     }
     if (!rejectionReason) throw new BadRequestException('Rejection reason is required');
-    return this.dormCertsRepository.reject(id, reviewerId, rejectionReason);
+    const result = await this.dormCertsRepository.reject(id, reviewerId, rejectionReason);
+
+    await this.undoService.registerUndo({
+      userId: reviewerId,
+      actionType: UndoActionType.REJECT_DORM_CERT,
+      entityType: 'dorm_certificate_request',
+      entityId: id,
+      undoData: { rejectionReason },
+      description: `Rejected dorm certificate request ${id}`,
+    });
+
+    return result;
   }
 }

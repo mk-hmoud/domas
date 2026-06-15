@@ -6,6 +6,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../../core/database/database.service';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import {
   NotificationsService,
   NotificationType,
@@ -23,6 +26,7 @@ import { LocationOwnership } from '../../../common/enums/location-ownership.enum
 export class RoomChangesService {
   constructor(
     private readonly db: DatabaseService,
+    private readonly undoService: UndoService,
     private readonly roomChangesRepo: RoomChangesRepository,
     private readonly studentsRepo: StudentsRepository,
     private readonly notificationsService: NotificationsService,
@@ -165,7 +169,7 @@ export class RoomChangesService {
     return this.roomChangesRepo.findAll(params);
   }
 
-  async resolve(id: string, dto: ResolveRoomChangeDto, resolvedBy: string): Promise<any> {
+  async resolve(id: string, dto: ResolveRoomChangeDto, context: AuditUserContext): Promise<any> {
     return this.db.transaction(async (client) => {
       const request = await this.roomChangesRepo.findById(id, client);
       if (!request) throw new NotFoundException('Room change request not found');
@@ -177,6 +181,8 @@ export class RoomChangesService {
       const effectiveBedId: number | undefined = isOpenRequest
         ? dto.assignedBedId
         : request.requestedBedId;
+
+      let bedWasMoved = false;
 
       if (dto.approved) {
         if (isOpenRequest && effectiveBedId == null) {
@@ -197,6 +203,7 @@ export class RoomChangesService {
 
         if (!request.requiresPayment) {
           await this.roomChangesRepo.moveBed(request.bookingId, effectiveBedId!, true, client);
+          bedWasMoved = true;
         }
       }
 
@@ -205,7 +212,7 @@ export class RoomChangesService {
         {
           approved: dto.approved,
           requiresPayment: request.requiresPayment,
-          resolvedBy,
+          resolvedBy: context.userId,
           rejectionReason: dto.rejectionReason,
           assignedBedId: isOpenRequest ? dto.assignedBedId : undefined,
         },
@@ -214,6 +221,23 @@ export class RoomChangesService {
 
       if (!resolved)
         throw new NotFoundException('Room change request not found or already resolved');
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.RESOLVE_ROOM_CHANGE,
+          entityType: 'room_change_request',
+          entityId: id,
+          undoData: {
+            bedWasMoved,
+            previousBedId: request.currentBedId,
+            bookingId: request.bookingId,
+            approved: dto.approved,
+          },
+          description: `${dto.approved ? 'Approved' : 'Rejected'} room change request ${id}`,
+        },
+        client,
+      );
 
       let notificationType: NotificationTypeValue;
       let title: string;
@@ -247,52 +271,81 @@ export class RoomChangesService {
   async approvePayment(
     id: string,
     dto: { approved: boolean; rejectionReason?: string },
-    approvedBy: string,
+    context: AuditUserContext,
   ): Promise<any> {
-    const request = await this.roomChangesRepo.findById(id);
-    if (!request) throw new NotFoundException('Room change request not found');
-    if (!request.requiresPayment) {
-      throw new BadRequestException('This request does not require payment approval');
-    }
-    if (request.status !== 'pending_payment') {
-      throw new BadRequestException(
-        'This request is not awaiting payment approval (must be approved by staff first)',
+    return this.db.transaction(async (client) => {
+      const request = await this.roomChangesRepo.findById(id, client);
+      if (!request) throw new NotFoundException('Room change request not found');
+      if (!request.requiresPayment) {
+        throw new BadRequestException('This request does not require payment approval');
+      }
+      if (request.status !== 'pending_payment') {
+        throw new BadRequestException(
+          'This request is not awaiting payment approval (must be approved by staff first)',
+        );
+      }
+
+      let bedWasMoved = false;
+      if (dto.approved && request.requestedBedId != null) {
+        await this.roomChangesRepo.moveBed(request.bookingId, request.requestedBedId, true, client);
+        bedWasMoved = true;
+      }
+
+      const result = await this.roomChangesRepo.approvePayment(id, {
+        approved: dto.approved,
+        approvedBy: context.userId,
+        rejectionReason: dto.rejectionReason,
+      });
+
+      if (!result)
+        throw new NotFoundException('Room change request not found or cannot be updated');
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.APPROVE_ROOM_CHANGE_PAYMENT,
+          entityType: 'room_change_request',
+          entityId: id,
+          undoData: {
+            bedWasMoved,
+            previousBedId: request.currentBedId,
+            bookingId: request.bookingId,
+            approved: dto.approved,
+          },
+          description: `${dto.approved ? 'Confirmed' : 'Rejected'} payment for room change ${id}`,
+        },
+        client,
       );
-    }
 
-    const result = await this.roomChangesRepo.approvePayment(id, {
-      approved: dto.approved,
-      approvedBy,
-      rejectionReason: dto.rejectionReason,
+      const notificationType = dto.approved
+        ? NotificationType.ROOM_CHANGE_APPROVED
+        : NotificationType.ROOM_CHANGE_REJECTED;
+      const title = dto.approved ? 'Room Change Confirmed' : 'Room Change Cancelled';
+      const body = dto.approved
+        ? 'Your payment has been confirmed and your room change is complete.'
+        : `Your room change was cancelled: ${dto.rejectionReason ?? 'Payment not confirmed'}.`;
+
+      setImmediate(() =>
+        this.notificationsService.create(request.studentId, notificationType, title, body, {
+          roomChangeId: id,
+          bookingId: request.bookingId,
+        }),
+      );
+
+      return result;
     });
-
-    if (!result) throw new NotFoundException('Room change request not found or cannot be updated');
-
-    const notificationType = dto.approved
-      ? NotificationType.ROOM_CHANGE_APPROVED
-      : NotificationType.ROOM_CHANGE_REJECTED;
-    const title = dto.approved ? 'Room Change Confirmed' : 'Room Change Cancelled';
-    const body = dto.approved
-      ? 'Your payment has been confirmed and your room change is complete.'
-      : `Your room change was cancelled: ${dto.rejectionReason ?? 'Payment not confirmed'}.`;
-
-    setImmediate(() =>
-      this.notificationsService.create(request.studentId, notificationType, title, body, {
-        roomChangeId: id,
-        bookingId: request.bookingId,
-      }),
-    );
-
-    return result;
   }
 
   async getAvailableBedsForBooking(bookingId: string): Promise<any[]> {
     return this.roomChangesRepo.findAvailableBedsForBooking(bookingId);
   }
 
-  async staffMoveBed(bookingId: string, dto: StaffMoveBedDto): Promise<void> {
+  async staffMoveBed(
+    bookingId: string,
+    dto: StaffMoveBedDto,
+    context: AuditUserContext,
+  ): Promise<void> {
     return this.db.transaction(async (client) => {
-      // Fetch booking to get semesterId
       const result = await client.query(
         `SELECT id, semester_id AS "semesterId", bed_id AS "bedId", status
          FROM bookings WHERE id = $1`,
@@ -315,13 +368,25 @@ export class RoomChangesService {
       );
       if (taken) throw new ConflictException('This bed is already occupied');
 
-      // Move without incrementing counter
+      const previousBedId = booking.bedId;
+
       await this.roomChangesRepo.moveBed(bookingId, dto.bedId, false, client);
 
-      // Cancel any pending room change requests for this booking
       await client.query(
         `DELETE FROM room_change_requests WHERE booking_id = $1 AND status = 'pending'`,
         [bookingId],
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.STAFF_MOVE_BED,
+          entityType: 'booking',
+          entityId: bookingId,
+          undoData: { previousBedId, newBedId: dto.bedId },
+          description: `Staff moved booking ${bookingId} from bed ${previousBedId} to ${dto.bedId}`,
+        },
+        client,
       );
     });
   }

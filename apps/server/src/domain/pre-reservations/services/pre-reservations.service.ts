@@ -6,6 +6,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../../core/database/database.service';
+import { UndoService } from '../../audit/services/undo.service';
+import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { PreReservationsRepository } from '../repositories/pre-reservations.repository';
 import { CreatePreReservationDto } from '../dto/create-pre-reservation.dto';
@@ -16,6 +19,7 @@ import { RejectPreReservationDto } from '../dto/reject-pre-reservation.dto';
 export class PreReservationsService {
   constructor(
     private readonly db: DatabaseService,
+    private readonly undoService: UndoService,
     private readonly preReservationsRepo: PreReservationsRepository,
     private readonly studentsRepo: StudentsRepository,
   ) {}
@@ -82,7 +86,7 @@ export class PreReservationsService {
     return this.preReservationsRepo.findAll(params);
   }
 
-  async assign(id: string, dto: AssignPreReservationDto, resolvedBy: string): Promise<any> {
+  async assign(id: string, dto: AssignPreReservationDto, context: AuditUserContext): Promise<any> {
     return this.db.transaction(async (client) => {
       const preRes = await this.preReservationsRepo.findById(id, client);
       if (!preRes) throw new NotFoundException('Pre-reservation not found');
@@ -109,26 +113,57 @@ export class PreReservationsService {
       );
       const bookingId: string = bookingResult.rows[0].id;
 
-      const updated = await this.preReservationsRepo.assign(id, { bookingId, resolvedBy }, client);
+      const updated = await this.preReservationsRepo.assign(
+        id,
+        { bookingId, resolvedBy: context.userId },
+        client,
+      );
       if (!updated) throw new NotFoundException('Pre-reservation not found or already resolved');
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.ASSIGN_PRE_RESERVATION,
+          entityType: 'pre_reservation',
+          entityId: id,
+          undoData: { bookingId },
+          description: `Assigned pre-reservation ${id} → booking ${bookingId}`,
+        },
+        client,
+      );
 
       return updated;
     });
   }
 
-  async reject(id: string, dto: RejectPreReservationDto, resolvedBy: string): Promise<any> {
-    const preRes = await this.preReservationsRepo.findById(id);
-    if (!preRes) throw new NotFoundException('Pre-reservation not found');
-    if (preRes.status !== 'pending') {
-      throw new BadRequestException('This pre-reservation has already been resolved');
-    }
+  async reject(id: string, dto: RejectPreReservationDto, context: AuditUserContext): Promise<any> {
+    return this.db.transaction(async (client) => {
+      const preRes = await this.preReservationsRepo.findById(id, client);
+      if (!preRes) throw new NotFoundException('Pre-reservation not found');
+      if (preRes.status !== 'pending') {
+        throw new BadRequestException('This pre-reservation has already been resolved');
+      }
 
-    const updated = await this.preReservationsRepo.reject(id, {
-      resolvedBy,
-      rejectionReason: dto.rejectionReason ?? null,
+      const updated = await this.preReservationsRepo.reject(id, {
+        resolvedBy: context.userId,
+        rejectionReason: dto.rejectionReason ?? null,
+      });
+      if (!updated) throw new NotFoundException('Pre-reservation not found or already resolved');
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.REJECT_PRE_RESERVATION,
+          entityType: 'pre_reservation',
+          entityId: id,
+          undoData: { rejectionReason: dto.rejectionReason ?? null },
+          description: `Rejected pre-reservation ${id}`,
+        },
+        client,
+      );
+
+      return updated;
     });
-    if (!updated) throw new NotFoundException('Pre-reservation not found or already resolved');
-    return updated;
   }
 
   async getAvailableBeds(semesterId: number, startDate: string, endDate: string): Promise<any[]> {
