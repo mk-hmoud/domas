@@ -8,6 +8,7 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { DamagesRepository } from '../repositories/damages.repository';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { InventoryRepository } from '../../inventory/repositories/inventory.repository';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { DatabaseService } from '../../../core/database/database.service';
@@ -286,7 +287,7 @@ export class DamagesService {
     const splitDivisor = targetBookings.length + targetGuestStays.length;
 
     for (const b of targetBookings) {
-      const isTR = b.nationality_code === 'TR';
+      const isTR = isTurkishNational(b.nationality_code);
       const studentAmount = isTR
         ? currentPriceTry / splitDivisor
         : currentPriceForeign / splitDivisor;

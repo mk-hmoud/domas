@@ -8,6 +8,7 @@ import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 
 @Injectable()
 export class BedsRepository implements IBedsRepository {
@@ -284,7 +285,7 @@ export class BedsRepository implements IBedsRepository {
   }
 
   async findEligibleBeds(filters: { gender: string; nationalityCode: string }): Promise<Bed[]> {
-    const isTurkish = filters.nationalityCode === 'TR';
+    const isTurkish = isTurkishNational(filters.nationalityCode);
 
     const query = `
       SELECT 

@@ -21,6 +21,7 @@ import { ResolveRoomChangeDto } from '../dto/resolve-room-change.dto';
 import { StaffMoveBedDto } from '../dto/staff-move-bed.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 
 @Injectable()
 export class RoomChangesService {
@@ -77,7 +78,7 @@ export class RoomChangesService {
       }
 
       // 5–6. Validate the requested bed (skipped for open requests)
-      const isTr = student.nationalityCode === 'TR';
+      const isTr = isTurkishNational(student.nationalityCode);
       if (dto.requestedBedId != null) {
         const bedWithRoom = await this.roomChangesRepo.findBedWithRoom(dto.requestedBedId, client);
         if (!bedWithRoom) throw new NotFoundException('Requested bed not found');

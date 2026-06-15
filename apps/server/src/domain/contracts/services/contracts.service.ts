@@ -12,6 +12,7 @@ import { ContractType } from '../../../common/enums/contract-type.enum';
 import PDFDocument from 'pdfkit';
 import { PoolClient } from 'pg';
 import * as path from 'path';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 
 @Injectable()
 export class ContractsService {
@@ -88,7 +89,7 @@ export class ContractsService {
     const room = await this.locationsRepository.findById(bed!.locationId, client);
     const staff = await this.usersRepository.findById(staffUserId, client);
 
-    const isTR = student!.nationalityCode === 'TR';
+    const isTR = isTurkishNational(student!.nationalityCode);
 
     // Fetch liabilities for this student that might be linked to this booking/stay
     const liabilitiesRes = await this.db.query(
@@ -172,7 +173,7 @@ export class ContractsService {
     },
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const isTR = student.nationalityCode === 'TR';
+      const isTR = isTurkishNational(student.nationalityCode);
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers: Buffer[] = [];
 
@@ -371,7 +372,7 @@ export class ContractsService {
     manager: any,
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const isTR = student.nationalityCode === 'TR';
+      const isTR = isTurkishNational(student.nationalityCode);
 
       let staffName = 'Dormitory Administrator';
       if (staff) {
