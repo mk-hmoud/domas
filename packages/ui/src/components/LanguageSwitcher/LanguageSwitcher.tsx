@@ -24,7 +24,7 @@ export function LanguageSwitcher() {
             radius="xl"
             aria-label="Change language"
           >
-            <IconLanguage size={16} stroke={1.5} />
+            <IconLanguage size="1em" stroke={1.5} />
           </ActionIcon>
         </Tooltip>
       </Menu.Target>

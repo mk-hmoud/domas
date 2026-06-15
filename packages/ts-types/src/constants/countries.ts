@@ -226,6 +226,7 @@ export const COUNTRIES: [string, string][] = [
   ["TT", "Trinidad and Tobago"],
   ["TN", "Tunisia"],
   ["TR", "Türkiye"],
+  ["TRNC", "North Cyprus (TRNC)"],
   ["TM", "Turkmenistan"],
   ["TC", "Turks and Caicos Islands"],
   ["TV", "Tuvalu"],

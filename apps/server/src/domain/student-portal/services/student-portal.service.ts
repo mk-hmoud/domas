@@ -25,6 +25,7 @@ import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 
 @Injectable()
 export class StudentPortalService {
@@ -253,7 +254,7 @@ export class StudentPortalService {
         throw new ForbiddenException('This bed is not available for student bookings');
       }
 
-      const isTr = student.nationalityCode === 'TR';
+      const isTr = isTurkishNational(student.nationalityCode);
       const isTrOnly = bed.isTrOnly || room.isTrOnly;
       const isForeignerOnly = bed.isForeignerOnly || room.isForeignerOnly;
 

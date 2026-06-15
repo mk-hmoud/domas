@@ -982,8 +982,7 @@ function LocationsContent() {
                       </Button>
                     )}
                     {selectedNode.type !== LocationType.ROOM &&
-                      selectedNode.type !== LocationType.BED &&
-                      selectedNode.type !== LocationType.UNIVERSITY && (
+                      selectedNode.type !== LocationType.BED && (
                         <Button
                           leftSection={<IconPlus size={16} />}
                           onClick={handleOpenCreateChild}

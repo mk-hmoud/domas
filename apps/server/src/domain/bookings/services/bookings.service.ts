@@ -18,6 +18,7 @@ import { ApproveFinancialsDto } from '../dto/approve-financials.dto';
 import { FindAllBookingsDto } from '../dto/find-all-bookings.dto';
 import { Booking } from '../entities/booking.entity';
 import { DatabaseService } from '../../../core/database/database.service';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
 import { PaymentStatus } from '../../../common/enums/payment-status.enum';
@@ -83,7 +84,7 @@ export class BookingsService {
       }
 
       const isForeignerOnly = room.isForeignerOnly || bed.isForeignerOnly;
-      if (isForeignerOnly && student.nationalityCode === 'TR') {
+      if (isForeignerOnly && isTurkishNational(student.nationalityCode)) {
         throw new BadRequestException('This location is reserved for foreign students only');
       }
 

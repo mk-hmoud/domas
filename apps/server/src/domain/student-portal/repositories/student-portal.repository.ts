@@ -4,6 +4,7 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
 import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 
 @Injectable()
 export class StudentPortalRepository {
@@ -75,7 +76,7 @@ export class StudentPortalRepository {
     isNewStudent: boolean,
     roomTypeId?: number | null,
   ): Promise<any[]> {
-    const isTr = nationalityCode === 'TR';
+    const isTr = isTurkishNational(nationalityCode);
 
     const query = `
       SELECT
@@ -143,7 +144,7 @@ export class StudentPortalRepository {
     isNewStudent: boolean,
     roomTypeId?: number | null,
   ): Promise<any[]> {
-    const isTr = nationalityCode === 'TR';
+    const isTr = isTurkishNational(nationalityCode);
 
     const query = `
       SELECT
@@ -211,7 +212,7 @@ export class StudentPortalRepository {
     gender: GenderType,
     isNewStudent: boolean,
   ): Promise<any[]> {
-    const isTr = nationalityCode === 'TR';
+    const isTr = isTurkishNational(nationalityCode);
 
     const query = `
       WITH avail_beds AS (
@@ -271,7 +272,7 @@ export class StudentPortalRepository {
     buildingId?: number | null,
     capacity?: number | null,
   ): Promise<any[]> {
-    const isTr = nationalityCode === 'TR';
+    const isTr = isTurkishNational(nationalityCode);
 
     const query = `
       WITH avail_beds AS (

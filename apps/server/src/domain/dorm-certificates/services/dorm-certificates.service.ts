@@ -19,6 +19,7 @@ import { StorageService } from '../../../common/storage/storage.service';
 import { DatabaseService } from '../../../core/database/database.service';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { DormCertificateRequest } from '../entities/dorm-certificate-request.entity';
 import { EnrollmentVerification } from '../../students/entities/enrollment-verification.entity';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
@@ -206,7 +207,7 @@ export class DormCertificatesService {
     manager: any,
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const isTR = student.nationalityCode === 'TR';
+      const isTR = isTurkishNational(student.nationalityCode);
       const doc = new PDFDocument({ margin: 60, size: 'A4' });
       const buffers: Buffer[] = [];
 

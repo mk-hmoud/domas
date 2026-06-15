@@ -105,7 +105,7 @@ export function HeaderBar({
                 radius="xl"
                 onClick={onShowHistory}
               >
-                <IconHistory size={16} stroke={1.5} />
+                <IconHistory size="1em" stroke={1.5} />
               </ActionIcon>
             </Tooltip>
           )}

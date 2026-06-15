@@ -7,6 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InventoryRepository } from '../repositories/inventory.repository';
+import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { InventoryCatalog } from '../entities/inventory-catalog.entity';
 import { InventoryAssignment } from '../entities/inventory-assignment.entity';
 import { InventoryTemplate } from '../entities/inventory-template.entity';
@@ -275,7 +276,7 @@ export class InventoryService {
     const student = await this.studentsRepository.findById(booking.studentId, client);
     if (!student) throw new Error('Student not found');
 
-    const isTR = student.nationalityCode === 'TR';
+    const isTR = isTurkishNational(student.nationalityCode);
 
     const ancestors = await this.locationsRepository.findWithAncestors(bed.locationId, client);
     const locationIds = ancestors.map((a) => a.id);
