@@ -12,7 +12,6 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Title,
   UnstyledButton,
 } from '@domas/ui';
 import { ThemeToggle, LanguageSwitcher, FontSizeControl } from '@domas/ui';
