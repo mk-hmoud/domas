@@ -11,6 +11,7 @@ import {
   Paper,
   Select,
   Stack,
+  Stepper,
   Text,
   TextInput,
   Title,
@@ -35,11 +36,23 @@ import {
 } from '@domas/ts-types';
 import { COUNTRIES } from '@domas/ts-types';
 
+const STEP2_FIELDS = [
+  'studentNumber',
+  'firstName',
+  'lastName',
+  'gender',
+  'nationalityCode',
+  'nationalId',
+  'birthPlace',
+  'department',
+] as const;
+
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
@@ -88,15 +101,32 @@ export function RegisterPage() {
     }
   };
 
+  const nextStep = () => {
+    if (activeStep === 0) {
+      setActiveStep(1);
+      return;
+    }
+    if (activeStep === 1) {
+      let hasError = false;
+      STEP2_FIELDS.forEach((field) => {
+        const result = form.validateField(field);
+        if (result.hasError) hasError = true;
+      });
+      if (!birthDate) {
+        setBirthDateError(t('required_field', 'Required'));
+        hasError = true;
+      } else {
+        setBirthDateError('');
+      }
+      if (!hasError) setActiveStep(2);
+    }
+  };
+
+  const prevStep = () => setActiveStep((s) => Math.max(0, s - 1));
+
   const handleSubmit = async (
     values: Omit<SubmitApplicationDto, 'birthDate' | 'documentType' | 'documentExpiryDate'>,
   ) => {
-    if (!birthDate) {
-      setBirthDateError(t('required_field', 'Required'));
-      return;
-    }
-    setBirthDateError('');
-
     if (documentType === 'returning' && !certExpiryDate) {
       setCertExpiryError(t('required_field', 'Required'));
       return;
@@ -144,7 +174,6 @@ export function RegisterPage() {
 
   const countryData = COUNTRIES.map(([code, name]) => ({ value: code, label: name }));
   const departmentData = DEPARTMENTS.map((d) => ({ value: d, label: d }));
-
   const isReturning = documentType === 'returning';
 
   return (
@@ -161,6 +190,13 @@ export function RegisterPage() {
             </Text>
           </Stack>
 
+          {/* Step indicator */}
+          <Stepper active={activeStep} size="sm" allowNextStepsSelect={false}>
+            <Stepper.Step label={t('portal.step_reg_type')} />
+            <Stepper.Step label={t('portal.step_personal_info')} />
+            <Stepper.Step label={t('portal.step_document')} />
+          </Stepper>
+
           <Paper
             radius="xl"
             p="xl"
@@ -171,227 +207,299 @@ export function RegisterPage() {
           >
             <form onSubmit={form.onSubmit(handleSubmit)}>
               <Stack gap="md">
-                {/* Document type selector */}
-                <Select
-                  label={t('portal.registration_type', 'Registration Type')}
-                  required
-                  radius="lg"
-                  value={documentType}
-                  onChange={(v) => {
-                    setDocumentType((v as ApplicationDocumentType) ?? 'freshman');
-                    setDocumentFile(null);
-                    setFileError('');
-                    setCertExpiryDate(null);
-                    setCertExpiryError('');
-                  }}
-                  data={[
-                    {
-                      value: 'freshman',
-                      label: t(
-                        'portal.doc_type_freshman',
-                        'New Student — I have an acceptance letter',
-                      ),
-                    },
-                    {
-                      value: 'returning',
-                      label: t(
-                        'portal.doc_type_returning',
-                        'Registered Student — I have a student certificate',
-                      ),
-                    },
-                  ]}
-                />
-
-                <Text fw={700} size="sm" mt="xs">
-                  {t('portal.identity', 'Identity')}
-                </Text>
-
-                <Group grow>
-                  <TextInput
-                    label={t('first_name')}
-                    required
-                    radius="lg"
-                    {...form.getInputProps('firstName')}
-                  />
-                  <TextInput
-                    label={t('last_name')}
-                    required
-                    radius="lg"
-                    {...form.getInputProps('lastName')}
-                  />
-                </Group>
-
-                <TextInput
-                  label={t('student_number')}
-                  required
-                  radius="lg"
-                  {...form.getInputProps('studentNumber')}
-                />
-
-                <Group grow>
-                  <Select
-                    label={t('gender')}
-                    required
-                    radius="lg"
-                    data={[
-                      { value: GenderType.MALE, label: t('male', 'Male') },
-                      { value: GenderType.FEMALE, label: t('female', 'Female') },
-                    ]}
-                    {...form.getInputProps('gender')}
-                  />
-                  <Select
-                    label={t('nationality')}
-                    required
-                    radius="lg"
-                    searchable
-                    data={countryData}
-                    {...form.getInputProps('nationalityCode')}
-                  />
-                </Group>
-
-                <Group grow>
-                  <TextInput
-                    label={t('national_id')}
-                    required
-                    radius="lg"
-                    {...form.getInputProps('nationalId')}
-                  />
-                  <DatePickerInput
-                    label={t('birth_date')}
-                    required
-                    radius="lg"
-                    valueFormat="DD/MM/YYYY"
-                    value={birthDate}
-                    onChange={setBirthDate}
-                    error={birthDateError}
-                  />
-                </Group>
-
-                <Group grow>
-                  <TextInput
-                    label={t('birth_place')}
-                    required
-                    radius="lg"
-                    {...form.getInputProps('birthPlace')}
-                  />
-                  <Select
-                    label={t('department')}
-                    required
-                    radius="lg"
-                    searchable
-                    data={departmentData}
-                    {...form.getInputProps('department')}
-                  />
-                </Group>
-
-                <Text fw={700} size="sm" mt="xs">
-                  {t('portal.contact', 'Contact (optional)')}
-                </Text>
-
-                <Group grow>
-                  <TextInput
-                    label={t('email')}
-                    radius="lg"
-                    inputMode="email"
-                    {...form.getInputProps('email')}
-                  />
-                  <TextInput
-                    label={t('phone_number')}
-                    radius="lg"
-                    inputMode="tel"
-                    {...form.getInputProps('phoneNumber')}
-                  />
-                </Group>
-
-                <Text fw={700} size="sm" mt="xs">
-                  {isReturning
-                    ? t('portal.student_certificate', 'Student Certificate')
-                    : t('portal.acceptance_letter', 'Acceptance Letter')}
-                </Text>
-
-                {isReturning && (
-                  <DatePickerInput
-                    label={t('portal.certificate_expiry', 'Certificate Expiry Date')}
-                    required
-                    radius="lg"
-                    valueFormat="DD/MM/YYYY"
-                    value={certExpiryDate}
-                    onChange={setCertExpiryDate}
-                    error={certExpiryError}
-                    minDate={new Date()}
-                  />
+                {/* ── Step 1: Registration type ── */}
+                {activeStep === 0 && (
+                  <>
+                    <Select
+                      label={t('portal.registration_type', 'Registration Type')}
+                      required
+                      radius="lg"
+                      value={documentType}
+                      onChange={(v) => {
+                        setDocumentType((v as ApplicationDocumentType) ?? 'freshman');
+                        setDocumentFile(null);
+                        setFileError('');
+                        setCertExpiryDate(null);
+                        setCertExpiryError('');
+                      }}
+                      data={[
+                        {
+                          value: 'freshman',
+                          label: t(
+                            'portal.doc_type_freshman',
+                            'New Student — I have an acceptance letter',
+                          ),
+                        },
+                        {
+                          value: 'returning',
+                          label: t(
+                            'portal.doc_type_returning',
+                            'Registered Student — I have a student certificate',
+                          ),
+                        },
+                      ]}
+                    />
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      radius="xl"
+                      size="md"
+                      variant="gradient"
+                      gradient={{ from: 'blue', to: 'cyan' }}
+                      mt="xs"
+                    >
+                      {t('portal.next', 'Next')}
+                    </Button>
+                  </>
                 )}
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPTED}
-                  style={{ display: 'none' }}
-                  onChange={handleFileChange}
-                />
+                {/* ── Step 2: Personal information ── */}
+                {activeStep === 1 && (
+                  <>
+                    <Text fw={700} size="sm">
+                      {t('portal.identity', 'Identity')}
+                    </Text>
 
-                {documentFile ? (
-                  <Paper withBorder p="sm" radius="md">
-                    <Group justify="space-between" wrap="nowrap">
-                      <Group gap="xs">
-                        <IconFileDescription size={16} />
-                        <Text size="sm" fw={500} truncate>
-                          {documentFile.name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          ({(documentFile.size / 1024).toFixed(0)} KB)
-                        </Text>
-                      </Group>
+                    <Group grow>
+                      <TextInput
+                        label={t('first_name')}
+                        required
+                        radius="lg"
+                        {...form.getInputProps('firstName')}
+                      />
+                      <TextInput
+                        label={t('last_name')}
+                        required
+                        radius="lg"
+                        {...form.getInputProps('lastName')}
+                      />
+                    </Group>
+
+                    <TextInput
+                      label={t('student_number')}
+                      required
+                      radius="lg"
+                      {...form.getInputProps('studentNumber')}
+                    />
+
+                    <Group grow>
+                      <Select
+                        label={t('gender')}
+                        required
+                        radius="lg"
+                        data={[
+                          { value: GenderType.MALE, label: t('male', 'Male') },
+                          { value: GenderType.FEMALE, label: t('female', 'Female') },
+                        ]}
+                        {...form.getInputProps('gender')}
+                      />
+                      <Select
+                        label={t('nationality')}
+                        required
+                        radius="lg"
+                        searchable
+                        data={countryData}
+                        {...form.getInputProps('nationalityCode')}
+                      />
+                    </Group>
+
+                    <Group grow>
+                      <TextInput
+                        label={t('national_id')}
+                        required
+                        radius="lg"
+                        {...form.getInputProps('nationalId')}
+                      />
+                      <DatePickerInput
+                        label={t('birth_date')}
+                        required
+                        radius="lg"
+                        valueFormat="DD/MM/YYYY"
+                        value={birthDate}
+                        onChange={(value) => {
+                          if (!value) {
+                            setBirthDate(null);
+                            return;
+                          }
+                          setBirthDate(
+                            typeof value === 'string'
+                              ? value
+                              : (value as Date).toISOString().split('T')[0],
+                          );
+                        }}
+                        error={birthDateError}
+                      />
+                    </Group>
+
+                    <Group grow>
+                      <TextInput
+                        label={t('birth_place')}
+                        required
+                        radius="lg"
+                        {...form.getInputProps('birthPlace')}
+                      />
+                      <Select
+                        label={t('department')}
+                        required
+                        radius="lg"
+                        searchable
+                        data={departmentData}
+                        {...form.getInputProps('department')}
+                      />
+                    </Group>
+
+                    <Text fw={700} size="sm" mt="xs">
+                      {t('portal.contact', 'Contact (optional)')}
+                    </Text>
+
+                    <Group grow>
+                      <TextInput
+                        label={t('email')}
+                        radius="lg"
+                        inputMode="email"
+                        {...form.getInputProps('email')}
+                      />
+                      <TextInput
+                        label={t('phone_number')}
+                        radius="lg"
+                        inputMode="tel"
+                        {...form.getInputProps('phoneNumber')}
+                      />
+                    </Group>
+
+                    <Group mt="xs">
                       <Button
-                        size="compact-xs"
-                        variant="subtle"
-                        color="red"
-                        onClick={() => setDocumentFile(null)}
+                        type="button"
+                        variant="default"
+                        radius="xl"
+                        onClick={prevStep}
+                        leftSection={<IconArrowLeft size={16} />}
                       >
-                        <IconX size={14} />
+                        {t('portal.back', 'Back')}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={nextStep}
+                        radius="xl"
+                        variant="gradient"
+                        gradient={{ from: 'blue', to: 'cyan' }}
+                        style={{ flex: 1 }}
+                      >
+                        {t('portal.next', 'Next')}
                       </Button>
                     </Group>
-                  </Paper>
-                ) : (
-                  <Button
-                    variant="light"
-                    radius="lg"
-                    leftSection={<IconUpload size={16} />}
-                    onClick={() => fileInputRef.current?.click()}
-                    color={fileError ? 'red' : undefined}
-                  >
-                    {isReturning
-                      ? t('portal.upload_certificate', 'Upload Student Certificate')
-                      : t('portal.upload_letter', 'Upload Acceptance Letter')}
-                  </Button>
+                  </>
                 )}
 
-                {fileError && (
-                  <Alert
-                    icon={<IconAlertCircle size={14} />}
-                    color="red"
-                    variant="light"
-                    radius="lg"
-                  >
-                    {fileError}
-                  </Alert>
+                {/* ── Step 3: Document upload ── */}
+                {activeStep === 2 && (
+                  <>
+                    <Text fw={700} size="sm">
+                      {isReturning
+                        ? t('portal.student_certificate', 'Student Certificate')
+                        : t('portal.acceptance_letter', 'Acceptance Letter')}
+                    </Text>
+
+                    {isReturning && (
+                      <DatePickerInput
+                        label={t('portal.certificate_expiry', 'Certificate Expiry Date')}
+                        required
+                        radius="lg"
+                        valueFormat="DD/MM/YYYY"
+                        value={certExpiryDate}
+                        onChange={setCertExpiryDate}
+                        error={certExpiryError}
+                        minDate={new Date()}
+                      />
+                    )}
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={ACCEPTED}
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+
+                    {documentFile ? (
+                      <Paper withBorder p="sm" radius="md">
+                        <Group justify="space-between" wrap="nowrap">
+                          <Group gap="xs">
+                            <IconFileDescription size={16} />
+                            <Text size="sm" fw={500} truncate>
+                              {documentFile.name}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              ({(documentFile.size / 1024).toFixed(0)} KB)
+                            </Text>
+                          </Group>
+                          <Button
+                            size="compact-xs"
+                            variant="subtle"
+                            color="red"
+                            onClick={() => setDocumentFile(null)}
+                          >
+                            <IconX size={14} />
+                          </Button>
+                        </Group>
+                      </Paper>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="light"
+                        radius="lg"
+                        leftSection={<IconUpload size={16} />}
+                        onClick={() => fileInputRef.current?.click()}
+                        color={fileError ? 'red' : undefined}
+                      >
+                        {isReturning
+                          ? t('portal.upload_certificate', 'Upload Student Certificate')
+                          : t('portal.upload_letter', 'Upload Acceptance Letter')}
+                      </Button>
+                    )}
+
+                    {fileError && (
+                      <Alert
+                        icon={<IconAlertCircle size={14} />}
+                        color="red"
+                        variant="light"
+                        radius="lg"
+                      >
+                        {fileError}
+                      </Alert>
+                    )}
+
+                    <Text size="xs" c="dimmed">
+                      {t(
+                        'portal.letter_formats',
+                        'Accepted formats: PDF, JPEG, PNG, WebP — max 10 MB',
+                      )}
+                    </Text>
+
+                    <Group mt="xs">
+                      <Button
+                        type="button"
+                        variant="default"
+                        radius="xl"
+                        onClick={prevStep}
+                        leftSection={<IconArrowLeft size={16} />}
+                      >
+                        {t('portal.back', 'Back')}
+                      </Button>
+                      <Button
+                        type="submit"
+                        loading={submitting}
+                        radius="xl"
+                        size="md"
+                        variant="gradient"
+                        gradient={{ from: 'blue', to: 'cyan' }}
+                        style={{ flex: 1 }}
+                      >
+                        {t('portal.submit_application', 'Submit Application')}
+                      </Button>
+                    </Group>
+                  </>
                 )}
-
-                <Text size="xs" c="dimmed">
-                  {t('portal.letter_formats', 'Accepted formats: PDF, JPEG, PNG, WebP — max 10 MB')}
-                </Text>
-
-                <Button
-                  type="submit"
-                  loading={submitting}
-                  radius="xl"
-                  size="md"
-                  variant="gradient"
-                  gradient={{ from: 'blue', to: 'cyan' }}
-                  mt="xs"
-                >
-                  {t('portal.submit_application', 'Submit Application')}
-                </Button>
               </Stack>
             </form>
           </Paper>

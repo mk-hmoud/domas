@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Badge,
   Box,
-  Card,
   Group,
   Paper,
   SimpleGrid,
@@ -20,7 +19,6 @@ import {
   IconCreditCard,
   IconInfoCircle,
   IconReceipt,
-  IconTrendingUp,
 } from '@tabler/icons-react';
 import { StudentDamageLiability, StudentTransaction } from '@domas/ts-types';
 import { portalFinancial } from '@domas/api-client';
@@ -41,6 +39,27 @@ function useTransactionTypeLabel() {
   };
 }
 
+// ─── Shared empty state ───────────────────────────────────────────────────────
+
+function ListEmptyState({
+  icon: Icon,
+  message,
+}: {
+  icon: ComponentType<{ size?: number }>;
+  message: string;
+}) {
+  return (
+    <Stack align="center" gap="xs" py="xl">
+      <ThemeIcon size={44} radius="xl" variant="light" color="gray">
+        <Icon size={22} />
+      </ThemeIcon>
+      <Text size="sm" c="dimmed">
+        {message}
+      </Text>
+    </Stack>
+  );
+}
+
 // ─── Transactions: desktop table ──────────────────────────────────────────────
 
 function TransactionsTable({ items }: { items: StudentTransaction[] }) {
@@ -48,16 +67,7 @@ function TransactionsTable({ items }: { items: StudentTransaction[] }) {
   const transactionTypeLabel = useTransactionTypeLabel();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconReceipt size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_transactions')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconReceipt} message={t('portal.no_transactions')} />;
   }
 
   return (
@@ -128,16 +138,7 @@ function TransactionCards({ items }: { items: StudentTransaction[] }) {
   const transactionTypeLabel = useTransactionTypeLabel();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconReceipt size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_transactions')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconReceipt} message={t('portal.no_transactions')} />;
   }
 
   return (
@@ -205,16 +206,7 @@ function DamagesTable({ items }: { items: StudentDamageLiability[] }) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconAlertTriangle size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_damage_liabilities')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconAlertTriangle} message={t('portal.no_damage_liabilities')} />;
   }
 
   return (
@@ -275,16 +267,7 @@ function DamageCards({ items }: { items: StudentDamageLiability[] }) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconAlertTriangle size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_damage_liabilities')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconAlertTriangle} message={t('portal.no_damage_liabilities')} />;
   }
 
   return (
@@ -389,7 +372,7 @@ export function FinancialPage() {
                 marginBottom: 4,
               }}
             >
-              Student Housing Portal
+              {t('portal.student_portal')}
             </Text>
             <Text fw={800} c="white" size="xl" lh={1.2}>
               {t('portal.financial_title')}

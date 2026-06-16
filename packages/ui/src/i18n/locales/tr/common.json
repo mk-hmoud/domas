@@ -846,7 +846,19 @@
     "dorm_cert_status_pending": "Beklemede",
     "dorm_cert_status_approved": "Onaylandı",
     "dorm_cert_status_rejected": "Reddedildi",
-    "download_cert": "İndir"
+    "download_cert": "İndir",
+    "student_portal": "Öğrenci Portalı",
+    "nav_more": "Daha",
+    "more_menu_title": "Menü",
+    "step_reg_type": "Tür",
+    "step_personal_info": "Bilgiler",
+    "step_document": "Belge",
+    "next": "İleri",
+    "back": "Geri",
+    "no_announcements_hint": "Yönetimden güncellemeler için daha sonra kontrol edin.",
+    "enrollment_pending_title": "Kayıt Onay Bekliyor",
+    "enrollment_pending_body": "Kaydınız yurt personeli tarafından inceleniyor. Onaylandıktan sonra rezervasyon ve diğer işlemler aktif olacak.",
+    "pre_reserve": "Ön Rezervasyon"
   },
   "room_change": {
     "page_title": "Oda Değişikliği Talepleri",

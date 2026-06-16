@@ -1,17 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Badge,
-  Box,
-  Button,
-  Group,
-  Paper,
-  Skeleton,
-  Stack,
-  Text,
-  ThemeIcon,
-} from '@domas/ui';
+import { Badge, Box, Button, Group, Paper, Skeleton, Stack, Text, ThemeIcon } from '@domas/ui';
 import { IconFile, IconPaperclip, IconPin, IconSpeakerphone } from '@tabler/icons-react';
 import { Announcement } from '@domas/ts-types';
 import { portalAnnouncements } from '@domas/api-client';
@@ -150,7 +139,7 @@ export function AnnouncementsPage() {
                 marginBottom: 4,
               }}
             >
-              Student Housing Portal
+              {t('portal.student_portal')}
             </Text>
             <Text fw={800} c="white" size="xl" lh={1.2}>
               {t('portal.nav_announcements', { defaultValue: 'Announcements' })}
@@ -201,7 +190,7 @@ export function AnnouncementsPage() {
               })}
             </Text>
             <Text size="sm" c="dimmed">
-              Check back later for updates from management.
+              {t('portal.no_announcements_hint')}
             </Text>
           </Stack>
         </Paper>

@@ -928,7 +928,7 @@ export function DashboardPage() {
         </>
       ) : (
         <>
-          {booking && <StatsBand booking={booking} />}
+          {booking && isActive && <StatsBand booking={booking} />}
 
           <Grid gutter="lg" align="flex-start">
             <Grid.Col span={{ base: 12, md: 7 }}>

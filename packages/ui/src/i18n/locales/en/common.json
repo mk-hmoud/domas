@@ -857,7 +857,19 @@
     "dorm_cert_status_pending": "Pending",
     "dorm_cert_status_approved": "Approved",
     "dorm_cert_status_rejected": "Rejected",
-    "download_cert": "Download"
+    "download_cert": "Download",
+    "student_portal": "Student Portal",
+    "nav_more": "More",
+    "more_menu_title": "Menu",
+    "step_reg_type": "Type",
+    "step_personal_info": "Info",
+    "step_document": "Document",
+    "next": "Next",
+    "back": "Back",
+    "no_announcements_hint": "Check back later for updates from management.",
+    "enrollment_pending_title": "Enrollment Pending Approval",
+    "enrollment_pending_body": "Your registration is being reviewed by dormitory staff. Booking and other actions will be available once approved.",
+    "pre_reserve": "Pre-Reserve"
   },
   "room_change": {
     "page_title": "Room Change Requests",
