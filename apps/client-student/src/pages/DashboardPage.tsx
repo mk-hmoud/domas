@@ -147,23 +147,13 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
       {stats.map((s) => (
         <Paper
           key={s.label}
-          radius="xl"
+          radius="lg"
           style={{
             cursor: 'pointer',
             border: '1px solid var(--mantine-color-default-border)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
             overflow: 'hidden',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
           }}
           onClick={s.onClick}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.transform = 'none';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-          }}
         >
           <Group gap={0} wrap="nowrap">
             <Box
@@ -213,7 +203,17 @@ function NoBookingCard({
 }) {
   const { t } = useTranslation();
 
-  if (semesters.length === 0) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Only keep semesters that are still running AND still accepting applications
+  const openSemesters = semesters.filter((s) => {
+    if (new Date(s.endDate) < today) return false;
+    if (s.bookingEndDate && new Date(s.bookingEndDate) < today) return false;
+    return true;
+  });
+
+  if (openSemesters.length === 0) {
     return (
       <Paper
         radius="xl"
@@ -238,7 +238,7 @@ function NoBookingCard({
     );
   }
 
-  const next = semesters[0];
+  const next = openSemesters[0];
   return (
     <Paper
       radius="xl"
@@ -330,7 +330,7 @@ function NoBookingCard({
           >
             {t('portal.apply_now')}
           </Button>
-          {semesters.some((s) => s.allowPreReservations) && (
+          {openSemesters.some((s) => s.allowPreReservations) && (
             <Button
               leftSection={<IconCalendarCheck size={16} />}
               onClick={onPreReserve}
@@ -840,59 +840,20 @@ export function DashboardPage() {
 
   return (
     <Stack gap="lg">
-      {/* Greeting hero */}
-      <Paper
-        radius="xl"
-        px="xl"
-        py="lg"
-        style={{
-          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-          boxShadow: '0 6px 24px rgba(25,113,194,0.22)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Box>
-            <Text
-              size="xs"
-              c="white"
-              fw={600}
-              style={{
-                opacity: 0.75,
-                marginBottom: 4,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                fontSize: 11,
-              }}
-            >
-              {now.toLocaleDateString(undefined, {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-            <Title order={2} c="white" fw={800} lh={1.2}>
-              {greeting}
-            </Title>
-            {student && (
-              <Text size="sm" c="white" style={{ opacity: 0.8, marginTop: 4 }}>
-                {student.studentNumber} · {student.department}
-              </Text>
-            )}
-          </Box>
-          <ThemeIcon
-            size={56}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            <IconBed size={28} />
-          </ThemeIcon>
-        </Group>
-      </Paper>
+      {/* Compact greeting */}
+      <Box>
+        <Text size="xs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: '0.04em' }}>
+          {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </Text>
+        <Title order={2} fw={800} lh={1.2}>
+          {greeting}
+        </Title>
+        {student && (
+          <Text size="sm" c="dimmed" mt={2}>
+            {student.studentNumber} · {student.department}
+          </Text>
+        )}
+      </Box>
 
       {student?.enrollmentStatus === 'pending' && (
         <Alert

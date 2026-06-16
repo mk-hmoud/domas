@@ -37,13 +37,16 @@ import { useAnnouncements } from '../contexts/AnnouncementsContext';
 
 // ─── Navigation definitions ───────────────────────────────────────────────────
 
-const SIDEBAR_ITEMS = [
+const SIDEBAR_PRIMARY = [
   { path: '/dashboard', labelKey: 'portal.nav_home', icon: IconHome2 },
   { path: '/booking', labelKey: 'portal.nav_my_room', icon: IconBed },
+  { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
+  { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
+];
+
+const SIDEBAR_SECONDARY = [
   { path: '/apply', labelKey: 'portal.nav_apply', icon: IconCalendarPlus },
   { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
-  { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
-  { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
   { path: '/dorm-certificate', labelKey: 'portal.nav_dorm_certificate', icon: IconCertificate },
 ];
 
@@ -78,51 +81,62 @@ function SidebarNav() {
     navigate('/login', { replace: true });
   };
 
+  const renderNavItem = ({ path, labelKey, icon: Icon }: (typeof SIDEBAR_PRIMARY)[number]) => {
+    const isNotif = path === '/notifications';
+    const isAnn = path === '/announcements';
+    const active = location.pathname === path;
+    const count = isNotif ? unreadCount : isAnn ? announcementCount : 0;
+
+    return (
+      <NavLink
+        key={path}
+        component={RouterNavLink}
+        to={path}
+        label={t(labelKey)}
+        active={active}
+        leftSection={
+          count > 0 ? (
+            <Indicator
+              inline
+              label={count > 9 ? '9+' : String(count)}
+              size={16}
+              color="red"
+              offset={4}
+            >
+              <ThemeIcon variant="transparent" size="sm">
+                <Icon size={18} />
+              </ThemeIcon>
+            </Indicator>
+          ) : (
+            <ThemeIcon variant="transparent" size="sm">
+              <Icon size={18} />
+            </ThemeIcon>
+          )
+        }
+        style={{ borderRadius: 8 }}
+      />
+    );
+  };
+
   return (
     <Stack h="100%" justify="space-between" py="sm" px="xs">
       <Stack gap={2}>
-        <Text size="xs" fw={600} c="dimmed" px="xs" mb={4} tt="uppercase">
-          {t('portal.nav_menu')}
+        {SIDEBAR_PRIMARY.map(renderNavItem)}
+
+        <Divider my="xs" />
+
+        <Text
+          size="xs"
+          fw={600}
+          c="dimmed"
+          px="xs"
+          mb={2}
+          tt="uppercase"
+          style={{ letterSpacing: '0.04em' }}
+        >
+          {t('portal.nav_more')}
         </Text>
-        {SIDEBAR_ITEMS.map(({ path, labelKey, icon: Icon }) => {
-          const isNotif = path === '/notifications';
-          const isAnn = path === '/announcements';
-          const active = location.pathname === path;
-
-          let count = 0;
-          if (isNotif) count = unreadCount;
-          if (isAnn) count = announcementCount;
-
-          return (
-            <NavLink
-              key={path}
-              component={RouterNavLink}
-              to={path}
-              label={t(labelKey)}
-              active={active}
-              leftSection={
-                count > 0 ? (
-                  <Indicator
-                    inline
-                    label={count > 9 ? '9+' : String(count)}
-                    size={16}
-                    color="red"
-                    offset={4}
-                  >
-                    <ThemeIcon variant="transparent" size="sm">
-                      <Icon size={18} />
-                    </ThemeIcon>
-                  </Indicator>
-                ) : (
-                  <ThemeIcon variant="transparent" size="sm">
-                    <Icon size={18} />
-                  </ThemeIcon>
-                )
-              }
-              style={{ borderRadius: 8 }}
-            />
-          );
-        })}
+        {SIDEBAR_SECONDARY.map(renderNavItem)}
 
         <Divider my="xs" />
 
@@ -444,7 +458,7 @@ export function PortalLayout() {
       <AppShell
         header={{ height: 60 }}
         navbar={{
-          width: 260,
+          width: 220,
           breakpoint: 'sm',
           collapsed: { mobile: true },
         }}

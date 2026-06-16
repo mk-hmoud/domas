@@ -673,6 +673,8 @@
     "status_not_approved": "Not Approved",
     "no_open_semesters": "No open semesters",
     "no_semesters_description": "There are no accommodation periods currently open for applications. Check back later.",
+    "no_booking_title": "No active booking",
+    "no_booking_description": "You don't have a current booking. Apply for a room to get started.",
     "applications_open": "Accommodation applications are open",
     "semester_period": "Semester period:",
     "apply_by": "Apply by:",

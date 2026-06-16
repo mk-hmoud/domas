@@ -662,6 +662,8 @@
     "status_not_approved": "Onaylanmadı",
     "no_open_semesters": "Açık dönem yok",
     "no_semesters_description": "Şu anda başvuruya açık bir barınma dönemi bulunmamaktadır. Daha sonra tekrar kontrol edin.",
+    "no_booking_title": "Aktif rezervasyon yok",
+    "no_booking_description": "Şu anda bir rezervasyonunuz bulunmuyor. Başlamak için oda başvurusu yapın.",
     "applications_open": "Barınma başvuruları açık",
     "semester_period": "Dönem süresi:",
     "apply_by": "Son başvuru:",
