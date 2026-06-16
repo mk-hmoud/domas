@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -20,6 +20,7 @@ import {
   IconInfoCircle,
   IconReceipt,
 } from '@tabler/icons-react';
+import { PortalPageHeader } from '../components/PortalPageHeader';
 import { StudentDamageLiability, StudentTransaction } from '@domas/ts-types';
 import { portalFinancial } from '@domas/api-client';
 
@@ -39,6 +40,27 @@ function useTransactionTypeLabel() {
   };
 }
 
+// ─── Shared empty state ───────────────────────────────────────────────────────
+
+function ListEmptyState({
+  icon: Icon,
+  message,
+}: {
+  icon: ComponentType<{ size?: number }>;
+  message: string;
+}) {
+  return (
+    <Stack align="center" gap="xs" py="xl">
+      <ThemeIcon size={44} radius="xl" variant="light" color="gray">
+        <Icon size={22} />
+      </ThemeIcon>
+      <Text size="sm" c="dimmed">
+        {message}
+      </Text>
+    </Stack>
+  );
+}
+
 // ─── Transactions: desktop table ──────────────────────────────────────────────
 
 function TransactionsTable({ items }: { items: StudentTransaction[] }) {
@@ -46,16 +68,7 @@ function TransactionsTable({ items }: { items: StudentTransaction[] }) {
   const transactionTypeLabel = useTransactionTypeLabel();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconReceipt size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_transactions')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconReceipt} message={t('portal.no_transactions')} />;
   }
 
   return (
@@ -126,16 +139,7 @@ function TransactionCards({ items }: { items: StudentTransaction[] }) {
   const transactionTypeLabel = useTransactionTypeLabel();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconReceipt size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_transactions')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconReceipt} message={t('portal.no_transactions')} />;
   }
 
   return (
@@ -203,16 +207,7 @@ function DamagesTable({ items }: { items: StudentDamageLiability[] }) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconAlertTriangle size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_damage_liabilities')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconAlertTriangle} message={t('portal.no_damage_liabilities')} />;
   }
 
   return (
@@ -273,16 +268,7 @@ function DamageCards({ items }: { items: StudentDamageLiability[] }) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
-    return (
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon size={44} radius="xl" variant="light" color="gray">
-          <IconAlertTriangle size={22} />
-        </ThemeIcon>
-        <Text size="sm" c="dimmed">
-          {t('portal.no_damage_liabilities')}
-        </Text>
-      </Stack>
-    );
+    return <ListEmptyState icon={IconAlertTriangle} message={t('portal.no_damage_liabilities')} />;
   }
 
   return (
@@ -363,53 +349,12 @@ export function FinancialPage() {
 
   return (
     <Stack gap="lg">
-      {/* Page hero */}
-      <Paper
-        radius="xl"
-        px="xl"
-        py="lg"
-        style={{
-          background: 'linear-gradient(135deg, #0B7285 0%, #1098AD 50%, #0C8599 100%)',
-          boxShadow: '0 6px 24px rgba(16,152,173,0.25)',
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Box>
-            <Text
-              size="xs"
-              c="white"
-              fw={600}
-              style={{
-                opacity: 0.75,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                fontSize: 11,
-                marginBottom: 4,
-              }}
-            >
-              Student Housing Portal
-            </Text>
-            <Text fw={800} c="white" size="xl" lh={1.2}>
-              {t('portal.financial_title')}
-            </Text>
-            <Text size="sm" c="white" style={{ opacity: 0.78, marginTop: 4 }}>
-              {t('portal.financial_subtitle')}
-            </Text>
-          </Box>
-          <ThemeIcon
-            size={56}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            <IconCreditCard size={28} />
-          </ThemeIcon>
-        </Group>
-      </Paper>
+      <PortalPageHeader
+        icon={IconCreditCard}
+        color="teal"
+        title={t('portal.financial_title')}
+        subtitle={t('portal.financial_subtitle')}
+      />
 
       {isLoading ? (
         <Stack gap="md">
@@ -424,131 +369,81 @@ export function FinancialPage() {
         <>
           {/* Stats row */}
           <SimpleGrid cols={{ base: 1, xs: 2, sm: 3 }} spacing="md">
-            {/* Total paid */}
-            <Paper
-              radius="xl"
-              style={{
-                overflow: 'hidden',
-                border: '1px solid var(--mantine-color-teal-3)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-              }}
-            >
-              <Group gap={0} wrap="nowrap">
-                <Box
-                  style={{
-                    width: 5,
-                    alignSelf: 'stretch',
-                    background: 'linear-gradient(180deg, #0B7285, #1098AD)',
-                    flexShrink: 0,
-                  }}
-                />
-                <Group gap="sm" p="md" wrap="nowrap" style={{ flex: 1 }}>
-                  <ThemeIcon
-                    size={42}
-                    radius="md"
-                    variant="light"
-                    color="teal"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <IconCreditCard size={20} />
-                  </ThemeIcon>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t('portal.stat_total_paid')}
-                    </Text>
-                    <Text size="lg" fw={800} c="teal">
-                      ₺{totalPaid.toLocaleString()}
-                    </Text>
-                  </Box>
-                </Group>
+            <Paper radius="lg" p="md" style={{ border: '1px solid var(--mantine-color-teal-3)' }}>
+              <Group gap="sm" wrap="nowrap">
+                <ThemeIcon
+                  size={42}
+                  radius="md"
+                  variant="light"
+                  color="teal"
+                  style={{ flexShrink: 0 }}
+                >
+                  <IconCreditCard size={20} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t('portal.stat_total_paid')}
+                  </Text>
+                  <Text size="lg" fw={800} c="teal">
+                    ₺{totalPaid.toLocaleString()}
+                  </Text>
+                </Box>
               </Group>
             </Paper>
 
-            {/* Pending transactions */}
             <Paper
-              radius="xl"
+              radius="lg"
+              p="md"
               style={{
-                overflow: 'hidden',
                 border: `1px solid var(--mantine-color-${pendingTransactions > 0 ? 'orange' : 'gray'}-3)`,
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
               }}
             >
-              <Group gap={0} wrap="nowrap">
-                <Box
-                  style={{
-                    width: 5,
-                    alignSelf: 'stretch',
-                    background:
-                      pendingTransactions > 0
-                        ? 'var(--mantine-color-orange-5)'
-                        : 'var(--mantine-color-gray-4)',
-                    flexShrink: 0,
-                  }}
-                />
-                <Group gap="sm" p="md" wrap="nowrap" style={{ flex: 1 }}>
-                  <ThemeIcon
-                    size={42}
-                    radius="md"
-                    variant="light"
-                    color={pendingTransactions > 0 ? 'orange' : 'gray'}
-                    style={{ flexShrink: 0 }}
-                  >
-                    <IconReceipt size={20} />
-                  </ThemeIcon>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t('portal.stat_pending_transactions')}
-                    </Text>
-                    <Text size="lg" fw={800} c={pendingTransactions > 0 ? 'orange' : 'dimmed'}>
-                      {pendingTransactions}
-                    </Text>
-                  </Box>
-                </Group>
+              <Group gap="sm" wrap="nowrap">
+                <ThemeIcon
+                  size={42}
+                  radius="md"
+                  variant="light"
+                  color={pendingTransactions > 0 ? 'orange' : 'gray'}
+                  style={{ flexShrink: 0 }}
+                >
+                  <IconReceipt size={20} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t('portal.stat_pending_transactions')}
+                  </Text>
+                  <Text size="lg" fw={800} c={pendingTransactions > 0 ? 'orange' : 'dimmed'}>
+                    {pendingTransactions}
+                  </Text>
+                </Box>
               </Group>
             </Paper>
 
-            {/* Damage charges */}
             <Paper
-              radius="xl"
+              radius="lg"
+              p="md"
               style={{
-                overflow: 'hidden',
                 border: `1px solid var(--mantine-color-${pendingDamages > 0 ? 'red' : 'gray'}-3)`,
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
               }}
             >
-              <Group gap={0} wrap="nowrap">
-                <Box
-                  style={{
-                    width: 5,
-                    alignSelf: 'stretch',
-                    background:
-                      pendingDamages > 0
-                        ? 'var(--mantine-color-red-5)'
-                        : 'var(--mantine-color-gray-4)',
-                    flexShrink: 0,
-                  }}
-                />
-                <Group gap="sm" p="md" wrap="nowrap" style={{ flex: 1 }}>
-                  <ThemeIcon
-                    size={42}
-                    radius="md"
-                    variant="light"
-                    color={pendingDamages > 0 ? 'red' : 'gray'}
-                    style={{ flexShrink: 0 }}
-                  >
-                    <IconAlertTriangle size={20} />
-                  </ThemeIcon>
-                  <Box>
-                    <Text size="xs" c="dimmed">
-                      {t('portal.stat_damage_charges')}
-                    </Text>
-                    <Text size="lg" fw={800} c={pendingDamages > 0 ? 'red' : 'dimmed'}>
-                      {pendingDamages > 0
-                        ? `₺${pendingDamages.toLocaleString()}`
-                        : t('portal.none')}
-                    </Text>
-                  </Box>
-                </Group>
+              <Group gap="sm" wrap="nowrap">
+                <ThemeIcon
+                  size={42}
+                  radius="md"
+                  variant="light"
+                  color={pendingDamages > 0 ? 'red' : 'gray'}
+                  style={{ flexShrink: 0 }}
+                >
+                  <IconAlertTriangle size={20} />
+                </ThemeIcon>
+                <Box>
+                  <Text size="xs" c="dimmed">
+                    {t('portal.stat_damage_charges')}
+                  </Text>
+                  <Text size="lg" fw={800} c={pendingDamages > 0 ? 'red' : 'dimmed'}>
+                    {pendingDamages > 0 ? `₺${pendingDamages.toLocaleString()}` : t('portal.none')}
+                  </Text>
+                </Box>
               </Group>
             </Paper>
           </SimpleGrid>

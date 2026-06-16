@@ -51,45 +51,25 @@ export function ProfilePage() {
 
   return (
     <Stack gap="lg">
-      {/* Hero header */}
-      <Paper
-        radius="xl"
-        style={{
-          overflow: 'hidden',
-          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-          boxShadow: '0 6px 24px rgba(25,113,194,0.22)',
-        }}
-      >
-        <Box px="xl" py="lg">
-          <Group gap="lg" align="center" wrap="nowrap">
-            <Avatar
-              size={64}
-              radius="xl"
-              style={{
-                background: 'rgba(255,255,255,0.25)',
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 800,
-                border: '2px solid rgba(255,255,255,0.4)',
-                flexShrink: 0,
-              }}
-            >
-              {initials}
-            </Avatar>
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <Text fw={800} c="white" size="xl" lh={1.2}>
-                {fullName}
-              </Text>
-              <Text size="sm" c="white" style={{ opacity: 0.8 }}>
-                {student.studentNumber}
-              </Text>
-              <Text size="xs" c="white" style={{ opacity: 0.65, marginTop: 2 }}>
-                {student.department}
-              </Text>
-            </Box>
-          </Group>
+      {/* Compact profile header */}
+      <Group gap="md" align="center" mb={4}>
+        <Avatar
+          size={48}
+          radius="lg"
+          color="blue"
+          style={{ flexShrink: 0, fontSize: 18, fontWeight: 700 }}
+        >
+          {initials}
+        </Avatar>
+        <Box style={{ minWidth: 0 }}>
+          <Text fw={700} size="xl" lh={1.1} truncate>
+            {fullName}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {student.studentNumber} · {student.department}
+          </Text>
         </Box>
-      </Paper>
+      </Group>
 
       <Grid gutter="md" align="flex-start">
         {/* Left — identity (read-only) */}
@@ -102,19 +82,9 @@ export function ProfilePage() {
               boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
             }}
           >
-            <Group gap="sm" mb="md">
-              <Box
-                style={{
-                  width: 6,
-                  height: 20,
-                  borderRadius: 3,
-                  background: 'linear-gradient(180deg, #228BE6, #0C8599)',
-                }}
-              />
-              <Text fw={700} size="sm">
-                {t('portal.profile_title')}
-              </Text>
-            </Group>
+            <Text fw={700} size="sm" mb="md">
+              {t('portal.profile_title')}
+            </Text>
 
             <Stack gap="sm">
               {[
@@ -151,19 +121,9 @@ export function ProfilePage() {
               }}
             >
               <Stack gap="lg">
-                <Group gap="sm">
-                  <Box
-                    style={{
-                      width: 6,
-                      height: 20,
-                      borderRadius: 3,
-                      background: 'linear-gradient(180deg, #228BE6, #0C8599)',
-                    }}
-                  />
-                  <Text fw={700} size="sm">
-                    {t('portal.contact_information')}
-                  </Text>
-                </Group>
+                <Text fw={700} size="sm">
+                  {t('portal.contact_information')}
+                </Text>
 
                 <Alert icon={<IconInfoCircle size={14} />} color="blue" variant="light" radius="lg">
                   {t('portal.contact_info_hint')}
@@ -237,19 +197,9 @@ export function ProfilePage() {
               }}
             >
               <Stack gap="sm">
-                <Group gap="sm">
-                  <Box
-                    style={{
-                      width: 6,
-                      height: 20,
-                      borderRadius: 3,
-                      background: 'var(--mantine-color-red-5)',
-                    }}
-                  />
-                  <Text fw={700} size="sm">
-                    {t('portal.session')}
-                  </Text>
-                </Group>
+                <Text fw={700} size="sm">
+                  {t('portal.session')}
+                </Text>
                 <Text size="xs" c="dimmed">
                   {t('portal.signed_in_as', { number: student.studentNumber })}
                 </Text>

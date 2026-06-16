@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,18 +20,19 @@ import {
   IconArrowsExchange,
   IconBed,
   IconCalendar,
+  IconCalendarPlus,
   IconCreditCard,
   IconDoor,
   IconFileDownload,
   IconHome2,
   IconInfoCircle,
   IconKey,
-  IconMapPin,
   IconReceipt,
 } from '@tabler/icons-react';
 import { BookingOpsStatus, PaymentStatus } from '@domas/ts-types';
 import { portalBookings } from '@domas/api-client';
 import { useCurrentBooking } from '../hooks/useCurrentBooking';
+import { PortalPageHeader } from '../components/PortalPageHeader';
 import { BookingStatusStepper } from '../components/BookingStatusStepper';
 import { RoomShowcase } from '../components/RoomShowcase';
 import { RoomChangeTab } from '../components/RoomChangeTab';
@@ -63,16 +63,10 @@ export function BookingPage() {
   const paymentLabel = usePaymentLabel();
   const { booking, isLoading, refetch } = useCurrentBooking();
 
-  useEffect(() => {
-    if (!isLoading && booking === null) {
-      navigate('/apply', { replace: true });
-    }
-  }, [isLoading, booking, navigate]);
-
-  if (isLoading || booking === null) {
+  if (isLoading) {
     return (
       <Stack gap="lg">
-        <Skeleton height={100} radius="xl" />
+        <Skeleton height={80} radius="lg" />
         <Grid gutter="lg">
           <Grid.Col span={{ base: 12, lg: 5 }}>
             <Skeleton height={340} radius="xl" />
@@ -84,6 +78,45 @@ export function BookingPage() {
             </Stack>
           </Grid.Col>
         </Grid>
+      </Stack>
+    );
+  }
+
+  if (booking === null) {
+    return (
+      <Stack gap="lg">
+        <PortalPageHeader icon={IconBed} color="blue" title={t('portal.nav_my_room')} />
+        <Paper
+          radius="xl"
+          p="xl"
+          style={{ border: '1px solid var(--mantine-color-default-border)', textAlign: 'center' }}
+        >
+          <Stack align="center" gap="md" py="lg">
+            <ThemeIcon size={64} radius="xl" variant="light" color="blue">
+              <IconBed size={32} />
+            </ThemeIcon>
+            <Box>
+              <Text fw={700} size="lg">
+                {t('portal.no_booking_title', 'No active booking')}
+              </Text>
+              <Text size="sm" c="dimmed" mt={4} maw={360} mx="auto">
+                {t(
+                  'portal.no_booking_description',
+                  "You don't have a current booking. Apply for a room to get started.",
+                )}
+              </Text>
+            </Box>
+            <Button
+              leftSection={<IconCalendarPlus size={16} />}
+              onClick={() => navigate('/apply')}
+              radius="xl"
+              variant="gradient"
+              gradient={{ from: 'blue', to: 'cyan' }}
+            >
+              {t('portal.apply_now')}
+            </Button>
+          </Stack>
+        </Paper>
       </Stack>
     );
   }
@@ -102,66 +135,25 @@ export function BookingPage() {
         : t('portal.status_under_review');
 
   const headerColor = isActive ? 'green' : isRejected ? 'red' : 'blue';
-  const headerGradient = isActive
-    ? 'linear-gradient(135deg, #2F9E44 0%, #37B24D 50%, #2B8A3E 100%)'
-    : isRejected
-      ? 'linear-gradient(135deg, #C92A2A 0%, #E03131 50%, #C92A2A 100%)'
-      : 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)';
 
   return (
     <Stack gap="lg">
-      {/* Page hero */}
-      <Paper
-        radius="xl"
-        style={{
-          overflow: 'hidden',
-          boxShadow: '0 6px 24px rgba(0,0,0,0.1)',
-        }}
-      >
-        <Box px="xl" py="lg" style={{ background: headerGradient }}>
-          <Group justify="space-between" align="flex-start" wrap="nowrap">
-            <Box>
-              <Text
-                size="xs"
-                c="white"
-                fw={600}
-                style={{
-                  opacity: 0.75,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  fontSize: 11,
-                  marginBottom: 4,
-                }}
-              >
-                {t('portal.my_booking')}
-              </Text>
-              <Text fw={800} c="white" size="xl" lh={1.2}>
-                {booking.roomName}
-              </Text>
-              <Group gap={4} mt={4}>
-                <IconMapPin size={13} color="rgba(255,255,255,0.7)" />
-                <Text size="xs" c="white" style={{ opacity: 0.8 }}>
-                  {booking.locationPath} · {t('portal.bed_label', { label: booking.bedLabel })}
-                </Text>
-              </Group>
-            </Box>
-            <Stack gap={6} align="flex-end" style={{ flexShrink: 0 }}>
-              <Badge
-                color="white"
-                variant="filled"
-                size="lg"
-                radius="xl"
-                style={{ color: isRejected ? '#C92A2A' : isActive ? '#2F9E44' : '#1971C2' }}
-              >
-                {statusBadgeLabel}
-              </Badge>
-              <Text size="xs" c="white" style={{ opacity: 0.75 }}>
-                {booking.semesterDisplayName}
-              </Text>
-            </Stack>
-          </Group>
-        </Box>
-      </Paper>
+      <PortalPageHeader
+        icon={IconBed}
+        color={headerColor}
+        title={booking.roomName}
+        subtitle={`${booking.locationPath} · ${t('portal.bed_label', { label: booking.bedLabel })} · ${booking.semesterDisplayName}`}
+        action={
+          <Badge
+            color={isRejected ? 'red' : isActive ? 'green' : 'blue'}
+            variant="filled"
+            size="lg"
+            radius="xl"
+          >
+            {statusBadgeLabel}
+          </Badge>
+        }
+      />
 
       <Grid gutter="lg" align="flex-start">
         {/* Left — status stepper */}
