@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Res, StreamableFile, UseGuards } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Get, Param, Request, Res, StreamableFile, UseGuards } from '@nestjs/common';
+import type { Request as ExpressRequest, Response } from 'express';
 import { AnnouncementsService } from '../services/announcements.service';
 import { StudentAuthGuard } from '../../../common/guards/student-auth.guard';
 
@@ -9,8 +9,8 @@ export class PortalAnnouncementsController {
   constructor(private readonly service: AnnouncementsService) {}
 
   @Get()
-  findPublished() {
-    return this.service.findPublished();
+  findPublished(@Request() req: ExpressRequest) {
+    return this.service.findPublishedForStudent(req.session.studentId!);
   }
 
   @Get(':id/attachments/:attachmentId')

@@ -77,3 +77,43 @@ CREATE TABLE announcement_attachments (
 
 CREATE INDEX idx_announcement_attachments_ann_id
     ON announcement_attachments(announcement_id);
+
+-- =============================================
+-- ANNOUNCEMENT TARGETING
+-- =============================================
+-- Adds optional audience scoping to announcements. 'all' (default) preserves
+-- the existing broadcast-to-everyone behavior; 'targeted' restricts visibility
+-- to students matching at least one row in announcement_targets.
+
+ALTER TABLE announcements
+    ADD COLUMN audience_mode VARCHAR(10) NOT NULL DEFAULT 'all'
+        CHECK (audience_mode IN ('all', 'targeted'));
+
+-- One row per targeting criterion selected by the admin. A student matches an
+-- announcement if they satisfy ANY row (OR semantics across rows).
+CREATE TABLE announcement_targets (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+
+    target_type     VARCHAR(20) NOT NULL
+        CHECK (target_type IN ('student', 'semester', 'location')),
+
+    -- Exactly one of these is set, matching target_type. location_id matches
+    -- the targeted node and its entire subtree (building, floor, or room).
+    student_id      UUID REFERENCES students(id) ON DELETE CASCADE,
+    semester_id     INT  REFERENCES semesters(id) ON DELETE CASCADE,
+    location_id     INT  REFERENCES locations(id) ON DELETE CASCADE,
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_target_shape CHECK (
+        (target_type = 'student'  AND student_id  IS NOT NULL AND semester_id IS NULL AND location_id IS NULL) OR
+        (target_type = 'semester' AND semester_id IS NOT NULL AND student_id  IS NULL AND location_id IS NULL) OR
+        (target_type = 'location' AND location_id IS NOT NULL AND student_id  IS NULL AND semester_id IS NULL)
+    )
+);
+
+CREATE INDEX idx_ann_targets_announcement ON announcement_targets(announcement_id);
+CREATE INDEX idx_ann_targets_student       ON announcement_targets(student_id)  WHERE student_id  IS NOT NULL;
+CREATE INDEX idx_ann_targets_semester      ON announcement_targets(semester_id) WHERE semester_id IS NOT NULL;
+CREATE INDEX idx_ann_targets_location      ON announcement_targets(location_id) WHERE location_id IS NOT NULL;

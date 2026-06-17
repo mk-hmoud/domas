@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type { PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 import { StorageService } from '../../../common/storage/storage.service';
 import { Announcement } from '../entities/announcement.entity';
 import { CreateAnnouncementDto } from '../dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from '../dto/update-announcement.dto';
+import { AnnouncementTargetDto } from '../dto/announcement-target.dto';
 
 @Injectable()
 export class AnnouncementsRepository {
@@ -27,6 +29,8 @@ export class AnnouncementsRepository {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       attachments: row.attachments ?? [],
+      audienceMode: row.audience_mode,
+      targets: row.targets ?? [],
     });
   }
 
@@ -45,22 +49,84 @@ export class AnnouncementsRepository {
     ), '[]'::json) AS attachments
   `;
 
+  private readonly targetsSubquery = `
+    COALESCE((
+      SELECT json_agg(json_build_object(
+        'id',                  t.id,
+        'targetType',          t.target_type,
+        'studentId',           t.student_id,
+        'studentName',         CASE WHEN t.student_id IS NOT NULL
+                                  THEN CONCAT(st.first_name, ' ', st.last_name) END,
+        'semesterId',          t.semester_id,
+        'semesterDisplayName', sem.display_name,
+        'locationId',          t.location_id,
+        'locationName',        loc.name,
+        'locationPath',        (
+          SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
+          FROM   locations anc
+          WHERE  anc.tree_path @> loc.tree_path
+            AND  anc.deleted_at IS NULL
+        )
+      ) ORDER BY t.created_at ASC)
+      FROM announcement_targets t
+      LEFT JOIN students  st  ON st.id  = t.student_id
+      LEFT JOIN semesters sem ON sem.id = t.semester_id
+      LEFT JOIN locations loc ON loc.id = t.location_id
+      WHERE t.announcement_id = a.id
+    ), '[]'::json) AS targets
+  `;
+
   private readonly baseSelect = `
     SELECT a.*,
            CONCAT(u.first_name, ' ', u.last_name) AS created_by_name,
-           ${this.attachmentsSubquery}
+           ${this.attachmentsSubquery},
+           ${this.targetsSubquery}
     FROM announcements a
     JOIN users u ON u.id = a.created_by
   `;
 
+  private async insertTargets(
+    client: PoolClient,
+    announcementId: string,
+    targets: AnnouncementTargetDto[],
+  ): Promise<void> {
+    for (const target of targets) {
+      await client.query(
+        `INSERT INTO announcement_targets (announcement_id, target_type, student_id, semester_id, location_id)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          announcementId,
+          target.targetType,
+          target.targetType === 'student' ? target.studentId : null,
+          target.targetType === 'semester' ? target.semesterId : null,
+          target.targetType === 'location' ? target.locationId : null,
+        ],
+      );
+    }
+  }
+
   async create(data: CreateAnnouncementDto, userId: string): Promise<Announcement> {
-    const inserted = await this.db.getPool().query(
-      `INSERT INTO announcements (title, body, pinned, expires_at, created_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id`,
-      [data.title, data.body, data.pinned ?? false, data.expiresAt ?? null, userId],
-    );
-    return this.findById(inserted.rows[0].id) as Promise<Announcement>;
+    const id = await this.db.transaction(async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO announcements (title, body, pinned, expires_at, created_by, audience_mode)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [
+          data.title,
+          data.body,
+          data.pinned ?? false,
+          data.expiresAt ?? null,
+          userId,
+          data.audienceMode ?? 'all',
+        ],
+      );
+      const announcementId = inserted.rows[0].id;
+      if (data.targets && data.targets.length > 0) {
+        await this.insertTargets(client, announcementId, data.targets);
+      }
+      return announcementId;
+    });
+    return this.findById(id) as Promise<Announcement>;
   }
 
   async findAll(): Promise<Announcement[]> {
@@ -70,12 +136,46 @@ export class AnnouncementsRepository {
     return result.rows.map((r) => this.map(r));
   }
 
-  async findPublished(): Promise<Announcement[]> {
+  /**
+   * Published announcements visible to a specific student: broadcast ('all')
+   * announcements, plus any 'targeted' announcement the student matches via
+   * a direct student target, their current booking's semester, or a
+   * location target that is an ancestor of their current room.
+   */
+  async findPublishedForStudent(studentId: string): Promise<Announcement[]> {
     const result = await this.db.getPool().query(
-      `${this.baseSelect}
+      `WITH student_ctx AS (
+         SELECT bk.semester_id, l.tree_path
+         FROM   bookings bk
+         JOIN   beds      bd ON bd.id = bk.bed_id
+         JOIN   locations l  ON l.id  = bd.location_id
+         WHERE  bk.student_id = $1
+           AND  bk.status NOT IN ('cancelled', 'rejected', 'completed', 'transferred')
+         ORDER BY bk.created_at DESC
+         LIMIT 1
+       )
+       ${this.baseSelect}
+       LEFT JOIN student_ctx sc ON TRUE
        WHERE a.is_published = TRUE
          AND (a.expires_at IS NULL OR a.expires_at > NOW())
+         AND (
+           a.audience_mode = 'all'
+           OR EXISTS (
+             SELECT 1 FROM announcement_targets t
+             WHERE t.announcement_id = a.id
+               AND (
+                    (t.target_type = 'student'  AND t.student_id  = $1)
+                 OR (t.target_type = 'semester' AND t.semester_id = sc.semester_id)
+                 OR (t.target_type = 'location' AND sc.tree_path IS NOT NULL
+                       AND EXISTS (
+                         SELECT 1 FROM locations tl
+                         WHERE tl.id = t.location_id AND tl.tree_path @> sc.tree_path
+                       ))
+               )
+           )
+         )
        ORDER BY a.pinned DESC, a.published_at DESC`,
+      [studentId],
     );
     return result.rows.map((r) => this.map(r));
   }
@@ -106,16 +206,28 @@ export class AnnouncementsRepository {
       updates.push(`expires_at = $${i++}`);
       values.push(data.expiresAt ?? null);
     }
+    if (data.audienceMode !== undefined) {
+      updates.push(`audience_mode = $${i++}`);
+      values.push(data.audienceMode);
+    }
 
-    if (updates.length === 0) return this.findById(id);
+    if (updates.length === 0 && data.targets === undefined) return this.findById(id);
 
-    values.push(id);
-    await this.db
-      .getPool()
-      .query(
-        `UPDATE announcements SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${i}`,
-        values,
-      );
+    await this.db.transaction(async (client) => {
+      if (updates.length > 0) {
+        const vals = [...values, id];
+        await client.query(
+          `UPDATE announcements SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${i}`,
+          vals,
+        );
+      }
+      if (data.targets !== undefined) {
+        await client.query(`DELETE FROM announcement_targets WHERE announcement_id = $1`, [id]);
+        if (data.targets.length > 0) {
+          await this.insertTargets(client, id, data.targets);
+        }
+      }
+    });
     return this.findById(id);
   }
 
