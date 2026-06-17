@@ -93,9 +93,9 @@ CREATE TABLE user_roles (
 -- 3.1 GEOGRAPHY (Countries)
 -- =============================================
 CREATE TABLE countries (
-    code CHAR(2) PRIMARY KEY, -- ISO 3166-1 alpha-2 (e.g., 'TR', 'US', 'DE')
+    code VARCHAR(10) PRIMARY KEY, -- Supports ISO alpha-2/3 and custom codes (e.g., 'TRNC')
     name VARCHAR(100) NOT NULL,
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -112,7 +112,7 @@ CREATE TABLE students (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     gender gender_type NOT NULL,
-    nationality_code CHAR(2) NOT NULL REFERENCES countries(code),
+    nationality_code VARCHAR(10) NOT NULL REFERENCES countries(code),
     national_id VARCHAR(50) NOT NULL,
     birth_date DATE NOT NULL,
     birth_place VARCHAR(100) NOT NULL,
@@ -869,7 +869,7 @@ CREATE TABLE student_applications (
     first_name           VARCHAR(100) NOT NULL,
     last_name            VARCHAR(100) NOT NULL,
     gender               VARCHAR(10)  NOT NULL CHECK (gender IN ('male', 'female')),
-    nationality_code     VARCHAR(3)   NOT NULL,
+    nationality_code     VARCHAR(10)   NOT NULL,
     national_id          VARCHAR(50)  NOT NULL,
     birth_date           DATE         NOT NULL,
     birth_place          VARCHAR(100) NOT NULL,

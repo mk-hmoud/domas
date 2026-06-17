@@ -7,6 +7,21 @@ export interface AnnouncementAttachmentMeta {
   createdAt: string;
 }
 
+export type AnnouncementAudienceMode = "all" | "targeted";
+export type AnnouncementTargetType = "student" | "semester" | "location";
+
+export interface AnnouncementTarget {
+  id: string;
+  targetType: AnnouncementTargetType;
+  studentId?: string;
+  studentName?: string;
+  semesterId?: number;
+  semesterDisplayName?: string;
+  locationId?: number;
+  locationName?: string;
+  locationPath?: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -20,4 +35,6 @@ export interface Announcement {
   createdAt: string;
   updatedAt: string;
   attachments: AnnouncementAttachmentMeta[];
+  audienceMode: AnnouncementAudienceMode;
+  targets: AnnouncementTarget[];
 }
