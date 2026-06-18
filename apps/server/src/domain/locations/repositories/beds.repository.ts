@@ -9,10 +9,15 @@ import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class BedsRepository implements IBedsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -51,7 +56,11 @@ export class BedsRepository implements IBedsRepository {
     return new Bed(result.rows[0]);
   }
 
-  async findAll(filters: FindAllBedsDto, client?: PoolClient): Promise<PaginatedResult<Bed>> {
+  async findAll(
+    filters: FindAllBedsDto,
+    client?: PoolClient,
+    scope?: LocationScope,
+  ): Promise<PaginatedResult<Bed>> {
     const {
       page = 1,
       limit = 10,
@@ -131,6 +140,14 @@ export class BedsRepository implements IBedsRepository {
         ))`,
       );
     }
+
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    conditions.push(scopeFilter.clause);
 
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;

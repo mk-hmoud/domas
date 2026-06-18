@@ -30,6 +30,8 @@ export enum UndoActionType {
   REJECT_BOOKING = 'reject_booking',
   ASSIGN_ROLE = 'assign_role',
   REVOKE_ROLE = 'revoke_role',
+  ASSIGN_STAFF_LOCATION = 'assign_staff_location',
+  REVOKE_STAFF_LOCATION = 'revoke_staff_location',
   UPDATE_SEMESTER = 'update_semester',
   UPDATE_BOOKING = 'update_booking',
   CREATE_INVENTORY_CATALOG = 'create_inventory_catalog',

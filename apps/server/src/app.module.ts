@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppLoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './core/database/database.module';
+import { LocationScopeModule } from './core/location-scope/location-scope.module';
 import { StorageModule } from './common/storage/storage.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
@@ -38,6 +39,7 @@ import { MessagesModule } from './domain/messages/messages.module';
     ScheduleModule.forRoot(),
     AppLoggerModule,
     DatabaseModule,
+    LocationScopeModule,
     StorageModule,
     UsersModule,
     AuthModule,

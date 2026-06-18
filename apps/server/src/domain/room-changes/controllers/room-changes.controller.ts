@@ -27,11 +27,18 @@ export class RoomChangesController {
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_VIEW)
   @Get()
-  getAll(@Query('semesterId') semesterId?: string, @Query('status') status?: string) {
-    return this.roomChangesService.getAll({
-      semesterId: semesterId ? parseInt(semesterId, 10) : undefined,
-      status,
-    });
+  getAll(
+    @UserContext() context: AuditUserContext,
+    @Query('semesterId') semesterId?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.roomChangesService.getAll(
+      {
+        semesterId: semesterId ? parseInt(semesterId, 10) : undefined,
+        status,
+      },
+      context,
+    );
   }
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)
@@ -56,8 +63,11 @@ export class RoomChangesController {
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)
   @Get('bookings/:bookingId/available-beds')
-  getAvailableBeds(@Param('bookingId') bookingId: string) {
-    return this.roomChangesService.getAvailableBedsForBooking(bookingId);
+  getAvailableBeds(
+    @Param('bookingId') bookingId: string,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.roomChangesService.getAvailableBedsForBooking(bookingId, context);
   }
 
   @RequirePermissions(PERMISSIONS.ROOM_CHANGES_MANAGE)

@@ -35,17 +35,24 @@ export class AccessCardsController {
 
   @Get('batches')
   @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
-  findAllBatches() {
-    return this.service.findAllBatches();
+  findAllBatches(@UserContext() context: AuditUserContext) {
+    return this.service.findAllBatches(context);
   }
 
   @Get('cards')
   @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
-  findAllCards(@Query('batchId') batchId?: string, @Query('status') status?: CardStatus) {
-    return this.service.findAllCards({
-      batchId: batchId ? parseInt(batchId, 10) : undefined,
-      status,
-    });
+  findAllCards(
+    @UserContext() context: AuditUserContext,
+    @Query('batchId') batchId?: string,
+    @Query('status') status?: CardStatus,
+  ) {
+    return this.service.findAllCards(
+      {
+        batchId: batchId ? parseInt(batchId, 10) : undefined,
+        status,
+      },
+      context,
+    );
   }
 
   @Post('issue')
@@ -76,7 +83,7 @@ export class AccessCardsController {
 
   @Get('cards/:id/logs')
   @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
-  getLogs(@Param('id', ParseIntPipe) id: number) {
-    return this.service.getLogs(id);
+  getLogs(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.service.getLogs(id, context);
   }
 }

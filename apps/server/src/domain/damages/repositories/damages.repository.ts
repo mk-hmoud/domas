@@ -8,12 +8,15 @@ import { DamageLiability } from '../entities/damage-liability.entity';
 import { DamageReportImage } from '../entities/damage-report-image.entity';
 import { CreateDamageReportDto } from '../dto/create-damage-report.dto';
 import { DamageStatus } from '../../../common/enums/damage-status.enum';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class DamagesRepository {
   constructor(
     private readonly db: DatabaseService,
     private readonly storage: StorageService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
@@ -124,6 +127,7 @@ export class DamagesRepository {
              dr.culprit_guest_stay_ids as "culpritGuestStayIds",
              dr.created_at as "createdAt", dr.updated_at as "updatedAt",
              l.name as "locationName",
+             l.tree_path as "treePath",
              u.first_name || ' ' || u.last_name as "reportedByName",
              rev.first_name || ' ' || rev.last_name as "reviewedByName",
              (
@@ -151,6 +155,7 @@ export class DamagesRepository {
 
   async findAllReports(
     filters: { status?: DamageStatus; locationId?: number } = {},
+    scope?: LocationScope,
   ): Promise<any[]> {
     let query = `
       SELECT dr.id, dr.location_id as "locationId", dr.snapshot_id as "snapshotId",
@@ -185,6 +190,14 @@ export class DamagesRepository {
       values.push(filters.locationId);
       query += ` AND dr.location_id = $${values.length}`;
     }
+
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    query += ` AND ${scopeFilter.clause}`;
 
     query += ` ORDER BY dr.reported_at DESC`;
 

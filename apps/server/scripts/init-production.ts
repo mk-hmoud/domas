@@ -154,6 +154,25 @@ async function bootstrap() {
     } else {
       console.log('\u2705 Locations already exist. Skipping root creation.');
     }
+
+    // 3. Backfill staff_locations for existing users
+    // Location scoping is deny-by-default: a staff user with zero rows in
+    // staff_locations sees nothing location-bound. Anchor every existing
+    // non-recovery-admin user at the top-level root node(s) so nobody loses
+    // access the moment enforcement ships - admins can narrow people down
+    // from there afterwards.
+    console.log('\ud83d\udccd  Backfilling staff location scope...');
+    const backfillResult = await db.query(
+      `INSERT INTO staff_locations (user_id, location_id)
+       SELECT u.id, l.id
+       FROM users u
+       CROSS JOIN (SELECT id FROM locations WHERE nlevel(tree_path) = 1 AND deleted_at IS NULL) l
+       WHERE u.deleted_at IS NULL
+         AND u.is_recovery_admin = FALSE
+         AND NOT EXISTS (SELECT 1 FROM staff_locations sl WHERE sl.user_id = u.id)
+       ON CONFLICT DO NOTHING`,
+    );
+    console.log(`\u2705 Staff location scope backfilled (${backfillResult.rowCount ?? 0} rows).`);
   } catch (error) {
     logger.error('Failed to initialize system', error);
   } finally {

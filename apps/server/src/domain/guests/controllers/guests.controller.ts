@@ -48,44 +48,52 @@ export class GuestsController {
 
   @Get('guest-stays')
   findAllStays(
-    @Query('status') status?: string,
-    @Query('upcoming') upcoming?: string,
-    @Query('bedId') bedId?: string,
+    @Query('status') status: string | undefined,
+    @Query('upcoming') upcoming: string | undefined,
+    @Query('bedId') bedId: string | undefined,
+    @UserContext() context: AuditUserContext,
   ) {
-    return this.service.findAllStays({
-      status,
-      upcoming: upcoming === 'true',
-      bedId: bedId ? Number(bedId) : undefined,
-    });
+    return this.service.findAllStays(
+      {
+        status,
+        upcoming: upcoming === 'true',
+        bedId: bedId ? Number(bedId) : undefined,
+      },
+      context,
+    );
   }
 
   @Get('guest-stays/:id')
-  findStay(@Param('id') id: string) {
-    return this.service.findStayById(id);
+  findStay(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.service.findStayById(id, context);
   }
 
   @Post('guest-stays')
-  createStay(@Body() dto: CreateGuestStayDto, @UserContext() user: AuditUserContext) {
-    return this.service.createStay(dto, user);
+  createStay(@Body() dto: CreateGuestStayDto, @UserContext() context: AuditUserContext) {
+    return this.service.createStay(dto, context);
   }
 
   @Patch('guest-stays/:id')
-  updateStay(@Param('id') id: string, @Body() dto: UpdateGuestStayDto) {
-    return this.service.updateStay(id, dto);
+  updateStay(
+    @Param('id') id: string,
+    @Body() dto: UpdateGuestStayDto,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.updateStay(id, dto, context);
   }
 
   @Post('guest-stays/:id/check-in')
-  checkIn(@Param('id') id: string, @UserContext() user: AuditUserContext) {
-    return this.service.checkIn(id, user.userId);
+  checkIn(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.service.checkIn(id, context);
   }
 
   @Post('guest-stays/:id/check-out')
-  checkOut(@Param('id') id: string, @UserContext() user: AuditUserContext) {
-    return this.service.checkOut(id, user.userId);
+  checkOut(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.service.checkOut(id, context);
   }
 
   @Post('guest-stays/:id/cancel')
-  cancel(@Param('id') id: string, @UserContext() user: AuditUserContext) {
-    return this.service.cancel(id, user.userId);
+  cancel(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.service.cancel(id, context);
   }
 }

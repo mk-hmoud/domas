@@ -112,14 +112,14 @@ export class BedsController {
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.bedsService.findById(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.bedsService.findById(id, context);
   }
 
   @Get()
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findAll(@Query() query: FindAllBedsDto) {
-    return this.bedsService.findAll(query);
+  findAll(@Query() query: FindAllBedsDto, @UserContext() context: AuditUserContext) {
+    return this.bedsService.findAll(query, context);
   }
 
   @Patch(':id')

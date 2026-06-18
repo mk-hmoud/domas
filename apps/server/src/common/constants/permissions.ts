@@ -24,6 +24,10 @@ export const PERMISSIONS = {
   LOCATIONS_UPDATE: 'locations.update',
   LOCATIONS_DELETE: 'locations.delete',
 
+  // Staff <-> Location scoping
+  STAFF_LOCATIONS_VIEW: 'staff_locations.view',
+  STAFF_LOCATIONS_MANAGE: 'staff_locations.manage',
+
   // Bookings
   BOOKINGS_VIEW: 'bookings.view',
   BOOKINGS_CREATE: 'bookings.create',

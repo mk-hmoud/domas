@@ -89,6 +89,21 @@ CREATE TABLE user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
+-- STAFF <-> LOCATION SCOPING
+-- A row anchors a staff member at a location node; their access extends to
+-- the entire subtree under it (same "node + descendants" semantics as
+-- announcement_targets.location_id). Zero rows = no location-scoped access
+-- (deny by default) for any non-recovery-admin user.
+CREATE TABLE staff_locations (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    location_id INT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    PRIMARY KEY (user_id, location_id)
+);
+
+CREATE INDEX idx_staff_locations_location ON staff_locations(location_id);
+
 -- =============================================
 -- 3.1 GEOGRAPHY (Countries)
 -- =============================================

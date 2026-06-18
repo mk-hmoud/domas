@@ -176,6 +176,12 @@ CREATE TRIGGER audit_role_permissions_change
 AFTER INSERT OR UPDATE OR DELETE ON role_permissions
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
+-- Staff Locations
+DROP TRIGGER IF EXISTS audit_staff_locations_change ON staff_locations;
+CREATE TRIGGER audit_staff_locations_change
+AFTER INSERT OR UPDATE OR DELETE ON staff_locations
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
 -- Undo Log
 DROP TRIGGER IF EXISTS audit_undo_log_change ON audit.undo_log;
 CREATE TRIGGER audit_undo_log_change

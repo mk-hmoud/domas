@@ -39,6 +39,7 @@ import {
   NotificationsService,
   NotificationType,
 } from '../../notifications/services/notifications.service';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 @Injectable()
 export class BookingsService {
@@ -57,7 +58,27 @@ export class BookingsService {
     private readonly contractsService: ContractsService,
     private readonly db: DatabaseService,
     private readonly notificationsService: NotificationsService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  // Fetches the booking and asserts the staff member's location scope
+  // covers the bed it's tied to. Used before any single-booking read or
+  // mutation.
+  private async assertBookingInScope(
+    bookingId: string,
+    context: AuditUserContext,
+    client?: PoolClient,
+  ): Promise<Booking> {
+    const booking = await this.bookingsRepository.findById(bookingId, client);
+    if (!booking) throw new NotFoundException(`Booking with ID ${bookingId} not found`);
+
+    if (!context.locationScope?.unrestricted) {
+      const treePath = await this.bookingsRepository.findLocationTreePath(bookingId, client);
+      this.locationScopeService.assertAccess(context.locationScope, treePath ?? '');
+    }
+
+    return booking;
+  }
 
   async create(
     data: CreateBookingDto,
@@ -76,6 +97,7 @@ export class BookingsService {
 
       const room = await this.locationsRepository.findById(bed.locationId, client);
       if (!room) throw new NotFoundException(`Location for bed ${data.bedId} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, room.treePath);
 
       // 2. Constraints Check
       const isTrOnly = room.isTrOnly || bed.isTrOnly;
@@ -148,16 +170,12 @@ export class BookingsService {
     return this.db.transaction(operation, context);
   }
 
-  async findById(id: string): Promise<Booking> {
-    const booking = await this.bookingsRepository.findById(id);
-    if (!booking) {
-      throw new NotFoundException(`Booking with ID ${id} not found`);
-    }
-    return booking;
+  async findById(id: string, context: AuditUserContext): Promise<Booking> {
+    return this.assertBookingInScope(id, context);
   }
 
-  async findAll(filters: FindAllBookingsDto): Promise<Booking[]> {
-    return this.bookingsRepository.findAll(filters);
+  async findAll(filters: FindAllBookingsDto, context: AuditUserContext): Promise<Booking[]> {
+    return this.bookingsRepository.findAll(filters, undefined, context.locationScope);
   }
 
   async approveFinancials(
@@ -168,10 +186,7 @@ export class BookingsService {
     this.logger.log({ bookingId: id, approved: data.approved }, 'Processing financial approval');
 
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.findById(id, client);
-      if (!booking) {
-        throw new NotFoundException(`Booking with ID ${id} not found`);
-      }
+      const booking = await this.assertBookingInScope(id, context, client);
 
       if (booking.status !== BookingOpsStatus.PENDING_ACCOUNTING) {
         throw new BadRequestException(
@@ -263,10 +278,7 @@ export class BookingsService {
     this.logger.log({ bookingId: id }, 'Processing check-in');
 
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.findById(id, client);
-      if (!booking) {
-        throw new NotFoundException(`Booking with ID ${id} not found`);
-      }
+      const booking = await this.assertBookingInScope(id, context, client);
 
       if (booking.status !== BookingOpsStatus.READY_FOR_CHECKIN) {
         throw new BadRequestException(`Invalid status for check-in: ${booking.status}`);
@@ -355,10 +367,7 @@ export class BookingsService {
     this.logger.log({ bookingId: id }, 'Processing check-out');
 
     return this.db.transaction(async (client) => {
-      const booking = await this.bookingsRepository.findById(id, client);
-      if (!booking) {
-        throw new NotFoundException(`Booking with ID ${id} not found`);
-      }
+      const booking = await this.assertBookingInScope(id, context, client);
 
       if (booking.status !== BookingOpsStatus.ACTIVE) {
         throw new BadRequestException(`Booking is in ${booking.status} state, cannot check out`);
@@ -468,6 +477,10 @@ export class BookingsService {
           this.logger.warn({ bookingId: id }, 'Booking not found during bulk transfer, skipping');
           continue;
         }
+        if (!context.locationScope?.unrestricted) {
+          const treePath = await this.bookingsRepository.findLocationTreePath(id, client);
+          this.locationScopeService.assertAccess(context.locationScope, treePath ?? '');
+        }
 
         // 3. Check for existing transfer
         const duplicateRes = await client.query(
@@ -536,8 +549,7 @@ export class BookingsService {
 
     return this.db.transaction(async (client) => {
       // 1. Fetch Existing Booking
-      const existing = await this.bookingsRepository.findById(id, client);
-      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+      const existing = await this.assertBookingInScope(id, context, client);
 
       // 2. Fetch Target Semester for Default Dates (Consistency Fix: using client)
       const semesterRes = await client.query(
@@ -625,8 +637,7 @@ export class BookingsService {
     };
 
     return this.db.transaction(async (client) => {
-      const existing = await this.bookingsRepository.findById(id, client);
-      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+      const existing = await this.assertBookingInScope(id, context, client);
 
       // 1. Validate Date Order
       const newStart = data.startDate ? new Date(data.startDate) : existing.startDate;
@@ -696,8 +707,7 @@ export class BookingsService {
     this.logger.log({ bookingId: id, data }, 'Updating booking');
 
     return this.db.transaction(async (client) => {
-      const existing = await this.bookingsRepository.findById(id, client);
-      if (!existing) throw new NotFoundException(`Booking with ID ${id} not found`);
+      const existing = await this.assertBookingInScope(id, context, client);
 
       const updated = await this.bookingsRepository.update(id, data, client);
 

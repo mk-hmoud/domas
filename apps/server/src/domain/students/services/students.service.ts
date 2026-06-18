@@ -30,6 +30,7 @@ import type { AuditUserContext } from '../../../common/interfaces/audit-user-con
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { BadRequestException } from '@nestjs/common';
 import { PoolClient } from 'pg';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 @Injectable()
 export class StudentsService {
@@ -44,7 +45,20 @@ export class StudentsService {
     private readonly db: DatabaseService,
     private readonly storage: StorageService,
     private readonly applicationsRepository: StudentApplicationsRepository,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  // Students with no current placement have no location to check, so they're
+  // only visible to unrestricted staff.
+  private async assertStudentInScope(
+    studentId: string,
+    context: AuditUserContext,
+    client?: PoolClient,
+  ): Promise<void> {
+    if (context.locationScope?.unrestricted) return;
+    const treePath = await this.studentsRepository.getCurrentLocationTreePath(studentId, client);
+    this.locationScopeService.assertAccess(context.locationScope, treePath ?? '');
+  }
 
   private validateNationalId(nationalityCode: string, nationalId: string): void {
     if (nationalityCode === 'TR') {
@@ -83,15 +97,19 @@ export class StudentsService {
     }, context);
   }
 
-  async findAll(dto: FindAllStudentsDto): Promise<PaginatedResult<Student>> {
-    return this.studentsRepository.findAll(dto);
+  async findAll(
+    dto: FindAllStudentsDto,
+    context: AuditUserContext,
+  ): Promise<PaginatedResult<Student>> {
+    return this.studentsRepository.findAll(dto, undefined, context.locationScope);
   }
 
-  async findById(id: string): Promise<Student> {
+  async findById(id: string, context: AuditUserContext): Promise<Student> {
     const student = await this.studentsRepository.findById(id);
     if (!student) {
       throw new NotFoundException(`Student with ID ${id} not found`);
     }
+    await this.assertStudentInScope(id, context);
     if (student.photoStorageKey) {
       student.photoUrl = await this.storage.presign(student.photoStorageKey);
       student.photoStorageKey = undefined;
@@ -134,6 +152,7 @@ export class StudentsService {
       if (!existing) {
         throw new NotFoundException(`Student with ID ${id} not found`);
       }
+      await this.assertStudentInScope(id, context, client);
 
       // If either nationality or ID is changing, re-validate
       if (data.nationalityCode || data.nationalId) {
@@ -167,6 +186,7 @@ export class StudentsService {
       if (!existing) {
         throw new NotFoundException(`Student with ID ${id} not found`);
       }
+      await this.assertStudentInScope(id, context, client);
 
       await this.studentsRepository.delete(id, client);
 
@@ -206,6 +226,9 @@ export class StudentsService {
   ): Promise<void> {
     this.logger.log({ count: ids.length, isActive }, 'Bulk updating student status');
     await this.db.transaction(async (client) => {
+      for (const id of ids) {
+        await this.assertStudentInScope(id, context, client);
+      }
       await this.studentsRepository.updateStatusMany(ids, isActive, client);
     }, context);
   }
@@ -221,6 +244,7 @@ export class StudentsService {
       if (!existing) {
         throw new NotFoundException(`Student with ID ${id} not found`);
       }
+      await this.assertStudentInScope(id, context, client);
       const updated = await this.studentsRepository.update(id, { isActive }, client);
       return updated!;
     }, context);

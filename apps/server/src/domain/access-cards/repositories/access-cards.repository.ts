@@ -7,6 +7,24 @@ import { AccessCardLog } from '../entities/access-card-log.entity';
 import { CreateCardBatchDto } from '../dto/create-card-batch.dto';
 import { CardStatus } from '../../../common/enums/card-status.enum';
 import { CardActionType } from '../../../common/enums/card-action-type.enum';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
+
+// Resolves a card's location: prefer its current booking's bed, fall back to
+// the issuing batch's location (if the batch was tied to one). Cards with
+// neither (e.g. unissued, batch-less) resolve to NULL and are only visible
+// to unrestricted staff.
+const CARD_TREE_PATH_EXPR = `
+  COALESCE(
+    (SELECT l.tree_path FROM bookings b
+       JOIN beds bd ON b.bed_id = bd.id
+       JOIN locations l ON bd.location_id = l.id
+     WHERE b.id = ac.current_booking_id),
+    (SELECT l2.tree_path FROM card_batches cb2
+       JOIN locations l2 ON cb2.location_id = l2.id
+     WHERE cb2.id = ac.batch_id)
+  )
+`;
 
 const CARD_COLUMNS = `
   id, batch_id as "batchId", card_number as "cardNumber", status,
@@ -22,9 +40,18 @@ const BATCH_COLUMNS = `
   created_at as "createdAt", updated_at as "updatedAt", created_by as "createdBy"
 `;
 
+const BATCH_COLUMNS_PREFIXED = `
+  cb.id, cb.location_id as "locationId", cb.catalog_id as "catalogId", cb.name,
+  cb.range_start as "rangeStart", cb.range_end as "rangeEnd",
+  cb.created_at as "createdAt", cb.updated_at as "updatedAt", cb.created_by as "createdBy"
+`;
+
 @Injectable()
 export class AccessCardsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -54,9 +81,19 @@ export class AccessCardsRepository {
     return new CardBatch(result.rows[0]);
   }
 
-  async findAllBatches(): Promise<CardBatch[]> {
+  async findAllBatches(scope?: LocationScope): Promise<CardBatch[]> {
+    // Batches without a location_id are campus-wide and only visible to
+    // unrestricted staff - the subquery resolves NULL for them, which fails
+    // the <@ ANY(...) scope check for restricted staff as intended.
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      '(SELECT tree_path FROM locations WHERE id = cb.location_id)',
+      1,
+    );
+    const params = scopeFilter.param ? [scopeFilter.param] : [];
     const result = await this.db.query(
-      `SELECT ${BATCH_COLUMNS} FROM card_batches ORDER BY created_at DESC`,
+      `SELECT ${BATCH_COLUMNS_PREFIXED} FROM card_batches cb WHERE ${scopeFilter.clause} ORDER BY cb.created_at DESC`,
+      params,
     );
     return result.rows.map((r) => new CardBatch(r));
   }
@@ -217,10 +254,21 @@ export class AccessCardsRepository {
     return result.rows[0] ? new AccessCard(result.rows[0]) : null;
   }
 
+  // Used to assertAccess() before returning/mutating a single card. NULL when
+  // the card has no current booking and its batch has no location.
+  async getCardTreePath(id: number, client?: PoolClient): Promise<string | null> {
+    const result = await this.getClient(client).query(
+      `SELECT ${CARD_TREE_PATH_EXPR}::TEXT as "treePath" FROM access_cards ac WHERE ac.id = $1`,
+      [id],
+    );
+    return result.rows[0]?.treePath ?? null;
+  }
+
   async findAllCards(
     filters: { batchId?: number; status?: CardStatus } = {},
+    scope?: LocationScope,
   ): Promise<AccessCard[]> {
-    let query = `SELECT ${CARD_COLUMNS} FROM access_cards WHERE 1=1`;
+    let query = `SELECT ${CARD_COLUMNS} FROM access_cards ac WHERE 1=1`;
     const values: any[] = [];
 
     if (filters.batchId) {
@@ -232,6 +280,14 @@ export class AccessCardsRepository {
       values.push(filters.status);
       query += ` AND status = $${values.length}`;
     }
+
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      CARD_TREE_PATH_EXPR,
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    query += ` AND ${scopeFilter.clause}`;
 
     query += ` ORDER BY card_number ASC`;
     const result = await this.db.query(query, values);

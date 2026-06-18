@@ -8,10 +8,15 @@ import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class LocationsRepository implements ILocationsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -59,7 +64,11 @@ export class LocationsRepository implements ILocationsRepository {
     return new Location(result.rows[0]);
   }
 
-  async findAll(filters: FindAllLocationsDto, client?: PoolClient): Promise<PaginatedResult<any>> {
+  async findAll(
+    filters: FindAllLocationsDto,
+    client?: PoolClient,
+    scope?: LocationScope,
+  ): Promise<PaginatedResult<any>> {
     const {
       page = 1,
       limit = 10,
@@ -116,6 +125,14 @@ export class LocationsRepository implements ILocationsRepository {
         );
       }
     }
+
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      params.length + 1,
+    );
+    if (scopeFilter.param) params.push(scopeFilter.param);
+    conditions.push(scopeFilter.clause);
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 

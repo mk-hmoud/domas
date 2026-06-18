@@ -4,10 +4,15 @@ import { DatabaseService } from '../../../core/database/database.service';
 import { GuestStay } from '../entities/guest-stay.entity';
 import { CreateGuestStayDto } from '../dto/create-guest-stay.dto';
 import { UpdateGuestStayDto } from '../dto/update-guest-stay.dto';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class GuestStaysRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient) {
     return client || this.db.getPool();
@@ -23,6 +28,7 @@ export class GuestStaysRepository {
       g.phone              AS guest_phone,
       b.label              AS bed_label,
       r.name               AS room_name,
+      r.tree_path::text    AS room_tree_path,
       l.tree_path::text    AS location_path,
       u.first_name || ' ' || u.last_name AS created_by_name
     FROM guest_stays gs
@@ -54,6 +60,7 @@ export class GuestStaysRepository {
       bedId: row.bed_id,
       bedLabel: row.bed_label,
       roomName: row.room_name,
+      treePath: row.room_tree_path,
       locationPath: row.location_path ?? row.room_name,
       checkInDate: row.check_in_date,
       checkOutDate: row.check_out_date,
@@ -97,6 +104,7 @@ export class GuestStaysRepository {
 
   async findAll(
     filters: { status?: string; upcoming?: boolean; bedId?: number } = {},
+    scope?: LocationScope,
   ): Promise<any[]> {
     let query = `${this.baseSelect} WHERE 1=1`;
     const values: any[] = [];
@@ -115,6 +123,10 @@ export class GuestStaysRepository {
       values.push(filters.bedId);
       query += ` AND gs.bed_id = $${i++}`;
     }
+
+    const scopeFilter = this.locationScopeService.buildScopeClause(scope, 'r.tree_path', i);
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    query += ` AND ${scopeFilter.clause}`;
 
     query += ` ORDER BY gs.check_in_date DESC`;
     const result = await this.db.getPool().query(query, values);

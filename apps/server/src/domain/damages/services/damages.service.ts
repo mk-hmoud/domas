@@ -19,6 +19,7 @@ import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { UndoService } from '../../audit/services/undo.service';
 import { DamageReport } from '../entities/damage-report.entity';
 import { PoolClient } from 'pg';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
@@ -33,6 +34,7 @@ export class DamagesService {
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
 
   /**
@@ -44,6 +46,7 @@ export class DamagesService {
       // Basic validation: ensure location exists
       const location = await this.locationsRepository.findById(data.locationId, client);
       if (!location) throw new NotFoundException('Location not found');
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       // If snapshotId is provided, validate it exists
       if (data.snapshotId) {
@@ -132,15 +135,19 @@ export class DamagesService {
     }, context);
   }
 
-  async findReportById(id: string) {
+  async findReportById(id: string, context: AuditUserContext) {
     const report = await this.repository.findReportById(id);
     if (!report) throw new NotFoundException('Damage report not found');
+    this.locationScopeService.assertAccess(context.locationScope, report.treePath);
     const liabilities = await this.repository.findLiabilitiesByReport(id);
     return { ...report, liabilities };
   }
 
-  async findAllReports(filters: { status?: DamageStatus; locationId?: number }) {
-    return this.repository.findAllReports(filters);
+  async findAllReports(
+    filters: { status?: DamageStatus; locationId?: number },
+    context: AuditUserContext,
+  ) {
+    return this.repository.findAllReports(filters, context.locationScope);
   }
 
   /**
@@ -151,6 +158,7 @@ export class DamagesService {
     return this.db.transaction(async (client) => {
       const report = await this.repository.findReportById(id, client);
       if (!report) throw new NotFoundException('Damage report not found');
+      this.locationScopeService.assertAccess(context.locationScope, report.treePath);
       if (report.status !== DamageStatus.PENDING) {
         this.logger.warn(
           { reportId: id, status: report.status },
@@ -340,6 +348,7 @@ export class DamagesService {
     return this.db.transaction(async (client) => {
       const report = await this.repository.findReportById(id, client);
       if (!report) throw new NotFoundException('Damage report not found');
+      this.locationScopeService.assertAccess(context.locationScope, report.treePath);
       if (report.status !== DamageStatus.PENDING)
         throw new BadRequestException('Report is already processed');
 
@@ -368,9 +377,10 @@ export class DamagesService {
     'image/webp',
   ];
 
-  async addImages(reportId: string, files: Express.Multer.File[]) {
+  async addImages(reportId: string, files: Express.Multer.File[], context: AuditUserContext) {
     const report = await this.repository.findReportById(reportId);
     if (!report) throw new NotFoundException('Damage report not found');
+    this.locationScopeService.assertAccess(context.locationScope, report.treePath);
 
     for (const file of files) {
       if (!DamagesService.ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
@@ -383,16 +393,24 @@ export class DamagesService {
     return this.repository.insertImages(reportId, files);
   }
 
-  async getImageUrl(reportId: string, imageId: string): Promise<{ url: string }> {
+  async getImageUrl(
+    reportId: string,
+    imageId: string,
+    context: AuditUserContext,
+  ): Promise<{ url: string }> {
+    const report = await this.repository.findReportById(reportId);
+    if (!report) throw new NotFoundException('Damage report not found');
+    this.locationScopeService.assertAccess(context.locationScope, report.treePath);
     const image = await this.repository.findImageById(imageId, reportId);
     if (!image) throw new NotFoundException('Image not found');
     const url = await this.repository.getPresignedUrl(image.storageKey);
     return { url };
   }
 
-  async deleteImage(reportId: string, imageId: string): Promise<void> {
+  async deleteImage(reportId: string, imageId: string, context: AuditUserContext): Promise<void> {
     const report = await this.repository.findReportById(reportId);
     if (!report) throw new NotFoundException('Damage report not found');
+    this.locationScopeService.assertAccess(context.locationScope, report.treePath);
     const deleted = await this.repository.deleteImage(imageId, reportId);
     if (!deleted) throw new NotFoundException('Image not found');
   }

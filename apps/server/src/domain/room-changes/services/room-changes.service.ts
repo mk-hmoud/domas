@@ -22,6 +22,7 @@ import { StaffMoveBedDto } from '../dto/staff-move-bed.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 @Injectable()
 export class RoomChangesService {
@@ -31,6 +32,7 @@ export class RoomChangesService {
     private readonly roomChangesRepo: RoomChangesRepository,
     private readonly studentsRepo: StudentsRepository,
     private readonly notificationsService: NotificationsService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
 
   // ─── Student Portal ───────────────────────────────────────────────────────────
@@ -166,14 +168,18 @@ export class RoomChangesService {
 
   // ─── Staff ────────────────────────────────────────────────────────────────────
 
-  async getAll(params?: { semesterId?: number; status?: string }): Promise<any[]> {
-    return this.roomChangesRepo.findAll(params);
+  async getAll(
+    params: { semesterId?: number; status?: string } | undefined,
+    context: AuditUserContext,
+  ): Promise<any[]> {
+    return this.roomChangesRepo.findAll(params, context.locationScope);
   }
 
   async resolve(id: string, dto: ResolveRoomChangeDto, context: AuditUserContext): Promise<any> {
     return this.db.transaction(async (client) => {
       const request = await this.roomChangesRepo.findById(id, client);
       if (!request) throw new NotFoundException('Room change request not found');
+      this.locationScopeService.assertAccess(context.locationScope, request.treePath);
       if (request.status !== 'pending') {
         throw new BadRequestException('This request has already been resolved');
       }
@@ -190,6 +196,12 @@ export class RoomChangesService {
           throw new BadRequestException(
             'A bed must be assigned when approving an open room change request',
           );
+        }
+
+        if (isOpenRequest) {
+          const bedWithRoom = await this.roomChangesRepo.findBedWithRoom(effectiveBedId!, client);
+          if (!bedWithRoom) throw new NotFoundException('Assigned bed not found');
+          this.locationScopeService.assertAccess(context.locationScope, bedWithRoom.room.treePath);
         }
 
         const taken = await this.roomChangesRepo.isBedTaken(
@@ -277,6 +289,7 @@ export class RoomChangesService {
     return this.db.transaction(async (client) => {
       const request = await this.roomChangesRepo.findById(id, client);
       if (!request) throw new NotFoundException('Room change request not found');
+      this.locationScopeService.assertAccess(context.locationScope, request.treePath);
       if (!request.requiresPayment) {
         throw new BadRequestException('This request does not require payment approval');
       }
@@ -337,8 +350,8 @@ export class RoomChangesService {
     });
   }
 
-  async getAvailableBedsForBooking(bookingId: string): Promise<any[]> {
-    return this.roomChangesRepo.findAvailableBedsForBooking(bookingId);
+  async getAvailableBedsForBooking(bookingId: string, context: AuditUserContext): Promise<any[]> {
+    return this.roomChangesRepo.findAvailableBedsForBooking(bookingId, context.locationScope);
   }
 
   async staffMoveBed(
@@ -348,18 +361,30 @@ export class RoomChangesService {
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       const result = await client.query(
-        `SELECT id, semester_id AS "semesterId", bed_id AS "bedId", status
-         FROM bookings WHERE id = $1`,
+        `SELECT bk.id, bk.semester_id AS "semesterId", bk.bed_id AS "bedId", bk.status,
+                l.tree_path AS "treePath"
+         FROM bookings bk
+         JOIN beds      bd ON bk.bed_id = bd.id
+         JOIN locations l  ON bd.location_id = l.id
+         WHERE bk.id = $1`,
         [bookingId],
       );
       const booking = result.rows[0];
       if (!booking) throw new NotFoundException('Booking not found');
+      this.locationScopeService.assertAccess(context.locationScope, booking.treePath);
       if (['cancelled', 'rejected', 'completed', 'transferred'].includes(booking.status)) {
         throw new BadRequestException('Cannot move bed on an inactive booking');
       }
       if (dto.bedId === booking.bedId) {
         throw new BadRequestException('The booking is already on this bed');
       }
+
+      const targetBedWithRoom = await this.roomChangesRepo.findBedWithRoom(dto.bedId, client);
+      if (!targetBedWithRoom) throw new NotFoundException('Target bed not found');
+      this.locationScopeService.assertAccess(
+        context.locationScope,
+        targetBedWithRoom.room.treePath,
+      );
 
       const taken = await this.roomChangesRepo.isBedTaken(
         dto.bedId,

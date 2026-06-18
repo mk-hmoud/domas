@@ -140,8 +140,8 @@ export class LocationsController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findAll(@Query() filters: FindAllLocationsDto) {
-    return this.locationsService.findAll(filters);
+  findAll(@Query() filters: FindAllLocationsDto, @UserContext() context: AuditUserContext) {
+    return this.locationsService.findAll(filters, context);
   }
 
   @Get('search')
@@ -154,26 +154,29 @@ export class LocationsController {
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.locationsService.findById(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.findById(id, context);
   }
 
   @Get(':id/residents')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  getResidents(@Param('id', ParseIntPipe) id: number) {
-    return this.locationsService.findActiveResidents(id);
+  getResidents(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.findActiveResidents(id, context);
   }
 
   @Get(':id/children')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findChildren(@Param('id', ParseIntPipe) id: number) {
-    return this.locationsService.findChildren(id);
+  findChildren(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.findChildren(id, context);
   }
 
   @Get(':id/ancestors')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  findWithAncestors(@Param('id', ParseIntPipe) id: number) {
-    return this.locationsService.findWithAncestors(id);
+  findWithAncestors(
+    @Param('id', ParseIntPipe) id: number,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.locationsService.findWithAncestors(id, context);
   }
 
   @Patch(':id')

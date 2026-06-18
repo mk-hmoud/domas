@@ -36,17 +36,24 @@ export class DamagesController {
 
   @Get('reports/:id')
   @RequirePermissions(PERMISSIONS.DAMAGES_VIEW)
-  findReportById(@Param('id') id: string) {
-    return this.service.findReportById(id);
+  findReportById(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.service.findReportById(id, context);
   }
 
   @Get('reports')
   @RequirePermissions(PERMISSIONS.DAMAGES_VIEW)
-  findAllReports(@Query('status') status?: DamageStatus, @Query('locationId') locationId?: string) {
-    return this.service.findAllReports({
-      status,
-      locationId: locationId ? parseInt(locationId, 10) : undefined,
-    });
+  findAllReports(
+    @UserContext() context: AuditUserContext,
+    @Query('status') status?: DamageStatus,
+    @Query('locationId') locationId?: string,
+  ) {
+    return this.service.findAllReports(
+      {
+        status,
+        locationId: locationId ? parseInt(locationId, 10) : undefined,
+      },
+      context,
+    );
   }
 
   @Post('reports/:id/approve')
@@ -66,20 +73,32 @@ export class DamagesController {
   @Post('reports/:id/images')
   @RequirePermissions(PERMISSIONS.DAMAGES_REPORT)
   @UseInterceptors(FilesInterceptor('images', 10, { limits: { fileSize: 20 * 1024 * 1024 } }))
-  uploadImages(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]) {
-    return this.service.addImages(id, files);
+  uploadImages(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.addImages(id, files, context);
   }
 
   @Get('reports/:id/images/:imageId/url')
   @RequirePermissions(PERMISSIONS.DAMAGES_VIEW)
-  getImageUrl(@Param('id') id: string, @Param('imageId') imageId: string) {
-    return this.service.getImageUrl(id, imageId);
+  getImageUrl(
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.getImageUrl(id, imageId, context);
   }
 
   @Delete('reports/:id/images/:imageId')
   @RequirePermissions(PERMISSIONS.DAMAGES_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteImage(@Param('id') id: string, @Param('imageId') imageId: string) {
-    return this.service.deleteImage(id, imageId);
+  deleteImage(
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.deleteImage(id, imageId, context);
   }
 }

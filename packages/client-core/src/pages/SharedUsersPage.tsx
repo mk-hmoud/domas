@@ -21,10 +21,16 @@ import {
   UpdateUserDto,
   Role,
 } from "@domas/ts-types";
-import { CreateUserModal, UsersTable, LabelValue } from "@domas/ui";
+import {
+  CreateUserModal,
+  UsersTable,
+  LabelValue,
+  UserLocationsPanel,
+} from "@domas/ui";
 import { useTranslation } from "react-i18next";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
+import { useAuth } from "../context/AuthContext";
 
 interface SharedUsersPageProps {
   title?: string;
@@ -36,6 +42,7 @@ export function SharedUsersPage({
   role,
 }: SharedUsersPageProps) {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
   const [paginatedData, setPaginatedData] =
     useState<PaginatedResult<User> | null>(null);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
@@ -303,6 +310,19 @@ export function SharedUsersPage({
                   )}
                 </Group>
               </LabelValue>
+
+              {hasPermission("staff_locations.view") && (
+                <LabelValue
+                  label={t("staff_locations", {
+                    defaultValue: "Assigned Locations",
+                  })}
+                >
+                  <UserLocationsPanel
+                    userId={viewUser.id}
+                    readOnly={!hasPermission("staff_locations.manage")}
+                  />
+                </LabelValue>
+              )}
 
               <Button
                 variant="light"

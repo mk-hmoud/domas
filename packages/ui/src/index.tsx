@@ -13,6 +13,7 @@ export * from "./components/FontSizeControl/FontSizeControl";
 export * from "./components/AuthenticationForm";
 export * from "./components/CreateUserModal";
 export * from "./components/UsersTable";
+export * from "./components/UserLocationsPanel";
 export * from "./components/Locations";
 export * from "./components/Locations/SmartLocationSelector";
 export * from "./components/Semesters";

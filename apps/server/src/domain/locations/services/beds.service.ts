@@ -28,6 +28,7 @@ import { PoolClient } from 'pg';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { Inject, forwardRef } from '@nestjs/common';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 @Injectable()
 export class BedsService {
@@ -38,7 +39,26 @@ export class BedsService {
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  // Fetches the bed's room and asserts the current staff member's location
+  // scope covers it. Used before any single-bed read or mutation.
+  private async assertBedInScope(
+    bedId: number,
+    context: AuditUserContext,
+    client?: PoolClient,
+  ): Promise<Bed> {
+    const bed = await this.bedsRepository.findById(bedId, client);
+    if (!bed) throw new NotFoundException(`Bed with ID ${bedId} not found`);
+
+    if (!context.locationScope?.unrestricted) {
+      const room = await this.locationsRepository.findById(bed.locationId, client);
+      this.locationScopeService.assertAccess(context.locationScope, room?.treePath ?? '');
+    }
+
+    return bed;
+  }
 
   private validateStatusTransition(current: BedStatus, next?: BedStatus) {
     if (!next || current === next) return;
@@ -64,8 +84,8 @@ export class BedsService {
     }
   }
 
-  async findAll(filters: FindAllBedsDto): Promise<PaginatedResult<Bed>> {
-    return this.bedsRepository.findAll(filters);
+  async findAll(filters: FindAllBedsDto, context: AuditUserContext): Promise<PaginatedResult<Bed>> {
+    return this.bedsRepository.findAll(filters, undefined, context.locationScope);
   }
 
   async create(
@@ -79,6 +99,7 @@ export class BedsService {
       if (!room) {
         throw new NotFoundException(`Location with ID ${data.locationId} not found`);
       }
+      this.locationScopeService.assertAccess(context.locationScope, room.treePath);
 
       try {
         const bed = await this.bedsRepository.create(
@@ -114,23 +135,29 @@ export class BedsService {
     return this.db.transaction(operation, context);
   }
 
-  async findById(id: number): Promise<Bed> {
-    const bed = await this.bedsRepository.findById(id);
-    if (!bed) {
-      throw new NotFoundException(`Bed with ID ${id} not found`);
-    }
-    return bed;
+  async findById(id: number, context: AuditUserContext): Promise<Bed> {
+    return this.assertBedInScope(id, context);
   }
 
-  async findByLocation(locationId: number): Promise<Bed[]> {
+  async findByLocation(locationId: number, context: AuditUserContext): Promise<Bed[]> {
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) {
+      throw new NotFoundException(`Location with ID ${locationId} not found`);
+    }
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
     return this.bedsRepository.findByLocation(locationId);
   }
 
   async update(id: number, data: UpdateBedDto, context: AuditUserContext): Promise<Bed> {
     return this.db.transaction(async (client) => {
-      const existing = await this.bedsRepository.findById(id, client);
-      if (!existing) {
-        throw new NotFoundException(`Bed with ID ${id} not found`);
+      const existing = await this.assertBedInScope(id, context, client);
+
+      if (data.locationId !== undefined && data.locationId !== existing.locationId) {
+        const targetRoom = await this.locationsRepository.findById(data.locationId, client);
+        if (!targetRoom) {
+          throw new NotFoundException(`Location with ID ${data.locationId} not found`);
+        }
+        this.locationScopeService.assertAccess(context.locationScope, targetRoom.treePath);
       }
 
       this.validateStatusTransition(existing.status, data.status);
@@ -163,10 +190,7 @@ export class BedsService {
 
   async delete(id: number, context: AuditUserContext): Promise<void> {
     return this.db.transaction(async (client) => {
-      const existing = await this.bedsRepository.findById(id, client);
-      if (!existing) {
-        throw new NotFoundException(`Bed with ID ${id} not found`);
-      }
+      const existing = await this.assertBedInScope(id, context, client);
       await this.bedsRepository.delete(id, client);
 
       await this.undoService.registerUndo(
@@ -185,8 +209,7 @@ export class BedsService {
 
   async updateTrOnly(id: number, isTrOnly: boolean, context: AuditUserContext): Promise<Bed> {
     return this.db.transaction(async (client) => {
-      const bed = await this.bedsRepository.findById(id, client);
-      if (!bed) throw new NotFoundException(`Bed with ID ${id} not found`);
+      const bed = await this.assertBedInScope(id, context, client);
 
       const updated = await this.bedsRepository.updateTrOnly(id, isTrOnly, client);
 
@@ -212,8 +235,7 @@ export class BedsService {
     context: AuditUserContext,
   ): Promise<Bed> {
     return this.db.transaction(async (client) => {
-      const bed = await this.bedsRepository.findById(id, client);
-      if (!bed) throw new NotFoundException(`Bed with ID ${id} not found`);
+      const bed = await this.assertBedInScope(id, context, client);
 
       const updated = await this.bedsRepository.updateForeignerOnly(id, isForeignerOnly, client);
 
@@ -235,8 +257,7 @@ export class BedsService {
 
   async updateOwnership(id: number, ownership: any, context: AuditUserContext): Promise<Bed> {
     return this.db.transaction(async (client) => {
-      const bed = await this.bedsRepository.findById(id, client);
-      if (!bed) throw new NotFoundException(`Bed with ID ${id} not found`);
+      const bed = await this.assertBedInScope(id, context, client);
 
       const updated = await this.bedsRepository.updateOwnership(id, ownership, client);
 
@@ -258,8 +279,7 @@ export class BedsService {
 
   async updateGuestZone(id: number, isGuestZone: boolean, context: AuditUserContext): Promise<Bed> {
     return this.db.transaction(async (client) => {
-      const bed = await this.bedsRepository.findById(id, client);
-      if (!bed) throw new NotFoundException(`Bed with ID ${id} not found`);
+      const bed = await this.assertBedInScope(id, context, client);
 
       const updated = await this.bedsRepository.updateGuestZone(id, isGuestZone, client);
 
@@ -291,6 +311,9 @@ export class BedsService {
 
   async deleteMany(dto: BulkDeleteBedDto, context: AuditUserContext): Promise<void> {
     return this.db.transaction(async (client) => {
+      for (const id of dto.ids) {
+        await this.assertBedInScope(id, context, client);
+      }
       await this.bedsRepository.deleteMany(dto.ids, client);
     }, context);
   }
@@ -298,11 +321,9 @@ export class BedsService {
   async updateStatusMany(dto: BulkUpdateBedStatusDto, context: AuditUserContext): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
-        const bed = await this.bedsRepository.findById(id, client);
-        if (bed) {
-          this.validateStatusTransition(bed.status, dto.status);
-          await this.bedsRepository.updateStatus(id, dto.status, client);
-        }
+        const bed = await this.assertBedInScope(id, context, client);
+        this.validateStatusTransition(bed.status, dto.status);
+        await this.bedsRepository.updateStatus(id, dto.status, client);
       }
     }, context);
   }
@@ -310,6 +331,7 @@ export class BedsService {
   async updateTrOnlyMany(dto: BulkUpdateBedTrOnlyDto, context: AuditUserContext): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
+        await this.assertBedInScope(id, context, client);
         await this.bedsRepository.updateTrOnly(id, dto.isTrOnly, client);
       }
     }, context);
@@ -321,6 +343,7 @@ export class BedsService {
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
+        await this.assertBedInScope(id, context, client);
         await this.bedsRepository.updateForeignerOnly(id, dto.isForeignerOnly, client);
       }
     }, context);
@@ -332,6 +355,7 @@ export class BedsService {
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
+        await this.assertBedInScope(id, context, client);
         await this.bedsRepository.updateOwnership(id, dto.ownership, client);
       }
     }, context);
@@ -343,6 +367,7 @@ export class BedsService {
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
+        await this.assertBedInScope(id, context, client);
         await this.bedsRepository.updateGuestZone(id, dto.isGuestZone, client);
       }
     }, context);
