@@ -58,8 +58,12 @@ export const PERMISSIONS = {
   UNDO_ALL: 'undo.all',
   UNDO_OWN: 'undo.own',
 
-  // Messaging
+  // Messaging (bulk contact resolution for an external SMS/WhatsApp/email tool)
   MESSAGING_SEND: 'messaging.send',
+
+  // Messages (in-app admin <-> student support inbox — distinct from MESSAGING_SEND above)
+  MESSAGES_VIEW: 'messages.view',
+  MESSAGES_MANAGE: 'messages.manage',
 
   // Announcements
   ANNOUNCEMENTS_MANAGE: 'announcements.manage',

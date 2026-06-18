@@ -117,3 +117,55 @@ CREATE INDEX idx_ann_targets_announcement ON announcement_targets(announcement_i
 CREATE INDEX idx_ann_targets_student       ON announcement_targets(student_id)  WHERE student_id  IS NOT NULL;
 CREATE INDEX idx_ann_targets_semester      ON announcement_targets(semester_id) WHERE semester_id IS NOT NULL;
 CREATE INDEX idx_ann_targets_location      ON announcement_targets(location_id) WHERE location_id IS NOT NULL;
+
+-- =============================================
+-- MESSAGING (Admin <-> Student support inbox)
+-- =============================================
+-- One conversation per student. Any admin with messages.manage can see/reply
+-- to any conversation — not locked to a single assignee.
+
+CREATE TABLE conversations (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id      UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+
+    subject         VARCHAR(200),
+    status          VARCHAR(20) NOT NULL DEFAULT 'open'
+        CHECK (status IN ('open', 'closed')),
+
+    -- Denormalized for fast inbox list sorting/badges; kept in sync in the
+    -- same transaction as each message insert.
+    last_message_at      TIMESTAMPTZ,
+    last_message_preview VARCHAR(200),
+    unread_by_admin       BOOLEAN NOT NULL DEFAULT FALSE,  -- student sent the last message, no admin has read it
+    unread_by_student      BOOLEAN NOT NULL DEFAULT FALSE, -- admin sent the last message, student hasn't read it
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Only one OPEN conversation per student at a time (support-inbox model). A
+-- partial unique index — not a table-level UNIQUE(student_id, status) — so a
+-- student can still have multiple CLOSED conversations in their history.
+CREATE UNIQUE INDEX idx_one_open_conversation_per_student
+    ON conversations(student_id) WHERE status = 'open';
+
+CREATE INDEX idx_conversations_student      ON conversations(student_id);
+CREATE INDEX idx_conversations_unread_admin ON conversations(last_message_at DESC) WHERE unread_by_admin = TRUE;
+
+CREATE TABLE conversation_messages (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+
+    -- Polymorphic sender, mirroring notifications.recipient_type/recipient_id.
+    -- 'student' -> students.id | 'user' -> users.id. Referential integrity is
+    -- enforced at the application layer.
+    sender_type     VARCHAR(10) NOT NULL CHECK (sender_type IN ('student', 'user')),
+    sender_id       UUID NOT NULL,
+
+    body            TEXT NOT NULL,
+    read_at         TIMESTAMPTZ,  -- read by the OTHER party
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_conv_messages_conversation ON conversation_messages(conversation_id, created_at);

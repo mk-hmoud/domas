@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Subject } from 'rxjs';
 import { PoolClient } from 'pg';
 import { NotificationsRepository, Notification } from '../repositories/notifications.repository';
+import { RealtimeService } from '../../realtime/realtime.service';
 
 export const NotificationType = {
   BOOKING_SUBMITTED: 'booking_submitted',
@@ -24,10 +24,10 @@ export type NotificationTypeValue = (typeof NotificationType)[keyof typeof Notif
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  /** In-process SSE subjects keyed by studentId. */
-  private readonly subjects = new Map<string, Subject<Notification>>();
-
-  constructor(private readonly notificationsRepository: NotificationsRepository) {}
+  constructor(
+    private readonly notificationsRepository: NotificationsRepository,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   // ─── Creation ────────────────────────────────────────────────────────────────
 
@@ -51,33 +51,13 @@ export class NotificationsService {
       });
 
       // Push to live SSE stream if the student has an active connection
-      const subject = this.subjects.get(studentId);
-      if (subject) {
-        subject.next(notification);
-      }
+      this.realtime.publish(studentId, 'notification', notification);
 
       return notification;
     } catch (err: any) {
       // Notifications must never break the main business operation
       this.logger.error({ studentId, type, error: err.message }, 'Failed to create notification');
       return null as any;
-    }
-  }
-
-  // ─── SSE ─────────────────────────────────────────────────────────────────────
-
-  getOrCreateSubject(studentId: string): Subject<Notification> {
-    if (!this.subjects.has(studentId)) {
-      this.subjects.set(studentId, new Subject<Notification>());
-    }
-    return this.subjects.get(studentId)!;
-  }
-
-  removeSubject(studentId: string): void {
-    const subject = this.subjects.get(studentId);
-    if (subject) {
-      subject.complete();
-      this.subjects.delete(studentId);
     }
   }
 

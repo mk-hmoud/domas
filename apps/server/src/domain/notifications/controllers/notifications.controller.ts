@@ -17,34 +17,39 @@ import { Observable, finalize } from 'rxjs';
 import { map } from 'rxjs/operators';
 import type { Request as ExpressRequest } from 'express';
 import { NotificationsService } from '../services/notifications.service';
+import { RealtimeService } from '../../realtime/realtime.service';
 import { StudentAuthGuard } from '../../../common/guards/student-auth.guard';
 
 @Controller('portal/notifications')
 export class NotificationsController implements OnModuleDestroy {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   onModuleDestroy() {
     // Nothing to clean up — subjects are cleaned up per-connection via finalize()
   }
 
   /**
-   * SSE stream — the frontend connects once and receives live notifications.
-   * The connection is cleaned up when the client disconnects.
+   * SSE stream — the frontend connects once and receives every realtime
+   * channel (notifications, messages, ...) for this student over one
+   * connection. The connection is cleaned up when the client disconnects.
    */
   @UseGuards(StudentAuthGuard)
   @Sse('stream')
   stream(@Request() req: ExpressRequest): Observable<MessageEvent> {
     const studentId = req.session.studentId!;
-    const subject = this.notificationsService.getOrCreateSubject(studentId);
+    const subject = this.realtime.getOrCreateSubject(studentId);
 
     // Detect client disconnect and clean up the subject
     req.on('close', () => {
-      this.notificationsService.removeSubject(studentId);
+      this.realtime.removeSubject(studentId);
     });
 
     return subject.pipe(
-      map((notification) => ({ data: notification }) as MessageEvent),
-      finalize(() => this.notificationsService.removeSubject(studentId)),
+      map((envelope) => ({ data: envelope }) as MessageEvent),
+      finalize(() => this.realtime.removeSubject(studentId)),
     );
   }
 

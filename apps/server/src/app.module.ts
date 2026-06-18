@@ -27,6 +27,7 @@ import { RoomTypesModule } from './domain/room-types/room-types.module';
 import { RoomChangesModule } from './domain/room-changes/room-changes.module';
 import { PreReservationsModule } from './domain/pre-reservations/pre-reservations.module';
 import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certificates.module';
+import { MessagesModule } from './domain/messages/messages.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certific
     RoomChangesModule,
     PreReservationsModule,
     DormCertificatesModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
