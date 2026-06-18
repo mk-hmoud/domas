@@ -26,19 +26,29 @@ export class MessagesService {
     return conversation;
   }
 
+  /**
+   * Starts a conversation with a student, or — if the student already has an
+   * open one (only one is allowed at a time) — appends to it instead, since
+   * inserting a second open conversation would violate the DB's
+   * one-open-conversation-per-student constraint.
+   */
   async startConversation(
     studentId: string,
     body: string,
     subject: string | undefined,
     adminUserId: string,
   ): Promise<Conversation> {
-    const { conversationId } = await this.repo.createConversation(
-      studentId,
-      subject,
-      'user',
-      adminUserId,
-      body,
-    );
+    const existingOpen = await this.repo.findOpenByStudent(studentId);
+    let conversationId: string;
+    if (existingOpen) {
+      conversationId = existingOpen.id;
+      await this.repo.appendMessage(conversationId, 'user', adminUserId, body);
+    } else {
+      conversationId = (
+        await this.repo.createConversation(studentId, subject, 'user', adminUserId, body)
+      ).conversationId;
+    }
+
     const conversation = await this.repo.findByIdForAdmin(conversationId);
     const message = conversation?.messages?.[conversation.messages.length - 1];
     if (message) {

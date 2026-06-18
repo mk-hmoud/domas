@@ -24,3 +24,4 @@ export * from "./pages/SharedRoomChangesPage";
 export * from "./pages/SharedPreReservationsPage";
 export * from "./pages/SharedStudentApplicationsPage";
 export * from "./pages/SharedDormCertificatesPage";
+export * from "./pages/SharedMessagesPage";

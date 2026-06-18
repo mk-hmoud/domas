@@ -28,12 +28,14 @@ import {
   IconDots,
   IconHome2,
   IconLogout,
+  IconMessageCircle,
   IconSpeakerphone,
   IconUser,
 } from '@tabler/icons-react';
 import { useStudentAuth } from '../contexts/StudentAuthContext';
 import { useNotifications } from '../contexts/NotificationsContext';
 import { useAnnouncements } from '../contexts/AnnouncementsContext';
+import { useMessages } from '../contexts/MessagesContext';
 
 // ─── Navigation definitions ───────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ const SIDEBAR_PRIMARY = [
   { path: '/booking', labelKey: 'portal.nav_my_room', icon: IconBed },
   { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
   { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
+  { path: '/messages', labelKey: 'portal.nav_messages', icon: IconMessageCircle },
 ];
 
 const SIDEBAR_SECONDARY = [
@@ -54,7 +57,7 @@ const SIDEBAR_SECONDARY = [
 const BOTTOM_MAIN_TABS = [
   { path: '/dashboard', labelKey: 'portal.nav_home', icon: IconHome2 },
   { path: '/booking', labelKey: 'portal.nav_my_room', icon: IconBed },
-  { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
+  { path: '/messages', labelKey: 'portal.nav_messages', icon: IconMessageCircle },
   { path: '/notifications', labelKey: 'portal.nav_notifications', icon: IconBell },
 ];
 
@@ -63,6 +66,7 @@ const BOTTOM_MORE_TABS = [
   { path: '/apply', labelKey: 'portal.nav_apply', icon: IconCalendarPlus },
   { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
   { path: '/dorm-certificate', labelKey: 'portal.nav_dorm_certificate', icon: IconCertificate },
+  { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
   { path: '/profile', labelKey: 'portal.nav_profile', icon: IconUser },
 ];
 
@@ -73,6 +77,7 @@ function SidebarNav() {
   const { logout } = useStudentAuth();
   const { unreadCount } = useNotifications();
   const { unreadCount: announcementCount } = useAnnouncements();
+  const { unreadCount: messagesUnreadCount } = useMessages();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -84,8 +89,15 @@ function SidebarNav() {
   const renderNavItem = ({ path, labelKey, icon: Icon }: (typeof SIDEBAR_PRIMARY)[number]) => {
     const isNotif = path === '/notifications';
     const isAnn = path === '/announcements';
+    const isMessages = path === '/messages';
     const active = location.pathname === path;
-    const count = isNotif ? unreadCount : isAnn ? announcementCount : 0;
+    const count = isNotif
+      ? unreadCount
+      : isAnn
+        ? announcementCount
+        : isMessages
+          ? messagesUnreadCount
+          : 0;
 
     return (
       <NavLink
@@ -177,6 +189,7 @@ function BottomTabBar() {
   const { logout } = useStudentAuth();
   const { unreadCount } = useNotifications();
   const { unreadCount: announcementCount } = useAnnouncements();
+  const { unreadCount: messagesUnreadCount } = useMessages();
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -211,8 +224,9 @@ function BottomTabBar() {
       >
         {BOTTOM_MAIN_TABS.map(({ path, labelKey, icon: Icon }) => {
           const isNotif = path === '/notifications';
+          const isMessages = path === '/messages';
           const active = location.pathname === path;
-          const count = isNotif ? unreadCount : 0;
+          const count = isNotif ? unreadCount : isMessages ? messagesUnreadCount : 0;
 
           return (
             <RouterNavLink

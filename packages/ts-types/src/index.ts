@@ -109,3 +109,5 @@ export * from "./interfaces/pre-reservation.interface";
 export * from "./interfaces/stats.interface";
 export * from "./interfaces/room-type.interface";
 export * from "./interfaces/dorm-certificate.interface";
+export * from "./interfaces/message.interface";
+export * from "./dtos/message.dto";

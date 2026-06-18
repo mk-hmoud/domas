@@ -23,6 +23,8 @@ import {
   SubmitApplicationDto,
   StudentCreatePreReservationDto,
   StudentPreReservationView,
+  Conversation,
+  SendMessageDto,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -384,5 +386,31 @@ export const portalApplications = {
       "/portal/applications/mine",
     );
     return response.data;
+  },
+};
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+export const portalMessages = {
+  getMine: async (): Promise<Conversation | null> => {
+    const response = await apiClient.get<Conversation | null>(
+      "/portal/messages",
+    );
+    return response.data;
+  },
+
+  send: async (data: SendMessageDto): Promise<void> => {
+    await apiClient.post("/portal/messages", data);
+  },
+
+  markRead: async (): Promise<void> => {
+    await apiClient.patch("/portal/messages/read");
+  },
+
+  getUnreadCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ count: number }>(
+      "/portal/messages/unread-count",
+    );
+    return response.data.count;
   },
 };

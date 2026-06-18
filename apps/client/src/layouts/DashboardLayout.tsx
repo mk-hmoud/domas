@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavStats } from '../hooks/useNavStats';
+import { useUnreadMessagesCount } from '../hooks/useUnreadMessagesCount';
 import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
@@ -23,6 +24,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
   const navStats = useNavStats();
+  const unreadMessagesCount = useUnreadMessagesCount(hasPermission('messages.view'));
   const { t } = useTranslation();
 
   // Undo History State
@@ -178,6 +180,12 @@ export function DashboardLayout() {
             requiredPermission: 'announcements.manage',
           },
           {
+            label: t('nav.messages', { defaultValue: 'Messages' }),
+            link: '/dashboard/messages',
+            requiredPermission: 'messages.view',
+            badge: unreadMessagesCount || undefined,
+          },
+          {
             label: t('nav.locations'),
             link: '/dashboard/locations',
             requiredPermission: 'locations.view',
@@ -239,7 +247,7 @@ export function DashboardLayout() {
         return null;
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [t, user, navStats]);
+  }, [t, user, navStats, unreadMessagesCount]);
 
   return (
     <>

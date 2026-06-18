@@ -10,6 +10,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { FinancialPage } from './pages/FinancialPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { VerifyEnrollmentPage } from './pages/VerifyEnrollmentPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ApplicationStatusPage } from './pages/ApplicationStatusPage';
@@ -50,6 +51,7 @@ function App() {
           <Route path="pre-reserve" element={<PreReservePage />} />
           <Route path="booking" element={<BookingPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="messages" element={<MessagesPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="financial" element={<FinancialPage />} />
           <Route path="profile" element={<ProfilePage />} />

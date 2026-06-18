@@ -21,6 +21,7 @@ import { DamagesPage } from './pages/DamagesPage';
 import { RoomChangesPage } from './pages/RoomChangesPage';
 import { PreReservationsPage } from './pages/PreReservationsPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
 import { DormCertificatesPage } from './pages/DormCertificatesPage';
@@ -183,6 +184,14 @@ function App() {
             element={
               <PermissionRoute permission="announcements.manage">
                 <AnnouncementsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="messages"
+            element={
+              <PermissionRoute permission="messages.view">
+                <MessagesPage />
               </PermissionRoute>
             }
           />
