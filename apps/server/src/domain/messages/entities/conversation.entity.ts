@@ -14,6 +14,7 @@ export class Conversation {
   createdAt!: Date;
   updatedAt!: Date;
   messages?: ConversationMessage[];
+  canReopen!: boolean;
 
   constructor(partial: Partial<Conversation>) {
     Object.assign(this, partial);

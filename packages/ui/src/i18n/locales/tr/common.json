@@ -645,6 +645,7 @@
     "no_messages": "Henüz mesaj yok",
     "no_messages_description": "Yönetimle görüşme başlatmak için bir mesaj gönderin.",
     "type_a_message": "Bir mesaj yazın…",
+    "conversation_closed_notice": "Bu görüşme yönetim tarafından kapatıldı. Yeni bir mesaj göndermek yeni bir görüşme başlatacaktır.",
     "announcement_pinned": "Sabitlenmiş",
     "announcements_subtitle": "Yönetimden önemli bildirimler",
     "no_announcements": "Şu anda duyuru bulunmuyor.",

@@ -655,6 +655,7 @@
     "no_messages": "No messages yet",
     "no_messages_description": "Send a message to start a conversation with management.",
     "type_a_message": "Type a message…",
+    "conversation_closed_notice": "This conversation has been closed by management. Sending a new message will start a new conversation.",
     "attachments": "Attachments",
     "announcement_pinned": "Pinned",
     "announcements_subtitle": "Important notices from management",

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActionIcon,
+  Alert,
   Box,
   Group,
   Paper,
@@ -11,7 +12,7 @@ import {
   Textarea,
   ThemeIcon,
 } from '@domas/ui';
-import { IconMessageCircle, IconSend } from '@tabler/icons-react';
+import { IconLock, IconMessageCircle, IconSend } from '@tabler/icons-react';
 import { PortalPageHeader } from '../components/PortalPageHeader';
 import { useMessages } from '../contexts/MessagesContext';
 
@@ -62,6 +63,14 @@ export function MessagesPage() {
           defaultValue: 'Chat with the dorm management team',
         })}
       />
+      {conversation?.status === 'closed' && (
+        <Alert color="gray" variant="light" icon={<IconLock size={16} />}>
+          {t('portal.conversation_closed_notice', {
+            defaultValue:
+              'This conversation has been closed by management. Sending a new message will start a new conversation.',
+          })}
+        </Alert>
+      )}
       <Paper
         radius="xl"
         style={{

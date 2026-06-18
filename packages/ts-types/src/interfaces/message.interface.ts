@@ -26,4 +26,6 @@ export interface Conversation {
   createdAt: string;
   updatedAt: string;
   messages?: ConversationMessage[];
+  /** False for a closed conversation when the student has since moved on to a different open one. */
+  canReopen: boolean;
 }

@@ -22,6 +22,9 @@ export class ConversationsRepository {
       unreadByStudent: row.unread_by_student,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      // Reopening would violate the one-open-conversation-per-student index
+      // if the student already moved on to a different open thread.
+      canReopen: row.status === 'closed' && !row.has_other_open_conversation,
     });
   }
 
@@ -41,7 +44,11 @@ export class ConversationsRepository {
   private readonly conversationSelect = `
     SELECT c.*,
            CONCAT(st.first_name, ' ', st.last_name) AS student_name,
-           st.student_number
+           st.student_number,
+           EXISTS (
+             SELECT 1 FROM conversations c2
+             WHERE c2.student_id = c.student_id AND c2.status = 'open' AND c2.id != c.id
+           ) AS has_other_open_conversation
     FROM conversations c
     JOIN students st ON st.id = c.student_id
   `;

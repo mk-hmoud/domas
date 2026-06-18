@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationsRepository } from '../repositories/conversations.repository';
 import { RealtimeService } from '../../realtime/realtime.service';
 import { Conversation } from '../entities/conversation.entity';
@@ -84,6 +84,14 @@ export class MessagesService {
   }
 
   async reopenConversation(conversationId: string): Promise<Conversation> {
+    const existing = await this.repo.findByIdForAdmin(conversationId);
+    if (!existing) throw new NotFoundException('Conversation not found');
+    if (existing.status === 'open') return existing;
+    if (!existing.canReopen) {
+      throw new ConflictException(
+        'This student already has a different open conversation — close it first',
+      );
+    }
     const result = await this.repo.setStatus(conversationId, 'open');
     if (!result) throw new NotFoundException('Conversation not found');
     return result;

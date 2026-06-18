@@ -209,8 +209,13 @@ export function SharedMessagesPage() {
     }
   };
 
+  // Poll the list periodically so new/incoming conversations and unread
+  // badges show up without a manual refresh — there's no admin-side SSE,
+  // only the student side gets realtime push (see RealtimeService).
   useEffect(() => {
     loadList();
+    const interval = setInterval(loadList, 15_000);
+    return () => clearInterval(interval);
   }, [statusFilter, debouncedSearch]);
 
   const selectConversation = async (id: string) => {
@@ -227,6 +232,20 @@ export function SharedMessagesPage() {
       setDetailLoading(false);
     }
   };
+
+  // Poll the open thread for new messages sent by the student while it's open
+  useEffect(() => {
+    if (!selectedId) return;
+    const interval = setInterval(async () => {
+      const conversation = await conversationsApi.findOne(selectedId);
+      setSelected(conversation);
+      if (conversation.unreadByAdmin) {
+        await conversationsApi.markRead(selectedId);
+        loadList();
+      }
+    }, 5_000);
+    return () => clearInterval(interval);
+  }, [selectedId]);
 
   useEffect(() => {
     viewportRef.current?.scrollTo({ top: viewportRef.current.scrollHeight });
@@ -418,23 +437,31 @@ export function SharedMessagesPage() {
                       {selected.subject ? ` · ${selected.subject}` : ""}
                     </Text>
                   </Box>
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color={selected.status === "open" ? "red" : "green"}
-                    leftSection={
-                      selected.status === "open" ? (
-                        <IconLock size={13} />
-                      ) : (
-                        <IconLockOpen size={13} />
-                      )
-                    }
-                    onClick={handleToggleStatus}
-                  >
-                    {selected.status === "open"
-                      ? t("close_conversation", { defaultValue: "Close" })
-                      : t("reopen_conversation", { defaultValue: "Reopen" })}
-                  </Button>
+                  {selected.status === "open" || selected.canReopen ? (
+                    <Button
+                      size="xs"
+                      variant="light"
+                      color={selected.status === "open" ? "red" : "green"}
+                      leftSection={
+                        selected.status === "open" ? (
+                          <IconLock size={13} />
+                        ) : (
+                          <IconLockOpen size={13} />
+                        )
+                      }
+                      onClick={handleToggleStatus}
+                    >
+                      {selected.status === "open"
+                        ? t("close_conversation", { defaultValue: "Close" })
+                        : t("reopen_conversation", { defaultValue: "Reopen" })}
+                    </Button>
+                  ) : (
+                    <Text size="xs" c="dimmed">
+                      {t("cannot_reopen_hint", {
+                        defaultValue: "Student has a newer open conversation",
+                      })}
+                    </Text>
+                  )}
                 </Group>
                 <ScrollArea
                   style={{ flex: 1 }}
