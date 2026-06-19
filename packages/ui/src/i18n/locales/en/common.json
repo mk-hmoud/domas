@@ -1085,5 +1085,18 @@
   "send": "Send",
   "message_sent": "Message sent",
   "failed_to_send_message": "Failed to send message",
-  "message_student": "Message {{name}}"
+  "message_student": "Message {{name}}",
+
+  "messages": "Messages",
+  "new_conversation": "New Conversation",
+  "no_conversations": "No conversations.",
+  "select_conversation": "Select a conversation",
+  "close_conversation": "Close",
+  "reopen_conversation": "Reopen",
+  "cannot_reopen_hint": "Student has a newer open conversation",
+  "type_a_message": "Type a message…",
+  "closed": "Closed",
+  "search_students_placeholder": "Search students…",
+  "no_students_found": "No students found",
+  "type_to_search": "Type to search"
 }

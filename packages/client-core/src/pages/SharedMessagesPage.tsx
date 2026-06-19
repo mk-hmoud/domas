@@ -49,6 +49,7 @@ function StudentSelect({
   value: string | null;
   onChange: (value: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [options, setOptions] = useState<{ value: string; label: string }[]>(
     [],
@@ -80,8 +81,10 @@ function StudentSelect({
 
   return (
     <Select
-      label="Student"
-      placeholder="Search students…"
+      label={t("student", { defaultValue: "Student" })}
+      placeholder={t("search_students_placeholder", {
+        defaultValue: "Search students…",
+      })}
       searchable
       data={options}
       value={value}
@@ -90,7 +93,9 @@ function StudentSelect({
       onSearchChange={setSearchQuery}
       rightSection={loading ? <Loader size={14} /> : undefined}
       nothingFoundMessage={
-        searchQuery.trim() ? "No students found" : "Type to search"
+        searchQuery.trim()
+          ? t("no_students_found", { defaultValue: "No students found" })
+          : t("type_to_search", { defaultValue: "Type to search" })
       }
     />
   );

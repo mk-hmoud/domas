@@ -1073,5 +1073,18 @@
   "send": "Gönder",
   "message_sent": "Mesaj gönderildi",
   "failed_to_send_message": "Mesaj gönderilemedi",
-  "message_student": "{{name}} kişisine mesaj gönder"
+  "message_student": "{{name}} kişisine mesaj gönder",
+
+  "messages": "Mesajlar",
+  "new_conversation": "Yeni Konuşma",
+  "no_conversations": "Konuşma yok.",
+  "select_conversation": "Bir konuşma seçin",
+  "close_conversation": "Kapat",
+  "reopen_conversation": "Yeniden Aç",
+  "cannot_reopen_hint": "Öğrencinin daha yeni açık bir konuşması var",
+  "type_a_message": "Bir mesaj yazın…",
+  "closed": "Kapalı",
+  "search_students_placeholder": "Öğrenci ara…",
+  "no_students_found": "Öğrenci bulunamadı",
+  "type_to_search": "Aramak için yazın"
 }
