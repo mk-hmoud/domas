@@ -4,6 +4,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { DashboardHome } from './pages/DashboardHome';
 import { UsersListPage } from './pages/UsersListPage';
 import { BookingsPage } from './pages/BookingsPage';
+import { RoomPlanPage } from './pages/RoomPlanPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
@@ -41,6 +42,14 @@ function App() {
           }
         >
           <Route index element={<DashboardHome />} />
+          <Route
+            path="room-plan"
+            element={
+              <PermissionRoute permission="locations.view">
+                <RoomPlanPage />
+              </PermissionRoute>
+            }
+          />
           <Route
             path="users"
             element={

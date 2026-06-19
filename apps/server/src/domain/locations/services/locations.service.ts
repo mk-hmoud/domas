@@ -275,6 +275,80 @@ export class LocationsService {
     return this.studentsRepository.findActiveResidentsByLocation(locationId);
   }
 
+  async getRoomPlan(locationId: number, context: AuditUserContext) {
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) {
+      throw new NotFoundException(`Location with ID ${locationId} not found`);
+    }
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+    const rows = await this.locationsRepository.findRoomPlan(locationId);
+    return this.groupRoomPlanRows(rows);
+  }
+
+  private groupRoomPlanRows(rows: any[]) {
+    const rooms = new Map<number, any>();
+
+    for (const row of rows) {
+      let room = rooms.get(row.roomId);
+      if (!room) {
+        room = {
+          id: row.roomId,
+          name: row.roomName,
+          genderLock: row.genderLock,
+          studentYearLock: row.studentYearLock,
+          isGuestZone: row.isGuestZone,
+          isTrOnly: row.isTrOnly,
+          isForeignerOnly: row.isForeignerOnly,
+          ownership: row.ownership,
+          roomTypeId: row.roomTypeId,
+          roomTypeName: row.roomTypeName,
+          capacity: row.capacity,
+          parentLocationId: row.parentLocationId,
+          parentLocationName: row.parentLocationName,
+          beds: [],
+        };
+        rooms.set(row.roomId, room);
+      }
+
+      if (row.bedId) {
+        room.beds.push({
+          id: row.bedId,
+          label: row.bedLabel,
+          status: row.bedStatus,
+          occupant: row.currentStudentId
+            ? {
+                studentId: row.currentStudentId,
+                bookingId: row.currentBookingId,
+                firstName: row.currentFirstName,
+                lastName: row.currentLastName,
+                studentNumber: row.currentStudentNumber,
+                gender: row.currentGender,
+                nationalityCode: row.currentNationalityCode,
+                email: row.currentEmail,
+                phoneNumber: row.currentPhoneNumber,
+                whatsappNumber: row.currentWhatsappNumber,
+                paymentStatus: row.currentPaymentStatus,
+                checkedInAt: row.currentCheckedInAt,
+              }
+            : null,
+          pendingBooking: row.pendingStudentId
+            ? {
+                bookingId: row.pendingBookingId,
+                studentId: row.pendingStudentId,
+                firstName: row.pendingFirstName,
+                lastName: row.pendingLastName,
+                studentNumber: row.pendingStudentNumber,
+                startDate: row.pendingStartDate,
+                status: row.pendingStatus,
+              }
+            : null,
+        });
+      }
+    }
+
+    return Array.from(rooms.values());
+  }
+
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
     this.logger.log({ locationId: id, data }, 'Updating location');
     const location = await this.db.transaction(async (client) => {

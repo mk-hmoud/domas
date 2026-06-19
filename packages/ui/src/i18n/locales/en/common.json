@@ -423,6 +423,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "operations": "Operations",
+    "room_plan": "Room Plan",
     "check_in": "Check-In",
     "check_out": "Check-Out",
     "bookings": "Bookings",
@@ -1064,5 +1065,25 @@
     "status_pending": "Pending",
     "status_approved": "Approved",
     "status_rejected": "Rejected"
-  }
+  },
+  "room_plan": "Room Plan",
+  "select_floor_prompt": "Select a location to view its room plan",
+  "search_room_or_student": "Search room or student...",
+  "no_rooms_found": "No rooms found",
+  "vacant": "Vacant",
+  "full": "Full",
+  "reserved_for": "Reserved for",
+  "from_date": "From",
+  "checked_in_on": "Checked in",
+  "bed_word": "Bed",
+  "view_student": "View Student",
+  "transfer": "Transfer",
+  "open_in_students": "Open in Students",
+  "whatsapp": "WhatsApp",
+  "quick_operations": "Quick Operations",
+  "subject": "Subject (optional)",
+  "send": "Send",
+  "message_sent": "Message sent",
+  "failed_to_send_message": "Failed to send message",
+  "message_student": "Message {{name}}"
 }

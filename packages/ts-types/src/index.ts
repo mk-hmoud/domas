@@ -111,3 +111,4 @@ export * from "./interfaces/room-type.interface";
 export * from "./interfaces/dorm-certificate.interface";
 export * from "./interfaces/message.interface";
 export * from "./dtos/message.dto";
+export * from "./interfaces/room-plan.interface";

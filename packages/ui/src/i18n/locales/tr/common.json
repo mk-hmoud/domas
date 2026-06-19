@@ -421,6 +421,7 @@
   "nav": {
     "dashboard": "Panel",
     "operations": "İşlemler",
+    "room_plan": "Oda Planı",
     "check_in": "Giriş İşlemi",
     "check_out": "Çıkış İşlemi",
     "bookings": "Rezervasyonlar",
@@ -1052,5 +1053,25 @@
     "status_pending": "Beklemede",
     "status_approved": "Onaylandı",
     "status_rejected": "Reddedildi"
-  }
+  },
+  "room_plan": "Oda Planı",
+  "select_floor_prompt": "Oda planını görmek için bir konum seçin",
+  "search_room_or_student": "Oda veya öğrenci ara...",
+  "no_rooms_found": "Oda bulunamadı",
+  "vacant": "Boş",
+  "full": "Dolu",
+  "reserved_for": "Şunun için ayrıldı",
+  "from_date": "Başlangıç",
+  "checked_in_on": "Giriş yapıldı",
+  "bed_word": "Yatak",
+  "view_student": "Öğrenciyi Görüntüle",
+  "transfer": "Transfer",
+  "open_in_students": "Öğrencilerde Aç",
+  "whatsapp": "WhatsApp",
+  "quick_operations": "Hızlı İşlemler",
+  "subject": "Konu (opsiyonel)",
+  "send": "Gönder",
+  "message_sent": "Mesaj gönderildi",
+  "failed_to_send_message": "Mesaj gönderilemedi",
+  "message_student": "{{name}} kişisine mesaj gönder"
 }

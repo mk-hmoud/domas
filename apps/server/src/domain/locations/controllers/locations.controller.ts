@@ -164,6 +164,12 @@ export class LocationsController {
     return this.locationsService.findActiveResidents(id, context);
   }
 
+  @Get(':id/room-plan')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
+  getRoomPlan(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.getRoomPlan(id, context);
+  }
+
   @Get(':id/children')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
   findChildren(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {

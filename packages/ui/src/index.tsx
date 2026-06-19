@@ -42,6 +42,7 @@ export * from "./components/Damages/CreateDamageModal";
 export * from "./components/Damages/DamageDetailsDrawer";
 
 export * from "./components/RoomTypes";
+export * from "./components/RoomPlan";
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";
 export * from "./components/Dashboard/StatCard";

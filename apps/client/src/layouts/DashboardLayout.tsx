@@ -81,6 +81,11 @@ export function DashboardLayout() {
         icon: IconDoorEnter,
         links: [
           {
+            label: t('nav.room_plan', { defaultValue: 'Room Plan' }),
+            link: '/dashboard/room-plan',
+            requiredPermission: 'locations.view',
+          },
+          {
             label: t('nav.bookings'),
             link: '/dashboard/bookings',
             requiredPermission: 'bookings.view',
