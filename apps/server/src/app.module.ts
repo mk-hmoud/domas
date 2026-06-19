@@ -7,6 +7,7 @@ import { AppLoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './core/database/database.module';
 import { LocationScopeModule } from './core/location-scope/location-scope.module';
 import { StorageModule } from './common/storage/storage.module';
+import { PdfRenderingModule } from './common/pdf-rendering/pdf-rendering.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
 import { UsersModule } from './domain/users/users.module';
@@ -29,6 +30,7 @@ import { RoomChangesModule } from './domain/room-changes/room-changes.module';
 import { PreReservationsModule } from './domain/pre-reservations/pre-reservations.module';
 import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certificates.module';
 import { MessagesModule } from './domain/messages/messages.module';
+import { DocumentTemplatesModule } from './domain/document-templates/document-templates.module';
 
 @Module({
   imports: [
@@ -41,6 +43,7 @@ import { MessagesModule } from './domain/messages/messages.module';
     DatabaseModule,
     LocationScopeModule,
     StorageModule,
+    PdfRenderingModule,
     UsersModule,
     AuthModule,
     SemestersModule,
@@ -62,6 +65,7 @@ import { MessagesModule } from './domain/messages/messages.module';
     PreReservationsModule,
     DormCertificatesModule,
     MessagesModule,
+    DocumentTemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

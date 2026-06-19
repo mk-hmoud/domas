@@ -87,6 +87,10 @@ export const PERMISSIONS = {
   // Dorm Certificates
   DORM_CERTIFICATES_VIEW: 'dorm_certificates.view',
   DORM_CERTIFICATES_MANAGE: 'dorm_certificates.manage',
+
+  // Document Templates (admin-editable format of contracts/certificates)
+  DOCUMENT_TEMPLATES_VIEW: 'document_templates.view',
+  DOCUMENT_TEMPLATES_MANAGE: 'document_templates.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

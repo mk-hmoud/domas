@@ -23,6 +23,7 @@ export class DormCertificatesRepository {
       rejectionReason: row.rejection_reason ?? undefined,
       certificateStorageKey: row.certificate_storage_key ?? undefined,
       certificateFilename: row.certificate_filename ?? undefined,
+      templateId: row.template_id ?? undefined,
       requestedAt: row.requested_at,
       reviewedAt: row.reviewed_at ?? undefined,
       reviewedBy: row.reviewed_by ?? undefined,
@@ -95,15 +96,16 @@ export class DormCertificatesRepository {
     reviewerId: string,
     certificateStorageKey: string,
     certificateFilename: string,
+    templateId: string | null,
     client?: PoolClient,
   ): Promise<DormCertificateRequest> {
     const result = await this.getClient(client).query(
       `UPDATE dorm_certificate_requests
        SET status = 'approved', reviewed_by = $1, reviewed_at = NOW(),
-           certificate_storage_key = $2, certificate_filename = $3
-       WHERE id = $4
+           certificate_storage_key = $2, certificate_filename = $3, template_id = $4
+       WHERE id = $5
        RETURNING *`,
-      [reviewerId, certificateStorageKey, certificateFilename, id],
+      [reviewerId, certificateStorageKey, certificateFilename, templateId, id],
     );
     return this.map(result.rows[0]);
   }

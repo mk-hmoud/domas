@@ -8,6 +8,7 @@ export class DormCertificateRequest {
   rejectionReason?: string;
   certificateStorageKey?: string;
   certificateFilename?: string;
+  templateId?: string;
   requestedAt!: Date;
   reviewedAt?: Date;
   reviewedBy?: string;
