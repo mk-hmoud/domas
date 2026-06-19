@@ -22,6 +22,7 @@ import {
   Select,
   ScrollArea,
   Table,
+  Modal,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -29,6 +30,7 @@ import {
   IconEdit,
   IconBrandWhatsapp,
   IconMail,
+  IconMessageCircle,
   IconCamera,
   IconTrash,
   IconEye,
@@ -38,7 +40,7 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { students } from "@domas/api-client";
+import { students, conversations } from "@domas/api-client";
 import {
   Student,
   CreateStudentDto,
@@ -69,6 +71,7 @@ export function SharedStudentsPage() {
   const { t } = useTranslation();
   const { hasPermission } = useAuth();
   const canReview = hasPermission("students.review_applications");
+  const canMessage = hasPermission("messages.manage");
   const [data, setData] = useState<PaginatedResult<Student>>({
     data: [],
     total: 0,
@@ -88,6 +91,10 @@ export function SharedStudentsPage() {
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectingCertId, setRejectingCertId] = useState<string | null>(null);
+  const [messageModalOpened, setMessageModalOpened] = useState(false);
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageBody, setMessageBody] = useState("");
+  const [messageSending, setMessageSending] = useState(false);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -558,6 +565,37 @@ export function SharedStudentsPage() {
     }
   };
 
+  const handleSendMessage = async () => {
+    const s = detailStudent ?? selectedStudent;
+    if (!s || !messageBody.trim()) return;
+    setMessageSending(true);
+    try {
+      await conversations.start({
+        studentId: s.id,
+        subject: messageSubject.trim() || undefined,
+        body: messageBody.trim(),
+      });
+      notifications.show({
+        title: t("success"),
+        message: t("message_sent", { defaultValue: "Message sent" }),
+        color: "green",
+      });
+      setMessageModalOpened(false);
+      setMessageSubject("");
+      setMessageBody("");
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_send_message", {
+          defaultValue: "Failed to send message",
+        }),
+        color: "red",
+      });
+    } finally {
+      setMessageSending(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -773,6 +811,9 @@ export function SharedStudentsPage() {
             setEnrollmentCerts([]);
             setRejectingCertId(null);
             setRejectReason("");
+            setMessageModalOpened(false);
+            setMessageSubject("");
+            setMessageBody("");
           }}
           title={t("student_details", { defaultValue: "Student Details" })}
           position="right"
@@ -947,6 +988,16 @@ export function SharedStudentsPage() {
                         {t("email_verb", { defaultValue: "Email" })}
                       </Button>
                     )}
+                    {canMessage && (
+                      <Button
+                        variant="light"
+                        color="indigo"
+                        leftSection={<IconMessageCircle size={16} />}
+                        onClick={() => setMessageModalOpened(true)}
+                      >
+                        {t("message", { defaultValue: "Message" })}
+                      </Button>
+                    )}
                   </Group>
 
                   <Divider />
@@ -1089,6 +1140,50 @@ export function SharedStudentsPage() {
               );
             })()}
         </Drawer>
+
+        <Modal
+          opened={messageModalOpened}
+          onClose={() => setMessageModalOpened(false)}
+          title={t("message_student", {
+            defaultValue: "Message {{name}}",
+            name: (() => {
+              const s = detailStudent ?? selectedStudent;
+              return s ? `${s.firstName} ${s.lastName}` : "";
+            })(),
+          })}
+          size="md"
+        >
+          <Stack gap="md">
+            <TextInput
+              label={t("subject", { defaultValue: "Subject (optional)" })}
+              value={messageSubject}
+              onChange={(e) => setMessageSubject(e.currentTarget.value)}
+            />
+            <Textarea
+              label={t("message", { defaultValue: "Message" })}
+              required
+              minRows={4}
+              autosize
+              value={messageBody}
+              onChange={(e) => setMessageBody(e.currentTarget.value)}
+            />
+            <Group justify="flex-end">
+              <Button
+                variant="default"
+                onClick={() => setMessageModalOpened(false)}
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                loading={messageSending}
+                disabled={!messageBody.trim()}
+              >
+                {t("send", { defaultValue: "Send" })}
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
 
         <ComposeEmailModal
           opened={composeEmailOpened}
