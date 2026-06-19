@@ -26,6 +26,7 @@ import { MessagesPage } from './pages/MessagesPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
 import { DormCertificatesPage } from './pages/DormCertificatesPage';
+import { DocumentTemplatesPage } from './pages/DocumentTemplatesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -217,6 +218,14 @@ function App() {
             element={
               <PermissionRoute permission="students.view">
                 <DormCertificatesPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="document-templates"
+            element={
+              <PermissionRoute permission="document_templates.view">
+                <DocumentTemplatesPage />
               </PermissionRoute>
             }
           />

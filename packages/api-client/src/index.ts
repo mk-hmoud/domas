@@ -23,3 +23,4 @@ export * from "./endpoints/room-changes";
 export * from "./endpoints/pre-reservations";
 export * from "./endpoints/dorm-certificates";
 export * from "./endpoints/conversations";
+export * from "./endpoints/document-templates";
