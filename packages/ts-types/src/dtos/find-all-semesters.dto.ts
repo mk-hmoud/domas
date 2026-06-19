@@ -1,3 +1,3 @@
 import { PaginationDto } from "./pagination.dto";
 
-export interface FindAllSemestersDto extends PaginationDto {}
+export type FindAllSemestersDto = PaginationDto;

@@ -3,11 +3,12 @@ import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import session from 'express-session';
 import passport from 'passport';
+import connectPgSimple from 'connect-pg-simple';
 import { DatabaseService } from './core/database/database.service';
 import { ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 
-const pgSession = require('connect-pg-simple')(session);
+const pgSession = connectPgSimple(session);
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

@@ -86,7 +86,7 @@ export function SharedStudentApplicationsPage() {
     fetchData();
   }, [statusFilter]);
 
-  const handleApprove = (app: StudentApplication & { letterUrl: string }) => {
+  const handleApprove = (app: StudentApplication & { documentUrl: string }) => {
     modals.openConfirmModal({
       title: t("approve_application", "Approve Application"),
       children: (
@@ -133,7 +133,7 @@ export function SharedStudentApplicationsPage() {
   };
 
   const handleReject = async (
-    app: StudentApplication & { letterUrl: string },
+    app: StudentApplication & { documentUrl: string },
   ) => {
     if (!rejectReason.trim()) return;
     setActionLoading(true);

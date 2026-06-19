@@ -1,4 +1,3 @@
-/// <reference path="../../../types/session.d.ts" />
 import {
   Controller,
   Get,

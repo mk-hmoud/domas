@@ -101,33 +101,29 @@ export class BedsService {
       }
       this.locationScopeService.assertAccess(context.locationScope, room.treePath);
 
-      try {
-        const bed = await this.bedsRepository.create(
-          {
-            ...data,
-            isTrOnly: data.isTrOnly ?? room.isTrOnly,
-            isGuestZone: data.isGuestZone ?? room.isGuestZone,
-            ownership: data.ownership ?? room.ownership,
-          },
-          client,
-        );
+      const bed = await this.bedsRepository.create(
+        {
+          ...data,
+          isTrOnly: data.isTrOnly ?? room.isTrOnly,
+          isGuestZone: data.isGuestZone ?? room.isGuestZone,
+          ownership: data.ownership ?? room.ownership,
+        },
+        client,
+      );
 
-        await this.undoService.registerUndo(
-          {
-            userId: context.userId,
-            actionType: UndoActionType.CREATE_BED,
-            entityType: 'bed',
-            entityId: bed.id.toString(),
-            undoData: {},
-            description: `Created bed ${bed.label} in room ${room.name}`,
-          },
-          client,
-        );
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.CREATE_BED,
+          entityType: 'bed',
+          entityId: bed.id.toString(),
+          undoData: {},
+          description: `Created bed ${bed.label} in room ${room.name}`,
+        },
+        client,
+      );
 
-        return bed;
-      } catch (error: any) {
-        throw error;
-      }
+      return bed;
     };
 
     if (externalClient) return operation(externalClient);

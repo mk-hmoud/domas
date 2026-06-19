@@ -197,7 +197,9 @@ export function SharedDormCertificatesPage() {
                         }
                         size="sm"
                       >
-                        {t(`cert_status_${req.status}`, req.status)}
+                        {t(`cert_status_${req.status}`, {
+                          defaultValue: req.status,
+                        })}
                       </Badge>
                     </Table.Td>
                     <Table.Td onClick={(e) => e.stopPropagation()}>
@@ -270,7 +272,9 @@ export function SharedDormCertificatesPage() {
                 {(selected as any).studentName ?? selected.studentId}
               </Text>
               <Badge color={STATUS_COLORS[selected.status]}>
-                {t(`cert_status_${selected.status}`, selected.status)}
+                {t(`cert_status_${selected.status}`, {
+                  defaultValue: selected.status,
+                })}
               </Badge>
             </Group>
 
