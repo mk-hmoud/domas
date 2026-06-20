@@ -102,6 +102,12 @@ CREATE TRIGGER update_import_batches_modtime
 BEFORE UPDATE ON import_batches
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Work Orders
+DROP TRIGGER IF EXISTS update_work_orders_modtime ON work_orders;
+CREATE TRIGGER update_work_orders_modtime
+BEFORE UPDATE ON work_orders
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -246,6 +252,12 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_import_batches_change ON import_batches;
 CREATE TRIGGER audit_import_batches_change
 AFTER INSERT OR UPDATE OR DELETE ON import_batches
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Work Orders
+DROP TRIGGER IF EXISTS audit_work_orders_change ON work_orders;
+CREATE TRIGGER audit_work_orders_change
+AFTER INSERT OR UPDATE OR DELETE ON work_orders
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

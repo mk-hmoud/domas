@@ -17,6 +17,8 @@ export * from "./enums/card-action-type.enum";
 export * from "./enums/damage-status.enum";
 export * from "./enums/guest-stay-status.enum";
 export * from "./enums/contract-type.enum";
+export * from "./enums/work-order-status.enum";
+export * from "./enums/work-order-priority.enum";
 
 export * from "./interfaces/user.interface";
 export * from "./interfaces/role.interface";
@@ -112,3 +114,5 @@ export * from "./interfaces/dorm-certificate.interface";
 export * from "./interfaces/message.interface";
 export * from "./dtos/message.dto";
 export * from "./interfaces/room-plan.interface";
+export * from "./interfaces/work-order.interface";
+export * from "./dtos/work-order.dto";

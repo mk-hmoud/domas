@@ -26,6 +26,7 @@ import { MessagesPage } from './pages/MessagesPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
 import { DormCertificatesPage } from './pages/DormCertificatesPage';
+import { WorkOrdersPage } from './pages/WorkOrdersPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -217,6 +218,14 @@ function App() {
             element={
               <PermissionRoute permission="students.view">
                 <DormCertificatesPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="work-orders"
+            element={
+              <PermissionRoute permission="work_orders.view">
+                <WorkOrdersPage />
               </PermissionRoute>
             }
           />

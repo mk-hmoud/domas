@@ -11,6 +11,7 @@ import {
   IconAddressBook,
   IconSettings,
   IconDatabase,
+  IconTool,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
@@ -75,6 +76,12 @@ export function DashboardLayout() {
         label: t('nav.dashboard'),
         icon: IconLayoutDashboard,
         link: '/dashboard',
+      },
+      {
+        label: t('nav.work_orders', { defaultValue: 'Work Orders' }),
+        icon: IconTool,
+        link: '/dashboard/work-orders',
+        requiredPermission: 'work_orders.view',
       },
       {
         label: t('nav.operations'),

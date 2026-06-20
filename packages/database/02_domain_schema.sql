@@ -936,3 +936,34 @@ CREATE TABLE dorm_certificate_requests (
 
 CREATE INDEX idx_dorm_cert_requests_student ON dorm_certificate_requests(student_id);
 CREATE INDEX idx_dorm_cert_requests_status  ON dorm_certificate_requests(status);
+
+-- =============================================
+-- WORK ORDERS (Technician repair/replacement jobs)
+-- =============================================
+
+CREATE TYPE work_order_status AS ENUM ('pending', 'assigned', 'in_progress', 'completed', 'cancelled');
+CREATE TYPE work_order_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+
+CREATE TABLE work_orders (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title               VARCHAR(200) NOT NULL,
+    description         TEXT,
+    location_id         INT NOT NULL REFERENCES locations(id),
+
+    status              work_order_status NOT NULL DEFAULT 'pending',
+    priority            work_order_priority NOT NULL DEFAULT 'medium',
+
+    assigned_to         UUID REFERENCES users(id),
+    created_by          UUID NOT NULL REFERENCES users(id),
+
+    due_date            DATE,
+    completion_notes    TEXT,
+    completed_at        TIMESTAMPTZ,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_work_orders_location    ON work_orders(location_id);
+CREATE INDEX idx_work_orders_assigned_to ON work_orders(assigned_to);
+CREATE INDEX idx_work_orders_status      ON work_orders(status);

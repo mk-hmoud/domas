@@ -87,6 +87,11 @@ export const PERMISSIONS = {
   // Dorm Certificates
   DORM_CERTIFICATES_VIEW: 'dorm_certificates.view',
   DORM_CERTIFICATES_MANAGE: 'dorm_certificates.manage',
+
+  // Work Orders (Technician repair/replacement jobs)
+  WORK_ORDERS_VIEW: 'work_orders.view',
+  WORK_ORDERS_MANAGE: 'work_orders.manage', // Create, assign/reassign, edit, cancel (Technician Manager)
+  WORK_ORDERS_UPDATE: 'work_orders.update', // Update status/notes on assigned work orders (Technician Staff)
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
