@@ -30,7 +30,7 @@ export class CreateStudentDto {
   gender!: GenderType;
 
   @IsString()
-  @Length(2, 2)
+  @Length(2, 10)
   @IsNotEmpty()
   nationalityCode!: string;
 
