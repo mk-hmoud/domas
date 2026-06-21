@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActionIcon,
   Badge,
@@ -16,7 +16,9 @@ import {
   useComputedColorScheme,
 } from '@mantine/core';
 import { PageHeader, PageShell, EmptyState } from '@domas/ui';
-import Editor from '@monaco-editor/react';
+import Editor, { type OnMount } from '@monaco-editor/react';
+import type { Editor as TiptapEditorInstance } from '@tiptap/react';
+import { RichTextTemplateEditor } from '../components/document-templates/RichTextTemplateEditor';
 import { IconCopy, IconEye, IconPlus, IconRocket, IconTrash } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
@@ -38,8 +40,34 @@ export function DocumentTemplatesPage() {
   const [name, setName] = useState('');
   const [htmlBody, setHtmlBody] = useState('');
   const [css, setCss] = useState('');
+  const [htmlEditMode, setHtmlEditMode] = useState<'visual' | 'code'>('visual');
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+
+  const tiptapEditorRef = useRef<TiptapEditorInstance | null>(null);
+  const monacoEditorRef = useRef<Parameters<OnMount>[0] | null>(null);
+
+  const handleTiptapReady = useCallback((editor: TiptapEditorInstance | null) => {
+    tiptapEditorRef.current = editor;
+  }, []);
+
+  const handleMonacoMount: OnMount = (editor) => {
+    monacoEditorRef.current = editor;
+  };
+
+  const insertMergeField = (field: string) => {
+    if (htmlEditMode === 'visual') {
+      tiptapEditorRef.current?.chain().focus().insertContent(field).run();
+      return;
+    }
+    const monacoEditor = monacoEditorRef.current;
+    const selection = monacoEditor?.getSelection();
+    if (!monacoEditor || !selection) return;
+    monacoEditor.executeEdits('insert-merge-field', [
+      { range: selection, text: field, forceMoveMarkers: true },
+    ]);
+    monacoEditor.focus();
+  };
 
   useEffect(() => {
     documentTemplates.listTypes().then((data) => {
@@ -70,6 +98,7 @@ export function DocumentTemplatesPage() {
     setName('');
     setHtmlBody('<div>\n\n</div>');
     setCss('');
+    setHtmlEditMode('visual');
     setEditorOpened(true);
   };
 
@@ -78,6 +107,7 @@ export function DocumentTemplatesPage() {
     setName(`${version.name} (copy)`);
     setHtmlBody(version.htmlBody);
     setCss(version.css);
+    setHtmlEditMode('visual');
     setEditorOpened(true);
   };
 
@@ -282,13 +312,22 @@ export function DocumentTemplatesPage() {
                 <Text size="xs" c="dimmed" mb={6}>
                   {t('merge_fields_hint')}
                 </Text>
-                <Stack gap={2}>
+                <Group gap={4}>
                   {currentTypeInfo.fields.map((field) => (
-                    <Text key={field} size="xs" ff="monospace">
+                    <Badge
+                      key={field}
+                      component="button"
+                      type="button"
+                      onClick={() => insertMergeField(field)}
+                      variant="light"
+                      ff="monospace"
+                      tt="none"
+                      style={{ cursor: 'pointer' }}
+                    >
                       {field}
-                    </Text>
+                    </Badge>
                   ))}
-                </Stack>
+                </Group>
               </Card>
             )}
 
@@ -298,14 +337,36 @@ export function DocumentTemplatesPage() {
                 <Tabs.Tab value="css">{t('css')}</Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="html" pt="xs">
-                <Editor
-                  height="420px"
-                  language="html"
-                  theme={monacoTheme}
-                  value={htmlBody}
-                  onChange={(value) => setHtmlBody(value ?? '')}
-                  options={{ minimap: { enabled: false }, fontSize: 13 }}
-                />
+                <Stack gap="xs">
+                  <SegmentedControl
+                    size="xs"
+                    value={htmlEditMode}
+                    onChange={(value) => setHtmlEditMode(value as 'visual' | 'code')}
+                    data={[
+                      { label: t('visual_mode'), value: 'visual' },
+                      { label: t('code_mode'), value: 'code' },
+                    ]}
+                    style={{ alignSelf: 'flex-start' }}
+                  />
+                  {htmlEditMode === 'visual' ? (
+                    <RichTextTemplateEditor
+                      value={htmlBody}
+                      onChange={setHtmlBody}
+                      onEditorReady={handleTiptapReady}
+                      editorKey={`${editingSeed?.id ?? 'new'}-${editorOpened}`}
+                    />
+                  ) : (
+                    <Editor
+                      height="420px"
+                      language="html"
+                      theme={monacoTheme}
+                      value={htmlBody}
+                      onChange={(value) => setHtmlBody(value ?? '')}
+                      onMount={handleMonacoMount}
+                      options={{ minimap: { enabled: false }, fontSize: 13 }}
+                    />
+                  )}
+                </Stack>
               </Tabs.Panel>
               <Tabs.Panel value="css" pt="xs">
                 <Editor
