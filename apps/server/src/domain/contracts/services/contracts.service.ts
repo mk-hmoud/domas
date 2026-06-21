@@ -14,7 +14,10 @@ import { PoolClient } from 'pg';
 import * as path from 'path';
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { DocumentTemplatesService } from '../../document-templates/services/document-templates.service';
-import { DOCUMENT_TYPES } from '../../document-templates/constants/document-types';
+import {
+  DOCUMENT_LANGUAGES,
+  DOCUMENT_TYPES,
+} from '../../document-templates/constants/document-types';
 
 @Injectable()
 export class ContractsService {
@@ -142,8 +145,12 @@ export class ContractsService {
 
     if (!student || !room || !bed) throw new NotFoundException('Missing booking details');
 
+    const language = isTurkishNational(student.nationalityCode)
+      ? DOCUMENT_LANGUAGES.TURKISH
+      : DOCUMENT_LANGUAGES.ENGLISH;
     const activeTemplate = await this.documentTemplatesService.findActiveByType(
       DOCUMENT_TYPES.CHECK_IN_CONTRACT,
+      language,
     );
     const pdfBuffer = activeTemplate
       ? await this.documentTemplatesService.render(
@@ -224,6 +231,7 @@ export class ContractsService {
 
     const activeTemplate = await this.documentTemplatesService.findActiveByType(
       DOCUMENT_TYPES.CHECK_OUT_CONTRACT,
+      isTR ? DOCUMENT_LANGUAGES.TURKISH : DOCUMENT_LANGUAGES.ENGLISH,
     );
     const pdfBuffer = activeTemplate
       ? await this.documentTemplatesService.render(

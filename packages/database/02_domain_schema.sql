@@ -471,6 +471,7 @@ CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(bookin
 CREATE TABLE document_templates (
     id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     document_type VARCHAR(50)  NOT NULL, -- 'check_in', 'check_out', 'dorm_certificate', ...
+    language      VARCHAR(5)   NOT NULL DEFAULT 'en', -- 'en', 'tr' - each language is its own template, not a {{#if}} branch
     name          VARCHAR(255) NOT NULL,
     html_body     TEXT         NOT NULL,
     css           TEXT         NOT NULL DEFAULT '',
@@ -479,9 +480,9 @@ CREATE TABLE document_templates (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_document_templates_type ON document_templates(document_type);
--- Only one active (published) version per document type at a time.
-CREATE UNIQUE INDEX idx_document_templates_active ON document_templates(document_type) WHERE is_active = TRUE;
+CREATE INDEX idx_document_templates_type ON document_templates(document_type, language);
+-- Only one active (published) version per document type + language at a time.
+CREATE UNIQUE INDEX idx_document_templates_active ON document_templates(document_type, language) WHERE is_active = TRUE;
 
 CREATE TABLE booking_contracts (
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,

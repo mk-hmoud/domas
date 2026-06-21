@@ -29,8 +29,8 @@ export class DocumentTemplatesService {
     }));
   }
 
-  findVersions(documentType: string): Promise<DocumentTemplate[]> {
-    return this.repository.findVersions(documentType);
+  findVersions(documentType: string, language: string): Promise<DocumentTemplate[]> {
+    return this.repository.findVersions(documentType, language);
   }
 
   findById(id: string): Promise<DocumentTemplate | null> {
@@ -39,14 +39,15 @@ export class DocumentTemplatesService {
 
   /** Used by ContractsService/DormCertificatesService to decide whether to
    * render via the template engine or fall back to the built-in generator. */
-  findActiveByType(documentType: string): Promise<DocumentTemplate | null> {
-    return this.repository.findActiveByType(documentType);
+  findActiveByType(documentType: string, language: string): Promise<DocumentTemplate | null> {
+    return this.repository.findActiveByType(documentType, language);
   }
 
   create(dto: CreateDocumentTemplateDto, userId: string): Promise<DocumentTemplate> {
     return this.repository.create(
       {
         documentType: dto.documentType,
+        language: dto.language,
         name: dto.name,
         htmlBody: dto.htmlBody,
         css: dto.css ?? '',
@@ -59,8 +60,8 @@ export class DocumentTemplatesService {
     return this.repository.publish(id);
   }
 
-  async unpublish(documentType: string): Promise<void> {
-    return this.repository.unpublish(documentType);
+  async unpublish(documentType: string, language: string): Promise<void> {
+    return this.repository.unpublish(documentType, language);
   }
 
   async delete(id: string): Promise<void> {

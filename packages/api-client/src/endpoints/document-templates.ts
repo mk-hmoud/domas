@@ -2,6 +2,7 @@ import { apiClient } from "../client";
 import {
   DocumentTemplate,
   DocumentTypeInfo,
+  DocumentLanguage,
   CreateDocumentTemplateDto,
   PreviewDocumentTemplateDto,
 } from "@domas/ts-types";
@@ -14,11 +15,14 @@ export const documentTemplates = {
     return response.data;
   },
 
-  findVersions: async (documentType: string): Promise<DocumentTemplate[]> => {
+  findVersions: async (
+    documentType: string,
+    language: DocumentLanguage,
+  ): Promise<DocumentTemplate[]> => {
     const response = await apiClient.get<DocumentTemplate[]>(
       "/document-templates",
       {
-        params: { documentType },
+        params: { documentType, language },
       },
     );
     return response.data;

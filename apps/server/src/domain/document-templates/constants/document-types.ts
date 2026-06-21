@@ -12,6 +12,16 @@ export type DocumentType = (typeof DOCUMENT_TYPES)[keyof typeof DOCUMENT_TYPES];
 
 export const DOCUMENT_TYPE_VALUES: DocumentType[] = Object.values(DOCUMENT_TYPES);
 
+// Each language is its own template row, not a {{#if isTR}} branch within one.
+export const DOCUMENT_LANGUAGES = {
+  ENGLISH: 'en',
+  TURKISH: 'tr',
+} as const;
+
+export type DocumentLanguage = (typeof DOCUMENT_LANGUAGES)[keyof typeof DOCUMENT_LANGUAGES];
+
+export const DOCUMENT_LANGUAGE_VALUES: DocumentLanguage[] = Object.values(DOCUMENT_LANGUAGES);
+
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   check_in: 'Check-In Contract',
   check_out: 'Check-Out Contract',

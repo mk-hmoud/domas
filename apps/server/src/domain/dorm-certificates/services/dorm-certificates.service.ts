@@ -24,7 +24,10 @@ import { DormCertificateRequest } from '../entities/dorm-certificate-request.ent
 import { EnrollmentVerification } from '../../students/entities/enrollment-verification.entity';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
 import { DocumentTemplatesService } from '../../document-templates/services/document-templates.service';
-import { DOCUMENT_TYPES } from '../../document-templates/constants/document-types';
+import {
+  DOCUMENT_LANGUAGES,
+  DOCUMENT_TYPES,
+} from '../../document-templates/constants/document-types';
 
 @Injectable()
 export class DormCertificatesService {
@@ -181,8 +184,12 @@ export class DormCertificatesService {
     `);
     const manager = managerRes.rows[0];
 
+    const language = isTurkishNational(student.nationalityCode)
+      ? DOCUMENT_LANGUAGES.TURKISH
+      : DOCUMENT_LANGUAGES.ENGLISH;
     const activeTemplate = await this.documentTemplatesService.findActiveByType(
       DOCUMENT_TYPES.DORM_CERTIFICATE,
+      language,
     );
     const pdfBuffer = activeTemplate
       ? await this.documentTemplatesService.render(

@@ -37,8 +37,8 @@ export class DocumentTemplatesController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.DOCUMENT_TEMPLATES_VIEW)
-  findVersions(@Query('documentType') documentType: string) {
-    return this.service.findVersions(documentType);
+  findVersions(@Query('documentType') documentType: string, @Query('language') language: string) {
+    return this.service.findVersions(documentType, language);
   }
 
   @Get(':id')

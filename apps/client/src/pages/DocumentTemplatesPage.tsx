@@ -24,7 +24,17 @@ import { useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
 import { documentTemplates } from '@domas/api-client';
-import { DocumentTemplate, DocumentType, DocumentTypeInfo } from '@domas/ts-types';
+import {
+  DocumentLanguage,
+  DocumentTemplate,
+  DocumentType,
+  DocumentTypeInfo,
+} from '@domas/ts-types';
+
+const DOCUMENT_LANGUAGES: { label: string; value: DocumentLanguage }[] = [
+  { label: 'English', value: 'en' },
+  { label: 'Türkçe', value: 'tr' },
+];
 
 export function DocumentTemplatesPage() {
   const { t } = useTranslation();
@@ -32,11 +42,13 @@ export function DocumentTemplatesPage() {
   const monacoTheme = computedColorScheme === 'dark' ? 'vs-dark' : 'light';
   const [types, setTypes] = useState<DocumentTypeInfo[]>([]);
   const [selectedType, setSelectedType] = useState<DocumentType | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<DocumentLanguage>('en');
   const [versions, setVersions] = useState<DocumentTemplate[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [editorOpened, setEditorOpened] = useState(false);
   const [editingSeed, setEditingSeed] = useState<DocumentTemplate | null>(null);
+  const [editingLanguage, setEditingLanguage] = useState<DocumentLanguage>('en');
   const [name, setName] = useState('');
   const [htmlBody, setHtmlBody] = useState('');
   const [css, setCss] = useState('');
@@ -76,10 +88,10 @@ export function DocumentTemplatesPage() {
     });
   }, []);
 
-  const loadVersions = async (type: DocumentType) => {
+  const loadVersions = async (type: DocumentType, language: DocumentLanguage) => {
     setLoading(true);
     try {
-      const data = await documentTemplates.findVersions(type);
+      const data = await documentTemplates.findVersions(type, language);
       setVersions(data);
     } finally {
       setLoading(false);
@@ -87,14 +99,15 @@ export function DocumentTemplatesPage() {
   };
 
   useEffect(() => {
-    if (selectedType) loadVersions(selectedType);
-  }, [selectedType]);
+    if (selectedType) loadVersions(selectedType, selectedLanguage);
+  }, [selectedType, selectedLanguage]);
 
   const activeVersion = versions.find((v) => v.isActive) ?? null;
   const currentTypeInfo = types.find((info) => info.documentType === selectedType);
 
   const openNewVersion = () => {
     setEditingSeed(null);
+    setEditingLanguage(selectedLanguage);
     setName('');
     setHtmlBody('<div>\n\n</div>');
     setCss('');
@@ -104,6 +117,7 @@ export function DocumentTemplatesPage() {
 
   const openEditCopy = (version: DocumentTemplate) => {
     setEditingSeed(version);
+    setEditingLanguage(version.language);
     setName(`${version.name} (copy)`);
     setHtmlBody(version.htmlBody);
     setCss(version.css);
@@ -117,13 +131,14 @@ export function DocumentTemplatesPage() {
     try {
       await documentTemplates.create({
         documentType: selectedType,
+        language: editingLanguage,
         name: name.trim(),
         htmlBody,
         css,
       });
       notifications.show({ title: t('success'), message: t('template_created'), color: 'green' });
       setEditorOpened(false);
-      loadVersions(selectedType);
+      loadVersions(selectedType, selectedLanguage);
     } catch {
       notifications.show({ title: t('error'), message: t('failed_to_save'), color: 'red' });
     } finally {
@@ -135,7 +150,12 @@ export function DocumentTemplatesPage() {
     if (!selectedType || !htmlBody.trim()) return;
     setPreviewing(true);
     try {
-      const blob = await documentTemplates.preview({ documentType: selectedType, htmlBody, css });
+      const blob = await documentTemplates.preview({
+        documentType: selectedType,
+        language: editingLanguage,
+        htmlBody,
+        css,
+      });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
     } catch {
@@ -154,7 +174,7 @@ export function DocumentTemplatesPage() {
         message: t('template_publish_success'),
         color: 'green',
       });
-      loadVersions(selectedType);
+      loadVersions(selectedType, selectedLanguage);
     } catch {
       notifications.show({ title: t('error'), message: t('failed_to_save'), color: 'red' });
     }
@@ -174,7 +194,7 @@ export function DocumentTemplatesPage() {
             message: t('template_deleted'),
             color: 'green',
           });
-          if (selectedType) loadVersions(selectedType);
+          if (selectedType) loadVersions(selectedType, selectedLanguage);
         } catch {
           notifications.show({
             title: t('error'),
@@ -191,13 +211,20 @@ export function DocumentTemplatesPage() {
       <PageHeader title={t('document_templates')} subtitle={t('document_templates_description')} />
       <PageShell size="xl">
         <Stack gap="md">
-          {types.length > 0 && (
+          <Group justify="space-between">
+            {types.length > 0 && (
+              <SegmentedControl
+                value={selectedType ?? types[0].documentType}
+                onChange={(value) => setSelectedType(value as DocumentType)}
+                data={types.map((info) => ({ label: info.label, value: info.documentType }))}
+              />
+            )}
             <SegmentedControl
-              value={selectedType ?? types[0].documentType}
-              onChange={(value) => setSelectedType(value as DocumentType)}
-              data={types.map((info) => ({ label: info.label, value: info.documentType }))}
+              value={selectedLanguage}
+              onChange={(value) => setSelectedLanguage(value as DocumentLanguage)}
+              data={DOCUMENT_LANGUAGES}
             />
-          )}
+          </Group>
 
           <Card withBorder radius="md" p="md">
             <Group justify="space-between" mb="sm">

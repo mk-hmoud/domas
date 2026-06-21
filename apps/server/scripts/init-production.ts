@@ -11,6 +11,8 @@ import { AuditUserContext } from '../src/common/interfaces/audit-user-context.in
 import { COUNTRIES } from '@domas/ts-types';
 import { PERMISSIONS } from '../src/common/constants/permissions';
 import { SYSTEM_ROLES } from '../src/common/constants/system-roles';
+import { DocumentTemplatesService } from '../src/domain/document-templates/services/document-templates.service';
+import { DOCUMENT_TEMPLATE_SEEDS } from './document-template-seeds';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -20,6 +22,7 @@ async function bootstrap() {
   const usersService = app.get(UsersService);
   const locationsService = app.get(LocationsService);
   const accessRepository = app.get(AccessRepository);
+  const documentTemplatesService = app.get(DocumentTemplatesService);
   const db = app.get(DatabaseService);
   const logger = new Logger('SystemInit');
 
@@ -28,6 +31,9 @@ async function bootstrap() {
     username: 'system_installer_script',
     ipAddress: '127.0.0.1',
     userAgent: 'Production Init Script',
+    // Bootstrap script runs before any real RBAC/location data exists -
+    // bypass location-scope filtering the same way Recovery Admin does.
+    locationScope: { unrestricted: true, treePaths: [] },
   };
 
   try {
@@ -98,6 +104,7 @@ async function bootstrap() {
     // 1. Handle Admin User
     const email = 'recovery_admin@dorm.com';
     const adminUser = await usersService.findByEmail(email);
+    let adminUserId = adminUser?.id;
 
     if (!adminUser) {
       // Generates a 24-character random string (e.g. "aF92-kL4m-99xZ...")
@@ -109,10 +116,11 @@ async function bootstrap() {
           ?.join('-') || 'secure-pass';
 
       // create recovery admin
-      await usersService.createRecoveryAdmin(systemContext, {
+      const createdAdmin = await usersService.createRecoveryAdmin(systemContext, {
         email,
         password: password,
       });
+      adminUserId = createdAdmin.id;
 
       // Print credentials
       const border = '════════════════════════════════════════════════════════════';
@@ -140,7 +148,7 @@ async function bootstrap() {
     }
 
     // 2. Handle Root Location
-    const locations = await locationsService.findAll({ page: 1, limit: 1 });
+    const locations = await locationsService.findAll({ page: 1, limit: 1 }, systemContext);
     if (locations.total === 0) {
       console.log('\ud83c\udfdb  Creating root location: University...');
       await locationsService.create(
@@ -173,6 +181,35 @@ async function bootstrap() {
        ON CONFLICT DO NOTHING`,
     );
     console.log(`\u2705 Staff location scope backfilled (${backfillResult.rowCount ?? 0} rows).`);
+
+    // 4. Seed default (v1) document templates
+    console.log('\ud83d\udcc4  Seeding default document templates...');
+    for (const seed of DOCUMENT_TEMPLATE_SEEDS) {
+      const existingVersions = await documentTemplatesService.findVersions(
+        seed.documentType,
+        seed.language,
+      );
+      if (existingVersions.length > 0) {
+        console.log(
+          `\u2705 ${seed.documentType} (${seed.language}) already has versions. Skipping seed.`,
+        );
+        continue;
+      }
+      const created = await documentTemplatesService.create(
+        {
+          documentType: seed.documentType,
+          language: seed.language,
+          name: seed.name,
+          htmlBody: seed.htmlBody,
+          css: seed.css,
+        },
+        adminUserId!,
+      );
+      await documentTemplatesService.publish(created.id);
+      console.log(
+        `\u2705 Seeded and published v1 template for ${seed.documentType} (${seed.language}).`,
+      );
+    }
   } catch (error) {
     logger.error('Failed to initialize system', error);
   } finally {

@@ -1,6 +1,7 @@
 export class DocumentTemplate {
   id!: string;
   documentType!: string;
+  language!: string;
   name!: string;
   htmlBody!: string;
   css!: string;
