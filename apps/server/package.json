@@ -28,6 +28,7 @@
     "db:seed:inventory:prod": "node dist/apps/server/scripts/seed-inventory.js",
     "db:seed:transfer": "ts-node scripts/seed-transfer.ts",
     "db:seed:students": "ts-node scripts/seed-students.ts",
+    "db:seed:students:prod": "node dist/apps/server/scripts/seed-students.js",
     "init:prod": "ts-node scripts/init-production.ts",
     "init:prod:prod": "node dist/apps/server/scripts/init-production.js"
   },
