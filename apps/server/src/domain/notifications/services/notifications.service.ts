@@ -16,6 +16,9 @@ export const NotificationType = {
   ROOM_CHANGE_APPROVED: 'room_change_approved',
   ROOM_CHANGE_REJECTED: 'room_change_rejected',
   ROOM_CHANGE_PENDING_PAYMENT: 'room_change_pending_payment',
+  TICKET_ESCALATED: 'ticket_escalated',
+  TICKET_RESOLVED: 'ticket_resolved',
+  TICKET_REJECTED: 'ticket_rejected',
 } as const;
 
 export type NotificationTypeValue = (typeof NotificationType)[keyof typeof NotificationType];

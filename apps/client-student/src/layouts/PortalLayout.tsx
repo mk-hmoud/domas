@@ -29,6 +29,7 @@ import {
   IconHome2,
   IconLogout,
   IconMessageCircle,
+  IconMessageReport,
   IconSpeakerphone,
   IconUser,
 } from '@tabler/icons-react';
@@ -51,6 +52,7 @@ const SIDEBAR_SECONDARY = [
   { path: '/apply', labelKey: 'portal.nav_apply', icon: IconCalendarPlus },
   { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
   { path: '/dorm-certificate', labelKey: 'portal.nav_dorm_certificate', icon: IconCertificate },
+  { path: '/tickets', labelKey: 'portal.nav_tickets', icon: IconMessageReport },
 ];
 
 // 4 tabs shown directly in the bottom bar
@@ -66,6 +68,7 @@ const BOTTOM_MORE_TABS = [
   { path: '/apply', labelKey: 'portal.nav_apply', icon: IconCalendarPlus },
   { path: '/announcements', labelKey: 'portal.nav_announcements', icon: IconSpeakerphone },
   { path: '/dorm-certificate', labelKey: 'portal.nav_dorm_certificate', icon: IconCertificate },
+  { path: '/tickets', labelKey: 'portal.nav_tickets', icon: IconMessageReport },
   { path: '/financial', labelKey: 'portal.nav_financial', icon: IconCreditCard },
   { path: '/profile', labelKey: 'portal.nav_profile', icon: IconUser },
 ];

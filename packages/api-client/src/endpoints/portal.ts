@@ -25,6 +25,8 @@ import {
   StudentPreReservationView,
   Conversation,
   SendMessageDto,
+  StudentTicketView,
+  CreateTicketDto,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -327,6 +329,24 @@ export const portalRoomChanges = {
 
   cancel: async (id: string): Promise<void> => {
     await apiClient.delete(`/portal/room-changes/${id}`);
+  },
+};
+
+// ─── Tickets ──────────────────────────────────────────────────────────────────
+
+export const portalTickets = {
+  getAll: async (): Promise<StudentTicketView[]> => {
+    const response =
+      await apiClient.get<StudentTicketView[]>("/portal/tickets");
+    return response.data;
+  },
+
+  create: async (dto: CreateTicketDto): Promise<StudentTicketView> => {
+    const response = await apiClient.post<StudentTicketView>(
+      "/portal/tickets",
+      dto,
+    );
+    return response.data;
   },
 };
 

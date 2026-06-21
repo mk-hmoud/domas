@@ -108,6 +108,12 @@ CREATE TRIGGER update_work_orders_modtime
 BEFORE UPDATE ON work_orders
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Tickets
+DROP TRIGGER IF EXISTS update_tickets_modtime ON tickets;
+CREATE TRIGGER update_tickets_modtime
+BEFORE UPDATE ON tickets
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- =============================================
 -- AUDIT TRIGGERS
 -- =============================================
@@ -258,6 +264,12 @@ FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 DROP TRIGGER IF EXISTS audit_work_orders_change ON work_orders;
 CREATE TRIGGER audit_work_orders_change
 AFTER INSERT OR UPDATE OR DELETE ON work_orders
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Tickets
+DROP TRIGGER IF EXISTS audit_tickets_change ON tickets;
+CREATE TRIGGER audit_tickets_change
+AFTER INSERT OR UPDATE OR DELETE ON tickets
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
 -- =============================================

@@ -30,6 +30,7 @@ import { PreReservationsModule } from './domain/pre-reservations/pre-reservation
 import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certificates.module';
 import { MessagesModule } from './domain/messages/messages.module';
 import { WorkOrdersModule } from './domain/work-orders/work-orders.module';
+import { TicketsModule } from './domain/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { WorkOrdersModule } from './domain/work-orders/work-orders.module';
     DormCertificatesModule,
     MessagesModule,
     WorkOrdersModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

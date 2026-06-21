@@ -45,6 +45,9 @@ export * from "./components/WorkOrders/WorkOrderCard";
 export * from "./components/WorkOrders/CreateWorkOrderModal";
 export * from "./components/WorkOrders/WorkOrderDetailsDrawer";
 
+export * from "./components/Tickets/TicketTable";
+export * from "./components/Tickets/TicketDetailsDrawer";
+
 export * from "./components/RoomTypes";
 export * from "./components/RoomPlan";
 export * from "./components/Table";

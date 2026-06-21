@@ -19,6 +19,8 @@ export * from "./enums/guest-stay-status.enum";
 export * from "./enums/contract-type.enum";
 export * from "./enums/work-order-status.enum";
 export * from "./enums/work-order-priority.enum";
+export * from "./enums/ticket-status.enum";
+export * from "./enums/ticket-category.enum";
 
 export * from "./interfaces/user.interface";
 export * from "./interfaces/role.interface";
@@ -116,3 +118,5 @@ export * from "./dtos/message.dto";
 export * from "./interfaces/room-plan.interface";
 export * from "./interfaces/work-order.interface";
 export * from "./dtos/work-order.dto";
+export * from "./interfaces/ticket.interface";
+export * from "./dtos/ticket.dto";

@@ -36,7 +36,8 @@ export class WorkOrdersController {
     );
   }
 
-  @RequirePermissions(PERMISSIONS.WORK_ORDERS_MANAGE)
+  // Also usable by dorm staff triaging tickets (tickets.triage) to pick a technician on escalation.
+  @RequirePermissions(PERMISSIONS.WORK_ORDERS_MANAGE, PERMISSIONS.TICKETS_TRIAGE)
   @Get('assignable-technicians')
   getAssignableTechnicians(@UserContext() context: AuditUserContext) {
     return this.workOrdersService.getAssignableTechnicians(context);

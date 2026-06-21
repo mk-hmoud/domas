@@ -26,6 +26,8 @@ async function bootstrap() {
   const systemContext: AuditUserContext = {
     userId: '00000000-0000-0000-0000-000000000000',
     username: 'system_installer_script',
+    isRecoveryAdmin: true,
+    locationScope: { unrestricted: true, treePaths: [] },
     ipAddress: '127.0.0.1',
     userAgent: 'Production Init Script',
   };
@@ -140,7 +142,7 @@ async function bootstrap() {
     }
 
     // 2. Handle Root Location
-    const locations = await locationsService.findAll({ page: 1, limit: 1 });
+    const locations = await locationsService.findAll({ page: 1, limit: 1 }, systemContext);
     if (locations.total === 0) {
       console.log('\ud83c\udfdb  Creating root location: University...');
       await locationsService.create(

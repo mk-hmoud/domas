@@ -1,14 +1,18 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { AccessRepository } from '../../users/repositories/access.repository';
+import { TicketsService } from '../../tickets/services/tickets.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 import { WorkOrdersRepository } from '../repositories/work-orders.repository';
@@ -31,12 +35,16 @@ const ALLOWED_STAFF_TRANSITIONS: Record<string, WorkOrderStatus[]> = {
 
 @Injectable()
 export class WorkOrdersService {
+  private readonly logger = new Logger(WorkOrdersService.name);
+
   constructor(
     private readonly repository: WorkOrdersRepository,
     private readonly locationsRepository: LocationsRepository,
     private readonly accessRepository: AccessRepository,
     private readonly db: DatabaseService,
     private readonly locationScopeService: LocationScopeService,
+    @Inject(forwardRef(() => TicketsService))
+    private readonly ticketsService: TicketsService,
   ) {}
 
   private isManager(context: AuditUserContext): boolean {
@@ -110,7 +118,7 @@ export class WorkOrdersService {
     dto: UpdateWorkOrderStatusDto,
     context: AuditUserContext,
   ): Promise<any> {
-    return this.db.transaction(async (client) => {
+    const updated = await this.db.transaction(async (client) => {
       const workOrder = await this.repository.findById(id, client);
       if (!workOrder) throw new NotFoundException('Work order not found');
 
@@ -131,15 +139,30 @@ export class WorkOrdersService {
         }
       }
 
-      const updated = await this.repository.updateStatus(
+      const result = await this.repository.updateStatus(
         id,
         dto.status,
         dto.completionNotes,
         client,
       );
-      if (!updated) throw new NotFoundException('Work order not found');
-      return updated;
+      if (!result) throw new NotFoundException('Work order not found');
+      return result;
     });
+
+    if (dto.status === WorkOrderStatus.COMPLETED) {
+      // Fired after the transaction commits. Never let a ticket-linking hiccup
+      // block the work order from completing.
+      this.ticketsService
+        .onWorkOrderCompleted(id)
+        .catch((err) =>
+          this.logger.error(
+            { workOrderId: id, error: err.message },
+            'Failed to sync linked ticket after work order completion',
+          ),
+        );
+    }
+
+    return updated;
   }
 
   async update(id: string, dto: UpdateWorkOrderDto, context: AuditUserContext): Promise<any> {

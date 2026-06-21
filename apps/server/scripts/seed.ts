@@ -39,6 +39,8 @@ async function bootstrap() {
   const seedContext: AuditUserContext = {
     userId: adminUser.id,
     username: 'seed_script',
+    isRecoveryAdmin: true,
+    locationScope: { unrestricted: true, treePaths: [] },
     ipAddress: '127.0.0.1',
     userAgent: 'Seed Script',
   };
@@ -125,7 +127,7 @@ async function bootstrap() {
 
     // 3. Create Locations
     logger.log('Checking Locations...');
-    const allLocations = await locationsService.findAll({ page: 1, limit: 1000 });
+    const allLocations = await locationsService.findAll({ page: 1, limit: 1000 }, seedContext);
 
     // Find the absolute root created by init:prod
     const universityRoot = allLocations.data.find(
@@ -133,7 +135,6 @@ async function bootstrap() {
     );
     if (!universityRoot) {
       logger.error('Root location "University" not found. Please run npm run init:prod first.');
-      await app.close();
       return;
     }
 
@@ -202,7 +203,7 @@ async function bootstrap() {
 
     // 4. Access Cards
     logger.log('Checking Access Cards...');
-    const batches = await accessCardsService.findAllBatches();
+    const batches = await accessCardsService.findAllBatches(seedContext);
     if (!batches.find((b) => b.name === 'General Pool 2025')) {
       await accessCardsService.createBatch(
         {
@@ -219,7 +220,7 @@ async function bootstrap() {
 
     // 5. Students
     logger.log('Checking Students...');
-    const students = await studentsService.findAll({ page: 1, limit: 100 });
+    const students = await studentsService.findAll({ page: 1, limit: 100 }, seedContext);
 
     if (!students.data.find((s) => s.studentNumber === '20251001')) {
       await studentsService.create(
@@ -352,7 +353,10 @@ async function bootstrap() {
 
     // 8. Assign Inventory
     logger.log('Checking Assignments...');
-    const floorAssignments = await inventoryService.findAssignmentsByLocation(floor.id);
+    const floorAssignments = await inventoryService.findAssignmentsByLocation(
+      floor.id,
+      seedContext,
+    );
     if (!floorAssignments.find((a) => a.catalogId === oven.id)) {
       await inventoryService.createAssignment(
         {
@@ -365,7 +369,10 @@ async function bootstrap() {
       logger.log('Assigned Oven to Floor.');
     }
 
-    const room201Assignments = await inventoryService.findAssignmentsByLocation(room201.id);
+    const room201Assignments = await inventoryService.findAssignmentsByLocation(
+      room201.id,
+      seedContext,
+    );
     if (!room201Assignments.find((a) => a.catalogId === desk.id)) {
       await inventoryService.createAssignment(
         {

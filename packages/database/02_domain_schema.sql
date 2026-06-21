@@ -967,3 +967,37 @@ CREATE TABLE work_orders (
 CREATE INDEX idx_work_orders_location    ON work_orders(location_id);
 CREATE INDEX idx_work_orders_assigned_to ON work_orders(assigned_to);
 CREATE INDEX idx_work_orders_status      ON work_orders(status);
+
+-- =============================================
+-- TICKETS (Student maintenance/issue requests)
+-- =============================================
+
+CREATE TYPE ticket_status AS ENUM ('open', 'escalated', 'resolved', 'rejected');
+CREATE TYPE ticket_category AS ENUM ('maintenance', 'cleaning', 'noise', 'other');
+
+CREATE TABLE tickets (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id        UUID NOT NULL REFERENCES students(id),
+    booking_id        UUID REFERENCES bookings(id),
+    location_id       INT NOT NULL REFERENCES locations(id),
+
+    category          ticket_category NOT NULL,
+    title             VARCHAR(200) NOT NULL,
+    description       TEXT NOT NULL,
+    status            ticket_status NOT NULL DEFAULT 'open',
+
+    work_order_id     UUID REFERENCES work_orders(id),
+
+    reviewed_by       UUID REFERENCES users(id),
+    reviewed_at       TIMESTAMPTZ,
+    resolution_notes  TEXT,
+    rejection_reason  TEXT,
+    resolved_at       TIMESTAMPTZ,
+
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_tickets_student     ON tickets(student_id);
+CREATE INDEX idx_tickets_status      ON tickets(status);
+CREATE INDEX idx_tickets_work_order  ON tickets(work_order_id);

@@ -92,6 +92,10 @@ export const PERMISSIONS = {
   WORK_ORDERS_VIEW: 'work_orders.view',
   WORK_ORDERS_MANAGE: 'work_orders.manage', // Create, assign/reassign, edit, cancel (Technician Manager)
   WORK_ORDERS_UPDATE: 'work_orders.update', // Update status/notes on assigned work orders (Technician Staff)
+
+  // Tickets (Student-reported issues, triaged by dorm staff)
+  TICKETS_VIEW: 'tickets.view',
+  TICKETS_TRIAGE: 'tickets.triage', // Reject / resolve directly / escalate to a technician
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
