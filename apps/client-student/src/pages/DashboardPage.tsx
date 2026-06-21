@@ -30,18 +30,22 @@ import {
   IconMapPin,
   IconPin,
   IconSparkles,
+  IconX,
 } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import {
   Announcement,
   BookingOpsStatus,
   PaymentStatus,
   PortalSemester,
   StudentCurrentBooking,
+  StudentPreReservationView,
 } from '@domas/ts-types';
 import {
   portalAnnouncements,
   portalBookings,
   portalNotifications,
+  portalPreReservations,
   portalSemesters,
 } from '@domas/api-client';
 import { StudentNotification } from '@domas/ts-types';
@@ -342,6 +346,170 @@ function NoBookingCard({
             </Button>
           )}
         </Group>
+      </Box>
+    </Paper>
+  );
+}
+
+// ─── State A.1 — Pending pre-reservation ───────────────────────────────────────
+
+function PreReservationCard({
+  preReservation,
+  onCancelled,
+}: {
+  preReservation: StudentPreReservationView;
+  onCancelled: () => void;
+}) {
+  const { t } = useTranslation();
+  const [confirming, setConfirming] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await portalPreReservations.cancel(preReservation.id);
+      notifications.show({
+        message: t('portal.pre_reservation_cancelled', {
+          defaultValue: 'Pre-reservation cancelled.',
+        }),
+        color: 'gray',
+      });
+      onCancelled();
+    } catch {
+      notifications.show({
+        message: t('portal.error_generic', { defaultValue: 'Something went wrong' }),
+        color: 'red',
+      });
+    } finally {
+      setCancelling(false);
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <Paper
+      radius="xl"
+      style={{
+        overflow: 'hidden',
+        border: '2px solid var(--mantine-color-teal-4)',
+        boxShadow: '0 6px 24px rgba(12,133,153,0.14)',
+      }}
+    >
+      <Box
+        px="xl"
+        py="md"
+        style={{
+          background: 'var(--mantine-color-teal-light)',
+          borderBottom: '1px solid var(--mantine-color-teal-3)',
+        }}
+      >
+        <Group justify="space-between" align="center">
+          <Box>
+            <Text fw={700} size="lg" lh={1.2}>
+              {t('portal.pre_reservation_title', { defaultValue: 'Pre-Reservation' })}
+            </Text>
+            <Group gap={4} mt={2}>
+              <IconMapPin size={13} color="var(--mantine-color-dimmed)" />
+              <Text size="xs" c="dimmed">
+                {preReservation.semesterDisplayName}
+              </Text>
+            </Group>
+          </Box>
+          <Badge color="yellow" variant="filled" radius="xl" size="lg" style={{ flexShrink: 0 }}>
+            {t('portal.pre_reservation_awaiting', { defaultValue: 'Awaiting Assignment' })}
+          </Badge>
+        </Group>
+      </Box>
+
+      <Box p="xl">
+        <Stack gap="lg">
+          <Text size="sm" c="dimmed">
+            {t('portal.pre_reservation_description', {
+              defaultValue:
+                'Your spot has been held. Dormitory staff will assign a room and bed soon.',
+            })}
+          </Text>
+
+          <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
+            <Group gap="xs">
+              <Text size="sm" c="dimmed" w={90}>
+                {t('portal.semester_period')}
+              </Text>
+              <Text size="sm" fw={500}>
+                {new Date(preReservation.startDate).toLocaleDateString()} –{' '}
+                {new Date(preReservation.endDate).toLocaleDateString()}
+              </Text>
+            </Group>
+            {preReservation.roomTypeName && (
+              <Group gap="xs">
+                <Text size="sm" c="dimmed" w={90}>
+                  {t('portal.room_type_preference', { defaultValue: 'Preferred type' })}
+                </Text>
+                <Text size="sm" fw={500} c="blue">
+                  {preReservation.roomTypeName}
+                </Text>
+              </Group>
+            )}
+          </SimpleGrid>
+
+          {preReservation.note && (
+            <Paper
+              radius="lg"
+              p="sm"
+              style={{
+                background: 'var(--mantine-color-default-hover)',
+                border: '1px solid var(--mantine-color-default-border)',
+              }}
+            >
+              <Text size="sm" c="dimmed" fs="italic">
+                "{preReservation.note}"
+              </Text>
+            </Paper>
+          )}
+
+          {confirming ? (
+            <Group gap="sm">
+              <Text size="sm" c="dimmed">
+                {t('portal.pre_reservation_cancel_confirm', {
+                  defaultValue: 'Cancel this pre-reservation?',
+                })}
+              </Text>
+              <Button
+                size="xs"
+                variant="filled"
+                color="red"
+                onClick={handleCancel}
+                loading={cancelling}
+                radius="xl"
+              >
+                {t('portal.pre_reservation_cancel_yes', { defaultValue: 'Yes, cancel' })}
+              </Button>
+              <Button
+                size="xs"
+                variant="subtle"
+                color="gray"
+                onClick={() => setConfirming(false)}
+                disabled={cancelling}
+                radius="xl"
+              >
+                {t('portal.pre_reservation_cancel_no', { defaultValue: 'Keep it' })}
+              </Button>
+            </Group>
+          ) : (
+            <Group>
+              <Button
+                size="sm"
+                variant="light"
+                color="red"
+                leftSection={<IconX size={14} />}
+                onClick={() => setConfirming(true)}
+                radius="xl"
+              >
+                {t('portal.pre_reservation_cancel', { defaultValue: 'Cancel Request' })}
+              </Button>
+            </Group>
+          )}
+        </Stack>
       </Box>
     </Paper>
   );
@@ -798,18 +966,30 @@ export function DashboardPage() {
 
   const [booking, setBooking] = useState<StudentCurrentBooking | null>(null);
   const [semesters, setSemesters] = useState<PortalSemester[]>([]);
+  const [preReservations, setPreReservations] = useState<StudentPreReservationView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchPreReservations = () => {
+    portalPreReservations
+      .getAll()
+      .then(setPreReservations)
+      .catch(() => setPreReservations([]));
+  };
 
   useEffect(() => {
     Promise.all([
       portalBookings.getCurrent().catch(() => null),
       portalSemesters.getBookable().catch(() => []),
-    ]).then(([b, s]) => {
+      portalPreReservations.getAll().catch(() => []),
+    ]).then(([b, s, pr]) => {
       setBooking(b);
       setSemesters(s as PortalSemester[]);
+      setPreReservations(pr as StudentPreReservationView[]);
       setIsLoading(false);
     });
   }, []);
+
+  const pendingPreReservation = preReservations.find((p) => p.status === 'pending') ?? null;
 
   const isActive = booking?.status === BookingOpsStatus.ACTIVE;
   const hasPending =
@@ -897,6 +1077,11 @@ export function DashboardPage() {
                 <ActiveResidentCard booking={booking!} onViewBooking={() => navigate('/booking')} />
               ) : hasPending ? (
                 <PendingBookingCard booking={booking!} />
+              ) : pendingPreReservation ? (
+                <PreReservationCard
+                  preReservation={pendingPreReservation}
+                  onCancelled={fetchPreReservations}
+                />
               ) : (
                 <NoBookingCard
                   semesters={semesters}
