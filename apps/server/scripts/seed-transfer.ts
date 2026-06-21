@@ -100,7 +100,7 @@ async function bootstrap() {
     }
 
     // 2. Setup Locations & Inventory
-    const allLocations = await locationsService.findAll({ page: 1, limit: 1000 });
+    const allLocations = await locationsService.findAll({ page: 1, limit: 1000 }, seedContext);
     const universityRoot = allLocations.data.find((l) => l.type === LocationType.UNIVERSITY);
 
     let campus = allLocations.data.find((l) => l.name === 'Transfer Test Campus');
@@ -147,7 +147,7 @@ async function bootstrap() {
       );
     }
 
-    const roomAssignments = await inventoryService.findAssignmentsByLocation(room.id);
+    const roomAssignments = await inventoryService.findAssignmentsByLocation(room.id, seedContext);
     if (!roomAssignments.find((a) => a.catalogId === desk!.id)) {
       await inventoryService.createAssignment(
         {
@@ -159,7 +159,7 @@ async function bootstrap() {
       );
     }
 
-    const beds = await bedsService.findByLocation(room.id);
+    const beds = await bedsService.findByLocation(room.id, seedContext);
 
     // 3. Create Students and Active Fall Bookings
     const studentData = [
@@ -190,7 +190,7 @@ async function bootstrap() {
     ];
 
     for (let i = 0; i < studentData.length; i++) {
-      let student = (await studentsService.findAll({ page: 1, limit: 100 })).data.find(
+      let student = (await studentsService.findAll({ page: 1, limit: 100 }, seedContext)).data.find(
         (s) => s.studentNumber === studentData[i].studentNumber,
       );
       if (!student) {
@@ -198,7 +198,10 @@ async function bootstrap() {
       }
 
       // Check if already has a booking for Fall
-      const existingBookings = await bookingsService.findAll({ studentId: student.id });
+      const existingBookings = await bookingsService.findAll(
+        { studentId: student.id },
+        seedContext,
+      );
       const hasFallBooking = existingBookings.find((b) => b.semesterId === fallSemester!.id);
 
       if (!hasFallBooking) {
