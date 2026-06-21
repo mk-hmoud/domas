@@ -4,6 +4,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { DashboardHome } from './pages/DashboardHome';
 import { UsersListPage } from './pages/UsersListPage';
 import { BookingsPage } from './pages/BookingsPage';
+import { RoomPlanPage } from './pages/RoomPlanPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { SemestersPage } from './pages/SemestersPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
@@ -21,9 +22,13 @@ import { DamagesPage } from './pages/DamagesPage';
 import { RoomChangesPage } from './pages/RoomChangesPage';
 import { PreReservationsPage } from './pages/PreReservationsPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { GuestStaysPage } from './pages/GuestStaysPage';
 import { RoomTypesPage } from './pages/RoomTypesPage';
 import { DormCertificatesPage } from './pages/DormCertificatesPage';
+import { WorkOrdersPage } from './pages/WorkOrdersPage';
+import { TicketsPage } from './pages/TicketsPage';
+import { DocumentTemplatesPage } from './pages/DocumentTemplatesPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -40,6 +45,14 @@ function App() {
           }
         >
           <Route index element={<DashboardHome />} />
+          <Route
+            path="room-plan"
+            element={
+              <PermissionRoute permission="locations.view">
+                <RoomPlanPage />
+              </PermissionRoute>
+            }
+          />
           <Route
             path="users"
             element={
@@ -187,6 +200,14 @@ function App() {
             }
           />
           <Route
+            path="messages"
+            element={
+              <PermissionRoute permission="messages.view">
+                <MessagesPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
             path="guest-stays"
             element={
               <PermissionRoute permission="guests.manage">
@@ -199,6 +220,30 @@ function App() {
             element={
               <PermissionRoute permission="students.view">
                 <DormCertificatesPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="work-orders"
+            element={
+              <PermissionRoute permission="work_orders.view">
+                <WorkOrdersPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="tickets"
+            element={
+              <PermissionRoute permission="tickets.view">
+                <TicketsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="document-templates"
+            element={
+              <PermissionRoute permission="document_templates.view">
+                <DocumentTemplatesPage />
               </PermissionRoute>
             }
           />

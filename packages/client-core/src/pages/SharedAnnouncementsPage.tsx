@@ -6,9 +6,12 @@ import {
   Button,
   Card,
   Group,
+  Loader,
   LoadingOverlay,
   Menu,
   Modal,
+  MultiSelect,
+  SegmentedControl,
   Stack,
   Switch,
   Text,
@@ -30,15 +33,103 @@ import {
   IconPin,
   IconPlus,
   IconTrash,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { announcements as announcementsApi } from "@domas/api-client";
+import {
+  announcements as announcementsApi,
+  locations as locationsApi,
+  semesters as semestersApi,
+} from "@domas/api-client";
 import {
   Announcement,
   AnnouncementAttachmentMeta,
+  AnnouncementTargetDto,
   CreateAnnouncementDto,
 } from "@domas/ts-types";
+import {
+  StudentMultiSelect,
+  StudentOption,
+} from "../components/StudentMultiSelect";
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+function LocationMultiSelect({
+  value,
+  onChange,
+  initialOptions = [],
+  label,
+  placeholder,
+}: {
+  value: string[];
+  onChange: (value: string[]) => void;
+  initialOptions?: SelectOption[];
+  label?: string;
+  placeholder?: string;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [options, setOptions] = useState<SelectOption[]>(initialOptions);
+  const [loading, setLoading] = useState(false);
+  const initializedFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = initialOptions.map((o) => o.value).join(",");
+    if (initializedFor.current === key) return;
+    initializedFor.current = key;
+    if (initialOptions.length === 0) return;
+    setOptions((prev) => {
+      const merged = new Map(prev.map((o) => [o.value, o]));
+      initialOptions.forEach((o) => merged.set(o.value, o));
+      return Array.from(merged.values());
+    });
+  }, [initialOptions]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const handler = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const results = await locationsApi.search(searchQuery, true);
+        const fetched = results
+          .filter((l) => l.type !== "bed")
+          .map((l) => ({
+            value: String(l.id),
+            label: l.locationPath ? `${l.locationPath} > ${l.name}` : l.name,
+          }));
+        setOptions((prev) => {
+          const merged = new Map(prev.map((o) => [o.value, o]));
+          fetched.forEach((o) => merged.set(o.value, o));
+          return Array.from(merged.values());
+        });
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  return (
+    <MultiSelect
+      label={label}
+      placeholder={placeholder}
+      searchable
+      value={value}
+      onChange={onChange}
+      data={options}
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+      rightSection={loading ? <Loader size={14} /> : undefined}
+      nothingFoundMessage={
+        searchQuery.trim() ? "No locations found" : "Type to search"
+      }
+      hidePickedOptions
+    />
+  );
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -51,6 +142,10 @@ interface AnnouncementFormValues {
   body: string;
   pinned: boolean;
   expiresAt: string;
+  audienceMode: "all" | "targeted";
+  targetStudentIds: string[];
+  targetSemesterIds: string[];
+  targetLocationIds: string[];
 }
 
 function AnnouncementModal({
@@ -79,8 +174,21 @@ function AnnouncementModal({
     initial?.attachments ?? []
   ).filter((a) => !deletedAttachmentIds.includes(a.id));
 
+  const [studentOptions, setStudentOptions] = useState<StudentOption[]>([]);
+  const [locationOptions, setLocationOptions] = useState<SelectOption[]>([]);
+  const [semesterOptions, setSemesterOptions] = useState<SelectOption[]>([]);
+
   const form = useForm<AnnouncementFormValues>({
-    initialValues: { title: "", body: "", pinned: false, expiresAt: "" },
+    initialValues: {
+      title: "",
+      body: "",
+      pinned: false,
+      expiresAt: "",
+      audienceMode: "all",
+      targetStudentIds: [],
+      targetSemesterIds: [],
+      targetLocationIds: [],
+    },
     validate: {
       title: (v) => (v.trim() ? null : t("field_required")),
       body: (v) => (v.trim() ? null : t("field_required")),
@@ -89,6 +197,16 @@ function AnnouncementModal({
 
   useEffect(() => {
     if (opened) {
+      const studentTargets = (initial?.targets ?? []).filter(
+        (target) => target.targetType === "student",
+      );
+      const semesterTargets = (initial?.targets ?? []).filter(
+        (target) => target.targetType === "semester",
+      );
+      const locationTargets = (initial?.targets ?? []).filter(
+        (target) => target.targetType === "location",
+      );
+
       form.setValues({
         title: initial?.title ?? "",
         body: initial?.body ?? "",
@@ -96,11 +214,58 @@ function AnnouncementModal({
         expiresAt: initial?.expiresAt
           ? new Date(initial.expiresAt).toISOString().split("T")[0]
           : "",
+        audienceMode: initial?.audienceMode ?? "all",
+        targetStudentIds: studentTargets.map((t) => t.studentId!),
+        targetSemesterIds: semesterTargets.map((t) => String(t.semesterId)),
+        targetLocationIds: locationTargets.map((t) => String(t.locationId)),
       });
+      setStudentOptions(
+        studentTargets.map((t) => ({
+          value: t.studentId!,
+          label: t.studentName ?? t.studentId!,
+        })),
+      );
+      setLocationOptions(
+        locationTargets.map((t) => ({
+          value: String(t.locationId),
+          label: t.locationName ?? String(t.locationId),
+        })),
+      );
+      setSemesterOptions([]);
       setPendingFiles([]);
       setDeletedAttachmentIds([]);
     }
   }, [opened, initial]);
+
+  // Semesters are a small, finite list — load once when targeting is opened
+  // rather than wiring up a debounced search like the student/location pickers.
+  useEffect(() => {
+    if (!opened || form.values.audienceMode !== "targeted") return;
+    if (semesterOptions.length > 0) return;
+    semestersApi.findAll({ limit: 200 }).then((result) => {
+      const initialSemesterTargets = (initial?.targets ?? []).filter(
+        (target) => target.targetType === "semester",
+      );
+      const merged = new Map<string, SelectOption>(
+        initialSemesterTargets.map((t) => [
+          String(t.semesterId),
+          {
+            value: String(t.semesterId),
+            label: t.semesterDisplayName ?? String(t.semesterId),
+          },
+        ]),
+      );
+      result.data.forEach((s) =>
+        merged.set(String(s.id), { value: String(s.id), label: s.displayName }),
+      );
+      setSemesterOptions(Array.from(merged.values()));
+    });
+  }, [
+    opened,
+    form.values.audienceMode,
+    initial?.targets,
+    semesterOptions.length,
+  ]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -198,6 +363,71 @@ function AnnouncementModal({
               {...form.getInputProps("expiresAt")}
             />
           </Group>
+
+          {/* Audience targeting */}
+          <Box>
+            <Text size="sm" fw={500} mb="xs">
+              {t("audience", { defaultValue: "Audience" })}
+            </Text>
+            <SegmentedControl
+              fullWidth
+              value={form.values.audienceMode}
+              onChange={(v) =>
+                form.setFieldValue("audienceMode", v as "all" | "targeted")
+              }
+              data={[
+                {
+                  label: t("all_students", { defaultValue: "All students" }),
+                  value: "all",
+                },
+                {
+                  label: t("targeted", { defaultValue: "Targeted" }),
+                  value: "targeted",
+                },
+              ]}
+            />
+            {form.values.audienceMode === "targeted" && (
+              <Stack gap="sm" mt="sm">
+                <Text size="xs" c="dimmed">
+                  {t("audience_targeting_hint", {
+                    defaultValue:
+                      "Visible to students matching any of the criteria below.",
+                  })}
+                </Text>
+                <StudentMultiSelect
+                  label={t("students", { defaultValue: "Students" })}
+                  placeholder={t("search_students", {
+                    defaultValue: "Search students…",
+                  })}
+                  value={form.values.targetStudentIds}
+                  onChange={(v) => form.setFieldValue("targetStudentIds", v)}
+                  initialOptions={studentOptions}
+                />
+                <MultiSelect
+                  label={t("semesters", { defaultValue: "Semesters" })}
+                  placeholder={t("select_semesters", {
+                    defaultValue: "Select semesters…",
+                  })}
+                  data={semesterOptions}
+                  value={form.values.targetSemesterIds}
+                  onChange={(v) => form.setFieldValue("targetSemesterIds", v)}
+                  searchable
+                  hidePickedOptions
+                />
+                <LocationMultiSelect
+                  label={t("buildings_and_rooms", {
+                    defaultValue: "Buildings / rooms",
+                  })}
+                  placeholder={t("search_locations", {
+                    defaultValue: "Search buildings, floors, rooms…",
+                  })}
+                  value={form.values.targetLocationIds}
+                  onChange={(v) => form.setFieldValue("targetLocationIds", v)}
+                  initialOptions={locationOptions}
+                />
+              </Stack>
+            )}
+          </Box>
 
           {/* Attachments section */}
           <Box>
@@ -379,6 +609,23 @@ export function SharedAnnouncementsPage() {
     load();
   }, []);
 
+  const buildTargets = (
+    values: AnnouncementFormValues,
+  ): AnnouncementTargetDto[] => [
+    ...values.targetStudentIds.map((studentId) => ({
+      targetType: "student" as const,
+      studentId,
+    })),
+    ...values.targetSemesterIds.map((id) => ({
+      targetType: "semester" as const,
+      semesterId: Number(id),
+    })),
+    ...values.targetLocationIds.map((id) => ({
+      targetType: "location" as const,
+      locationId: Number(id),
+    })),
+  ];
+
   const handleCreate = async (
     values: AnnouncementFormValues,
   ): Promise<string> => {
@@ -387,6 +634,9 @@ export function SharedAnnouncementsPage() {
       body: values.body,
       pinned: values.pinned,
       expiresAt: values.expiresAt || undefined,
+      audienceMode: values.audienceMode,
+      targets:
+        values.audienceMode === "targeted" ? buildTargets(values) : undefined,
     };
     const ann = await announcementsApi.create(dto);
     notifications.show({
@@ -407,6 +657,8 @@ export function SharedAnnouncementsPage() {
       body: values.body,
       pinned: values.pinned,
       expiresAt: values.expiresAt || null,
+      audienceMode: values.audienceMode,
+      targets: values.audienceMode === "targeted" ? buildTargets(values) : [],
     });
     notifications.show({
       color: "green",
@@ -512,6 +764,19 @@ export function SharedAnnouncementsPage() {
                         leftSection={<IconPaperclip size={10} />}
                       >
                         {item.attachments.length}
+                      </Badge>
+                    )}
+                    {item.audienceMode === "targeted" && (
+                      <Badge
+                        color="violet"
+                        variant="light"
+                        size="sm"
+                        leftSection={<IconUsers size={10} />}
+                      >
+                        {t("targeted_count", {
+                          defaultValue: "Targeted ({{count}})",
+                          count: item.targets.length,
+                        })}
                       </Badge>
                     )}
                   </Group>

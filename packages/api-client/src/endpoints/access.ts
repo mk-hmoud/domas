@@ -4,6 +4,7 @@ import {
   Permission,
   CreateRoleDto,
   UpdateRoleDto,
+  Location,
 } from "@domas/ts-types";
 
 export const access = {
@@ -42,5 +43,20 @@ export const access = {
 
   revokeRole: async (userId: string, roleId: number): Promise<void> => {
     await apiClient.delete(`/access/users/${userId}/roles/${roleId}`);
+  },
+
+  getLocationsForUser: async (userId: string): Promise<Location[]> => {
+    const response = await apiClient.get<Location[]>(
+      `/access/users/${userId}/locations`,
+    );
+    return response.data;
+  },
+
+  assignLocation: async (userId: string, locationId: number): Promise<void> => {
+    await apiClient.post(`/access/users/${userId}/locations/${locationId}`);
+  },
+
+  revokeLocation: async (userId: string, locationId: number): Promise<void> => {
+    await apiClient.delete(`/access/users/${userId}/locations/${locationId}`);
   },
 };

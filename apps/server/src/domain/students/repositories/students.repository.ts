@@ -8,6 +8,8 @@ import { UpdateStudentDto } from '../dto/update-student.dto';
 import { FindAllStudentsDto } from '../dto/find-all-students.dto';
 import { ResolveContactsDto } from '../dto/resolve-contacts.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 export interface ResolvedContact {
   id: string;
@@ -19,7 +21,10 @@ export interface ResolvedContact {
 
 @Injectable()
 export class StudentsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -133,7 +138,11 @@ export class StudentsRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
-  async findAll(dto: FindAllStudentsDto, client?: PoolClient): Promise<PaginatedResult<Student>> {
+  async findAll(
+    dto: FindAllStudentsDto,
+    client?: PoolClient,
+    scope?: LocationScope,
+  ): Promise<PaginatedResult<Student>> {
     const { page = 1, limit = 10, search } = dto;
     const offset = (page - 1) * limit;
 
@@ -158,6 +167,24 @@ export class StudentsRepository {
       const idx = values.length + 1;
       conditions.push(`enrollment_status = $${idx}`);
       values.push((dto as any).enrollmentStatus);
+    }
+
+    if (!scope?.unrestricted) {
+      // A student is only visible to scoped staff while they have a current
+      // active booking whose bed falls within the staff member's locations -
+      // students with no physical placement yet have no location to scope.
+      const scopeFilter = this.locationScopeService.buildScopeClause(
+        scope,
+        'l.tree_path',
+        values.length + 1,
+      );
+      if (scopeFilter.param) values.push(scopeFilter.param);
+      conditions.push(`EXISTS (
+        SELECT 1 FROM bookings b
+        JOIN beds bd ON b.bed_id = bd.id
+        JOIN locations l ON bd.location_id = l.id
+        WHERE b.student_id = students.id AND b.status = 'active' AND ${scopeFilter.clause}
+      )`);
     }
 
     if (conditions.length > 0) {
@@ -258,6 +285,21 @@ export class StudentsRepository {
 
     const result = await this.getClient(client).query(query, params);
     return result.rows;
+  }
+
+  // Tree path of the bed under the student's current active booking, if any.
+  // Null means the student has no physical placement right now.
+  async getCurrentLocationTreePath(studentId: string, client?: PoolClient): Promise<string | null> {
+    const query = `
+      SELECT l.tree_path::TEXT as "treePath"
+      FROM bookings b
+      JOIN beds bd ON b.bed_id = bd.id
+      JOIN locations l ON bd.location_id = l.id
+      WHERE b.student_id = $1 AND b.status = 'active'
+      LIMIT 1
+    `;
+    const result = await this.getClient(client).query<{ treePath: string }>(query, [studentId]);
+    return result.rows[0]?.treePath ?? null;
   }
 
   async findActiveResidentsByLocation(locationId: number, client?: PoolClient): Promise<any[]> {
@@ -413,5 +455,70 @@ export class StudentsRepository {
       `UPDATE students SET enrollment_status = $1, updated_at = NOW() WHERE id = $2`,
       [status, id],
     );
+  }
+
+  /**
+   * Full stay history for a student: every booking (any status), enriched
+   * with room/semester labels, each carrying its own room-change requests
+   * nested inline so the timeline shows why a bed changed mid-stay.
+   */
+  async findBookingHistory(studentId: string): Promise<any[]> {
+    const query = `
+      SELECT
+        bk.id,
+        bk.semester_id          AS "semesterId",
+        s.display_name          AS "semesterDisplayName",
+        s.type                  AS "semesterType",
+        s.academic_year         AS "academicYear",
+        bk.bed_id                AS "bedId",
+        bd.label                 AS "bedLabel",
+        l.name                   AS "roomName",
+        (
+          SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
+          FROM   locations anc
+          WHERE  anc.tree_path @> l.tree_path AND anc.deleted_at IS NULL
+        )                         AS "locationPath",
+        bk.status,
+        bk.payment_status        AS "paymentStatus",
+        bk.start_date            AS "startDate",
+        bk.end_date              AS "endDate",
+        bk.checked_in_at         AS "checkedInAt",
+        bk.checked_out_at        AS "checkedOutAt",
+        bk.contract_signed       AS "contractSigned",
+        bk.created_at            AS "createdAt",
+        COALESCE(
+          (
+            SELECT json_agg(rc_row ORDER BY rc_row->>'createdAt' DESC)
+            FROM (
+              SELECT json_build_object(
+                'id', rc.id,
+                'status', rc.status,
+                'note', rc.note,
+                'rejectionReason', rc.rejection_reason,
+                'requiresPayment', rc.requires_payment,
+                'paymentAmount', rc.payment_amount,
+                'paymentCurrency', rc.payment_currency,
+                'currentBedLabel', cb.label,
+                'requestedBedLabel', rb.label,
+                'createdAt', rc.created_at,
+                'resolvedAt', rc.resolved_at
+              ) AS rc_row
+              FROM   room_change_requests rc
+              LEFT JOIN beds cb ON rc.current_bed_id   = cb.id
+              LEFT JOIN beds rb ON rc.requested_bed_id = rb.id
+              WHERE  rc.booking_id = bk.id
+            ) sub
+          ),
+          '[]'
+        )                         AS "roomChanges"
+      FROM  bookings bk
+      JOIN  beds      bd ON bk.bed_id     = bd.id
+      JOIN  locations l  ON bd.location_id = l.id
+      JOIN  semesters s  ON bk.semester_id = s.id
+      WHERE bk.student_id = $1
+      ORDER BY bk.created_at DESC
+    `;
+    const result = await this.db.getPool().query(query, [studentId]);
+    return result.rows;
   }
 }

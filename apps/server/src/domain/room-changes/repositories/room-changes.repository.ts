@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class RoomChangesRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient) {
     return client || this.db.getPool();
@@ -34,7 +39,10 @@ export class RoomChangesRepository {
     `;
   }
 
-  async findAll(params?: { semesterId?: number; status?: string }): Promise<any[]> {
+  async findAll(
+    params?: { semesterId?: number; status?: string },
+    scope?: LocationScope,
+  ): Promise<any[]> {
     const conditions: string[] = [];
     const values: any[] = [];
     let i = 1;
@@ -47,6 +55,17 @@ export class RoomChangesRepository {
       conditions.push(`rc.status = $${i++}`);
       values.push(params.status);
     }
+
+    // current_bed_id is always set at creation time (snapshot of the bed the
+    // student is leaving), so it's the stable anchor for scoping - unlike
+    // requested_bed_id which is nullable for open requests.
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'cl.tree_path',
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    conditions.push(scopeFilter.clause);
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -114,8 +133,10 @@ export class RoomChangesRepository {
 
   async findById(id: string, client?: PoolClient): Promise<any | null> {
     const query = `
-      SELECT ${this.selectColumns}
+      SELECT ${this.selectColumns}, cl.tree_path AS "treePath"
       FROM room_change_requests rc
+      JOIN beds      cb ON rc.current_bed_id = cb.id
+      JOIN locations cl ON cb.location_id    = cl.id
       WHERE rc.id = $1
     `;
     const result = await this.getClient(client).query(query, [id]);
@@ -294,7 +315,8 @@ export class RoomChangesRepository {
         l.is_tr_only   AS "roomIsTrOnly",
         l.is_foreigner_only AS "roomIsForeignerOnly",
         l.is_guest_zone AS "roomIsGuestZone",
-        l.ownership    AS "roomOwnership"
+        l.ownership    AS "roomOwnership",
+        l.tree_path    AS "treePath"
       FROM beds b
       JOIN locations l ON b.location_id = l.id
       WHERE b.id = $1 AND b.deleted_at IS NULL
@@ -321,6 +343,7 @@ export class RoomChangesRepository {
         isForeignerOnly: row.roomIsForeignerOnly,
         isGuestZone: row.roomIsGuestZone,
         ownership: row.roomOwnership,
+        treePath: row.treePath,
       },
     };
   }
@@ -385,7 +408,15 @@ export class RoomChangesRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
-  async findAvailableBedsForBooking(bookingId: string): Promise<any[]> {
+  async findAvailableBedsForBooking(bookingId: string, scope?: LocationScope): Promise<any[]> {
+    const values: any[] = [bookingId];
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+
     const query = `
       SELECT
         b.id,
@@ -417,9 +448,10 @@ export class RoomChangesRepository {
         -- TR/international bed compatibility
         AND NOT (b.is_tr_only        = TRUE AND st.nationality_code != 'TR')
         AND NOT (b.is_foreigner_only = TRUE AND st.nationality_code  = 'TR')
+        AND ${scopeFilter.clause}
       ORDER BY l.name, b.label
     `;
-    const result = await this.db.getPool().query(query, [bookingId]);
+    const result = await this.db.getPool().query(query, values);
     return result.rows;
   }
 

@@ -22,3 +22,7 @@ export * from "./endpoints/room-types";
 export * from "./endpoints/room-changes";
 export * from "./endpoints/pre-reservations";
 export * from "./endpoints/dorm-certificates";
+export * from "./endpoints/conversations";
+export * from "./endpoints/work-orders";
+export * from "./endpoints/tickets";
+export * from "./endpoints/document-templates";

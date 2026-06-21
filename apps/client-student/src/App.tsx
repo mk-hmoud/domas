@@ -10,11 +10,13 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { FinancialPage } from './pages/FinancialPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { VerifyEnrollmentPage } from './pages/VerifyEnrollmentPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ApplicationStatusPage } from './pages/ApplicationStatusPage';
 import { DormCertificatePage } from './pages/DormCertificatePage';
 import { ApplicationStatusPortalPage } from './pages/ApplicationStatusPortalPage';
+import { TicketsPage } from './pages/TicketsPage';
 
 function App() {
   return (
@@ -50,10 +52,12 @@ function App() {
           <Route path="pre-reserve" element={<PreReservePage />} />
           <Route path="booking" element={<BookingPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="messages" element={<MessagesPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="financial" element={<FinancialPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="dorm-certificate" element={<DormCertificatePage />} />
+          <Route path="tickets" element={<TicketsPage />} />
           <Route path="application-status" element={<ApplicationStatusPortalPage />} />
         </Route>
 

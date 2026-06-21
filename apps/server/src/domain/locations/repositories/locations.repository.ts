@@ -8,10 +8,15 @@ import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class LocationsRepository implements ILocationsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -59,7 +64,11 @@ export class LocationsRepository implements ILocationsRepository {
     return new Location(result.rows[0]);
   }
 
-  async findAll(filters: FindAllLocationsDto, client?: PoolClient): Promise<PaginatedResult<any>> {
+  async findAll(
+    filters: FindAllLocationsDto,
+    client?: PoolClient,
+    scope?: LocationScope,
+  ): Promise<PaginatedResult<any>> {
     const {
       page = 1,
       limit = 10,
@@ -116,6 +125,14 @@ export class LocationsRepository implements ILocationsRepository {
         );
       }
     }
+
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      params.length + 1,
+    );
+    if (scopeFilter.param) params.push(scopeFilter.param);
+    conditions.push(scopeFilter.clause);
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -229,6 +246,80 @@ export class LocationsRepository implements ILocationsRepository {
      `;
     const result = await this.getClient(client).query<Location>(query, [parent.treePath]);
     return result.rows.map((row) => new Location(row));
+  }
+
+  // Flat bed-level rows for every room in the subtree under `locationId`.
+  // The service groups these into nested room/bed/occupant shapes.
+  async findRoomPlan(locationId: number, client?: PoolClient): Promise<any[]> {
+    const parent = await this.findById(locationId, client);
+    if (!parent) return [];
+
+    const query = `
+      SELECT
+        l.id as "roomId",
+        l.name as "roomName",
+        l.gender_lock as "genderLock",
+        l.student_year_lock as "studentYearLock",
+        l.is_guest_zone as "isGuestZone",
+        l.is_tr_only as "isTrOnly",
+        l.is_foreigner_only as "isForeignerOnly",
+        l.ownership,
+        rt.id as "roomTypeId",
+        rt.name as "roomTypeName",
+        rt.capacity as "capacity",
+        parent.id as "parentLocationId",
+        parent.name as "parentLocationName",
+        bd.id as "bedId",
+        bd.label as "bedLabel",
+        bd.status as "bedStatus",
+        cur.booking_id as "currentBookingId",
+        cur.student_id as "currentStudentId",
+        cur.first_name as "currentFirstName",
+        cur.last_name as "currentLastName",
+        cur.student_number as "currentStudentNumber",
+        cur.gender as "currentGender",
+        cur.nationality_code as "currentNationalityCode",
+        cur.email as "currentEmail",
+        cur.phone_number as "currentPhoneNumber",
+        cur.whatsapp_number as "currentWhatsappNumber",
+        cur.payment_status as "currentPaymentStatus",
+        cur.checked_in_at as "currentCheckedInAt",
+        pend.booking_id as "pendingBookingId",
+        pend.student_id as "pendingStudentId",
+        pend.first_name as "pendingFirstName",
+        pend.last_name as "pendingLastName",
+        pend.student_number as "pendingStudentNumber",
+        pend.start_date as "pendingStartDate",
+        pend.status as "pendingStatus"
+      FROM locations l
+      JOIN room_types rt ON rt.id = l.room_type_id
+      LEFT JOIN locations parent ON parent.tree_path = subpath(l.tree_path, 0, nlevel(l.tree_path) - 1)
+      LEFT JOIN beds bd ON bd.location_id = l.id AND bd.deleted_at IS NULL
+      LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
+               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
+               s.email, s.phone_number, s.whatsapp_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id AND b.status = 'active'
+        ORDER BY b.start_date DESC
+        LIMIT 1
+      ) cur ON true
+      LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.start_date, b.status,
+               s.first_name, s.last_name, s.student_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id
+          AND b.status IN ('pending_accounting', 'ready_for_checkin', 'confirmed')
+        ORDER BY b.start_date ASC
+        LIMIT 1
+      ) pend ON true
+      WHERE l.type = 'room' AND l.deleted_at IS NULL AND l.tree_path <@ $1
+      ORDER BY l.tree_path ASC, bd.label ASC
+    `;
+    const result = await this.getClient(client).query(query, [parent.treePath]);
+    return result.rows;
   }
 
   async findWithAncestors(id: number, client?: PoolClient): Promise<Location[]> {

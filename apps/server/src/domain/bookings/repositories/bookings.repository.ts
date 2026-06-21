@@ -7,10 +7,15 @@ import { UpdateBookingDto } from '../dto/update-booking.dto';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
 import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 import { FindAllBookingsDto } from '../dto/find-all-bookings.dto';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class BookingsRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
   private getClient(client?: PoolClient): Pool | PoolClient {
     return client || this.db.getPool();
@@ -151,12 +156,18 @@ export class BookingsRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
-  async findAll(filters: FindAllBookingsDto, client?: PoolClient): Promise<Booking[]> {
-    const needsBedJoin = !!(filters.locationId || filters.bedId);
-
-    let query = needsBedJoin
-      ? `SELECT b.* FROM bookings b JOIN beds bd ON bd.id = b.bed_id`
-      : `SELECT b.* FROM bookings b`;
+  async findAll(
+    filters: FindAllBookingsDto,
+    client?: PoolClient,
+    scope?: LocationScope,
+  ): Promise<Booking[]> {
+    // Locations are always joined (not just when locationId/bedId filters are
+    // set) since the scope clause needs the bed's tree_path too.
+    let query = `
+      SELECT b.* FROM bookings b
+      JOIN beds bd ON bd.id = b.bed_id
+      JOIN locations l ON l.id = bd.location_id
+    `;
 
     const values: any[] = [];
     const conditions: string[] = [];
@@ -186,6 +197,14 @@ export class BookingsRepository {
       values.push(filters.bedId);
     }
 
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    conditions.push(scopeFilter.clause);
+
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
@@ -193,6 +212,29 @@ export class BookingsRepository {
     query += ` ORDER BY b.created_at DESC`;
     const result = await this.getClient(client).query(query, values);
     return result.rows.map((row) => this.mapRowToEntity(row));
+  }
+
+  async findLocationTreePath(bookingId: string, client?: PoolClient): Promise<string | null> {
+    const query = `
+      SELECT l.tree_path::TEXT as "treePath"
+      FROM bookings b
+      JOIN beds bd ON bd.id = b.bed_id
+      JOIN locations l ON l.id = bd.location_id
+      WHERE b.id = $1
+    `;
+    const result = await this.getClient(client).query<{ treePath: string }>(query, [bookingId]);
+    return result.rows[0]?.treePath ?? null;
+  }
+
+  async findBedLocationTreePath(bedId: number, client?: PoolClient): Promise<string | null> {
+    const query = `
+      SELECT l.tree_path::TEXT as "treePath"
+      FROM beds bd
+      JOIN locations l ON l.id = bd.location_id
+      WHERE bd.id = $1
+    `;
+    const result = await this.getClient(client).query<{ treePath: string }>(query, [bedId]);
+    return result.rows[0]?.treePath ?? null;
   }
 
   async countBySemester(semesterId: number, client?: PoolClient): Promise<number> {

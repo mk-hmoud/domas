@@ -42,27 +42,31 @@ export class BookingsController {
   @Get()
   @RequirePermissions(PERMISSIONS.BOOKINGS_VIEW)
   findAll(
-    @Query('studentId') studentId?: string,
-    @Query('status') status?: BookingOpsStatus,
-    @Query('semesterId') semesterId?: string,
-    @Query('paymentStatus') paymentStatus?: PaymentStatus,
-    @Query('locationId') locationId?: string,
-    @Query('bedId') bedId?: string,
+    @Query('studentId') studentId: string | undefined,
+    @Query('status') status: BookingOpsStatus | undefined,
+    @Query('semesterId') semesterId: string | undefined,
+    @Query('paymentStatus') paymentStatus: PaymentStatus | undefined,
+    @Query('locationId') locationId: string | undefined,
+    @Query('bedId') bedId: string | undefined,
+    @UserContext() context: AuditUserContext,
   ) {
-    return this.bookingsService.findAll({
-      studentId,
-      status,
-      paymentStatus,
-      semesterId: semesterId ? parseInt(semesterId, 10) : undefined,
-      locationId: locationId ? parseInt(locationId, 10) : undefined,
-      bedId: bedId ? parseInt(bedId, 10) : undefined,
-    });
+    return this.bookingsService.findAll(
+      {
+        studentId,
+        status,
+        paymentStatus,
+        semesterId: semesterId ? parseInt(semesterId, 10) : undefined,
+        locationId: locationId ? parseInt(locationId, 10) : undefined,
+        bedId: bedId ? parseInt(bedId, 10) : undefined,
+      },
+      context,
+    );
   }
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.BOOKINGS_VIEW)
-  findOne(@Param('id') id: string) {
-    return this.bookingsService.findById(id);
+  findOne(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.bookingsService.findById(id, context);
   }
 
   @Patch(':id/approve-financials')

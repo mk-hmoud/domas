@@ -127,14 +127,14 @@ export class InventoryController {
 
   @Get('assignments/location/:id')
   @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
-  findByLocation(@Param('id') id: string) {
-    return this.inventoryService.findAssignmentsByLocation(parseInt(id, 10));
+  findByLocation(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.inventoryService.findAssignmentsByLocation(parseInt(id, 10), context);
   }
 
   @Get('assignments/bed/:id')
   @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
-  findByBed(@Param('id') id: string) {
-    return this.inventoryService.findAssignmentsByBed(parseInt(id, 10));
+  findByBed(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.inventoryService.findAssignmentsByBed(parseInt(id, 10), context);
   }
 
   @Patch('assignments/:id')
@@ -163,8 +163,11 @@ export class InventoryController {
 
   @Get('active-snapshots/:locationId')
   @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
-  findActiveSnapshotsByLocation(@Param('locationId') locationId: string) {
-    return this.inventoryService.findActiveSnapshotsByLocation(parseInt(locationId, 10));
+  findActiveSnapshotsByLocation(
+    @Param('locationId') locationId: string,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.inventoryService.findActiveSnapshotsByLocation(parseInt(locationId, 10), context);
   }
 
   @Get('snapshots/booking/:bookingId')
@@ -175,7 +178,10 @@ export class InventoryController {
 
   @Get('active-mixed/:locationId')
   @RequirePermissions(PERMISSIONS.INVENTORY_VIEW)
-  getMixedInventory(@Param('locationId') locationId: string) {
-    return this.inventoryService.getMixedInventory(parseInt(locationId, 10));
+  getMixedInventory(
+    @Param('locationId') locationId: string,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.inventoryService.getMixedInventory(parseInt(locationId, 10), context);
   }
 }

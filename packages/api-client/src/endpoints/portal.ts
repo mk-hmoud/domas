@@ -23,6 +23,10 @@ import {
   SubmitApplicationDto,
   StudentCreatePreReservationDto,
   StudentPreReservationView,
+  Conversation,
+  SendMessageDto,
+  StudentTicketView,
+  CreateTicketDto,
 } from "@domas/ts-types";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -210,22 +214,33 @@ export const portalNotifications = {
   markAllAsRead: async (): Promise<void> => {
     await apiClient.patch("/portal/notifications/read-all");
   },
+};
 
+// ─── Realtime (SSE) ───────────────────────────────────────────────────────────
+
+export interface RealtimeEnvelope<T = unknown> {
+  channel: string;
+  data: T;
+}
+
+export const portalRealtime = {
   /**
-   * Opens a Server-Sent Events connection for live notification delivery.
-   * Returns the EventSource instance — caller is responsible for closing it.
+   * Opens the single Server-Sent Events connection that multiplexes every
+   * realtime channel (notifications, messages, ...) for the logged-in
+   * student. Returns the EventSource instance — caller is responsible for
+   * closing it.
    */
   stream: (
     baseURL: string,
-    onMessage: (notification: StudentNotification) => void,
+    onEnvelope: (envelope: RealtimeEnvelope) => void,
   ): EventSource => {
     const es = new EventSource(`${baseURL}/portal/notifications/stream`, {
       withCredentials: true,
     });
     es.onmessage = (event) => {
       try {
-        const notification = JSON.parse(event.data) as StudentNotification;
-        onMessage(notification);
+        const envelope = JSON.parse(event.data) as RealtimeEnvelope;
+        onEnvelope(envelope);
       } catch {
         // ignore malformed events
       }
@@ -317,6 +332,24 @@ export const portalRoomChanges = {
   },
 };
 
+// ─── Tickets ──────────────────────────────────────────────────────────────────
+
+export const portalTickets = {
+  getAll: async (): Promise<StudentTicketView[]> => {
+    const response =
+      await apiClient.get<StudentTicketView[]>("/portal/tickets");
+    return response.data;
+  },
+
+  create: async (dto: CreateTicketDto): Promise<StudentTicketView> => {
+    const response = await apiClient.post<StudentTicketView>(
+      "/portal/tickets",
+      dto,
+    );
+    return response.data;
+  },
+};
+
 // ─── Pre-Reservations ─────────────────────────────────────────────────────────
 
 export const portalPreReservations = {
@@ -373,5 +406,31 @@ export const portalApplications = {
       "/portal/applications/mine",
     );
     return response.data;
+  },
+};
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+export const portalMessages = {
+  getMine: async (): Promise<Conversation | null> => {
+    const response = await apiClient.get<Conversation | null>(
+      "/portal/messages",
+    );
+    return response.data;
+  },
+
+  send: async (data: SendMessageDto): Promise<void> => {
+    await apiClient.post("/portal/messages", data);
+  },
+
+  markRead: async (): Promise<void> => {
+    await apiClient.patch("/portal/messages/read");
+  },
+
+  getUnreadCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ count: number }>(
+      "/portal/messages/unread-count",
+    );
+    return response.data.count;
   },
 };

@@ -21,6 +21,7 @@ import { LocationType } from '../../../common/enums/location-type.enum';
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { PoolClient } from 'pg';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 @Injectable()
 export class AccessCardsService {
@@ -32,7 +33,20 @@ export class AccessCardsService {
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  // Cards with no resolvable location (no current booking, batch-less) are
+  // only reachable by unrestricted staff.
+  private async assertCardInScope(
+    cardId: number,
+    context: AuditUserContext,
+    client?: PoolClient,
+  ): Promise<void> {
+    if (context.locationScope?.unrestricted) return;
+    const treePath = await this.repository.getCardTreePath(cardId, client);
+    this.locationScopeService.assertAccess(context.locationScope, treePath ?? '');
+  }
 
   async createBatch(
     data: CreateCardBatchDto,
@@ -51,7 +65,11 @@ export class AccessCardsService {
             'Access card batches can only be associated with Buildings or Blocks',
           );
         }
+        this.locationScopeService.assertAccess(context.locationScope, location.treePath);
         batchName = `${location.name} (${data.rangeStart}-${data.rangeEnd})`;
+      } else {
+        // A campus-wide (unassigned) batch is reserved for unrestricted staff.
+        this.locationScopeService.assertAccess(context.locationScope, '');
       }
 
       const batch = await this.repository.createBatch(
@@ -79,12 +97,15 @@ export class AccessCardsService {
     return this.db.transaction(operation, context);
   }
 
-  async findAllBatches() {
-    return this.repository.findAllBatches();
+  async findAllBatches(context: AuditUserContext) {
+    return this.repository.findAllBatches(context.locationScope);
   }
 
-  async findAllCards(filters: { batchId?: number; status?: CardStatus }) {
-    return this.repository.findAllCards(filters);
+  async findAllCards(
+    filters: { batchId?: number; status?: CardStatus },
+    context: AuditUserContext,
+  ) {
+    return this.repository.findAllCards(filters, context.locationScope);
   }
 
   async issueCard(
@@ -94,6 +115,21 @@ export class AccessCardsService {
     skipUndo = false,
   ) {
     const operation = async (client: PoolClient) => {
+      if (!context.locationScope?.unrestricted) {
+        const bookingLocation = await client.query(
+          `SELECT l.tree_path as "treePath"
+           FROM bookings b
+           JOIN beds bd ON b.bed_id = bd.id
+           JOIN locations l ON bd.location_id = l.id
+           WHERE b.id = $1`,
+          [data.bookingId],
+        );
+        this.locationScopeService.assertAccess(
+          context.locationScope,
+          bookingLocation.rows[0]?.treePath ?? '',
+        );
+      }
+
       let card: AccessCard | null;
 
       // SCENARIO 1: Manual Input (Receptionist types specific number)
@@ -184,6 +220,7 @@ export class AccessCardsService {
     const operation = async (client: PoolClient) => {
       const card = await this.repository.findById(id, client);
       if (!card) throw new NotFoundException(`Card with ID ${id} not found`);
+      await this.assertCardInScope(id, context, client);
       if (card.status !== CardStatus.ACTIVE) {
         throw new BadRequestException(`Card is not active (Status: ${card.status})`);
       }
@@ -245,6 +282,7 @@ export class AccessCardsService {
     const operation = async (client: PoolClient) => {
       const card = await this.repository.findById(id, client);
       if (!card) throw new NotFoundException(`Card with ID ${id} not found`);
+      await this.assertCardInScope(id, context, client);
 
       const updatedCard = await this.repository.updateCard(
         id,
@@ -319,7 +357,8 @@ export class AccessCardsService {
     return this.db.transaction(operation, context);
   }
 
-  async getLogs(cardId: number) {
+  async getLogs(cardId: number, context: AuditUserContext) {
+    await this.assertCardInScope(cardId, context);
     return this.repository.findLogsByCard(cardId);
   }
 

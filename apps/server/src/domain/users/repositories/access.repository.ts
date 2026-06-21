@@ -3,6 +3,7 @@ import { Pool, PoolClient } from 'pg';
 import { DatabaseService } from '../../../core/database/database.service';
 import { Role } from '../entities/role.entity';
 import { Permission } from '../entities/permission.entity';
+import { Location } from '../../locations/entities/location.entity';
 
 @Injectable()
 export class AccessRepository {
@@ -221,5 +222,61 @@ export class AccessRepository {
       `;
     const result = await this.getClient(client).query<Permission>(query, [roleId]);
     return result.rows.map((p) => new Permission(p));
+  }
+
+  // --- Staff Locations ---
+
+  async assignLocationToUser(
+    userId: string,
+    locationId: number,
+    assignedBy: string,
+    client?: PoolClient,
+  ): Promise<void> {
+    const query = `
+      INSERT INTO staff_locations (user_id, location_id, created_by)
+      VALUES ($1, $2, $3)
+      ON CONFLICT DO NOTHING
+    `;
+    await this.getClient(client).query(query, [userId, locationId, assignedBy]);
+  }
+
+  async revokeLocationFromUser(
+    userId: string,
+    locationId: number,
+    client?: PoolClient,
+  ): Promise<void> {
+    const query = `DELETE FROM staff_locations WHERE user_id = $1 AND location_id = $2`;
+    await this.getClient(client).query(query, [userId, locationId]);
+  }
+
+  async getLocationsForUser(userId: string, client?: PoolClient): Promise<Location[]> {
+    const query = `
+      SELECT l.id, l.name, l.tree_path as "treePath", l.type
+      FROM locations l
+      JOIN staff_locations sl ON sl.location_id = l.id
+      WHERE sl.user_id = $1 AND l.deleted_at IS NULL
+      ORDER BY l.tree_path ASC
+    `;
+    const result = await this.getClient(client).query(query, [userId]);
+    return result.rows.map((l) => new Location(l));
+  }
+
+  // Tree paths of the locations a staff member is directly anchored at.
+  // The caller is responsible for treating these as subtree roots (<@ ANY(...)).
+  async getLocationScopeTreePaths(userId: string, client?: PoolClient): Promise<string[]> {
+    const query = `
+      SELECT l.tree_path::TEXT as "treePath"
+      FROM locations l
+      JOIN staff_locations sl ON sl.location_id = l.id
+      WHERE sl.user_id = $1 AND l.deleted_at IS NULL
+    `;
+    const result = await this.getClient(client).query<{ treePath: string }>(query, [userId]);
+    return result.rows.map((r) => r.treePath);
+  }
+
+  async getStaffForLocation(locationId: number, client?: PoolClient): Promise<string[]> {
+    const query = `SELECT user_id as "userId" FROM staff_locations WHERE location_id = $1`;
+    const result = await this.getClient(client).query<{ userId: string }>(query, [locationId]);
+    return result.rows.map((r) => r.userId);
   }
 }

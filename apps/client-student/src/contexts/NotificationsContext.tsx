@@ -1,17 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { portalNotifications } from '@domas/api-client';
-import { StudentNotification } from '@domas/ts-types';
 import { useStudentAuth } from './StudentAuthContext';
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000';
+import { useRealtime } from './RealtimeContext';
 
 interface NotificationsContextType {
   unreadCount: number;
@@ -23,10 +13,10 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { student } = useStudentAuth();
+  const { subscribe } = useRealtime();
   const [unreadCount, setUnreadCount] = useState(0);
-  const esRef = useRef<EventSource | null>(null);
 
-  // Fetch initial unread count and open SSE stream when authenticated
+  // Fetch initial unread count when authenticated
   useEffect(() => {
     if (!student) {
       setUnreadCount(0);
@@ -37,17 +27,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .getUnreadCount()
       .then(setUnreadCount)
       .catch(() => {});
+  }, [student]);
 
-    const es = portalNotifications.stream(API_BASE, (_notification: StudentNotification) => {
+  // Subscribe to the shared realtime connection for live notifications
+  useEffect(() => {
+    if (!student) return;
+    return subscribe('notification', () => {
       setUnreadCount((c) => c + 1);
     });
-    esRef.current = es;
-
-    return () => {
-      es.close();
-      esRef.current = null;
-    };
-  }, [student]);
+  }, [student, subscribe]);
 
   const markAsRead = useCallback(async (id: string) => {
     await portalNotifications.markAsRead(id);

@@ -24,6 +24,10 @@ export const PERMISSIONS = {
   LOCATIONS_UPDATE: 'locations.update',
   LOCATIONS_DELETE: 'locations.delete',
 
+  // Staff <-> Location scoping
+  STAFF_LOCATIONS_VIEW: 'staff_locations.view',
+  STAFF_LOCATIONS_MANAGE: 'staff_locations.manage',
+
   // Bookings
   BOOKINGS_VIEW: 'bookings.view',
   BOOKINGS_CREATE: 'bookings.create',
@@ -58,8 +62,12 @@ export const PERMISSIONS = {
   UNDO_ALL: 'undo.all',
   UNDO_OWN: 'undo.own',
 
-  // Messaging
+  // Messaging (bulk contact resolution for an external SMS/WhatsApp/email tool)
   MESSAGING_SEND: 'messaging.send',
+
+  // Messages (in-app admin <-> student support inbox — distinct from MESSAGING_SEND above)
+  MESSAGES_VIEW: 'messages.view',
+  MESSAGES_MANAGE: 'messages.manage',
 
   // Announcements
   ANNOUNCEMENTS_MANAGE: 'announcements.manage',
@@ -79,6 +87,19 @@ export const PERMISSIONS = {
   // Dorm Certificates
   DORM_CERTIFICATES_VIEW: 'dorm_certificates.view',
   DORM_CERTIFICATES_MANAGE: 'dorm_certificates.manage',
+
+  // Work Orders (Technician repair/replacement jobs)
+  WORK_ORDERS_VIEW: 'work_orders.view',
+  WORK_ORDERS_MANAGE: 'work_orders.manage', // Create, assign/reassign, edit, cancel (Technician Manager)
+  WORK_ORDERS_UPDATE: 'work_orders.update', // Update status/notes on assigned work orders (Technician Staff)
+
+  // Tickets (Student-reported issues, triaged by dorm staff)
+  TICKETS_VIEW: 'tickets.view',
+  TICKETS_TRIAGE: 'tickets.triage', // Reject / resolve directly / escalate to a technician
+
+  // Document Templates (admin-editable format of contracts/certificates)
+  DOCUMENT_TEMPLATES_VIEW: 'document_templates.view',
+  DOCUMENT_TEMPLATES_MANAGE: 'document_templates.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

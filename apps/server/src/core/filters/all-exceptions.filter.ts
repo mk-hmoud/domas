@@ -68,7 +68,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const dbError = exception as { code: string; message: string; detail?: string };
 
       switch (dbError.code) {
-        case '23505': // Unique violation
+        case '23505': {
+          // Unique violation
           httpStatus = HttpStatus.CONFLICT;
           code = ErrorCodes.DUPLICATE_ENTRY;
           message = 'Duplicate entry found';
@@ -80,6 +81,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
           userMessage = `This ${field} already exists. Please use a different one.`;
           break;
+        }
         case '23503': // Foreign key violation
           httpStatus = HttpStatus.BAD_REQUEST;
           code = ErrorCodes.DB_CONSTRAINT_VIOLATION;

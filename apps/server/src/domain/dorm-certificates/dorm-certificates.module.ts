@@ -7,9 +7,16 @@ import { DormCertificatesService } from './services/dorm-certificates.service';
 import { DormCertificatesController } from './controllers/dorm-certificates.controller';
 import { PortalDormCertificatesController } from './controllers/portal-dorm-certificates.controller';
 import { DormCertificatesRepository } from './repositories/dorm-certificates.repository';
+import { DocumentTemplatesModule } from '../document-templates/document-templates.module';
 
 @Module({
-  imports: [StudentsModule, BookingsModule, LocationsModule, forwardRef(() => AuditModule)],
+  imports: [
+    StudentsModule,
+    BookingsModule,
+    LocationsModule,
+    forwardRef(() => AuditModule),
+    DocumentTemplatesModule,
+  ],
   controllers: [DormCertificatesController, PortalDormCertificatesController],
   providers: [DormCertificatesService, DormCertificatesRepository],
 })

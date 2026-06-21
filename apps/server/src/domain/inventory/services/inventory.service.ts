@@ -29,6 +29,7 @@ import { BookingsRepository } from '../../bookings/repositories/bookings.reposit
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { InventoryScope } from '../../../common/enums/inventory-scope.enum';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 @Injectable()
 export class InventoryService {
@@ -43,7 +44,39 @@ export class InventoryService {
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  private async assertLocationIdInScope(
+    locationId: number,
+    context: AuditUserContext,
+  ): Promise<void> {
+    if (context.locationScope?.unrestricted) return;
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) throw new NotFoundException(`Location with ID ${locationId} not found`);
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+  }
+
+  private async assertBedIdInScope(bedId: number, context: AuditUserContext): Promise<void> {
+    if (context.locationScope?.unrestricted) return;
+    const bed = await this.bedsRepository.findById(bedId);
+    if (!bed) throw new NotFoundException(`Bed with ID ${bedId} not found`);
+    const location = await this.locationsRepository.findById(bed.locationId);
+    this.locationScopeService.assertAccess(context.locationScope, location?.treePath ?? '');
+  }
+
+  // An assignment's target is either a location_id or a bed_id (mutually
+  // exclusive, enforced by a DB constraint).
+  private async assertAssignmentTargetInScope(
+    target: { locationId?: number | null; bedId?: number | null },
+    context: AuditUserContext,
+  ): Promise<void> {
+    if (target.bedId) {
+      await this.assertBedIdInScope(target.bedId, context);
+    } else if (target.locationId) {
+      await this.assertLocationIdInScope(target.locationId, context);
+    }
+  }
 
   // --- Catalog ---
 
@@ -151,6 +184,8 @@ export class InventoryService {
       throw new BadRequestException('Either bedId or locationId must be provided');
     }
 
+    await this.assertAssignmentTargetInScope(data, context);
+
     const catalog = await this.findCatalogById(data.catalogId);
 
     if (data.bedId && catalog.scope !== 'bed') {
@@ -179,11 +214,19 @@ export class InventoryService {
     }, context);
   }
 
-  async findAssignmentsByLocation(locationId: number): Promise<InventoryAssignment[]> {
+  async findAssignmentsByLocation(
+    locationId: number,
+    context: AuditUserContext,
+  ): Promise<InventoryAssignment[]> {
+    await this.assertLocationIdInScope(locationId, context);
     return this.inventoryRepository.findAssignmentsByLocation(locationId);
   }
 
-  async findAssignmentsByBed(bedId: number): Promise<InventoryAssignment[]> {
+  async findAssignmentsByBed(
+    bedId: number,
+    context: AuditUserContext,
+  ): Promise<InventoryAssignment[]> {
+    await this.assertBedIdInScope(bedId, context);
     return this.inventoryRepository.findAssignmentsByBed(bedId);
   }
 
@@ -195,6 +238,10 @@ export class InventoryService {
     // Note: Inventory assignments are UUID based
     const existing = await this.inventoryRepository.findAssignmentWithItem(id);
     if (!existing) throw new NotFoundException(`Assignment with ID ${id} not found`);
+    await this.assertAssignmentTargetInScope(
+      { locationId: existing.location_id, bedId: existing.bed_id },
+      context,
+    );
 
     return this.db.transaction(async (client) => {
       const updated = await this.inventoryRepository.updateAssignment(id, data, client);
@@ -219,6 +266,10 @@ export class InventoryService {
   async deleteAssignment(id: string, context: AuditUserContext): Promise<void> {
     const existing = await this.inventoryRepository.findAssignmentWithItem(id);
     if (!existing) throw new NotFoundException(`Assignment with ID ${id} not found`);
+    await this.assertAssignmentTargetInScope(
+      { locationId: existing.location_id, bedId: existing.bed_id },
+      context,
+    );
 
     await this.db.transaction(async (client) => {
       await this.inventoryRepository.deleteAssignment(id, client);
@@ -315,11 +366,16 @@ export class InventoryService {
     return this.inventoryRepository.findSnapshotsByBooking(bookingId);
   }
 
-  async findActiveSnapshotsByLocation(locationId: number): Promise<any[]> {
+  async findActiveSnapshotsByLocation(
+    locationId: number,
+    context: AuditUserContext,
+  ): Promise<any[]> {
+    await this.assertLocationIdInScope(locationId, context);
     return this.inventoryRepository.findActiveSnapshotsByLocation(locationId);
   }
 
-  async getMixedInventory(locationId: number) {
+  async getMixedInventory(locationId: number, context: AuditUserContext) {
+    await this.assertLocationIdInScope(locationId, context);
     return this.inventoryRepository.findMixedInventoryByLocation(locationId);
   }
 
@@ -405,17 +461,17 @@ export class InventoryService {
       throw new BadRequestException('Cannot apply an empty template');
     }
 
-    // 1. Pre-check existence of all targets
+    // 1. Pre-check existence and scope of all targets
     if (dto.locationIds?.length) {
       for (const id of dto.locationIds) {
         const loc = await this.locationsRepository.findById(id);
         if (!loc) throw new NotFoundException(`Location ${id} not found`);
+        this.locationScopeService.assertAccess(context.locationScope, loc.treePath);
       }
     }
     if (dto.bedIds?.length) {
       for (const id of dto.bedIds) {
-        const bed = await this.bedsRepository.findById(id);
-        if (!bed) throw new NotFoundException(`Bed ${id} not found`);
+        await this.assertBedIdInScope(id, context);
       }
     }
 

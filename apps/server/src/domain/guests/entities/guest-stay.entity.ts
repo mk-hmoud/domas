@@ -4,6 +4,7 @@ export class GuestStay {
   id!: string;
   guestId!: string;
   bedId!: number;
+  treePath?: string;
   checkInDate!: string;
   checkOutDate!: string;
   actualCheckIn?: Date;

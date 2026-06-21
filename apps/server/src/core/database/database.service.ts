@@ -46,7 +46,6 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     this.logger.log('Closing database connections...');
     try {
-      ``;
       await this.pool.end();
       this.logger.log('Database connections closed successfully');
     } catch (error) {

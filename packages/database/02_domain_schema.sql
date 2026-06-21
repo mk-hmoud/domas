@@ -89,13 +89,28 @@ CREATE TABLE user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
+-- STAFF <-> LOCATION SCOPING
+-- A row anchors a staff member at a location node; their access extends to
+-- the entire subtree under it (same "node + descendants" semantics as
+-- announcement_targets.location_id). Zero rows = no location-scoped access
+-- (deny by default) for any non-recovery-admin user.
+CREATE TABLE staff_locations (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    location_id INT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    PRIMARY KEY (user_id, location_id)
+);
+
+CREATE INDEX idx_staff_locations_location ON staff_locations(location_id);
+
 -- =============================================
 -- 3.1 GEOGRAPHY (Countries)
 -- =============================================
 CREATE TABLE countries (
-    code CHAR(2) PRIMARY KEY, -- ISO 3166-1 alpha-2 (e.g., 'TR', 'US', 'DE')
+    code VARCHAR(10) PRIMARY KEY, -- Supports ISO alpha-2/3 and custom codes (e.g., 'TRNC')
     name VARCHAR(100) NOT NULL,
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -112,7 +127,7 @@ CREATE TABLE students (
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     gender gender_type NOT NULL,
-    nationality_code CHAR(2) NOT NULL REFERENCES countries(code),
+    nationality_code VARCHAR(10) NOT NULL REFERENCES countries(code),
     national_id VARCHAR(50) NOT NULL,
     birth_date DATE NOT NULL,
     birth_place VARCHAR(100) NOT NULL,
@@ -449,11 +464,32 @@ CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(bookin
 -- CONTRACTS SYSTEM
 -- =============================================
 
+-- Admin/manager-editable HTML+CSS templates for generated documents
+-- (check-in/check-out contracts, dorm certificates, and future paper types).
+-- Every save inserts a new immutable version row; "publish" just flips
+-- is_active so prior versions remain available for history/rollback.
+CREATE TABLE document_templates (
+    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_type VARCHAR(50)  NOT NULL, -- 'check_in', 'check_out', 'dorm_certificate', ...
+    language      VARCHAR(5)   NOT NULL DEFAULT 'en', -- 'en', 'tr' - each language is its own template, not a {{#if}} branch
+    name          VARCHAR(255) NOT NULL,
+    html_body     TEXT         NOT NULL,
+    css           TEXT         NOT NULL DEFAULT '',
+    is_active     BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_by    UUID         REFERENCES users(id),
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_document_templates_type ON document_templates(document_type, language);
+-- Only one active (published) version per document type + language at a time.
+CREATE UNIQUE INDEX idx_document_templates_active ON document_templates(document_type, language) WHERE is_active = TRUE;
+
 CREATE TABLE booking_contracts (
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL DEFAULT 'check_in', -- 'check_in', 'check_out'
     storage_key VARCHAR(500) NOT NULL,
     file_size INT NOT NULL,
+    template_id UUID REFERENCES document_templates(id), -- which template version produced this PDF, if any (NULL = built-in PDFKit renderer)
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (booking_id, type)
@@ -869,7 +905,7 @@ CREATE TABLE student_applications (
     first_name           VARCHAR(100) NOT NULL,
     last_name            VARCHAR(100) NOT NULL,
     gender               VARCHAR(10)  NOT NULL CHECK (gender IN ('male', 'female')),
-    nationality_code     VARCHAR(3)   NOT NULL,
+    nationality_code     VARCHAR(10)   NOT NULL,
     national_id          VARCHAR(50)  NOT NULL,
     birth_date           DATE         NOT NULL,
     birth_place          VARCHAR(100) NOT NULL,
@@ -914,6 +950,7 @@ CREATE TABLE dorm_certificate_requests (
     rejection_reason            TEXT,
     certificate_storage_key     VARCHAR(500),
     certificate_filename        VARCHAR(255),
+    template_id                 UUID        REFERENCES document_templates(id),
     requested_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     reviewed_at                 TIMESTAMPTZ,
     reviewed_by                 UUID        REFERENCES users(id)
@@ -921,3 +958,68 @@ CREATE TABLE dorm_certificate_requests (
 
 CREATE INDEX idx_dorm_cert_requests_student ON dorm_certificate_requests(student_id);
 CREATE INDEX idx_dorm_cert_requests_status  ON dorm_certificate_requests(status);
+
+-- =============================================
+-- WORK ORDERS (Technician repair/replacement jobs)
+-- =============================================
+
+CREATE TYPE work_order_status AS ENUM ('pending', 'assigned', 'in_progress', 'completed', 'cancelled');
+CREATE TYPE work_order_priority AS ENUM ('low', 'medium', 'high', 'urgent');
+
+CREATE TABLE work_orders (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title               VARCHAR(200) NOT NULL,
+    description         TEXT,
+    location_id         INT NOT NULL REFERENCES locations(id),
+
+    status              work_order_status NOT NULL DEFAULT 'pending',
+    priority            work_order_priority NOT NULL DEFAULT 'medium',
+
+    assigned_to         UUID REFERENCES users(id),
+    created_by          UUID NOT NULL REFERENCES users(id),
+
+    due_date            DATE,
+    completion_notes    TEXT,
+    completed_at        TIMESTAMPTZ,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_work_orders_location    ON work_orders(location_id);
+CREATE INDEX idx_work_orders_assigned_to ON work_orders(assigned_to);
+CREATE INDEX idx_work_orders_status      ON work_orders(status);
+
+-- =============================================
+-- TICKETS (Student maintenance/issue requests)
+-- =============================================
+
+CREATE TYPE ticket_status AS ENUM ('open', 'escalated', 'resolved', 'rejected');
+CREATE TYPE ticket_category AS ENUM ('maintenance', 'cleaning', 'noise', 'other');
+
+CREATE TABLE tickets (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id        UUID NOT NULL REFERENCES students(id),
+    booking_id        UUID REFERENCES bookings(id),
+    location_id       INT NOT NULL REFERENCES locations(id),
+
+    category          ticket_category NOT NULL,
+    title             VARCHAR(200) NOT NULL,
+    description       TEXT NOT NULL,
+    status            ticket_status NOT NULL DEFAULT 'open',
+
+    work_order_id     UUID REFERENCES work_orders(id),
+
+    reviewed_by       UUID REFERENCES users(id),
+    reviewed_at       TIMESTAMPTZ,
+    resolution_notes  TEXT,
+    rejection_reason  TEXT,
+    resolved_at       TIMESTAMPTZ,
+
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_tickets_student     ON tickets(student_id);
+CREATE INDEX idx_tickets_status      ON tickets(status);
+CREATE INDEX idx_tickets_work_order  ON tickets(work_order_id);

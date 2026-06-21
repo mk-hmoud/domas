@@ -5,7 +5,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppLoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './core/database/database.module';
+import { LocationScopeModule } from './core/location-scope/location-scope.module';
 import { StorageModule } from './common/storage/storage.module';
+import { PdfRenderingModule } from './common/pdf-rendering/pdf-rendering.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
 import { UsersModule } from './domain/users/users.module';
@@ -27,6 +29,10 @@ import { RoomTypesModule } from './domain/room-types/room-types.module';
 import { RoomChangesModule } from './domain/room-changes/room-changes.module';
 import { PreReservationsModule } from './domain/pre-reservations/pre-reservations.module';
 import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certificates.module';
+import { MessagesModule } from './domain/messages/messages.module';
+import { WorkOrdersModule } from './domain/work-orders/work-orders.module';
+import { TicketsModule } from './domain/tickets/tickets.module';
+import { DocumentTemplatesModule } from './domain/document-templates/document-templates.module';
 
 @Module({
   imports: [
@@ -37,7 +43,9 @@ import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certific
     ScheduleModule.forRoot(),
     AppLoggerModule,
     DatabaseModule,
+    LocationScopeModule,
     StorageModule,
+    PdfRenderingModule,
     UsersModule,
     AuthModule,
     SemestersModule,
@@ -58,6 +66,10 @@ import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certific
     RoomChangesModule,
     PreReservationsModule,
     DormCertificatesModule,
+    MessagesModule,
+    WorkOrdersModule,
+    TicketsModule,
+    DocumentTemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

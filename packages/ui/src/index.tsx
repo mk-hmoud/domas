@@ -13,6 +13,7 @@ export * from "./components/FontSizeControl/FontSizeControl";
 export * from "./components/AuthenticationForm";
 export * from "./components/CreateUserModal";
 export * from "./components/UsersTable";
+export * from "./components/UserLocationsPanel";
 export * from "./components/Locations";
 export * from "./components/Locations/SmartLocationSelector";
 export * from "./components/Semesters";
@@ -40,7 +41,15 @@ export * from "./components/Damages/DamageReportTable";
 export * from "./components/Damages/CreateDamageModal";
 export * from "./components/Damages/DamageDetailsDrawer";
 
+export * from "./components/WorkOrders/WorkOrderCard";
+export * from "./components/WorkOrders/CreateWorkOrderModal";
+export * from "./components/WorkOrders/WorkOrderDetailsDrawer";
+
+export * from "./components/Tickets/TicketTable";
+export * from "./components/Tickets/TicketDetailsDrawer";
+
 export * from "./components/RoomTypes";
+export * from "./components/RoomPlan";
 export * from "./components/Table";
 export * from "./layouts/DashboardLayout";
 export * from "./components/Dashboard/StatCard";

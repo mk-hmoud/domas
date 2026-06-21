@@ -13,7 +13,7 @@ export interface CreateInventoryCatalogDto {
   isOptional?: boolean;
 }
 
-export interface UpdateInventoryCatalogDto extends Partial<CreateInventoryCatalogDto> {}
+export type UpdateInventoryCatalogDto = Partial<CreateInventoryCatalogDto>;
 
 export interface CreateInventoryAssignmentDto {
   catalogId: number;

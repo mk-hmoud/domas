@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavStats } from '../hooks/useNavStats';
+import { useUnreadMessagesCount } from '../hooks/useUnreadMessagesCount';
 import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
@@ -10,6 +11,8 @@ import {
   IconAddressBook,
   IconSettings,
   IconDatabase,
+  IconTool,
+  IconMessageReport,
 } from '@tabler/icons-react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@domas/client-core';
@@ -23,6 +26,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
   const navStats = useNavStats();
+  const unreadMessagesCount = useUnreadMessagesCount(hasPermission('messages.view'));
   const { t } = useTranslation();
 
   // Undo History State
@@ -75,9 +79,26 @@ export function DashboardLayout() {
         link: '/dashboard',
       },
       {
+        label: t('nav.tickets', { defaultValue: 'Tickets' }),
+        icon: IconMessageReport,
+        link: '/dashboard/tickets',
+        requiredPermission: 'tickets.view',
+      },
+      {
+        label: t('nav.work_orders', { defaultValue: 'Work Orders' }),
+        icon: IconTool,
+        link: '/dashboard/work-orders',
+        requiredPermission: 'work_orders.view',
+      },
+      {
         label: t('nav.operations'),
         icon: IconDoorEnter,
         links: [
+          {
+            label: t('nav.room_plan', { defaultValue: 'Room Plan' }),
+            link: '/dashboard/room-plan',
+            requiredPermission: 'locations.view',
+          },
           {
             label: t('nav.bookings'),
             link: '/dashboard/bookings',
@@ -178,6 +199,12 @@ export function DashboardLayout() {
             requiredPermission: 'announcements.manage',
           },
           {
+            label: t('nav.messages', { defaultValue: 'Messages' }),
+            link: '/dashboard/messages',
+            requiredPermission: 'messages.view',
+            badge: unreadMessagesCount || undefined,
+          },
+          {
             label: t('nav.locations'),
             link: '/dashboard/locations',
             requiredPermission: 'locations.view',
@@ -201,6 +228,11 @@ export function DashboardLayout() {
             label: t('nav.roles'),
             link: '/dashboard/roles',
             requiredPermission: 'roles.manage',
+          },
+          {
+            label: t('nav.document_templates', { defaultValue: 'Document Templates' }),
+            link: '/dashboard/document-templates',
+            requiredPermission: 'document_templates.view',
           },
         ],
       },
@@ -239,7 +271,7 @@ export function DashboardLayout() {
         return null;
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [t, user, navStats]);
+  }, [t, user, navStats, unreadMessagesCount]);
 
   return (
     <>

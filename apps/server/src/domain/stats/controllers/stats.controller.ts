@@ -12,6 +12,10 @@ export class StatsController {
   @Get('dashboard')
   @Header('Cache-Control', 'no-store')
   getDashboard(@UserContext() context: AuditUserContext) {
-    return this.service.getDashboard(context.permissions ?? [], context.isRecoveryAdmin);
+    return this.service.getDashboard(
+      context.permissions ?? [],
+      context.isRecoveryAdmin,
+      context.locationScope,
+    );
   }
 }

@@ -1,11 +1,16 @@
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { AnnouncementTargetDto } from './announcement-target.dto';
 
 export class CreateAnnouncementDto {
   @IsString()
@@ -24,4 +29,14 @@ export class CreateAnnouncementDto {
   @IsDateString()
   @IsOptional()
   expiresAt?: string;
+
+  @IsIn(['all', 'targeted'])
+  @IsOptional()
+  audienceMode?: 'all' | 'targeted';
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => AnnouncementTargetDto)
+  targets?: AnnouncementTargetDto[];
 }

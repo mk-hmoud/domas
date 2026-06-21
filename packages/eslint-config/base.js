@@ -24,4 +24,12 @@ export const baseConfig = [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // .cjs files are CommonJS by definition - require() is the only valid
+    // way to import another module's exports there, not a style choice.
+    files: ['**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 ];

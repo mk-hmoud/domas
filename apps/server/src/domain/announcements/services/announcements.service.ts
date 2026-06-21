@@ -30,8 +30,8 @@ export class AnnouncementsService {
     return this.repo.findAll();
   }
 
-  findPublished(): Promise<Announcement[]> {
-    return this.repo.findPublished();
+  findPublishedForStudent(studentId: string): Promise<Announcement[]> {
+    return this.repo.findPublishedForStudent(studentId);
   }
 
   async update(id: string, data: UpdateAnnouncementDto, userId?: string): Promise<Announcement> {

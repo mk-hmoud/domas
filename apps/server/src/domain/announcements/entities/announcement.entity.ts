@@ -7,6 +7,18 @@ export interface AttachmentMeta {
   createdAt: Date;
 }
 
+export interface AnnouncementTarget {
+  id: string;
+  targetType: 'student' | 'semester' | 'location';
+  studentId?: string;
+  studentName?: string;
+  semesterId?: number;
+  semesterDisplayName?: string;
+  locationId?: number;
+  locationName?: string;
+  locationPath?: string;
+}
+
 export class Announcement {
   id!: string;
   title!: string;
@@ -20,6 +32,8 @@ export class Announcement {
   createdAt!: Date;
   updatedAt!: Date;
   attachments!: AttachmentMeta[];
+  audienceMode!: 'all' | 'targeted';
+  targets!: AnnouncementTarget[];
 
   constructor(partial: Partial<Announcement>) {
     Object.assign(this, partial);

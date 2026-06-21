@@ -107,14 +107,20 @@ export class StudentsController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
-  findAll(@Query() query: FindAllStudentsDto) {
-    return this.studentsService.findAll(query);
+  findAll(@Query() query: FindAllStudentsDto, @UserContext() context: AuditUserContext) {
+    return this.studentsService.findAll(query, context);
   }
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
-  findOne(@Param('id') id: string) {
-    return this.studentsService.findById(id);
+  findOne(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.studentsService.findById(id, context);
+  }
+
+  @Get(':id/history')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  getHistory(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.studentsService.getHistory(id, context);
   }
 
   @Patch(':id')

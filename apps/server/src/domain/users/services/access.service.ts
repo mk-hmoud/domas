@@ -1,9 +1,19 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { AccessRepository } from '../repositories/access.repository';
 import { Role } from '../entities/role.entity';
 import { Permission } from '../entities/permission.entity';
+import { Location } from '../../locations/entities/location.entity';
+import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { DatabaseService } from '../../../core/database/database.service';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
 import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
@@ -18,6 +28,9 @@ export class AccessService {
     private readonly accessRepository: AccessRepository,
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+    @Inject(forwardRef(() => LocationsRepository))
+    private readonly locationsRepository: LocationsRepository,
   ) {}
 
   private canViewRole(role: Role, context: AuditUserContext): boolean {
@@ -211,5 +224,72 @@ export class AccessService {
 
       await this.accessRepository.deleteRole(id, client);
     }, context);
+  }
+
+  async assignLocationToUser(
+    userId: string,
+    locationId: number,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log({ userId, locationId }, 'Assigning location to user');
+
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) throw new NotFoundException(`Location with ID ${locationId} not found`);
+
+    // A staff member can only grant location access within their own scope -
+    // mirrors the subset-permission logic used for role assignment, so a
+    // building-scoped manager can't extend reach beyond their own building.
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+
+    await this.db.transaction(async (client) => {
+      await this.accessRepository.assignLocationToUser(userId, locationId, context.userId, client);
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.ASSIGN_STAFF_LOCATION,
+          entityType: 'staff_location',
+          entityId: userId,
+          undoData: { locationId },
+          description: `Assigned location ${locationId} to user ${userId}`,
+        },
+        client,
+      );
+    }, context);
+  }
+
+  async revokeLocationFromUser(
+    userId: string,
+    locationId: number,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log({ userId, locationId }, 'Revoking location from user');
+
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) throw new NotFoundException(`Location with ID ${locationId} not found`);
+
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+
+    await this.db.transaction(async (client) => {
+      await this.accessRepository.revokeLocationFromUser(userId, locationId, client);
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.REVOKE_STAFF_LOCATION,
+          entityType: 'staff_location',
+          entityId: userId,
+          undoData: { locationId },
+          description: `Revoked location ${locationId} from user ${userId}`,
+        },
+        client,
+      );
+    }, context);
+  }
+
+  async getLocationsForUser(userId: string): Promise<Location[]> {
+    return this.accessRepository.getLocationsForUser(userId);
+  }
+
+  async getStaffForLocation(locationId: number): Promise<string[]> {
+    return this.accessRepository.getStaffForLocation(locationId);
   }
 }

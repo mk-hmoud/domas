@@ -21,6 +21,7 @@ import {
   BulkUpdateOwnershipDto,
   CreateRoomWithBedsDto,
   BulkCreateRoomWithBedsDto,
+  RoomPlanRoom,
 } from "@domas/ts-types";
 
 export const locations = {
@@ -72,6 +73,13 @@ export const locations = {
 
   getResidents: async (id: number): Promise<any[]> => {
     const response = await apiClient.get<any[]>(`/locations/${id}/residents`);
+    return response.data;
+  },
+
+  getRoomPlan: async (id: number): Promise<RoomPlanRoom[]> => {
+    const response = await apiClient.get<RoomPlanRoom[]>(
+      `/locations/${id}/room-plan`,
+    );
     return response.data;
   },
 

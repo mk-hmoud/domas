@@ -207,6 +207,10 @@ export class UndoService {
         return this.undoAssignRole(log, client);
       case UndoActionType.REVOKE_ROLE:
         return this.undoRevokeRole(log, client);
+      case UndoActionType.ASSIGN_STAFF_LOCATION:
+        return this.undoAssignStaffLocation(log, client);
+      case UndoActionType.REVOKE_STAFF_LOCATION:
+        return this.undoRevokeStaffLocation(log, client);
 
       // Semesters
       case UndoActionType.CREATE_SEMESTER:
@@ -772,6 +776,24 @@ export class UndoService {
     await client.query(
       'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [userId, roleId],
+    );
+  }
+
+  private async undoAssignStaffLocation(log: UndoLog, client: PoolClient): Promise<void> {
+    const userId = log.entityId;
+    const { locationId } = log.undoData;
+    await client.query('DELETE FROM staff_locations WHERE user_id = $1 AND location_id = $2', [
+      userId,
+      locationId,
+    ]);
+  }
+
+  private async undoRevokeStaffLocation(log: UndoLog, client: PoolClient): Promise<void> {
+    const userId = log.entityId;
+    const { locationId } = log.undoData;
+    await client.query(
+      'INSERT INTO staff_locations (user_id, location_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [userId, locationId],
     );
   }
 

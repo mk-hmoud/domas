@@ -1,4 +1,5 @@
 import { Role } from './role.entity';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 export class User {
   id!: string;
@@ -11,6 +12,7 @@ export class User {
   isRecoveryAdmin!: boolean;
   roles?: Role[];
   permissions?: string[]; // Flattened list for easy access in code
+  locationScope?: LocationScope;
   createdAt!: Date;
   updatedAt!: Date;
 

@@ -23,6 +23,11 @@ import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { DormCertificateRequest } from '../entities/dorm-certificate-request.entity';
 import { EnrollmentVerification } from '../../students/entities/enrollment-verification.entity';
 import { BookingOpsStatus } from '../../../common/enums/booking-ops-status.enum';
+import { DocumentTemplatesService } from '../../document-templates/services/document-templates.service';
+import {
+  DOCUMENT_LANGUAGES,
+  DOCUMENT_TYPES,
+} from '../../document-templates/constants/document-types';
 
 @Injectable()
 export class DormCertificatesService {
@@ -46,6 +51,7 @@ export class DormCertificatesService {
     private readonly storage: StorageService,
     private readonly db: DatabaseService,
     private readonly undoService: UndoService,
+    private readonly documentTemplatesService: DocumentTemplatesService,
   ) {}
 
   async getEligibility(studentId: string): Promise<{
@@ -178,14 +184,32 @@ export class DormCertificatesService {
     `);
     const manager = managerRes.rows[0];
 
-    const pdfBuffer = await this.generateDormCertPdf(student, activeBooking, room, bed, manager);
+    const language = isTurkishNational(student.nationalityCode)
+      ? DOCUMENT_LANGUAGES.TURKISH
+      : DOCUMENT_LANGUAGES.ENGLISH;
+    const activeTemplate = await this.documentTemplatesService.findActiveByType(
+      DOCUMENT_TYPES.DORM_CERTIFICATE,
+      language,
+    );
+    const pdfBuffer = activeTemplate
+      ? await this.documentTemplatesService.render(
+          activeTemplate,
+          this.buildDormCertContext(student, activeBooking, room, bed, manager),
+        )
+      : await this.generateDormCertPdf(student, activeBooking, room, bed, manager);
 
     const filename = `dorm-certificate-${student.studentNumber}-${Date.now()}.pdf`;
     const storageKey = `dorm-certificates/${id}/${randomUUID()}.pdf`;
     await this.storage.upload(storageKey, pdfBuffer, 'application/pdf');
 
     this.logger.log(`Dorm certificate generated for student ${student.studentNumber}`);
-    const result = await this.dormCertsRepository.approve(id, reviewerId, storageKey, filename);
+    const result = await this.dormCertsRepository.approve(
+      id,
+      reviewerId,
+      storageKey,
+      filename,
+      activeTemplate?.id ?? null,
+    );
 
     await this.undoService.registerUndo({
       userId: reviewerId,
@@ -197,6 +221,44 @@ export class DormCertificatesService {
     });
 
     return result;
+  }
+
+  private buildDormCertContext(
+    student: any,
+    booking: any,
+    room: any,
+    bed: any,
+    manager: any,
+  ): Record<string, unknown> {
+    const isTR = isTurkishNational(student.nationalityCode);
+    const managerName =
+      manager?.firstName && manager?.lastName
+        ? `${manager.firstName} ${manager.lastName}`
+        : 'Umut KAYIKCI';
+    const issueDate = new Date().toLocaleDateString(isTR ? 'tr-TR' : 'en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    return {
+      student: {
+        firstName: student.firstName,
+        lastName: student.lastName,
+        studentNumber: student.studentNumber,
+      },
+      isTR,
+      room: room ? { name: room.name } : null,
+      bed: bed ? { label: bed.label } : null,
+      managerName,
+      issueDate,
+      booking: booking
+        ? {
+            startDate: new Date(booking.startDate).toLocaleDateString(isTR ? 'tr-TR' : 'en-GB'),
+            endDate: new Date(booking.endDate).toLocaleDateString(isTR ? 'tr-TR' : 'en-GB'),
+          }
+        : null,
+    };
   }
 
   private generateDormCertPdf(

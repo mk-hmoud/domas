@@ -87,4 +87,37 @@ export class AccessController {
   ) {
     return this.accessService.revokeRoleFromUser(userId, roleId, context);
   }
+
+  @Get('users/:userId/locations')
+  @RequirePermissions(PERMISSIONS.STAFF_LOCATIONS_VIEW)
+  getLocationsForUser(@Param('userId') userId: string) {
+    return this.accessService.getLocationsForUser(userId);
+  }
+
+  @Get('locations/:locationId/staff')
+  @RequirePermissions(PERMISSIONS.STAFF_LOCATIONS_VIEW)
+  getStaffForLocation(@Param('locationId', ParseIntPipe) locationId: number) {
+    return this.accessService.getStaffForLocation(locationId);
+  }
+
+  @Post('users/:userId/locations/:locationId')
+  @RequirePermissions(PERMISSIONS.STAFF_LOCATIONS_MANAGE)
+  assignLocation(
+    @Param('userId') userId: string,
+    @Param('locationId', ParseIntPipe) locationId: number,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.accessService.assignLocationToUser(userId, locationId, context);
+  }
+
+  @Delete('users/:userId/locations/:locationId')
+  @RequirePermissions(PERMISSIONS.STAFF_LOCATIONS_MANAGE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  revokeLocation(
+    @Param('userId') userId: string,
+    @Param('locationId', ParseIntPipe) locationId: number,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.accessService.revokeLocationFromUser(userId, locationId, context);
+  }
 }

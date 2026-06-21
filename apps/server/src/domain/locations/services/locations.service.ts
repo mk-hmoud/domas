@@ -30,6 +30,7 @@ import { PaginatedResult } from '../../../common/interfaces/paginated-result.int
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { DatabaseService } from '../../../core/database/database.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 import { PoolClient } from 'pg';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { UndoService } from '../../audit/services/undo.service';
@@ -49,6 +50,7 @@ export class LocationsService {
     @Inject(forwardRef(() => UndoService))
     private readonly undoService: UndoService,
     private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
   ) {}
 
   // ... (existing create helper)
@@ -124,6 +126,7 @@ export class LocationsService {
       if (data.parentId) {
         const parent = await this.locationsRepository.findById(data.parentId, client);
         if (parent) {
+          this.locationScopeService.assertAccess(context.locationScope, parent.treePath);
           parentFlags = {
             genderLock: parent.genderLock,
             isTrOnly: parent.isTrOnly,
@@ -131,6 +134,11 @@ export class LocationsService {
             ownership: parent.ownership,
           };
         }
+      } else {
+        // Creating a new top-level node (campus/root) is reserved for
+        // unrestricted staff - a scoped staff member has no anchor to check
+        // a root node against.
+        this.locationScopeService.assertAccess(context.locationScope, '');
       }
 
       const tempPath = 'temp';
@@ -188,9 +196,23 @@ export class LocationsService {
     }, context);
   }
 
+  private async assertLocationsInScope(
+    ids: number[],
+    context: AuditUserContext,
+    client?: PoolClient,
+  ): Promise<void> {
+    if (context.locationScope?.unrestricted) return;
+    for (const id of ids) {
+      const location = await this.locationsRepository.findById(id, client);
+      if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+    }
+  }
+
   async updateMany(dto: BulkUpdateLocationDto, context: AuditUserContext): Promise<void> {
     this.logger.log({ count: dto.ids.length, data: dto.data }, 'Bulk updating locations');
     await this.db.transaction(async (client) => {
+      await this.assertLocationsInScope(dto.ids, context, client);
       await this.locationsRepository.updateMany(dto.ids, dto.data, client);
     }, context);
   }
@@ -198,37 +220,45 @@ export class LocationsService {
   async deleteMany(dto: BulkDeleteLocationDto, context: AuditUserContext): Promise<void> {
     this.logger.log({ count: dto.ids.length }, 'Bulk deleting locations');
     await this.db.transaction(async (client) => {
+      await this.assertLocationsInScope(dto.ids, context, client);
       await this.locationsRepository.deleteMany(dto.ids, client);
     }, context);
   }
 
   async findAll(
     filters: FindAllLocationsDto,
+    context: AuditUserContext,
   ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
-    return this.locationsRepository.findAll(filters);
+    return this.locationsRepository.findAll(filters, undefined, context.locationScope);
   }
 
-  async findById(id: number): Promise<Location> {
+  async findById(id: number, context: AuditUserContext): Promise<Location> {
     const location = await this.locationsRepository.findById(id);
     if (!location) {
       throw new NotFoundException(`Location with ID ${id} not found`);
     }
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
     return location;
   }
 
-  async findChildren(id: number): Promise<Location[]> {
-    const exists = await this.locationsRepository.exists(id);
-    if (!exists) {
+  async findChildren(id: number, context: AuditUserContext): Promise<Location[]> {
+    const parent = await this.locationsRepository.findById(id);
+    if (!parent) {
       throw new NotFoundException(`Location with ID ${id} not found`);
     }
+    this.locationScopeService.assertAccess(context.locationScope, parent.treePath);
     return this.locationsRepository.findChildren(id);
   }
 
-  async findWithAncestors(id: number): Promise<Location[]> {
-    const exists = await this.locationsRepository.exists(id);
-    if (!exists) {
+  async findWithAncestors(id: number, context: AuditUserContext): Promise<Location[]> {
+    const target = await this.locationsRepository.findById(id);
+    if (!target) {
       throw new NotFoundException(`Location with ID ${id} not found`);
     }
+    // Breadcrumb: the leaf must be in scope, but ancestor names (campus,
+    // building) are returned unfiltered for display purposes even if they
+    // sit above the staff member's anchor point.
+    this.locationScopeService.assertAccess(context.locationScope, target.treePath);
     return this.locationsRepository.findWithAncestors(id);
   }
 
@@ -236,8 +266,87 @@ export class LocationsService {
     return this.locationsRepository.searchByName(query, options);
   }
 
-  async findActiveResidents(locationId: number) {
+  async findActiveResidents(locationId: number, context: AuditUserContext) {
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) {
+      throw new NotFoundException(`Location with ID ${locationId} not found`);
+    }
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
     return this.studentsRepository.findActiveResidentsByLocation(locationId);
+  }
+
+  async getRoomPlan(locationId: number, context: AuditUserContext) {
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) {
+      throw new NotFoundException(`Location with ID ${locationId} not found`);
+    }
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+    const rows = await this.locationsRepository.findRoomPlan(locationId);
+    return this.groupRoomPlanRows(rows);
+  }
+
+  private groupRoomPlanRows(rows: any[]) {
+    const rooms = new Map<number, any>();
+
+    for (const row of rows) {
+      let room = rooms.get(row.roomId);
+      if (!room) {
+        room = {
+          id: row.roomId,
+          name: row.roomName,
+          genderLock: row.genderLock,
+          studentYearLock: row.studentYearLock,
+          isGuestZone: row.isGuestZone,
+          isTrOnly: row.isTrOnly,
+          isForeignerOnly: row.isForeignerOnly,
+          ownership: row.ownership,
+          roomTypeId: row.roomTypeId,
+          roomTypeName: row.roomTypeName,
+          capacity: row.capacity,
+          parentLocationId: row.parentLocationId,
+          parentLocationName: row.parentLocationName,
+          beds: [],
+        };
+        rooms.set(row.roomId, room);
+      }
+
+      if (row.bedId) {
+        room.beds.push({
+          id: row.bedId,
+          label: row.bedLabel,
+          status: row.bedStatus,
+          occupant: row.currentStudentId
+            ? {
+                studentId: row.currentStudentId,
+                bookingId: row.currentBookingId,
+                firstName: row.currentFirstName,
+                lastName: row.currentLastName,
+                studentNumber: row.currentStudentNumber,
+                gender: row.currentGender,
+                nationalityCode: row.currentNationalityCode,
+                email: row.currentEmail,
+                phoneNumber: row.currentPhoneNumber,
+                whatsappNumber: row.currentWhatsappNumber,
+                paymentStatus: row.currentPaymentStatus,
+                checkedInAt: row.currentCheckedInAt,
+              }
+            : null,
+          pendingBooking: row.pendingStudentId
+            ? {
+                bookingId: row.pendingBookingId,
+                studentId: row.pendingStudentId,
+                firstName: row.pendingFirstName,
+                lastName: row.pendingLastName,
+                studentNumber: row.pendingStudentNumber,
+                startDate: row.pendingStartDate,
+                status: row.pendingStatus,
+              }
+            : null,
+        });
+      }
+    }
+
+    return Array.from(rooms.values());
   }
 
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
@@ -247,6 +356,7 @@ export class LocationsService {
       if (!existing) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
+      this.locationScopeService.assertAccess(context.locationScope, existing.treePath);
 
       const updated = await this.locationsRepository.update(id, data, client);
 
@@ -275,6 +385,7 @@ export class LocationsService {
       if (!existing) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
+      this.locationScopeService.assertAccess(context.locationScope, existing.treePath);
       await this.locationsRepository.delete(id, client);
 
       await this.undoService.registerUndo(
@@ -302,6 +413,7 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       const updated = await this.locationsRepository.updateGenderLock(
         id,
@@ -341,6 +453,7 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       const updated = await this.locationsRepository.updateStudentYearLock(
         id,
@@ -368,6 +481,7 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       const updated = await this.locationsRepository.updateGuestZone(
         id,
@@ -407,6 +521,7 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       const updated = await this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
 
@@ -441,6 +556,7 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       const updated = await this.locationsRepository.updateOwnership(
         id,
@@ -516,6 +632,7 @@ export class LocationsService {
     const operation = async (client: PoolClient) => {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+      this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
       const updated = await this.locationsRepository.updateForeignerOnly(
         id,

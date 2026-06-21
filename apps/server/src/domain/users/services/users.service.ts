@@ -199,6 +199,12 @@ export class UsersService {
     if (user) {
       user.roles = await this.accessRepository.getRolesForUser(user.id);
       user.permissions = await this.accessRepository.getPermissionsForUser(user.id);
+      user.locationScope = user.isRecoveryAdmin
+        ? { unrestricted: true, treePaths: [] }
+        : {
+            unrestricted: false,
+            treePaths: await this.accessRepository.getLocationScopeTreePaths(user.id),
+          };
     }
     return user;
   }

@@ -2,12 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../../core/database/database.service';
 import { DashboardStats } from '@domas/ts-types';
 import { PERMISSIONS } from '../../../common/constants/permissions';
+import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
 @Injectable()
 export class StatsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly locationScopeService: LocationScopeService,
+  ) {}
 
-  async getDashboard(permissions: string[], isRecoveryAdmin?: boolean): Promise<DashboardStats> {
+  async getDashboard(
+    permissions: string[],
+    isRecoveryAdmin?: boolean,
+    locationScope?: LocationScope,
+  ): Promise<DashboardStats> {
     const has = (p: string) =>
       isRecoveryAdmin || permissions?.includes(p) || permissions?.includes('*');
 
@@ -17,24 +26,34 @@ export class StatsService {
     const queries: Promise<void>[] = [];
 
     if (has(PERMISSIONS.BOOKINGS_VIEW)) {
+      const bookingsScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
+      );
+
       queries.push(
         pool
           .query(
             `
             SELECT
-              COUNT(*) FILTER (WHERE status = 'pending_accounting') AS pending_approval,
-              COUNT(*) FILTER (WHERE status = 'active') AS active_residents,
+              COUNT(*) FILTER (WHERE b.status = 'pending_accounting') AS pending_approval,
+              COUNT(*) FILTER (WHERE b.status = 'active') AS active_residents,
               COUNT(*) FILTER (
-                WHERE status = 'ready_for_checkin'
-                  AND start_date = CURRENT_DATE
+                WHERE b.status = 'ready_for_checkin'
+                  AND b.start_date = CURRENT_DATE
               ) AS check_ins_today,
               COUNT(*) FILTER (
-                WHERE status = 'active'
-                  AND end_date = CURRENT_DATE
+                WHERE b.status = 'active'
+                  AND b.end_date = CURRENT_DATE
               ) AS check_outs_today
-            FROM bookings
-            WHERE status NOT IN ('cancelled', 'rejected', 'draft')
+            FROM bookings b
+            JOIN beds bd ON bd.id = b.bed_id
+            JOIN locations l ON l.id = bd.location_id
+            WHERE b.status NOT IN ('cancelled', 'rejected', 'draft')
+              AND ${bookingsScope.clause}
           `,
+            bookingsScope.param ? [bookingsScope.param] : [],
           )
           .then((r) => {
             const row = r.rows[0];
@@ -45,6 +64,12 @@ export class StatsService {
               checkOutsToday: parseInt(row.check_outs_today, 10),
             };
           }),
+      );
+
+      const pendingBookingsScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
       );
 
       queries.push(
@@ -63,9 +88,11 @@ export class StatsService {
             JOIN beds bd ON bd.id = b.bed_id
             JOIN locations l ON l.id = bd.location_id
             WHERE b.status = 'pending_accounting'
+              AND ${pendingBookingsScope.clause}
             ORDER BY b.created_at ASC
             LIMIT 5
           `,
+            pendingBookingsScope.param ? [pendingBookingsScope.param] : [],
           )
           .then((r) => {
             result.pendingBookings = r.rows.map((row) => ({
@@ -81,20 +108,35 @@ export class StatsService {
     }
 
     if (has(PERMISSIONS.DAMAGES_VIEW)) {
+      const damagesScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
+      );
+
       queries.push(
         pool
           .query(
             `
             SELECT COUNT(*) AS pending_reports
-            FROM damage_reports
-            WHERE status = 'pending'
+            FROM damage_reports dr
+            JOIN locations l ON l.id = dr.location_id
+            WHERE dr.status = 'pending'
+              AND ${damagesScope.clause}
           `,
+            damagesScope.param ? [damagesScope.param] : [],
           )
           .then((r) => {
             result.damages = {
               pendingReports: parseInt(r.rows[0].pending_reports, 10),
             };
           }),
+      );
+
+      const pendingDamagesScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
       );
 
       queries.push(
@@ -109,9 +151,11 @@ export class StatsService {
             FROM damage_reports dr
             JOIN locations l ON l.id = dr.location_id
             WHERE dr.status = 'pending'
+              AND ${pendingDamagesScope.clause}
             ORDER BY dr.reported_at ASC
             LIMIT 5
           `,
+            pendingDamagesScope.param ? [pendingDamagesScope.param] : [],
           )
           .then((r) => {
             result.pendingDamages = r.rows.map((row) => ({
@@ -125,18 +169,28 @@ export class StatsService {
     }
 
     if (has(PERMISSIONS.GUESTS_MANAGE)) {
+      const guestsScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
+      );
+
       queries.push(
         pool
           .query(
             `
             SELECT
-              COUNT(*) FILTER (WHERE status = 'active') AS active_stays,
+              COUNT(*) FILTER (WHERE gs.status = 'active') AS active_stays,
               COUNT(*) FILTER (
-                WHERE status = 'confirmed'
-                  AND check_in_date = CURRENT_DATE
+                WHERE gs.status = 'confirmed'
+                  AND gs.check_in_date = CURRENT_DATE
               ) AS check_ins_today
-            FROM guest_stays
+            FROM guest_stays gs
+            JOIN beds bd ON bd.id = gs.bed_id
+            JOIN locations l ON l.id = bd.location_id
+            WHERE ${guestsScope.clause}
           `,
+            guestsScope.param ? [guestsScope.param] : [],
           )
           .then((r) => {
             const row = r.rows[0];
@@ -148,6 +202,9 @@ export class StatsService {
       );
     }
 
+    // Students total / without-active-booking / pending-applications are
+    // global counts, not tied to a single location (applicants and students
+    // without a booking aren't "under" any location yet) - left unscoped.
     if (has(PERMISSIONS.STUDENTS_VIEW)) {
       queries.push(
         pool
@@ -179,20 +236,30 @@ export class StatsService {
     }
 
     if (has(PERMISSIONS.BOOKINGS_APPROVE_FINANCIAL)) {
+      const financesScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
+      );
+
       queries.push(
         pool
           .query(
             `
             SELECT
-              COUNT(*) FILTER (WHERE payment_status = 'pending') AS pending_payments,
+              COUNT(*) FILTER (WHERE b.payment_status = 'pending') AS pending_payments,
               COUNT(*) FILTER (
-                WHERE payment_status = 'pending'
-                  AND end_date < CURRENT_DATE
+                WHERE b.payment_status = 'pending'
+                  AND b.end_date < CURRENT_DATE
               ) AS overdue_count,
-              COUNT(*) FILTER (WHERE status = 'pending_accounting') AS pending_accounting
-            FROM bookings
-            WHERE status NOT IN ('cancelled', 'rejected', 'draft')
+              COUNT(*) FILTER (WHERE b.status = 'pending_accounting') AS pending_accounting
+            FROM bookings b
+            JOIN beds bd ON bd.id = b.bed_id
+            JOIN locations l ON l.id = bd.location_id
+            WHERE b.status NOT IN ('cancelled', 'rejected', 'draft')
+              AND ${financesScope.clause}
           `,
+            financesScope.param ? [financesScope.param] : [],
           )
           .then((r) => {
             const row = r.rows[0];
@@ -206,10 +273,25 @@ export class StatsService {
     }
 
     if (has(PERMISSIONS.ROOM_CHANGES_VIEW)) {
+      const roomChangesScope = this.locationScopeService.buildScopeClause(
+        locationScope,
+        'l.tree_path',
+        1,
+      );
+
       queries.push(
         pool
           .query(
-            `SELECT COUNT(*) AS pending_count FROM room_change_requests WHERE status = 'pending'`,
+            `
+            SELECT COUNT(*) AS pending_count
+            FROM room_change_requests rcr
+            JOIN bookings b ON b.id = rcr.booking_id
+            JOIN beds bd ON bd.id = b.bed_id
+            JOIN locations l ON l.id = bd.location_id
+            WHERE rcr.status = 'pending'
+              AND ${roomChangesScope.clause}
+          `,
+            roomChangesScope.param ? [roomChangesScope.param] : [],
           )
           .then((r) => {
             result.roomChanges = {
