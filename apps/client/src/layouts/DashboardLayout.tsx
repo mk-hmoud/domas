@@ -229,6 +229,11 @@ export function DashboardLayout() {
             link: '/dashboard/roles',
             requiredPermission: 'roles.manage',
           },
+          {
+            label: t('nav.document_templates', { defaultValue: 'Document Templates' }),
+            link: '/dashboard/document-templates',
+            requiredPermission: 'document_templates.view',
+          },
         ],
       },
       {

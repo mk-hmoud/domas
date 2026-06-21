@@ -96,6 +96,10 @@ export const PERMISSIONS = {
   // Tickets (Student-reported issues, triaged by dorm staff)
   TICKETS_VIEW: 'tickets.view',
   TICKETS_TRIAGE: 'tickets.triage', // Reject / resolve directly / escalate to a technician
+
+  // Document Templates (admin-editable format of contracts/certificates)
+  DOCUMENT_TEMPLATES_VIEW: 'document_templates.view',
+  DOCUMENT_TEMPLATES_MANAGE: 'document_templates.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

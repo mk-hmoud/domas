@@ -7,6 +7,7 @@ import { StudentsModule } from '../students/students.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { LocationsModule } from '../locations/locations.module';
 import { UsersModule } from '../users/users.module';
+import { DocumentTemplatesModule } from '../document-templates/document-templates.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UsersModule } from '../users/users.module';
     forwardRef(() => InventoryModule),
     forwardRef(() => LocationsModule),
     forwardRef(() => UsersModule),
+    DocumentTemplatesModule,
   ],
   controllers: [ContractsController],
   providers: [ContractsService, ContractsRepository],

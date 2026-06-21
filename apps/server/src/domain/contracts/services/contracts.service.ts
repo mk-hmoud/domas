@@ -13,6 +13,11 @@ import PDFDocument from 'pdfkit';
 import { PoolClient } from 'pg';
 import * as path from 'path';
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
+import { DocumentTemplatesService } from '../../document-templates/services/document-templates.service';
+import {
+  DOCUMENT_LANGUAGES,
+  DOCUMENT_TYPES,
+} from '../../document-templates/constants/document-types';
 
 @Injectable()
 export class ContractsService {
@@ -30,7 +35,87 @@ export class ContractsService {
     private readonly storageService: StorageService,
     private readonly usersRepository: UsersRepository,
     private readonly db: DatabaseService,
+    private readonly documentTemplatesService: DocumentTemplatesService,
   ) {}
+
+  private resolvePersonName(person: any, fallback: string): string {
+    if (!person) return fallback;
+    if (person.firstName && person.lastName) return `${person.firstName} ${person.lastName}`;
+    return person.email || fallback;
+  }
+
+  private buildCheckInContext(
+    student: any,
+    room: any,
+    bed: any,
+    snapshots: any[],
+    staff: any,
+    manager: any,
+  ): Record<string, unknown> {
+    const isTR = isTurkishNational(student.nationalityCode);
+    return {
+      student: {
+        firstName: student.firstName,
+        lastName: student.lastName,
+        studentNumber: student.studentNumber,
+        nationalId: student.nationalId,
+      },
+      isTR,
+      room: { name: room.name },
+      bed: { label: bed.label },
+      staffName: this.resolvePersonName(
+        staff,
+        isTR ? 'Yurt Yöneticisi' : 'Dormitory Administrator',
+      ),
+      managerName: this.resolvePersonName(manager, isTR ? 'Konaklama Müdürü' : 'Housing Manager'),
+      items: snapshots.map((s) => ({
+        nameTr: s.nameTr,
+        nameEn: s.nameEn,
+        scope: s.scope,
+        quantity: s.quantity,
+      })),
+      issueDate: new Date().toLocaleDateString(isTR ? 'tr-TR' : 'en-GB'),
+    };
+  }
+
+  private buildCheckOutContext(
+    student: any,
+    room: any,
+    bed: any,
+    liabilities: any[],
+    staff: any,
+    manager: any,
+    financials: {
+      totalDeposit: number;
+      totalDeductions: number;
+      refundAmount: number;
+      currency: string;
+    },
+  ): Record<string, unknown> {
+    const isTR = isTurkishNational(student.nationalityCode);
+    return {
+      student: {
+        firstName: student.firstName,
+        lastName: student.lastName,
+        studentNumber: student.studentNumber,
+      },
+      isTR,
+      room: { name: room.name },
+      bed: { label: bed.label },
+      staffName: this.resolvePersonName(staff, '....................'),
+      managerName: this.resolvePersonName(manager, 'Umut KAYIKCI'),
+      liabilities: liabilities.map((l) => ({
+        description: (isTR ? l.item_name_tr : l.item_name_en) || l.report_description,
+        amount: l.amount,
+        currency: l.currency,
+      })),
+      totalDeposit: financials.totalDeposit,
+      totalDeductions: financials.totalDeductions,
+      refundAmount: financials.refundAmount,
+      currency: financials.currency,
+      issueDate: new Date().toLocaleDateString(isTR ? 'tr-TR' : 'en-GB'),
+    };
+  }
 
   async generateCheckInContract(
     bookingId: string,
@@ -60,17 +145,27 @@ export class ContractsService {
 
     if (!student || !room || !bed) throw new NotFoundException('Missing booking details');
 
-    const pdfBuffer = await this.createContractPdf(
-      student,
-      room,
-      bed,
-      booking,
-      snapshots,
-      staff,
-      manager,
+    const language = isTurkishNational(student.nationalityCode)
+      ? DOCUMENT_LANGUAGES.TURKISH
+      : DOCUMENT_LANGUAGES.ENGLISH;
+    const activeTemplate = await this.documentTemplatesService.findActiveByType(
+      DOCUMENT_TYPES.CHECK_IN_CONTRACT,
+      language,
     );
+    const pdfBuffer = activeTemplate
+      ? await this.documentTemplatesService.render(
+          activeTemplate,
+          this.buildCheckInContext(student, room, bed, snapshots, staff, manager),
+        )
+      : await this.createContractPdf(student, room, bed, booking, snapshots, staff, manager);
 
-    await this.contractsRepository.upsert(bookingId, ContractType.CHECK_IN, pdfBuffer, client);
+    await this.contractsRepository.upsert(
+      bookingId,
+      ContractType.CHECK_IN,
+      pdfBuffer,
+      client,
+      activeTemplate?.id,
+    );
     await this.bookingsRepository.update(bookingId, { contractSigned: true }, client);
 
     this.logger.log(`Check-in contract generated for booking ${bookingId}`);
@@ -132,18 +227,35 @@ export class ContractsService {
     const refundAmount = totalDeposit - totalDeductions;
     const currency = isTR ? 'TRY' : semester.foreign_currency_code;
 
-    const pdfBuffer = await this.createCheckOutPdf(
-      student,
-      room,
-      bed,
-      booking,
-      liabilities,
-      staff,
-      manager,
-      { totalDeposit, totalDeductions, refundAmount, currency },
-    );
+    const financials = { totalDeposit, totalDeductions, refundAmount, currency };
 
-    await this.contractsRepository.upsert(bookingId, ContractType.CHECK_OUT, pdfBuffer, client);
+    const activeTemplate = await this.documentTemplatesService.findActiveByType(
+      DOCUMENT_TYPES.CHECK_OUT_CONTRACT,
+      isTR ? DOCUMENT_LANGUAGES.TURKISH : DOCUMENT_LANGUAGES.ENGLISH,
+    );
+    const pdfBuffer = activeTemplate
+      ? await this.documentTemplatesService.render(
+          activeTemplate,
+          this.buildCheckOutContext(student, room, bed, liabilities, staff, manager, financials),
+        )
+      : await this.createCheckOutPdf(
+          student,
+          room,
+          bed,
+          booking,
+          liabilities,
+          staff,
+          manager,
+          financials,
+        );
+
+    await this.contractsRepository.upsert(
+      bookingId,
+      ContractType.CHECK_OUT,
+      pdfBuffer,
+      client,
+      activeTemplate?.id,
+    );
     this.logger.log(`Check-out contract generated for booking ${bookingId}`);
   }
 

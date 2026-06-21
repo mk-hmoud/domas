@@ -464,11 +464,32 @@ CREATE INDEX idx_booking_snapshots_booking ON booking_inventory_snapshots(bookin
 -- CONTRACTS SYSTEM
 -- =============================================
 
+-- Admin/manager-editable HTML+CSS templates for generated documents
+-- (check-in/check-out contracts, dorm certificates, and future paper types).
+-- Every save inserts a new immutable version row; "publish" just flips
+-- is_active so prior versions remain available for history/rollback.
+CREATE TABLE document_templates (
+    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_type VARCHAR(50)  NOT NULL, -- 'check_in', 'check_out', 'dorm_certificate', ...
+    language      VARCHAR(5)   NOT NULL DEFAULT 'en', -- 'en', 'tr' - each language is its own template, not a {{#if}} branch
+    name          VARCHAR(255) NOT NULL,
+    html_body     TEXT         NOT NULL,
+    css           TEXT         NOT NULL DEFAULT '',
+    is_active     BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_by    UUID         REFERENCES users(id),
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_document_templates_type ON document_templates(document_type, language);
+-- Only one active (published) version per document type + language at a time.
+CREATE UNIQUE INDEX idx_document_templates_active ON document_templates(document_type, language) WHERE is_active = TRUE;
+
 CREATE TABLE booking_contracts (
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL DEFAULT 'check_in', -- 'check_in', 'check_out'
     storage_key VARCHAR(500) NOT NULL,
     file_size INT NOT NULL,
+    template_id UUID REFERENCES document_templates(id), -- which template version produced this PDF, if any (NULL = built-in PDFKit renderer)
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (booking_id, type)
@@ -929,6 +950,7 @@ CREATE TABLE dorm_certificate_requests (
     rejection_reason            TEXT,
     certificate_storage_key     VARCHAR(500),
     certificate_filename        VARCHAR(255),
+    template_id                 UUID        REFERENCES document_templates(id),
     requested_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     reviewed_at                 TIMESTAMPTZ,
     reviewed_by                 UUID        REFERENCES users(id)

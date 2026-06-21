@@ -20,16 +20,23 @@ export class ContractsRepository {
     type: string,
     pdfData: Buffer,
     client?: PoolClient,
+    templateId?: string | null,
   ): Promise<void> {
     const key = `contracts/${bookingId}/${type}.pdf`;
     await this.storage.upload(key, pdfData, 'application/pdf');
     const query = `
-      INSERT INTO booking_contracts (booking_id, type, storage_key, file_size, updated_at)
-      VALUES ($1, $2, $3, $4, NOW())
+      INSERT INTO booking_contracts (booking_id, type, storage_key, file_size, template_id, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW())
       ON CONFLICT (booking_id, type)
-      DO UPDATE SET storage_key = $3, file_size = $4, updated_at = NOW()
+      DO UPDATE SET storage_key = $3, file_size = $4, template_id = $5, updated_at = NOW()
     `;
-    await this.getClient(client).query(query, [bookingId, type, key, pdfData.length]);
+    await this.getClient(client).query(query, [
+      bookingId,
+      type,
+      key,
+      pdfData.length,
+      templateId ?? null,
+    ]);
   }
 
   async findById(

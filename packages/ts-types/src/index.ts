@@ -120,3 +120,5 @@ export * from "./interfaces/work-order.interface";
 export * from "./dtos/work-order.dto";
 export * from "./interfaces/ticket.interface";
 export * from "./dtos/ticket.dto";
+export * from "./interfaces/document-template.interface";
+export * from "./dtos/document-template.dto";

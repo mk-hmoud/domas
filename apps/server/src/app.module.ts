@@ -7,6 +7,7 @@ import { AppLoggerModule } from './core/logger/logger.module';
 import { DatabaseModule } from './core/database/database.module';
 import { LocationScopeModule } from './core/location-scope/location-scope.module';
 import { StorageModule } from './common/storage/storage.module';
+import { PdfRenderingModule } from './common/pdf-rendering/pdf-rendering.module';
 import { databaseConfig } from './config';
 import { AuthModule } from './domain/auth/auth.module';
 import { UsersModule } from './domain/users/users.module';
@@ -31,6 +32,7 @@ import { DormCertificatesModule } from './domain/dorm-certificates/dorm-certific
 import { MessagesModule } from './domain/messages/messages.module';
 import { WorkOrdersModule } from './domain/work-orders/work-orders.module';
 import { TicketsModule } from './domain/tickets/tickets.module';
+import { DocumentTemplatesModule } from './domain/document-templates/document-templates.module';
 
 @Module({
   imports: [
@@ -43,6 +45,7 @@ import { TicketsModule } from './domain/tickets/tickets.module';
     DatabaseModule,
     LocationScopeModule,
     StorageModule,
+    PdfRenderingModule,
     UsersModule,
     AuthModule,
     SemestersModule,
@@ -66,6 +69,7 @@ import { TicketsModule } from './domain/tickets/tickets.module';
     MessagesModule,
     WorkOrdersModule,
     TicketsModule,
+    DocumentTemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
