@@ -418,6 +418,7 @@
   "active": "Aktif",
   "inactive": "Pasif",
   "status": "Durum",
+  "label": "Etiket",
   "created_at": "Oluşturulma Tarihi",
   "no_sub_locations": "Alt lokasyon bulunamadı. Başlamak için bir tane ekleyin.",
   "select_location_prompt": "Detayları görüntülemek için bir lokasyon seçin",

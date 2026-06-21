@@ -12,6 +12,7 @@ import {
   EnrollmentVerification,
   StudentApplication,
   ApplicationStatus,
+  StudentHistoryBooking,
 } from "@domas/ts-types";
 
 export const students = {
@@ -47,6 +48,13 @@ export const students = {
 
   findOne: async (id: string): Promise<Student> => {
     const response = await apiClient.get<Student>(`/students/${id}`);
+    return response.data;
+  },
+
+  getHistory: async (id: string): Promise<StudentHistoryBooking[]> => {
+    const response = await apiClient.get<StudentHistoryBooking[]>(
+      `/students/${id}/history`,
+    );
     return response.data;
   },
 

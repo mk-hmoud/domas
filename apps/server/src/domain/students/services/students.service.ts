@@ -117,6 +117,15 @@ export class StudentsService {
     return student;
   }
 
+  async getHistory(id: string, context: AuditUserContext): Promise<any[]> {
+    const student = await this.studentsRepository.findById(id);
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+    await this.assertStudentInScope(id, context);
+    return this.studentsRepository.findBookingHistory(id);
+  }
+
   async uploadPhoto(id: string, file: Express.Multer.File): Promise<{ photoUrl: string }> {
     if (!StudentsService.ALLOWED_PHOTO_TYPES.includes(file.mimetype)) {
       throw new UnsupportedMediaTypeException('Only JPEG, PNG, and WebP images are accepted');

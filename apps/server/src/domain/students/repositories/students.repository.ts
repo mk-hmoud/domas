@@ -456,4 +456,69 @@ export class StudentsRepository {
       [status, id],
     );
   }
+
+  /**
+   * Full stay history for a student: every booking (any status), enriched
+   * with room/semester labels, each carrying its own room-change requests
+   * nested inline so the timeline shows why a bed changed mid-stay.
+   */
+  async findBookingHistory(studentId: string): Promise<any[]> {
+    const query = `
+      SELECT
+        bk.id,
+        bk.semester_id          AS "semesterId",
+        s.display_name          AS "semesterDisplayName",
+        s.type                  AS "semesterType",
+        s.academic_year         AS "academicYear",
+        bk.bed_id                AS "bedId",
+        bd.label                 AS "bedLabel",
+        l.name                   AS "roomName",
+        (
+          SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
+          FROM   locations anc
+          WHERE  anc.tree_path @> l.tree_path AND anc.deleted_at IS NULL
+        )                         AS "locationPath",
+        bk.status,
+        bk.payment_status        AS "paymentStatus",
+        bk.start_date            AS "startDate",
+        bk.end_date              AS "endDate",
+        bk.checked_in_at         AS "checkedInAt",
+        bk.checked_out_at        AS "checkedOutAt",
+        bk.contract_signed       AS "contractSigned",
+        bk.created_at            AS "createdAt",
+        COALESCE(
+          (
+            SELECT json_agg(rc_row ORDER BY rc_row->>'createdAt' DESC)
+            FROM (
+              SELECT json_build_object(
+                'id', rc.id,
+                'status', rc.status,
+                'note', rc.note,
+                'rejectionReason', rc.rejection_reason,
+                'requiresPayment', rc.requires_payment,
+                'paymentAmount', rc.payment_amount,
+                'paymentCurrency', rc.payment_currency,
+                'currentBedLabel', cb.label,
+                'requestedBedLabel', rb.label,
+                'createdAt', rc.created_at,
+                'resolvedAt', rc.resolved_at
+              ) AS rc_row
+              FROM   room_change_requests rc
+              LEFT JOIN beds cb ON rc.current_bed_id   = cb.id
+              LEFT JOIN beds rb ON rc.requested_bed_id = rb.id
+              WHERE  rc.booking_id = bk.id
+            ) sub
+          ),
+          '[]'
+        )                         AS "roomChanges"
+      FROM  bookings bk
+      JOIN  beds      bd ON bk.bed_id     = bd.id
+      JOIN  locations l  ON bd.location_id = l.id
+      JOIN  semesters s  ON bk.semester_id = s.id
+      WHERE bk.student_id = $1
+      ORDER BY bk.created_at DESC
+    `;
+    const result = await this.db.getPool().query(query, [studentId]);
+    return result.rows;
+  }
 }

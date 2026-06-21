@@ -23,6 +23,8 @@ import {
   ScrollArea,
   Table,
   Modal,
+  ThemeIcon,
+  Skeleton,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -38,6 +40,9 @@ import {
   IconX,
   IconFileDescription,
   IconExternalLink,
+  IconBed,
+  IconArrowsExchange,
+  IconCalendar,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students, conversations } from "@domas/api-client";
@@ -49,6 +54,7 @@ import {
   EnrollmentVerification,
   ApplicationStatus,
   StudentApplication,
+  StudentHistoryBooking,
 } from "@domas/ts-types";
 import {
   StudentModal,
@@ -66,6 +72,206 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   approved: "green",
   rejected: "red",
 };
+
+function bookingStatusColor(status: string): string {
+  switch (status) {
+    case "active":
+      return "green";
+    case "ready_for_checkin":
+      return "blue";
+    case "confirmed":
+      return "cyan";
+    case "transferred":
+      return "grape";
+    case "pending_accounting":
+      return "orange";
+    case "draft":
+      return "yellow";
+    case "completed":
+      return "gray";
+    case "cancelled":
+    case "rejected":
+      return "red";
+    default:
+      return "gray";
+  }
+}
+
+function paymentStatusColor(status: string): string {
+  switch (status) {
+    case "paid":
+      return "green";
+    case "partial":
+      return "orange";
+    case "failed":
+      return "red";
+    case "refunded":
+      return "gray";
+    default:
+      return "yellow";
+  }
+}
+
+function roomChangeStatusColor(status: string): string {
+  switch (status) {
+    case "approved":
+      return "green";
+    case "rejected":
+      return "red";
+    case "pending_payment":
+      return "orange";
+    default:
+      return "yellow";
+  }
+}
+
+function StudentHistoryPanel({
+  history,
+  loading,
+}: {
+  history: StudentHistoryBooking[];
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <Stack gap="sm">
+        <Skeleton height={90} radius="lg" />
+        <Skeleton height={90} radius="lg" />
+      </Stack>
+    );
+  }
+
+  if (history.length === 0) {
+    return (
+      <Text size="sm" c="dimmed" ta="center" py="lg">
+        {t("no_booking_history", { defaultValue: "No bookings yet" })}
+      </Text>
+    );
+  }
+
+  return (
+    <Stack gap="md">
+      {history.map((booking) => (
+        <Paper key={booking.id} withBorder radius="lg" p="md">
+          <Stack gap="xs">
+            <Group justify="space-between" align="flex-start" wrap="nowrap">
+              <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                <ThemeIcon size={28} radius="md" variant="light" color="blue">
+                  <IconBed size={14} />
+                </ThemeIcon>
+                <Stack gap={0} style={{ minWidth: 0 }}>
+                  <Text size="sm" fw={600} truncate>
+                    {booking.roomName} — {booking.bedLabel}
+                  </Text>
+                  <Text size="xs" c="dimmed" truncate>
+                    {booking.locationPath}
+                  </Text>
+                </Stack>
+              </Group>
+              <Badge
+                color={bookingStatusColor(booking.status)}
+                variant="light"
+                style={{ flexShrink: 0 }}
+              >
+                {t(`booking_status.${booking.status}`, {
+                  defaultValue: booking.status,
+                })}
+              </Badge>
+            </Group>
+
+            <Group justify="space-between" wrap="wrap" gap="xs">
+              <Group gap={4}>
+                <IconCalendar size={13} color="var(--mantine-color-dimmed)" />
+                <Text size="xs" c="dimmed">
+                  {booking.semesterDisplayName} ·{" "}
+                  {new Date(booking.startDate).toLocaleDateString()} –{" "}
+                  {new Date(booking.endDate).toLocaleDateString()}
+                </Text>
+              </Group>
+              <Badge
+                size="sm"
+                variant="outline"
+                color={paymentStatusColor(booking.paymentStatus)}
+              >
+                {t(`payment_status_${booking.paymentStatus}`, {
+                  defaultValue: booking.paymentStatus,
+                })}
+              </Badge>
+            </Group>
+
+            {(booking.checkedInAt || booking.checkedOutAt) && (
+              <Text size="xs" c="dimmed">
+                {booking.checkedInAt &&
+                  t("checked_in_on", {
+                    defaultValue: "Checked in {{date}}",
+                    date: new Date(booking.checkedInAt).toLocaleDateString(),
+                  })}
+                {booking.checkedInAt && booking.checkedOutAt && " · "}
+                {booking.checkedOutAt &&
+                  t("checked_out_on", {
+                    defaultValue: "Checked out {{date}}",
+                    date: new Date(booking.checkedOutAt).toLocaleDateString(),
+                  })}
+              </Text>
+            )}
+
+            {booking.roomChanges.length > 0 && (
+              <>
+                <Divider
+                  label={
+                    <Group gap={4}>
+                      <IconArrowsExchange size={12} />
+                      <Text size="xs" fw={500}>
+                        {t("room_changes", { defaultValue: "Room Changes" })}
+                      </Text>
+                    </Group>
+                  }
+                  labelPosition="left"
+                />
+                <Stack gap={6}>
+                  {booking.roomChanges.map((rc) => (
+                    <Group
+                      key={rc.id}
+                      justify="space-between"
+                      wrap="wrap"
+                      gap="xs"
+                    >
+                      <Text size="xs">
+                        {rc.currentBedLabel ?? "—"} →{" "}
+                        {rc.requestedBedLabel ?? "—"}
+                        {rc.note && (
+                          <Text component="span" c="dimmed">
+                            {" "}
+                            ({rc.note})
+                          </Text>
+                        )}
+                      </Text>
+                      <Group gap={6} wrap="nowrap">
+                        <Text size="xs" c="dimmed">
+                          {new Date(rc.createdAt).toLocaleDateString()}
+                        </Text>
+                        <Badge
+                          size="xs"
+                          color={roomChangeStatusColor(rc.status)}
+                        >
+                          {t(`room_change_status_${rc.status}`, {
+                            defaultValue: rc.status,
+                          })}
+                        </Badge>
+                      </Group>
+                    </Group>
+                  ))}
+                </Stack>
+              </>
+            )}
+          </Stack>
+        </Paper>
+      ))}
+    </Stack>
+  );
+}
 
 export function SharedStudentsPage() {
   const { t } = useTranslation();
@@ -95,6 +301,9 @@ export function SharedStudentsPage() {
   const [messageSubject, setMessageSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [messageSending, setMessageSending] = useState(false);
+  const [detailTab, setDetailTab] = useState<string | null>("profile");
+  const [history, setHistory] = useState<StudentHistoryBooking[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -473,6 +682,8 @@ export function SharedStudentsPage() {
   const handleSelectStudent = async (student: Student) => {
     setSelectedStudent(student);
     setEnrollmentCerts([]);
+    setDetailTab("profile");
+    setHistory([]);
     try {
       const detail = await students.findOne(student.id);
       setDetailStudent(detail);
@@ -480,6 +691,19 @@ export function SharedStudentsPage() {
       setDetailStudent(student);
     }
     fetchEnrollmentCerts(student.id);
+    fetchHistory(student.id);
+  };
+
+  const fetchHistory = async (studentId: string) => {
+    setHistoryLoading(true);
+    try {
+      const result = await students.getHistory(studentId);
+      setHistory(result);
+    } catch {
+      // silently ignore
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -814,6 +1038,8 @@ export function SharedStudentsPage() {
             setMessageModalOpened(false);
             setMessageSubject("");
             setMessageBody("");
+            setDetailTab("profile");
+            setHistory([]);
           }}
           title={t("student_details", { defaultValue: "Student Details" })}
           position="right"
@@ -900,242 +1126,294 @@ export function SharedStudentsPage() {
                     </Group>
                   </Group>
 
-                  <Group grow>
-                    <LabelValue label={t("student_number")}>
-                      {s.studentNumber}
-                    </LabelValue>
-                    <LabelValue label={t("national_id")}>
-                      {s.nationalId}
-                    </LabelValue>
-                  </Group>
+                  <Tabs value={detailTab} onChange={setDetailTab}>
+                    <Tabs.List mb="md">
+                      <Tabs.Tab value="profile">
+                        {t("profile", { defaultValue: "Profile" })}
+                      </Tabs.Tab>
+                      <Tabs.Tab value="history">
+                        {t("history", { defaultValue: "History" })}
+                      </Tabs.Tab>
+                    </Tabs.List>
 
-                  <Group grow>
-                    <LabelValue label={t("gender")}>{t(s.gender)}</LabelValue>
-                    <LabelValue label={t("nationality")}>
-                      {getCountryName(s.nationalityCode)}
-                    </LabelValue>
-                  </Group>
+                    <Tabs.Panel value="profile">
+                      <Stack gap="lg">
+                        <Group grow>
+                          <LabelValue label={t("student_number")}>
+                            {s.studentNumber}
+                          </LabelValue>
+                          <LabelValue label={t("national_id")}>
+                            {s.nationalId}
+                          </LabelValue>
+                        </Group>
 
-                  <LabelValue label={t("birth_date")}>
-                    {s.birthDate
-                      ? new Date(s.birthDate).toLocaleDateString("en-GB")
-                      : "—"}
-                  </LabelValue>
+                        <Group grow>
+                          <LabelValue label={t("gender")}>
+                            {t(s.gender)}
+                          </LabelValue>
+                          <LabelValue label={t("nationality")}>
+                            {getCountryName(s.nationalityCode)}
+                          </LabelValue>
+                        </Group>
 
-                  <LabelValue label={t("email")}>{s.email || "—"}</LabelValue>
+                        <LabelValue label={t("birth_date")}>
+                          {s.birthDate
+                            ? new Date(s.birthDate).toLocaleDateString("en-GB")
+                            : "—"}
+                        </LabelValue>
 
-                  <Group grow>
-                    <LabelValue label={t("phone_number")}>
-                      {s.phoneNumber || "—"}
-                    </LabelValue>
-                    <LabelValue
-                      label={t("whatsapp_number", { defaultValue: "WhatsApp" })}
-                    >
-                      {s.whatsappNumber ? (
-                        <Group gap="xs">
-                          <Text size="sm" fw={500}>
-                            {s.whatsappNumber}
-                          </Text>
-                          <Button
-                            size="compact-xs"
-                            color="green"
-                            variant="light"
-                            leftSection={<IconBrandWhatsapp size={12} />}
-                            onClick={() =>
-                              window.open(
-                                `https://wa.me/${s.whatsappNumber!.replace(/\D/g, "")}`,
-                                "_blank",
-                              )
-                            }
+                        <LabelValue label={t("email")}>
+                          {s.email || "—"}
+                        </LabelValue>
+
+                        <Group grow>
+                          <LabelValue label={t("phone_number")}>
+                            {s.phoneNumber || "—"}
+                          </LabelValue>
+                          <LabelValue
+                            label={t("whatsapp_number", {
+                              defaultValue: "WhatsApp",
+                            })}
                           >
-                            {t("open", { defaultValue: "Open" })}
-                          </Button>
-                        </Group>
-                      ) : (
-                        <Text size="sm" c="dimmed">
-                          —
-                        </Text>
-                      )}
-                    </LabelValue>
-                  </Group>
-
-                  {s.userId && (
-                    <LabelValue label="User ID">
-                      <Code>{s.userId}</Code>
-                    </LabelValue>
-                  )}
-
-                  <Group grow>
-                    <Button
-                      variant="light"
-                      leftSection={<IconEdit size={16} />}
-                      onClick={() => {
-                        setEditingStudent(s);
-                        setEditModalOpened(true);
-                      }}
-                    >
-                      {t("edit")}
-                    </Button>
-                    {s.email && (
-                      <Button
-                        variant="light"
-                        color="blue"
-                        leftSection={<IconMail size={16} />}
-                        onClick={() =>
-                          window.open(`mailto:${s.email}`, "_blank")
-                        }
-                      >
-                        {t("email_verb", { defaultValue: "Email" })}
-                      </Button>
-                    )}
-                    {canMessage && (
-                      <Button
-                        variant="light"
-                        color="indigo"
-                        leftSection={<IconMessageCircle size={16} />}
-                        onClick={() => setMessageModalOpened(true)}
-                      >
-                        {t("message", { defaultValue: "Message" })}
-                      </Button>
-                    )}
-                  </Group>
-
-                  <Divider />
-
-                  {/* Enrollment certificates */}
-                  <Stack gap="xs">
-                    <Text fw={600} size="sm">
-                      {t("enrollment_certificates", "Enrollment Certificates")}
-                    </Text>
-
-                    {enrollmentLoading && (
-                      <Text size="xs" c="dimmed">
-                        {t("loading", "Loading…")}
-                      </Text>
-                    )}
-
-                    {!enrollmentLoading && enrollmentCerts.length === 0 && (
-                      <Text size="xs" c="dimmed">
-                        {t("no_enrollment_certs", "No certificates submitted")}
-                      </Text>
-                    )}
-
-                    {enrollmentCerts.map((cert) => (
-                      <Paper key={cert.id} withBorder p="xs" radius="md">
-                        <Group justify="space-between" wrap="nowrap" gap="xs">
-                          <Group gap="xs" style={{ minWidth: 0 }}>
-                            <IconFileDescription size={16} />
-                            <Stack gap={2} style={{ minWidth: 0 }}>
-                              <Text size="xs" fw={500} truncate>
-                                {cert.filename}
-                              </Text>
+                            {s.whatsappNumber ? (
                               <Group gap="xs">
-                                <Badge
-                                  size="xs"
-                                  color={
-                                    cert.status === "verified"
-                                      ? "green"
-                                      : cert.status === "rejected"
-                                        ? "red"
-                                        : "yellow"
-                                  }
-                                >
-                                  {t(`cert_status_${cert.status}`, cert.status)}
-                                </Badge>
-                                {cert.rejectionReason && (
-                                  <Text size="xs" c="red" truncate>
-                                    {cert.rejectionReason}
-                                  </Text>
-                                )}
-                              </Group>
-                            </Stack>
-                          </Group>
-                          <Group gap={4} wrap="nowrap">
-                            {cert.url && (
-                              <Tooltip label={t("view", "View")}>
-                                <ActionIcon
-                                  variant="light"
-                                  size="sm"
-                                  onClick={() =>
-                                    window.open(cert.url, "_blank")
-                                  }
-                                >
-                                  <IconEye size={14} />
-                                </ActionIcon>
-                              </Tooltip>
-                            )}
-                            {cert.status !== "verified" && (
-                              <Tooltip label={t("verify", "Verify")}>
-                                <ActionIcon
-                                  variant="light"
+                                <Text size="sm" fw={500}>
+                                  {s.whatsappNumber}
+                                </Text>
+                                <Button
+                                  size="compact-xs"
                                   color="green"
-                                  size="sm"
-                                  loading={enrollmentLoading}
+                                  variant="light"
+                                  leftSection={<IconBrandWhatsapp size={12} />}
                                   onClick={() =>
-                                    handleReviewCert(s.id, cert.id, "verify")
+                                    window.open(
+                                      `https://wa.me/${s.whatsappNumber!.replace(/\D/g, "")}`,
+                                      "_blank",
+                                    )
                                   }
                                 >
-                                  <IconCheck size={14} />
-                                </ActionIcon>
-                              </Tooltip>
+                                  {t("open", { defaultValue: "Open" })}
+                                </Button>
+                              </Group>
+                            ) : (
+                              <Text size="sm" c="dimmed">
+                                —
+                              </Text>
                             )}
-                            {cert.status !== "rejected" && (
-                              <Tooltip label={t("reject", "Reject")}>
-                                <ActionIcon
-                                  variant="light"
-                                  color="red"
-                                  size="sm"
-                                  onClick={() => setRejectingCertId(cert.id)}
-                                >
-                                  <IconX size={14} />
-                                </ActionIcon>
-                              </Tooltip>
-                            )}
-                          </Group>
+                          </LabelValue>
                         </Group>
 
-                        {rejectingCertId === cert.id && (
-                          <Stack gap="xs" mt="xs">
-                            <Textarea
-                              placeholder={t(
-                                "rejection_reason",
-                                "Reason for rejection",
-                              )}
-                              size="xs"
-                              value={rejectReason}
-                              onChange={(e) =>
-                                setRejectReason(e.currentTarget.value)
-                              }
-                              autosize
-                              minRows={2}
-                            />
-                            <Group gap="xs">
-                              <Button
-                                size="compact-xs"
-                                color="red"
-                                loading={enrollmentLoading}
-                                onClick={() =>
-                                  handleReviewCert(s.id, cert.id, "reject")
-                                }
-                              >
-                                {t("confirm_reject", "Confirm Reject")}
-                              </Button>
-                              <Button
-                                size="compact-xs"
-                                variant="default"
-                                onClick={() => {
-                                  setRejectingCertId(null);
-                                  setRejectReason("");
-                                }}
-                              >
-                                {t("cancel")}
-                              </Button>
-                            </Group>
-                          </Stack>
+                        {s.userId && (
+                          <LabelValue label="User ID">
+                            <Code>{s.userId}</Code>
+                          </LabelValue>
                         )}
-                      </Paper>
-                    ))}
-                  </Stack>
+
+                        <Group grow>
+                          <Button
+                            variant="light"
+                            leftSection={<IconEdit size={16} />}
+                            onClick={() => {
+                              setEditingStudent(s);
+                              setEditModalOpened(true);
+                            }}
+                          >
+                            {t("edit")}
+                          </Button>
+                          {s.email && (
+                            <Button
+                              variant="light"
+                              color="blue"
+                              leftSection={<IconMail size={16} />}
+                              onClick={() =>
+                                window.open(`mailto:${s.email}`, "_blank")
+                              }
+                            >
+                              {t("email_verb", { defaultValue: "Email" })}
+                            </Button>
+                          )}
+                          {canMessage && (
+                            <Button
+                              variant="light"
+                              color="indigo"
+                              leftSection={<IconMessageCircle size={16} />}
+                              onClick={() => setMessageModalOpened(true)}
+                            >
+                              {t("message", { defaultValue: "Message" })}
+                            </Button>
+                          )}
+                        </Group>
+
+                        <Divider />
+
+                        {/* Enrollment certificates */}
+                        <Stack gap="xs">
+                          <Text fw={600} size="sm">
+                            {t(
+                              "enrollment_certificates",
+                              "Enrollment Certificates",
+                            )}
+                          </Text>
+
+                          {enrollmentLoading && (
+                            <Text size="xs" c="dimmed">
+                              {t("loading", "Loading…")}
+                            </Text>
+                          )}
+
+                          {!enrollmentLoading &&
+                            enrollmentCerts.length === 0 && (
+                              <Text size="xs" c="dimmed">
+                                {t(
+                                  "no_enrollment_certs",
+                                  "No certificates submitted",
+                                )}
+                              </Text>
+                            )}
+
+                          {enrollmentCerts.map((cert) => (
+                            <Paper key={cert.id} withBorder p="xs" radius="md">
+                              <Group
+                                justify="space-between"
+                                wrap="nowrap"
+                                gap="xs"
+                              >
+                                <Group gap="xs" style={{ minWidth: 0 }}>
+                                  <IconFileDescription size={16} />
+                                  <Stack gap={2} style={{ minWidth: 0 }}>
+                                    <Text size="xs" fw={500} truncate>
+                                      {cert.filename}
+                                    </Text>
+                                    <Group gap="xs">
+                                      <Badge
+                                        size="xs"
+                                        color={
+                                          cert.status === "verified"
+                                            ? "green"
+                                            : cert.status === "rejected"
+                                              ? "red"
+                                              : "yellow"
+                                        }
+                                      >
+                                        {t(
+                                          `cert_status_${cert.status}`,
+                                          cert.status,
+                                        )}
+                                      </Badge>
+                                      {cert.rejectionReason && (
+                                        <Text size="xs" c="red" truncate>
+                                          {cert.rejectionReason}
+                                        </Text>
+                                      )}
+                                    </Group>
+                                  </Stack>
+                                </Group>
+                                <Group gap={4} wrap="nowrap">
+                                  {cert.url && (
+                                    <Tooltip label={t("view", "View")}>
+                                      <ActionIcon
+                                        variant="light"
+                                        size="sm"
+                                        onClick={() =>
+                                          window.open(cert.url, "_blank")
+                                        }
+                                      >
+                                        <IconEye size={14} />
+                                      </ActionIcon>
+                                    </Tooltip>
+                                  )}
+                                  {cert.status !== "verified" && (
+                                    <Tooltip label={t("verify", "Verify")}>
+                                      <ActionIcon
+                                        variant="light"
+                                        color="green"
+                                        size="sm"
+                                        loading={enrollmentLoading}
+                                        onClick={() =>
+                                          handleReviewCert(
+                                            s.id,
+                                            cert.id,
+                                            "verify",
+                                          )
+                                        }
+                                      >
+                                        <IconCheck size={14} />
+                                      </ActionIcon>
+                                    </Tooltip>
+                                  )}
+                                  {cert.status !== "rejected" && (
+                                    <Tooltip label={t("reject", "Reject")}>
+                                      <ActionIcon
+                                        variant="light"
+                                        color="red"
+                                        size="sm"
+                                        onClick={() =>
+                                          setRejectingCertId(cert.id)
+                                        }
+                                      >
+                                        <IconX size={14} />
+                                      </ActionIcon>
+                                    </Tooltip>
+                                  )}
+                                </Group>
+                              </Group>
+
+                              {rejectingCertId === cert.id && (
+                                <Stack gap="xs" mt="xs">
+                                  <Textarea
+                                    placeholder={t(
+                                      "rejection_reason",
+                                      "Reason for rejection",
+                                    )}
+                                    size="xs"
+                                    value={rejectReason}
+                                    onChange={(e) =>
+                                      setRejectReason(e.currentTarget.value)
+                                    }
+                                    autosize
+                                    minRows={2}
+                                  />
+                                  <Group gap="xs">
+                                    <Button
+                                      size="compact-xs"
+                                      color="red"
+                                      loading={enrollmentLoading}
+                                      onClick={() =>
+                                        handleReviewCert(
+                                          s.id,
+                                          cert.id,
+                                          "reject",
+                                        )
+                                      }
+                                    >
+                                      {t("confirm_reject", "Confirm Reject")}
+                                    </Button>
+                                    <Button
+                                      size="compact-xs"
+                                      variant="default"
+                                      onClick={() => {
+                                        setRejectingCertId(null);
+                                        setRejectReason("");
+                                      }}
+                                    >
+                                      {t("cancel")}
+                                    </Button>
+                                  </Group>
+                                </Stack>
+                              )}
+                            </Paper>
+                          ))}
+                        </Stack>
+                      </Stack>
+                    </Tabs.Panel>
+
+                    <Tabs.Panel value="history">
+                      <StudentHistoryPanel
+                        history={history}
+                        loading={historyLoading}
+                      />
+                    </Tabs.Panel>
+                  </Tabs>
                 </Stack>
               );
             })()}

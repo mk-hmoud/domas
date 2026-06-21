@@ -420,6 +420,7 @@
   "active": "Active",
   "inactive": "Inactive",
   "status": "Status",
+  "label": "Label",
   "created_at": "Created At",
   "no_sub_locations": "No sub-locations found. Add one to get started.",
   "select_location_prompt": "Select a location to view details",

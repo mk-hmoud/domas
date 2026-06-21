@@ -117,6 +117,12 @@ export class StudentsController {
     return this.studentsService.findById(id, context);
   }
 
+  @Get(':id/history')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  getHistory(@Param('id') id: string, @UserContext() context: AuditUserContext) {
+    return this.studentsService.getHistory(id, context);
+  }
+
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.STUDENTS_UPDATE)
   update(

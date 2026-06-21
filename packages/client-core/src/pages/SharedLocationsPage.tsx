@@ -1093,9 +1093,7 @@ function LocationsContent() {
 
                 {selectedNode.type === LocationType.BED ? (
                   <Stack gap="md" p="md">
-                    <LabelValue
-                      label={t("bed_label", { defaultValue: "Label" })}
-                    >
+                    <LabelValue label={t("label", { defaultValue: "Label" })}>
                       {selectedNode.name}
                     </LabelValue>
                     <LabelValue label={t("status", { defaultValue: "Status" })}>
