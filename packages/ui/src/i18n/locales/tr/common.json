@@ -1076,6 +1076,7 @@
   "pending_approval": "Onay Bekliyor",
   "enabled": "Etkin",
   "disabled": "Devre Dışı",
+  "account_enabled_hint": "Bu öğrencinin öğrenci portalına giriş yapıp yapamayacağı — kayıt veya rezervasyon durumundan bağımsızdır.",
   "whatsapp_number": "WhatsApp",
   "open": "Açık",
   "email_verb": "E-posta Gönder",

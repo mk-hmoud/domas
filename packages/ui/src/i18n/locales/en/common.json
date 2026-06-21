@@ -1088,6 +1088,7 @@
   "pending_approval": "Pending Approval",
   "enabled": "Enabled",
   "disabled": "Disabled",
+  "account_enabled_hint": "Whether this student can log in to the student portal — separate from their enrollment or booking status.",
   "whatsapp_number": "WhatsApp",
   "open": "Open",
   "email_verb": "Email",

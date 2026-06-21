@@ -43,6 +43,7 @@ import {
   IconBed,
   IconArrowsExchange,
   IconCalendar,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { students, conversations } from "@domas/api-client";
@@ -1123,6 +1124,24 @@ export function SharedStudentsPage() {
                           ? t("enabled", "Enabled")
                           : t("disabled", "Disabled")}
                       </Badge>
+                      <Tooltip
+                        label={t("account_enabled_hint", {
+                          defaultValue:
+                            "Whether this student can log in to the student portal — separate from their enrollment or booking status.",
+                        })}
+                        multiline
+                        w={220}
+                      >
+                        <ThemeIcon
+                          size={16}
+                          radius="xl"
+                          variant="light"
+                          color="blue"
+                          style={{ cursor: "help" }}
+                        >
+                          <IconInfoCircle size={11} />
+                        </ThemeIcon>
+                      </Tooltip>
                     </Group>
                   </Group>
 
