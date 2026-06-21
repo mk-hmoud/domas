@@ -30,7 +30,7 @@ export class UpdateStudentDto {
   gender?: GenderType;
 
   @IsString()
-  @Length(2, 2)
+  @Length(2, 10)
   @IsOptional()
   nationalityCode?: string;
 

@@ -29,7 +29,7 @@ export class SubmitApplicationDto {
   gender!: GenderType;
 
   @IsString()
-  @Length(2, 2)
+  @Length(2, 10)
   nationalityCode!: string;
 
   @IsString()
