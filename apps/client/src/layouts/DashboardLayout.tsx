@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavStats } from '../hooks/useNavStats';
 import { useUnreadMessagesCount } from '../hooks/useUnreadMessagesCount';
+import { useNavBadgeNotifications } from '../hooks/useNavBadgeNotifications';
 import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
@@ -272,6 +273,8 @@ export function DashboardLayout() {
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [t, user, navStats, unreadMessagesCount]);
+
+  useNavBadgeNotifications(navData);
 
   return (
     <>
