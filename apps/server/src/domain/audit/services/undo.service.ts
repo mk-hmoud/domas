@@ -362,6 +362,7 @@ export class UndoService {
     if (!location.rows[0].deleted_at) throw new BadRequestException('Location is not deleted');
 
     const treePath = location.rows[0].tree_path;
+    const deletedAt = location.rows[0].deleted_at;
     if (treePath.includes('.')) {
       const parentPath = treePath.substring(0, treePath.lastIndexOf('.'));
       const parent = await client.query(
@@ -372,7 +373,20 @@ export class UndoService {
         throw new BadRequestException('Cannot restore: parent location is deleted or missing');
     }
 
-    await client.query('UPDATE locations SET deleted_at = NULL WHERE id = $1', [locationId]);
+    // Deleting a location cascades to its whole subtree (locations + beds) in
+    // one statement, so everything cascaded shares this exact deleted_at -
+    // restore only those rows, not anything deleted independently before or
+    // after.
+    await client.query(
+      'UPDATE locations SET deleted_at = NULL WHERE tree_path <@ $1 AND deleted_at = $2',
+      [treePath, deletedAt],
+    );
+    await client.query(
+      `UPDATE beds SET deleted_at = NULL
+       WHERE deleted_at = $2
+         AND location_id IN (SELECT id FROM locations WHERE tree_path <@ $1)`,
+      [treePath, deletedAt],
+    );
   }
 
   private async undoUpdateLocation(log: UndoLog, client: PoolClient): Promise<void> {

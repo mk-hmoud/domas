@@ -221,6 +221,8 @@ export class LocationsService {
     this.logger.log({ count: dto.ids.length }, 'Bulk deleting locations');
     await this.db.transaction(async (client) => {
       await this.assertLocationsInScope(dto.ids, context, client);
+      // Cascade: see delete() above for why beds go first.
+      await this.bedsRepository.deleteByLocationIds(dto.ids, client);
       await this.locationsRepository.deleteMany(dto.ids, client);
     }, context);
   }
@@ -386,6 +388,10 @@ export class LocationsService {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
       this.locationScopeService.assertAccess(context.locationScope, existing.treePath);
+      // Cascade: soft-delete the beds under this subtree before the locations
+      // themselves, so nothing is left orphaned (active beds pointing at a
+      // deleted location).
+      await this.bedsRepository.deleteByLocationId(id, client);
       await this.locationsRepository.delete(id, client);
 
       await this.undoService.registerUndo(

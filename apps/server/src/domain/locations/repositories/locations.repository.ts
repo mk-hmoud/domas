@@ -421,13 +421,29 @@ export class LocationsRepository implements ILocationsRepository {
     await this.getClient(client).query(query, values);
   }
 
+  // Cascades to the whole subtree (tree_path containment includes the node itself).
   async delete(id: number, client?: PoolClient): Promise<void> {
-    const query = `UPDATE locations SET deleted_at = NOW() WHERE id = $1`;
+    const query = `
+      UPDATE locations
+      SET deleted_at = NOW()
+      WHERE deleted_at IS NULL
+        AND tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+    `;
     await this.getClient(client).query(query, [id]);
   }
 
+  // Cascades to the subtree under each id - safe to call with overlapping
+  // subtrees (e.g. a node and one of its own descendants both selected).
   async deleteMany(ids: number[], client?: PoolClient): Promise<void> {
-    const query = `UPDATE locations SET deleted_at = NOW() WHERE id = ANY($1)`;
+    const query = `
+      WITH target_paths AS (
+        SELECT tree_path FROM locations WHERE id = ANY($1)
+      )
+      UPDATE locations l
+      SET deleted_at = NOW()
+      FROM target_paths tp
+      WHERE l.tree_path <@ tp.tree_path AND l.deleted_at IS NULL
+    `;
     await this.getClient(client).query(query, [ids]);
   }
 

@@ -286,6 +286,37 @@ export class BedsRepository implements IBedsRepository {
     await this.getClient(client).query(query, [ids]);
   }
 
+  // Used when cascading a location deletion to its subtree - soft-deletes
+  // every bed under the given location id (any depth).
+  async deleteByLocationId(locationId: number, client?: PoolClient): Promise<void> {
+    const query = `
+      UPDATE beds
+      SET deleted_at = NOW()
+      WHERE deleted_at IS NULL
+        AND location_id IN (
+          SELECT id FROM locations
+          WHERE tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+        )
+    `;
+    await this.getClient(client).query(query, [locationId]);
+  }
+
+  // Same as above, for a bulk delete of multiple location ids at once.
+  async deleteByLocationIds(locationIds: number[], client?: PoolClient): Promise<void> {
+    const query = `
+      WITH target_paths AS (
+        SELECT tree_path FROM locations WHERE id = ANY($1)
+      )
+      UPDATE beds b
+      SET deleted_at = NOW()
+      WHERE b.deleted_at IS NULL
+        AND b.location_id IN (
+          SELECT l.id FROM locations l, target_paths tp WHERE l.tree_path <@ tp.tree_path
+        )
+    `;
+    await this.getClient(client).query(query, [locationIds]);
+  }
+
   async countByLocation(locationId: number, client?: PoolClient): Promise<number> {
     const query = `SELECT COUNT(*) FROM beds WHERE location_id = $1 AND deleted_at IS NULL`;
     const result = await this.getClient(client).query<{ count: string }>(query, [locationId]);
