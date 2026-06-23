@@ -119,7 +119,15 @@ export function SharedUsersPage({
           color: "green",
         });
       } else {
-        await users.create(values as CreateUserDto);
+        const { locationIds, ...createData } = values as CreateUserDto & {
+          locationIds?: number[];
+        };
+        const newUser = await users.create(createData);
+        if (locationIds && locationIds.length > 0) {
+          await Promise.all(
+            locationIds.map((id) => access.assignLocation(newUser.id, id)),
+          );
+        }
         notifications.show({
           title: t("success"),
           message: t("user_created_successfully", "User created successfully"),

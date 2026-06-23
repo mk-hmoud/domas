@@ -12,18 +12,33 @@ import {
   Checkbox,
   Stack,
   Text,
+  Divider,
+  Badge,
+  Select,
+  Box,
+  Loader,
+  ComboboxItem,
+  CloseButton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useDebouncedValue } from "@mantine/hooks";
 import { useTranslation } from "react-i18next";
 import { CreateUserDto, UpdateUserDto, User, Role } from "@domas/ts-types";
-import { IconRefresh, IconEye, IconEyeOff } from "@tabler/icons-react";
+import {
+  IconRefresh,
+  IconEye,
+  IconEyeOff,
+  IconMapPin,
+} from "@tabler/icons-react";
+import { locations as locationsApi } from "@domas/api-client";
 
 interface CreateUserModalProps {
   opened: boolean;
   onClose: () => void;
   onSubmit: (
-    values: CreateUserDto | (UpdateUserDto & { roleIds?: number[] }),
+    values:
+      | (CreateUserDto & { locationIds?: number[] })
+      | (UpdateUserDto & { roleIds?: number[] }),
   ) => Promise<void>;
   userToEdit?: User | null;
   availableRoles?: Role[];
@@ -39,6 +54,17 @@ export function CreateUserModal({
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [visible, { toggle }] = useDisclosure(false);
+
+  // Location picker state (create mode only)
+  const [selectedLocations, setSelectedLocations] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [debouncedLocationSearch] = useDebouncedValue(locationSearch, 300);
+  const [locationOptions, setLocationOptions] = useState<
+    (ComboboxItem & { path?: string })[]
+  >([]);
+  const [locationSearching, setLocationSearching] = useState(false);
 
   const form = useForm({
     initialValues: {
@@ -73,9 +99,59 @@ export function CreateUserModal({
         });
       } else {
         form.reset();
+        setSelectedLocations([]);
+        setLocationSearch("");
+        setLocationOptions([]);
       }
     }
   }, [opened, userToEdit]);
+
+  useEffect(() => {
+    if (!debouncedLocationSearch.trim()) {
+      setLocationOptions([]);
+      return;
+    }
+    const selectedIds = new Set(selectedLocations.map((l) => l.id));
+    let cancelled = false;
+    setLocationSearching(true);
+    locationsApi
+      .search(debouncedLocationSearch, true)
+      .then((results) => {
+        if (cancelled) return;
+        setLocationOptions(
+          results
+            .filter((loc) => !selectedIds.has(loc.id))
+            .map((loc) => ({
+              value: loc.id.toString(),
+              label: loc.name,
+              path: loc.locationPath,
+            })),
+        );
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLocationSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedLocationSearch, selectedLocations]);
+
+  const handleAddLocation = (value: string | null) => {
+    if (!value) return;
+    const opt = locationOptions.find((o) => o.value === value);
+    if (!opt) return;
+    setSelectedLocations((prev) => [
+      ...prev,
+      { id: parseInt(value, 10), name: opt.label },
+    ]);
+    setLocationSearch("");
+    setLocationOptions([]);
+  };
+
+  const handleRemoveLocation = (id: number) => {
+    setSelectedLocations((prev) => prev.filter((l) => l.id !== id));
+  };
 
   const generatePassword = () => {
     const chars =
@@ -109,12 +185,13 @@ export function CreateUserModal({
         await onSubmit(payload);
       } else {
         // Create user
-        const payload: CreateUserDto = {
+        const payload: CreateUserDto & { locationIds?: number[] } = {
           email: values.email,
           firstName: values.firstName,
           lastName: values.lastName,
           phoneNumber: values.phoneNumber,
           roleIds: values.roleIds.map((id) => parseInt(id)),
+          locationIds: selectedLocations.map((l) => l.id),
         };
         if (values.password) {
           payload.password = values.password;
@@ -229,6 +306,72 @@ export function CreateUserModal({
             ))}
           </Stack>
         </Checkbox.Group>
+
+        {!userToEdit && (
+          <>
+            <Divider
+              label={t("assigned_locations", "Assigned Locations")}
+              labelPosition="left"
+              mt="md"
+              mb="xs"
+            />
+
+            {selectedLocations.length > 0 && (
+              <Group gap="xs" mb="xs">
+                {selectedLocations.map((loc) => (
+                  <Badge
+                    key={loc.id}
+                    variant="outline"
+                    pr={4}
+                    rightSection={
+                      <CloseButton
+                        size="xs"
+                        radius="xl"
+                        variant="transparent"
+                        onClick={() => handleRemoveLocation(loc.id)}
+                      />
+                    }
+                  >
+                    {loc.name}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
+            <Select
+              placeholder={t(
+                "add_location_placeholder",
+                "Search to assign a location...",
+              )}
+              data={locationOptions}
+              value={null}
+              onChange={handleAddLocation}
+              searchable
+              searchValue={locationSearch}
+              onSearchChange={setLocationSearch}
+              nothingFoundMessage={
+                locationSearching
+                  ? t("searching", "Searching...")
+                  : t("no_locations_found", "No locations found")
+              }
+              rightSection={locationSearching ? <Loader size={16} /> : null}
+              filter={({ options }) => options}
+              renderOption={({ option }) => (
+                <Group gap="sm" wrap="nowrap">
+                  <IconMapPin size={16} opacity={0.5} />
+                  <Box>
+                    <Text size="sm">{option.label}</Text>
+                    {(option as ComboboxItem & { path?: string }).path && (
+                      <Text size="xs" c="dimmed">
+                        {(option as ComboboxItem & { path?: string }).path}
+                      </Text>
+                    )}
+                  </Box>
+                </Group>
+              )}
+            />
+          </>
+        )}
 
         {userToEdit && (
           <Switch
