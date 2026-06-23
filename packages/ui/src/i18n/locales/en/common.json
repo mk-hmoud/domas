@@ -531,7 +531,8 @@
     "system": "System",
     "audit_logs": "Audit Logs",
     "dorm_certificates": "Dorm Certificates",
-    "pre_reservations": "Pre-Reservations"
+    "pre_reservations": "Pre-Reservations",
+    "lookups": "Countries & Departments"
   },
   "recent_history": "Recent History",
   "no_recent_history": "No recent actions found",
@@ -1227,5 +1228,20 @@
   "document_template_deleted": "Template version deleted",
   "cannot_delete_active_template": "Cannot delete the published version. Publish a different version first.",
   "preview_failed": "Failed to render preview",
-  "created_by_on": "{{name}} · {{date}}"
+  "created_by_on": "{{name}} · {{date}}",
+  "lookups_description": "Manage the nationality and department lists used across student forms.",
+  "countries": "Countries",
+  "departments": "Departments",
+  "code": "Code",
+  "updated_successfully": "Updated successfully",
+  "create_country": "Add Country",
+  "edit_country": "Edit Country",
+  "delete_country": "Delete Country",
+  "delete_country_confirm": "Delete «{{name}}»? Students with this nationality will block the deletion.",
+  "country_code_hint": "ISO alpha-2/3 code, e.g. TR, GB, TRNC",
+  "create_department": "Add Department",
+  "edit_department": "Edit Department",
+  "delete_department": "Delete Department",
+  "delete_department_confirm": "Delete «{{name}}»? Students with this department will block the deletion.",
+  "department_rename_hint": "Renaming updates this department on all students that have it."
 }

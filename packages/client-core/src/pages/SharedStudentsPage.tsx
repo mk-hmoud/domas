@@ -52,7 +52,6 @@ import {
   Student,
   CreateStudentDto,
   PaginatedResult,
-  COUNTRIES,
   EnrollmentVerification,
   ApplicationStatus,
   StudentApplication,
@@ -68,6 +67,7 @@ import {
   LabelValue,
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
+import { useCountries, useDepartments } from "../hooks/useLookups";
 import { modals } from "@mantine/modals";
 import { useAuth } from "../context/AuthContext";
 
@@ -278,7 +278,10 @@ function StudentHistoryPanel({
 }
 
 export function SharedStudentsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const { countries } = useCountries();
+  const { departments } = useDepartments();
   const { hasPermission } = useAuth();
   const canReview = hasPermission("students.review_applications");
   const canMessage = hasPermission("messages.manage");
@@ -346,8 +349,8 @@ export function SharedStudentsPage() {
 
   const getCountryName = (code?: string) => {
     if (!code) return "-";
-    const country = COUNTRIES.find(([c]) => c === code);
-    return country ? country[1] : code;
+    const country = countries.find((c) => c.code === code);
+    return country ? (isTr ? country.nameTr : country.nameEn) : code;
   };
 
   // Debounce search query
@@ -942,9 +945,9 @@ export function SharedStudentsPage() {
               />
               <Select
                 placeholder={t("filter_by_country", "Country")}
-                data={COUNTRIES.map(([code, name]) => ({
-                  value: code,
-                  label: name,
+                data={countries.map((c) => ({
+                  value: c.code,
+                  label: isTr ? c.nameTr : c.nameEn,
                 }))}
                 value={nationalityFilter}
                 onChange={setNationalityFilter}
@@ -977,6 +980,7 @@ export function SharedStudentsPage() {
               <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
               <StudentsTable
                 data={data.data}
+                countries={countries}
                 selectedIds={selectedIds}
                 onToggleSelection={handleToggleSelection}
                 onToggleSelectAll={handleToggleSelectAll}
@@ -1129,6 +1133,8 @@ export function SharedStudentsPage() {
           opened={createModalOpened}
           onClose={() => setCreateModalOpened(false)}
           onSubmit={handleCreate}
+          countries={countries}
+          departments={departments}
         />
 
         <StudentModal
@@ -1137,6 +1143,8 @@ export function SharedStudentsPage() {
             setEditModalOpened(false);
             setEditingStudent(null);
           }}
+          countries={countries}
+          departments={departments}
           onSubmit={handleUpdate}
           initialValues={editingStudent}
         />

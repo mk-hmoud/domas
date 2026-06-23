@@ -26,3 +26,5 @@ export * from "./endpoints/conversations";
 export * from "./endpoints/work-orders";
 export * from "./endpoints/tickets";
 export * from "./endpoints/document-templates";
+export * from "./endpoints/countries";
+export * from "./endpoints/departments";

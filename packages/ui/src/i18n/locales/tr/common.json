@@ -529,7 +529,8 @@
     "system": "Sistem",
     "audit_logs": "Denetim Kayıtları",
     "dorm_certificates": "Yurt Belgesi",
-    "pre_reservations": "Ön Rezervasyonlar"
+    "pre_reservations": "Ön Rezervasyonlar",
+    "lookups": "Ülkeler ve Bölümler"
   },
   "recent_history": "Son İşlemler",
   "no_recent_history": "Son işlem bulunamadı",
@@ -1215,5 +1216,20 @@
   "document_template_deleted": "Şablon sürümü silindi",
   "cannot_delete_active_template": "Yayınlanmış sürüm silinemez. Önce başka bir sürümü yayınlayın.",
   "preview_failed": "Önizleme oluşturulamadı",
-  "created_by_on": "{{name}} · {{date}}"
+  "created_by_on": "{{name}} · {{date}}",
+  "lookups_description": "Öğrenci formlarında kullanılan ülke (uyruk) ve bölüm listelerini yönetin.",
+  "countries": "Ülkeler",
+  "departments": "Bölümler",
+  "code": "Kod",
+  "updated_successfully": "Başarıyla güncellendi",
+  "create_country": "Ülke Ekle",
+  "edit_country": "Ülkeyi Düzenle",
+  "delete_country": "Ülkeyi Sil",
+  "delete_country_confirm": "«{{name}}» silinsin mi? Bu uyruğa sahip öğrenciler varsa silme işlemi engellenir.",
+  "country_code_hint": "ISO alpha-2/3 kodu, örn. TR, GB, TRNC",
+  "create_department": "Bölüm Ekle",
+  "edit_department": "Bölümü Düzenle",
+  "delete_department": "Bölümü Sil",
+  "delete_department_confirm": "«{{name}}» silinsin mi? Bu bölüme sahip öğrenciler varsa silme işlemi engellenir.",
+  "department_rename_hint": "Yeniden adlandırma, bu bölüme sahip tüm öğrencilerde güncellenir."
 }

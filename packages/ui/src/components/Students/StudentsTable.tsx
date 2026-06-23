@@ -15,13 +15,14 @@ import {
   IconUserOff,
   IconBrandWhatsapp,
 } from "@tabler/icons-react";
-import { Student, COUNTRIES } from "@domas/ts-types";
+import { Student, Country } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "../EmptyState";
 import classes from "../Table/table.module.css";
 
 interface StudentsTableProps {
   data: Student[];
+  countries?: Country[];
   onSelect: (student: Student) => void;
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
@@ -34,6 +35,7 @@ interface StudentsTableProps {
 
 export function StudentsTable({
   data,
+  countries = [],
   onSelect,
   onEdit,
   onDelete,
@@ -43,12 +45,13 @@ export function StudentsTable({
   onToggleSelectAll,
   emptyMessage,
 }: StudentsTableProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
 
   const getCountryName = (code?: string) => {
     if (!code) return "-";
-    const country = COUNTRIES.find(([c]) => c === code);
-    return country ? country[1] : code;
+    const country = countries.find((c) => c.code === code);
+    return country ? (isTr ? country.nameTr : country.nameEn) : code;
   };
 
   const allSelected =

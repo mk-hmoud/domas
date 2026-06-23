@@ -54,4 +54,10 @@ export class ImportsRepository {
     const result = await this.getClient(client).query(query, [code]);
     return (result.rowCount ?? 0) > 0;
   }
+
+  async validateDepartment(nameEn: string, client?: PoolClient): Promise<boolean> {
+    const query = 'SELECT 1 FROM departments WHERE name_en = $1';
+    const result = await this.getClient(client).query(query, [nameEn]);
+    return (result.rowCount ?? 0) > 0;
+  }
 }

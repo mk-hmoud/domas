@@ -109,7 +109,21 @@ CREATE INDEX idx_staff_locations_location ON staff_locations(location_id);
 -- =============================================
 CREATE TABLE countries (
     code VARCHAR(10) PRIMARY KEY, -- Supports ISO alpha-2/3 and custom codes (e.g., 'TRNC')
-    name VARCHAR(100) NOT NULL,
+    name_en VARCHAR(100) NOT NULL,
+    name_tr VARCHAR(100) NOT NULL,
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
+-- 3.2 DEPARTMENTS (Admin-editable lookup list)
+-- =============================================
+-- name_en is the canonical key referenced by students.department (not a
+-- surrogate id) so renaming a department here cascades to existing students,
+-- mirroring how countries.code anchors nationality_code.
+CREATE TABLE departments (
+    name_en VARCHAR(150) PRIMARY KEY,
+    name_tr VARCHAR(150) NOT NULL,
 
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -131,7 +145,7 @@ CREATE TABLE students (
     national_id VARCHAR(50) NOT NULL,
     birth_date DATE NOT NULL,
     birth_place VARCHAR(100) NOT NULL,
-    department VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL REFERENCES departments(name_en) ON UPDATE CASCADE,
     
     -- 4. Contact (Might differ from User email)
     email VARCHAR(150),

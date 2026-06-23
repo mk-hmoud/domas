@@ -134,6 +134,10 @@ export class ImportsService {
         );
         if (!nationality) throw new Error(`Invalid nationality code: ${student.nationalityCode}`);
 
+        // 3.1 Validate Department
+        const department = await this.importsRepository.validateDepartment(student.department);
+        if (!department) throw new Error(`Invalid department: ${student.department}`);
+
         // 4. Validate Booking & Internal Bed Conflicts
         if (student.bedId && student.semesterId) {
           const semester = await this.semestersRepository.findById(student.semesterId);

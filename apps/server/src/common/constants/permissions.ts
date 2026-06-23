@@ -100,6 +100,9 @@ export const PERMISSIONS = {
   // Document Templates (admin-editable format of contracts/certificates)
   DOCUMENT_TEMPLATES_VIEW: 'document_templates.view',
   DOCUMENT_TEMPLATES_MANAGE: 'document_templates.manage',
+
+  // Lookups (admin-editable Countries & Departments lists - read is public, see controllers)
+  LOOKUPS_MANAGE: 'lookups.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

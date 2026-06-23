@@ -8,7 +8,7 @@ import { AccessRepository } from '../src/domain/users/repositories/access.reposi
 import { DatabaseService } from '../src/core/database/database.service';
 import { LocationType } from '../src/common/enums/location-type.enum';
 import { AuditUserContext } from '../src/common/interfaces/audit-user-context.interface';
-import { COUNTRIES } from '@domas/ts-types';
+import { COUNTRY_SEEDS, DEPARTMENT_SEEDS } from '@domas/ts-types';
 import { PERMISSIONS } from '../src/common/constants/permissions';
 import { SYSTEM_ROLES } from '../src/common/constants/system-roles';
 import { DocumentTemplatesService } from '../src/domain/document-templates/services/document-templates.service';
@@ -41,13 +41,36 @@ async function bootstrap() {
     if (parseInt(countryCheck.rows[0].count, 10) === 0) {
       console.log('\ud83c\udf0d  Populating countries table...');
 
-      for (const [code, name] of COUNTRIES) {
+      for (const { code, nameEn, nameTr } of COUNTRY_SEEDS) {
         await db.query(
-          'INSERT INTO countries (code, name) VALUES ($1, $2) ON CONFLICT (code) DO NOTHING',
-          [code, name],
+          'INSERT INTO countries (code, name_en, name_tr) VALUES ($1, $2, $3) ON CONFLICT (code) DO NOTHING',
+          [code, nameEn, nameTr],
         );
       }
       console.log('\u2705 Countries populated.');
+    } else {
+      // Backfill name_tr for rows that predate the Turkish-translation column
+      // (e.g. databases created before this script supported it).
+      for (const { code, nameTr } of COUNTRY_SEEDS) {
+        await db.query(
+          `UPDATE countries SET name_tr = $2 WHERE code = $1 AND (name_tr IS NULL OR name_tr = '')`,
+          [code, nameTr],
+        );
+      }
+    }
+
+    // 0.05 Handle Departments
+    const departmentCheck = await db.query('SELECT COUNT(*) FROM departments');
+    if (parseInt(departmentCheck.rows[0].count, 10) === 0) {
+      console.log('\ud83c\udf93  Populating departments table...');
+
+      for (const { nameEn, nameTr } of DEPARTMENT_SEEDS) {
+        await db.query(
+          'INSERT INTO departments (name_en, name_tr) VALUES ($1, $2) ON CONFLICT (name_en) DO NOTHING',
+          [nameEn, nameTr],
+        );
+      }
+      console.log('\u2705 Departments populated.');
     }
 
     // 0.1 Handle Permissions & Roles (RBAC Seed)

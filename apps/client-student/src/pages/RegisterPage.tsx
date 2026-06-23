@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -27,14 +27,18 @@ import logo from '../assets/eul-logo.png';
 import { useTranslation } from 'react-i18next';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { portalApplications } from '@domas/api-client';
+import {
+  countries as countriesApi,
+  departments as departmentsApi,
+  portalApplications,
+} from '@domas/api-client';
 import {
   ApplicationDocumentType,
-  DEPARTMENTS,
+  Country,
+  Department,
   GenderType,
   SubmitApplicationDto,
 } from '@domas/ts-types';
-import { COUNTRIES } from '@domas/ts-types';
 
 const STEP2_FIELDS = [
   'studentNumber',
@@ -48,9 +52,18 @@ const STEP2_FIELDS = [
 ] as const;
 
 export function RegisterPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  useEffect(() => {
+    countriesApi.findAll().then(setCountries);
+    departmentsApi.findAll().then(setDepartments);
+  }, []);
 
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -172,8 +185,11 @@ export function RegisterPage() {
     }
   };
 
-  const countryData = COUNTRIES.map(([code, name]) => ({ value: code, label: name }));
-  const departmentData = DEPARTMENTS.map((d) => ({ value: d, label: d }));
+  const countryData = countries.map((c) => ({ value: c.code, label: isTr ? c.nameTr : c.nameEn }));
+  const departmentData = departments.map((d) => ({
+    value: d.nameEn,
+    label: isTr ? d.nameTr : d.nameEn,
+  }));
   const isReturning = documentType === 'returning';
 
   return (

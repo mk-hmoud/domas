@@ -88,12 +88,15 @@ import {
 } from "@domas/api-client";
 import { useLocationSelection } from "../hooks/useLocationSelection";
 import { useBedManagement } from "../hooks/useBedManagement";
+import { useCountries, useDepartments } from "../hooks/useLookups";
 import { findLocationPath } from "../utils/location-utils";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
 
 function LocationsContent() {
   const { t } = useTranslation();
+  const { countries } = useCountries();
+  const { departments } = useDepartments();
   const {
     treeData,
     selectedNode,
@@ -1529,6 +1532,8 @@ function LocationsContent() {
             label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
           }))}
           semesters={allSemesters}
+          countries={countries}
+          departments={departments}
           initialBedId={
             selectedNode?.type === LocationType.BED
               ? typeof selectedNode.id === "string"

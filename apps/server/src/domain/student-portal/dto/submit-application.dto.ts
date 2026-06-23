@@ -2,14 +2,12 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
-  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   Length,
 } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { DEPARTMENTS } from '../../../common/constants/departments';
 import type { ApplicationDocumentType } from '../entities/student-application.entity';
 
 export class SubmitApplicationDto {
@@ -44,7 +42,7 @@ export class SubmitApplicationDto {
   birthPlace!: string;
 
   @IsString()
-  @IsIn(DEPARTMENTS)
+  @IsNotEmpty()
   department!: string;
 
   @IsEmail()

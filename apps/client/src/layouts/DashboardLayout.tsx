@@ -235,6 +235,11 @@ export function DashboardLayout() {
             link: '/dashboard/document-templates',
             requiredPermission: 'document_templates.view',
           },
+          {
+            label: t('nav.lookups', { defaultValue: 'Countries & Departments' }),
+            link: '/dashboard/lookups',
+            requiredPermission: 'lookups.manage',
+          },
         ],
       },
       {

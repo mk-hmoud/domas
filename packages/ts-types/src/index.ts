@@ -122,3 +122,5 @@ export * from "./interfaces/ticket.interface";
 export * from "./dtos/ticket.dto";
 export * from "./interfaces/document-template.interface";
 export * from "./dtos/document-template.dto";
+export * from "./interfaces/country.interface";
+export * from "./interfaces/department.interface";

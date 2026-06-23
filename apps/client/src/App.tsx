@@ -29,6 +29,7 @@ import { DormCertificatesPage } from './pages/DormCertificatesPage';
 import { WorkOrdersPage } from './pages/WorkOrdersPage';
 import { TicketsPage } from './pages/TicketsPage';
 import { DocumentTemplatesPage } from './pages/DocumentTemplatesPage';
+import { LookupsPage } from './pages/LookupsPage';
 import { ProtectedRoute, PermissionRoute } from '@domas/client-core';
 
 function App() {
@@ -244,6 +245,14 @@ function App() {
             element={
               <PermissionRoute permission="document_templates.view">
                 <DocumentTemplatesPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="lookups"
+            element={
+              <PermissionRoute permission="lookups.manage">
+                <LookupsPage />
               </PermissionRoute>
             }
           />
