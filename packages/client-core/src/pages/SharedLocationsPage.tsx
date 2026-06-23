@@ -1258,9 +1258,17 @@ function LocationsContent() {
                         style={{ letterSpacing: "0.05em" }}
                       >
                         {selectedNode.type === LocationType.UNIVERSITY
-                          ? t("campuses", { defaultValue: "Campuses" })
+                          ? children.every(
+                              (c) => c.type === LocationType.CAMPUS,
+                            )
+                            ? t("campuses", { defaultValue: "Campuses" })
+                            : t("locations", { defaultValue: "Locations" })
                           : selectedNode.type === LocationType.CAMPUS
-                            ? t("buildings", { defaultValue: "Buildings" })
+                            ? children.every(
+                                (c) => c.type === LocationType.BUILDING,
+                              )
+                              ? t("buildings", { defaultValue: "Buildings" })
+                              : t("locations", { defaultValue: "Locations" })
                             : selectedNode.type === LocationType.BUILDING
                               ? t("floors", { defaultValue: "Floors" })
                               : selectedNode.type === LocationType.FLOOR

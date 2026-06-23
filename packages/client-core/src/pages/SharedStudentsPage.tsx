@@ -26,6 +26,8 @@ import {
   ThemeIcon,
   Skeleton,
   SimpleGrid,
+  FileInput,
+  Switch,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -45,9 +47,15 @@ import {
   IconArrowsExchange,
   IconCalendar,
   IconInfoCircle,
+  IconDownload,
+  IconUpload,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { students, conversations } from "@domas/api-client";
+import {
+  students,
+  conversations,
+  imports as importsApi,
+} from "@domas/api-client";
 import {
   Student,
   CreateStudentDto,
@@ -58,6 +66,7 @@ import {
   StudentHistoryBooking,
   StudentNationalityStats,
   GenderType,
+  ImportResultDto,
 } from "@domas/ts-types";
 import {
   StudentModal,
@@ -328,6 +337,17 @@ export function SharedStudentsPage() {
 
   // Stats
   const [stats, setStats] = useState<StudentNationalityStats | null>(null);
+
+  // Import/Export state
+  const [importModalOpened, setImportModalOpened] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importDryRun, setImportDryRun] = useState(true);
+  const [importUpdateExisting, setImportUpdateExisting] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResultDto | null>(
+    null,
+  );
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<string | null>("students");
@@ -830,6 +850,70 @@ export function SharedStudentsPage() {
     }
   };
 
+  const handleExport = async () => {
+    setExportLoading(true);
+    try {
+      await students.exportToExcel({
+        search: debouncedSearch || undefined,
+        nationalityCode: nationalityFilter || undefined,
+        gender: (genderFilter as GenderType) || undefined,
+      });
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImportLoading(true);
+    try {
+      const result = await importsApi.bulkImport({
+        file: importFile,
+        dryRun: importDryRun,
+        updateExisting: importUpdateExisting,
+      });
+      setImportResult(result);
+      if (!importDryRun && result.success) {
+        notifications.show({
+          title: t("success"),
+          message: t("import_complete", {
+            defaultValue: "Import complete: {{count}} students imported",
+            count: result.summary.successful,
+          }),
+          color: "green",
+        });
+        fetchData();
+        fetchStats();
+      }
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("import_failed", { defaultValue: "Import failed" }),
+        color: "red",
+      });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      await students.downloadImportTemplate();
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    }
+  };
+
   const handleSendMessage = async () => {
     const s = detailStudent ?? selectedStudent;
     if (!s || !messageBody.trim()) return;
@@ -867,12 +951,51 @@ export function SharedStudentsPage() {
         title={t("students", { defaultValue: "Students" })}
         actions={
           activeTab === "students" ? (
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={() => setCreateModalOpened(true)}
-            >
-              {t("create_student", { defaultValue: "Create Student" })}
-            </Button>
+            <Group gap="xs">
+              <Tooltip
+                label={
+                  debouncedSearch || nationalityFilter || genderFilter
+                    ? t("export_filtered_hint", {
+                        defaultValue: "Exporting filtered results",
+                      })
+                    : t("export_all_hint", {
+                        defaultValue: "Exporting all students",
+                      })
+                }
+              >
+                <Button
+                  variant={
+                    debouncedSearch || nationalityFilter || genderFilter
+                      ? "light"
+                      : "default"
+                  }
+                  leftSection={<IconDownload size={16} />}
+                  loading={exportLoading}
+                  onClick={handleExport}
+                >
+                  {t("export", { defaultValue: "Export" })} (
+                  {data.total.toLocaleString()})
+                </Button>
+              </Tooltip>
+              <Button
+                variant="default"
+                leftSection={<IconUpload size={16} />}
+                onClick={() => {
+                  setImportResult(null);
+                  setImportFile(null);
+                  setImportDryRun(true);
+                  setImportModalOpened(true);
+                }}
+              >
+                {t("import", { defaultValue: "Import" })}
+              </Button>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setCreateModalOpened(true)}
+              >
+                {t("create_student", { defaultValue: "Create Student" })}
+              </Button>
+            </Group>
           ) : undefined
         }
       />
@@ -1609,6 +1732,152 @@ export function SharedStudentsPage() {
           resolveDto={{ scope: "list", studentIds: selectedIds }}
         />
       </PageShell>
+
+      <Modal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        title={t("import_students", { defaultValue: "Import Students" })}
+        size="xl"
+      >
+        <Stack gap="md">
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              size="xs"
+              leftSection={<IconDownload size={14} />}
+              onClick={handleDownloadTemplate}
+            >
+              {t("download_template", { defaultValue: "Download Template" })}
+            </Button>
+          </Group>
+
+          <FileInput
+            label={t("select_excel_file", {
+              defaultValue: "Select Excel file (.xlsx)",
+            })}
+            placeholder={t("click_to_browse", {
+              defaultValue: "Click to browse…",
+            })}
+            accept=".xlsx,.xls"
+            value={importFile}
+            onChange={(f) => {
+              setImportFile(f);
+              setImportResult(null);
+            }}
+            leftSection={<IconUpload size={16} />}
+            clearable
+          />
+
+          <Group>
+            <Switch
+              label={t("dry_run_label", {
+                defaultValue: "Validate only (dry run)",
+              })}
+              checked={importDryRun}
+              onChange={(e) => {
+                setImportDryRun(e.currentTarget.checked);
+                setImportResult(null);
+              }}
+            />
+            <Switch
+              label={t("update_existing_label", {
+                defaultValue: "Update existing students",
+              })}
+              checked={importUpdateExisting}
+              onChange={(e) => setImportUpdateExisting(e.currentTarget.checked)}
+            />
+          </Group>
+
+          {importResult && (
+            <Stack gap="xs">
+              <Group gap="xs">
+                <Badge color="blue">
+                  {t("total")}: {importResult.summary.total}
+                </Badge>
+                <Badge color="green">
+                  {t("success")}: {importResult.summary.successful}
+                </Badge>
+                {importResult.summary.failed > 0 && (
+                  <Badge color="red">
+                    {t("failed")}: {importResult.summary.failed}
+                  </Badge>
+                )}
+                {importResult.summary.skipped > 0 && (
+                  <Badge color="gray">
+                    {t("skipped")}: {importResult.summary.skipped}
+                  </Badge>
+                )}
+              </Group>
+
+              {importResult.results.some((r) => r.status !== "success") && (
+                <Paper withBorder radius="md">
+                  <ScrollArea mah={280}>
+                    <Table fz="xs">
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>
+                            {t("row", { defaultValue: "Row" })}
+                          </Table.Th>
+                          <Table.Th>{t("student_number")}</Table.Th>
+                          <Table.Th>{t("name")}</Table.Th>
+                          <Table.Th>{t("status")}</Table.Th>
+                          <Table.Th>{t("error")}</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {importResult.results
+                          .filter((r) => r.status !== "success")
+                          .map((r) => (
+                            <Table.Tr key={r.row}>
+                              <Table.Td>{r.row}</Table.Td>
+                              <Table.Td>{r.data.studentNumber}</Table.Td>
+                              <Table.Td>
+                                {r.data.firstName} {r.data.lastName}
+                              </Table.Td>
+                              <Table.Td>
+                                <Badge
+                                  size="xs"
+                                  color={
+                                    r.status === "skipped" ? "gray" : "red"
+                                  }
+                                >
+                                  {r.status}
+                                </Badge>
+                              </Table.Td>
+                              <Table.Td c="red">{r.error ?? "—"}</Table.Td>
+                            </Table.Tr>
+                          ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                </Paper>
+              )}
+            </Stack>
+          )}
+
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              onClick={() => setImportModalOpened(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              leftSection={
+                importDryRun ? <IconEye size={16} /> : <IconUpload size={16} />
+              }
+              onClick={handleImport}
+              loading={importLoading}
+              disabled={!importFile}
+              color={importDryRun ? "blue" : "green"}
+            >
+              {importDryRun
+                ? t("validate", { defaultValue: "Validate" })
+                : t("import", { defaultValue: "Import" })}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Application detail drawer */}
       <Drawer

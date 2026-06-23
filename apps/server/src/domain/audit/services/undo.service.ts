@@ -269,6 +269,11 @@ export class UndoService {
         return this.undoIssueCard(log, undoUserId, client);
       case UndoActionType.RETURN_CARD:
         return this.undoReturnCard(log, undoUserId, client);
+      case UndoActionType.MARK_CARD_LOST:
+      case UndoActionType.MARK_CARD_BROKEN:
+        return this.undoMarkCardQuarantined(log, undoUserId, client);
+      case UndoActionType.REINSTATE_CARD:
+        return this.undoReinstateCard(log, undoUserId, client);
 
       // Damages
       case UndoActionType.CREATE_DAMAGE_REPORT:
@@ -281,6 +286,12 @@ export class UndoService {
       // Bulk Import
       case UndoActionType.BULK_IMPORT_STUDENT:
         return this.undoBulkImport(log, client);
+
+      // Student Applications
+      case UndoActionType.APPROVE_APPLICATION:
+        return this.undoApproveApplication(log, client);
+      case UndoActionType.REJECT_APPLICATION:
+        return this.undoRejectApplication(log, client);
 
       // Pre-Reservations
       case UndoActionType.ASSIGN_PRE_RESERVATION:
@@ -355,37 +366,36 @@ export class UndoService {
   private async undoDeleteLocation(log: UndoLog, client: PoolClient): Promise<void> {
     const locationId = parseInt(log.entityId, 10);
     const location = await client.query(
-      'SELECT id, tree_path, deleted_at FROM locations WHERE id = $1',
+      'SELECT id, tree_path::TEXT as tree_path, deleted_at FROM locations WHERE id = $1',
       [locationId],
     );
     if (location.rowCount === 0) throw new BadRequestException('Location does not exist');
     if (!location.rows[0].deleted_at) throw new BadRequestException('Location is not deleted');
 
     const treePath = location.rows[0].tree_path;
-    const deletedAt = location.rows[0].deleted_at;
     if (treePath.includes('.')) {
       const parentPath = treePath.substring(0, treePath.lastIndexOf('.'));
       const parent = await client.query(
-        'SELECT 1 FROM locations WHERE tree_path = $1 AND deleted_at IS NULL',
+        'SELECT 1 FROM locations WHERE tree_path::TEXT = $1 AND deleted_at IS NULL',
         [parentPath],
       );
       if (parent.rowCount === 0)
         throw new BadRequestException('Cannot restore: parent location is deleted or missing');
     }
 
-    // Deleting a location cascades to its whole subtree (locations + beds) in
-    // one statement, so everything cascaded shares this exact deleted_at -
-    // restore only those rows, not anything deleted independently before or
-    // after.
+    // Compare deleted_at entirely in the database to avoid JavaScript Date
+    // millisecond truncation of PostgreSQL's microsecond-precision timestamps.
     await client.query(
-      'UPDATE locations SET deleted_at = NULL WHERE tree_path <@ $1 AND deleted_at = $2',
-      [treePath, deletedAt],
+      `UPDATE locations SET deleted_at = NULL
+       WHERE tree_path <@ $1::ltree
+         AND deleted_at = (SELECT deleted_at FROM locations WHERE id = $2)`,
+      [treePath, locationId],
     );
     await client.query(
       `UPDATE beds SET deleted_at = NULL
-       WHERE deleted_at = $2
-         AND location_id IN (SELECT id FROM locations WHERE tree_path <@ $1)`,
-      [treePath, deletedAt],
+       WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $1::ltree)
+         AND deleted_at = (SELECT deleted_at FROM locations WHERE id = $2)`,
+      [treePath, locationId],
     );
   }
 
@@ -1306,6 +1316,62 @@ export class UndoService {
     );
   }
 
+  private async undoMarkCardQuarantined(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
+    const cardId = parseInt(log.entityId, 10);
+    const { previousStatus, previousHolderId, previousBookingId } = log.undoData;
+
+    await client.query(
+      `UPDATE access_cards
+       SET status = $1,
+           current_holder_id = $2,
+           current_booking_id = $3,
+           updated_at = NOW()
+       WHERE id = $4`,
+      [previousStatus, previousHolderId ?? null, previousBookingId ?? null, cardId],
+    );
+
+    await client.query(
+      `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
+       VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+      [
+        cardId,
+        previousHolderId ?? null,
+        previousBookingId ?? null,
+        undoUserId,
+        'Undo: Card quarantine reversed',
+      ],
+    );
+  }
+
+  private async undoReinstateCard(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
+    const cardId = parseInt(log.entityId, 10);
+    const { previousStatus } = log.undoData;
+
+    await client.query(
+      `UPDATE access_cards
+       SET status = $1,
+           current_holder_id = NULL,
+           current_booking_id = NULL,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [previousStatus, cardId],
+    );
+
+    await client.query(
+      `INSERT INTO access_card_logs (card_id, action_type, performed_by, notes)
+       VALUES ($1, 'reversed', $2, $3)`,
+      [cardId, undoUserId, 'Undo: Card reinstatement reversed'],
+    );
+  }
+
   // ===========================================================================
   // Damage Handlers
   // ===========================================================================
@@ -1554,6 +1620,51 @@ export class UndoService {
       previousStatus,
       log.entityId,
     ]);
+  }
+
+  // ===========================================================================
+  // Student Application Handlers
+  // ===========================================================================
+
+  private async undoApproveApplication(log: UndoLog, client: PoolClient): Promise<void> {
+    const { studentId, previousEnrollmentStatus, studentCreatedDuringApproval, insertedCertId } =
+      log.undoData;
+    const appId = log.entityId;
+
+    // 1. Revert application back to pending
+    await client.query(
+      `UPDATE student_applications
+       SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL, student_id = NULL
+       WHERE id = $1`,
+      [appId],
+    );
+
+    if (studentCreatedDuringApproval) {
+      // 2a. Student was created as part of this approval — delete them
+      await client.query('DELETE FROM students WHERE id = $1', [studentId]);
+    } else {
+      // 2b. Student pre-existed — revert enrollment status
+      await client.query(
+        'UPDATE students SET enrollment_status = $1, updated_at = NOW() WHERE id = $2',
+        [previousEnrollmentStatus ?? 'pending', studentId],
+      );
+
+      // 3. Delete enrollment cert that was inserted (returning students only)
+      if (insertedCertId) {
+        await client.query('DELETE FROM student_enrollment_verifications WHERE id = $1', [
+          insertedCertId,
+        ]);
+      }
+    }
+  }
+
+  private async undoRejectApplication(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE student_applications
+       SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL, rejection_reason = NULL
+       WHERE id = $1`,
+      [log.entityId],
+    );
   }
 
   private async undoBulkImport(log: UndoLog, client: PoolClient): Promise<void> {

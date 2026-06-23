@@ -7,6 +7,7 @@ import {
   forwardRef,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import * as XLSX from 'xlsx';
 import { ApiException } from '../../../common/exceptions/api.exception';
 import { ErrorCodes } from '../../../common/constants/error-codes';
 import { StudentsRepository } from '../repositories/students.repository';
@@ -339,7 +340,16 @@ export class StudentsService {
 
     if (action === 'reject') {
       if (!rejectionReason) throw new BadRequestException('Rejection reason is required');
-      return this.applicationsRepository.reject(id, reviewerId, rejectionReason);
+      const result = await this.applicationsRepository.reject(id, reviewerId, rejectionReason);
+      await this.undoService.registerUndo({
+        userId: reviewerId,
+        actionType: UndoActionType.REJECT_APPLICATION,
+        entityType: 'student_application',
+        entityId: id,
+        undoData: {},
+        description: `Rejected application from ${application.firstName} ${application.lastName}`,
+      });
+      return result;
     }
 
     return this.db.transaction(async (client) => {
@@ -350,6 +360,8 @@ export class StudentsService {
         application.studentNumber,
         client,
       );
+
+      const studentCreatedDuringApproval = !student;
 
       if (!student) {
         student = await this.studentsRepository.create(
@@ -372,12 +384,15 @@ export class StudentsService {
         );
       }
 
+      const previousEnrollmentStatus = student.enrollmentStatus;
+
       // Activate the account
       await this.studentsRepository.setEnrollmentStatus(student.id, 'enrolled', client);
 
       // Store the submitted certificate for returning students
+      let insertedCertId: string | null = null;
       if (application.documentType === 'returning') {
-        await this.studentsRepository.insertEnrollmentCert(
+        const cert = await this.studentsRepository.insertEnrollmentCert(
           student.id,
           {
             filename: application.documentFilename,
@@ -388,9 +403,29 @@ export class StudentsService {
           },
           client,
         );
+        insertedCertId = cert.id;
       }
 
-      return this.applicationsRepository.approve(id, reviewerId, student.id, client);
+      const result = await this.applicationsRepository.approve(id, reviewerId, student.id, client);
+
+      await this.undoService.registerUndo(
+        {
+          userId: reviewerId,
+          actionType: UndoActionType.APPROVE_APPLICATION,
+          entityType: 'student_application',
+          entityId: id,
+          undoData: {
+            studentId: student.id,
+            previousEnrollmentStatus,
+            studentCreatedDuringApproval,
+            insertedCertId,
+          },
+          description: `Approved application from ${application.firstName} ${application.lastName}`,
+        },
+        client,
+      );
+
+      return result;
     });
   }
 
@@ -403,5 +438,59 @@ export class StudentsService {
 
   async getApplicationLetterUrl(id: string): Promise<{ url: string }> {
     return this.getApplicationDocumentUrl(id);
+  }
+
+  async exportStudents(dto: FindAllStudentsDto, context: AuditUserContext): Promise<Buffer> {
+    const { data } = await this.studentsRepository.findAll(
+      { ...dto, page: 1, limit: 100000 },
+      undefined,
+      context.locationScope,
+    );
+
+    const rows = data.map((s) => ({
+      studentNumber: s.studentNumber,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      gender: s.gender,
+      nationalityCode: s.nationalityCode,
+      nationalId: s.nationalId,
+      birthDate: s.birthDate ? String(s.birthDate).split('T')[0] : '',
+      department: s.department,
+      email: s.email ?? '',
+      phoneNumber: s.phoneNumber ?? '',
+      whatsappNumber: s.whatsappNumber ?? '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  }
+
+  generateImportTemplate(): Buffer {
+    const example = [
+      {
+        studentNumber: '20230001',
+        firstName: 'John',
+        lastName: 'Doe',
+        gender: 'male',
+        nationalityCode: 'TR',
+        nationalId: '12345678901',
+        birthDate: '2000-01-15',
+        department: 'Computer Engineering',
+        email: 'john@example.com',
+        phoneNumber: '+90 555 123 4567',
+        whatsappNumber: '+90 555 123 4567',
+        bedId: '',
+        semesterId: '',
+        startDate: '',
+        endDate: '',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(example);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
   }
 }

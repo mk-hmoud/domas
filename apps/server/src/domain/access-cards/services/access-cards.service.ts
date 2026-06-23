@@ -284,13 +284,17 @@ export class AccessCardsService {
       if (!card) throw new NotFoundException(`Card with ID ${id} not found`);
       await this.assertCardInScope(id, context, client);
 
+      const isQuarantined =
+        data.status === CardStatus.LOST ||
+        data.status === CardStatus.BROKEN ||
+        data.status === CardStatus.VOID;
+
       const updatedCard = await this.repository.updateCard(
         id,
         {
           status: data.status,
-          // If losing or voiding, clear holder
-          currentHolderId: data.status !== CardStatus.ACTIVE ? (null as any) : undefined,
-          currentBookingId: data.status !== CardStatus.ACTIVE ? (null as any) : undefined,
+          currentHolderId: isQuarantined ? (null as any) : undefined,
+          currentBookingId: isQuarantined ? (null as any) : undefined,
         },
         client,
       );
@@ -300,6 +304,9 @@ export class AccessCardsService {
         case CardStatus.LOST:
           actionType = CardActionType.LOST;
           break;
+        case CardStatus.BROKEN:
+          actionType = CardActionType.BROKEN;
+          break;
         case CardStatus.VOID:
           actionType = CardActionType.VOID;
           break;
@@ -307,7 +314,7 @@ export class AccessCardsService {
           actionType = CardActionType.RETURNED;
           break;
         default:
-          actionType = CardActionType.VOID; // Fallback
+          actionType = CardActionType.VOID;
       }
 
       await this.repository.createLog(
@@ -324,7 +331,11 @@ export class AccessCardsService {
 
       // Auto-create a pending damage report so the replacement cost becomes a
       // student liability that goes through the normal manager-approval flow.
-      if (data.status === CardStatus.LOST && card.snapshotId && card.currentBookingId) {
+      if (
+        (data.status === CardStatus.LOST || data.status === CardStatus.BROKEN) &&
+        card.snapshotId &&
+        card.currentBookingId
+      ) {
         const locationRes = await client.query(
           `SELECT l.id
            FROM bookings b
@@ -335,6 +346,10 @@ export class AccessCardsService {
         );
 
         if (locationRes.rows[0]) {
+          const description =
+            data.status === CardStatus.BROKEN
+              ? `Access card #${card.cardNumber} reported broken`
+              : `Access card #${card.cardNumber} reported lost`;
           await client.query(
             `INSERT INTO damage_reports
                (location_id, snapshot_id, description, reported_by, culprit_ids, status)
@@ -342,13 +357,92 @@ export class AccessCardsService {
             [
               locationRes.rows[0].id,
               card.snapshotId,
-              `Access card #${card.cardNumber} reported lost`,
+              description,
               context.userId,
               card.currentHolderId ? [card.currentHolderId] : null,
             ],
           );
         }
       }
+
+      if (data.status === CardStatus.LOST || data.status === CardStatus.BROKEN) {
+        const undoActionType =
+          data.status === CardStatus.LOST
+            ? UndoActionType.MARK_CARD_LOST
+            : UndoActionType.MARK_CARD_BROKEN;
+        await this.undoService.registerUndo(
+          {
+            userId: context.userId,
+            actionType: undoActionType,
+            entityType: 'access_card',
+            entityId: id.toString(),
+            undoData: {
+              previousStatus: card.status,
+              previousHolderId: card.currentHolderId,
+              previousBookingId: card.currentBookingId,
+            },
+            description: `Marked card #${card.cardNumber} as ${data.status}`,
+          },
+          client,
+        );
+      }
+
+      return updatedCard;
+    };
+
+    if (externalClient) return operation(externalClient);
+    return this.db.transaction(operation, context);
+  }
+
+  async reinstateCard(
+    id: number,
+    data: { notes?: string },
+    context: AuditUserContext,
+    externalClient?: PoolClient,
+  ) {
+    const operation = async (client: PoolClient) => {
+      const card = await this.repository.findById(id, client);
+      if (!card) throw new NotFoundException(`Card with ID ${id} not found`);
+      await this.assertCardInScope(id, context, client);
+
+      const quarantinedStatuses = [CardStatus.LOST, CardStatus.BROKEN, CardStatus.VOID];
+      if (!quarantinedStatuses.includes(card.status)) {
+        throw new BadRequestException(
+          `Card is not quarantined (Status: ${card.status}). Only lost, broken, or void cards can be reinstated.`,
+        );
+      }
+
+      const updatedCard = await this.repository.updateCard(
+        id,
+        {
+          status: CardStatus.AVAILABLE,
+          currentHolderId: null as any,
+          currentBookingId: null as any,
+        },
+        client,
+      );
+
+      await this.repository.createLog(
+        {
+          cardId: id,
+          actionType: CardActionType.REINSTATED,
+          performedBy: context.userId,
+          notes: data.notes,
+        },
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.REINSTATE_CARD,
+          entityType: 'access_card',
+          entityId: id.toString(),
+          undoData: { previousStatus: card.status },
+          description: `Reinstated card #${card.cardNumber} (was ${card.status})`,
+        },
+        client,
+      );
 
       return updatedCard;
     };

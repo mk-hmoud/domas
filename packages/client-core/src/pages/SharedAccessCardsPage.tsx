@@ -25,6 +25,8 @@ import {
   CardBatchTable,
   AccessCardTable,
   ReportLostCardModal,
+  ReportBrokenCardModal,
+  ReinstateCardModal,
 } from "@domas/ui";
 import { notifications } from "@mantine/notifications";
 
@@ -40,6 +42,9 @@ export function SharedAccessCardsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [modalOpened, setModalOpened] = useState(false);
   const [lostCard, setLostCard] = useState<AccessCard | null>(null);
+  const [brokenCard, setBrokenCard] = useState<AccessCard | null>(null);
+  const [reinstateCard, setReinstateCard] = useState<AccessCard | null>(null);
+  const [reinstateLoading, setReinstateLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("batches");
 
   const fetchData = async () => {
@@ -153,6 +158,80 @@ export function SharedAccessCardsPage() {
     }
   };
 
+  const handleMarkBroken = async (
+    issueReplacement: boolean,
+    batchId?: number,
+  ) => {
+    if (!brokenCard) return;
+    setActionLoading(true);
+    try {
+      await accessCards.updateStatus(brokenCard.id, {
+        status: CardStatus.BROKEN,
+        notes: "Reported broken by staff",
+      });
+
+      if (
+        issueReplacement &&
+        brokenCard.currentHolderId &&
+        brokenCard.currentBookingId
+      ) {
+        await accessCards.issueCard({
+          studentId: brokenCard.currentHolderId,
+          bookingId: brokenCard.currentBookingId,
+          batchId,
+        });
+      }
+
+      notifications.show({
+        title: t("success"),
+        message: issueReplacement
+          ? t(
+              "card_marked_broken_replacement_issued",
+              "Card marked as broken and replacement issued.",
+            )
+          : t("card_marked_broken", "Card marked as broken."),
+        color: "green",
+      });
+
+      setBrokenCard(null);
+      fetchData();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReinstate = async (notes?: string) => {
+    if (!reinstateCard) return;
+    setReinstateLoading(true);
+    try {
+      await accessCards.reinstateCard(reinstateCard.id, { notes });
+      notifications.show({
+        title: t("success"),
+        message: t(
+          "card_reinstated",
+          "Card reinstated and available for reuse.",
+        ),
+        color: "green",
+      });
+      setReinstateCard(null);
+      fetchData();
+    } catch (error) {
+      notifications.show({
+        title: t("error"),
+        message: t("action_failed", { defaultValue: "Action failed" }),
+        color: "red",
+      });
+    } finally {
+      setReinstateLoading(false);
+    }
+  };
+
   const allowedLocations = locationList.filter(
     (loc) =>
       loc.type === LocationType.BUILDING || loc.type === LocationType.BLOCK,
@@ -202,6 +281,16 @@ export function SharedAccessCardsPage() {
                     ? (card) => setLostCard(card)
                     : undefined
                 }
+                onMarkBroken={
+                  hasPermission("access_cards.manage")
+                    ? (card) => setBrokenCard(card)
+                    : undefined
+                }
+                onReinstate={
+                  hasPermission("access_cards.reinstate")
+                    ? (card) => setReinstateCard(card)
+                    : undefined
+                }
               />
             </Paper>
           </Tabs.Panel>
@@ -222,6 +311,23 @@ export function SharedAccessCardsPage() {
           batches={batches}
           loading={actionLoading}
           onConfirm={handleMarkLost}
+        />
+
+        <ReportBrokenCardModal
+          opened={brokenCard !== null}
+          onClose={() => setBrokenCard(null)}
+          card={brokenCard}
+          batches={batches}
+          loading={actionLoading}
+          onConfirm={handleMarkBroken}
+        />
+
+        <ReinstateCardModal
+          opened={reinstateCard !== null}
+          onClose={() => setReinstateCard(null)}
+          card={reinstateCard}
+          loading={reinstateLoading}
+          onConfirm={handleReinstate}
         />
       </PageShell>
     </>

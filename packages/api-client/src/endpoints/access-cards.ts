@@ -63,6 +63,17 @@ export const accessCards = {
     return response.data;
   },
 
+  reinstateCard: async (
+    id: number,
+    data: { notes?: string },
+  ): Promise<AccessCard> => {
+    const response = await apiClient.post<AccessCard>(
+      `/access-cards/cards/${id}/reinstate`,
+      data,
+    );
+    return response.data;
+  },
+
   getLogs: async (id: number): Promise<AccessCardLog[]> => {
     const response = await apiClient.get<AccessCardLog[]>(
       `/access-cards/cards/${id}/logs`,

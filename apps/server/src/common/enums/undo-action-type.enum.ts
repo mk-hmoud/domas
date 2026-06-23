@@ -48,6 +48,9 @@ export enum UndoActionType {
   CREATE_CARD_BATCH = 'create_card_batch',
   ISSUE_CARD = 'issue_card',
   RETURN_CARD = 'return_card',
+  MARK_CARD_LOST = 'mark_card_lost',
+  MARK_CARD_BROKEN = 'mark_card_broken',
+  REINSTATE_CARD = 'reinstate_card',
 
   // Damages
   CREATE_DAMAGE_REPORT = 'create_damage_report',
@@ -87,4 +90,8 @@ export enum UndoActionType {
   CHECK_IN_GUEST_STAY = 'check_in_guest_stay',
   CHECK_OUT_GUEST_STAY = 'check_out_guest_stay',
   CANCEL_GUEST_STAY = 'cancel_guest_stay',
+
+  // Student Applications
+  APPROVE_APPLICATION = 'approve_application',
+  REJECT_APPLICATION = 'reject_application',
 }

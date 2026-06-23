@@ -12,7 +12,9 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentsService } from '../services/students.service';
 import { CreateStudentDto } from '../dto/create-student.dto';
@@ -115,6 +117,34 @@ export class StudentsController {
   @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
   getStats(@UserContext() context: AuditUserContext) {
     return this.studentsService.getStats(context);
+  }
+
+  @Get('export')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  async exportStudents(
+    @Query() query: FindAllStudentsDto,
+    @UserContext() context: AuditUserContext,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.studentsService.exportStudents(query, context);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename="students.xlsx"');
+    res.send(buffer);
+  }
+
+  @Get('import-template')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  downloadImportTemplate(@Res() res: Response) {
+    const buffer = this.studentsService.generateImportTemplate();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename="students_import_template.xlsx"');
+    res.send(buffer);
   }
 
   @Get(':id')
