@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   TextInput,
-  NumberInput,
   Button,
   Modal,
   Select,
@@ -51,8 +50,8 @@ export function CreateLocationModal({
   // Bulk State
   const [prefix, setPrefix] = useState("Room");
   const [prefixTr, setPrefixTr] = useState("");
-  const [startNumber, setStartNumber] = useState(101);
-  const [endNumber, setEndNumber] = useState(120);
+  const [startNumber, setStartNumber] = useState("101");
+  const [endNumber, setEndNumber] = useState("120");
   const [autoCreateBeds, setAutoCreateBeds] = useState(false);
   const [bedCount, setBedCount] = useState(3);
 
@@ -154,10 +153,20 @@ export function CreateLocationModal({
         await onSubmit(payload, autoCreateBeds ? bedCount : undefined);
       } else {
         // Bulk Create
+        const start = parseInt(startNumber, 10);
+        const end = parseInt(endNumber, 10);
+        const hasLeadingZero =
+          startNumber.startsWith("0") || endNumber.startsWith("0");
+        const padLength = hasLeadingZero
+          ? Math.max(startNumber.length, endNumber.length)
+          : 0;
         const dtos: CreateLocationDto[] = [];
-        for (let i = startNumber; i <= endNumber; i++) {
-          const name = `${prefix} ${i}`;
-          const nameTr = prefixTr ? `${prefixTr} ${i}` : undefined;
+        for (let i = start; i <= end; i++) {
+          const numStr = hasLeadingZero
+            ? String(i).padStart(padLength, "0")
+            : String(i);
+          const name = `${prefix} ${numStr}`;
+          const nameTr = prefixTr ? `${prefixTr} ${numStr}` : undefined;
           dtos.push({ ...payload, name, nameTr });
         }
         await onSubmit(dtos, autoCreateBeds ? bedCount : undefined);
@@ -253,16 +262,16 @@ export function CreateLocationModal({
                 />
               </SimpleGrid>
               <SimpleGrid cols={2} mb="md">
-                <NumberInput
+                <TextInput
                   label={t("start_number")}
                   value={startNumber}
-                  onChange={(val) => setStartNumber(Number(val))}
+                  onChange={(e) => setStartNumber(e.currentTarget.value)}
                   required
                 />
-                <NumberInput
+                <TextInput
                   label={t("end_number")}
                   value={endNumber}
-                  onChange={(val) => setEndNumber(Number(val))}
+                  onChange={(e) => setEndNumber(e.currentTarget.value)}
                   required
                 />
               </SimpleGrid>
@@ -393,7 +402,7 @@ export function CreateLocationModal({
             {initialValues
               ? t("save")
               : activeTab === "bulk"
-                ? `${t("create")} (${endNumber - startNumber + 1})`
+                ? `${t("create")} (${parseInt(endNumber, 10) - parseInt(startNumber, 10) + 1})`
                 : t("create")}
           </Button>
         </Group>
