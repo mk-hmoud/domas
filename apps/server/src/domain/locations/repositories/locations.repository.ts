@@ -26,6 +26,7 @@ export class LocationsRepository implements ILocationsRepository {
     return `
       id,
       name,
+      name_tr as "nameTr",
       tree_path as "treePath",
       type,
       gender_lock as "genderLock",
@@ -43,13 +44,14 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
+        name, name_tr, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING ${this.selectColumns}
     `;
     const values = [
       data.name,
+      data.nameTr || null,
       data.treePath,
       data.type,
       data.genderLock || null,
@@ -90,7 +92,7 @@ export class LocationsRepository implements ILocationsRepository {
 
     if (q) {
       params.push(`%${q}%`);
-      conditions.push(`l.name ILIKE $${params.length}`);
+      conditions.push(`(l.name ILIKE $${params.length} OR l.name_tr ILIKE $${params.length})`);
     }
     if (type) {
       params.push(type);
@@ -143,7 +145,7 @@ export class LocationsRepository implements ILocationsRepository {
 
     let baseQuery = `
       SELECT
-        l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
+        l.id, l.name, l.name_tr as "nameTr", l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
         l.student_year_lock as "studentYearLock",
         l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
         l.room_type_id as "roomTypeId", rt.name as "roomTypeName",
@@ -258,6 +260,7 @@ export class LocationsRepository implements ILocationsRepository {
       SELECT
         l.id as "roomId",
         l.name as "roomName",
+        l.name_tr as "roomNameTr",
         l.gender_lock as "genderLock",
         l.student_year_lock as "studentYearLock",
         l.is_guest_zone as "isGuestZone",
@@ -269,6 +272,7 @@ export class LocationsRepository implements ILocationsRepository {
         rt.capacity as "capacity",
         parent.id as "parentLocationId",
         parent.name as "parentLocationName",
+        parent.name_tr as "parentLocationNameTr",
         bd.id as "bedId",
         bd.label as "bedLabel",
         bd.status as "bedStatus",
@@ -347,6 +351,7 @@ export class LocationsRepository implements ILocationsRepository {
     };
 
     if (data.name !== undefined) addUpdate('name', data.name);
+    if ('nameTr' in data) addUpdate('name_tr', data.nameTr ?? null);
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
@@ -383,6 +388,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.name !== undefined) {
       updates.push(`name = $${paramIndex++}`);
       values.push(data.name);
+    }
+    if ('nameTr' in data) {
+      updates.push(`name_tr = $${paramIndex++}`);
+      values.push(data.nameTr ?? null);
     }
     if (data.type !== undefined) {
       updates.push(`type = $${paramIndex++}`);
@@ -467,7 +476,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE name ILIKE $1 AND deleted_at IS NULL
+      WHERE (name ILIKE $1 OR name_tr ILIKE $1) AND deleted_at IS NULL
       ORDER BY tree_path ASC
       LIMIT 20
     `;

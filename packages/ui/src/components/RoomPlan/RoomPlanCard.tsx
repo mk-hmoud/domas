@@ -107,7 +107,8 @@ export function RoomPlanCard({
   onCreateBooking,
   onViewStudent,
 }: RoomPlanCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
   const status = getRoomPlanStatus(room);
   const color = STATUS_COLORS[status];
   const occupiedCount = room.beds.filter((b) => b.occupant).length;
@@ -124,7 +125,7 @@ export function RoomPlanCard({
     >
       <Group justify="space-between" wrap="nowrap" mb={6}>
         <Text fw={700} size="md" truncate>
-          {room.name}
+          {isTr && room.nameTr ? room.nameTr : room.name}
         </Text>
         <Group gap={6} wrap="nowrap">
           {room.genderLock && (

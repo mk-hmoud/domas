@@ -89,7 +89,9 @@ function TreeItem({
   onSelectBranch,
   expandedIds,
 }: TreeItemProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const displayName = isTr && node.nameTr ? node.nameTr : node.name;
   const [opened, setOpened] = useState(false);
   const [hovered, setHovered] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -220,7 +222,7 @@ function TreeItem({
               color: "inherit",
             }}
           >
-            {node.name}
+            {displayName}
           </Text>
 
           {node.type === LocationType.BED ? (
@@ -279,7 +281,9 @@ function filterTree(nodes: LocationNode[], query: string): LocationNode[] {
     const children = node.children
       ? filterTree(node.children, query)
       : undefined;
-    const matches = node.name.toLowerCase().includes(lowerQuery);
+    const matches =
+      node.name.toLowerCase().includes(lowerQuery) ||
+      (node.nameTr ?? "").toLowerCase().includes(lowerQuery);
     if (matches || (children && children.length > 0)) {
       filtered.push({ ...node, children: children || [] });
     }

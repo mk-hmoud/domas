@@ -169,7 +169,10 @@ export function SharedRoomPlanPage() {
       } else {
         groups.set(room.parentLocationId, {
           id: room.parentLocationId,
-          name: room.parentLocationName,
+          name:
+            isTr && room.parentLocationNameTr
+              ? room.parentLocationNameTr
+              : room.parentLocationName,
           rooms: [room],
         });
       }

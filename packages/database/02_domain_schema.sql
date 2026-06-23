@@ -9,7 +9,8 @@
 CREATE TABLE locations (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(100) NOT NULL, -- e.g., "Campus", "Block A", "Room 101"
-    
+    name_tr VARCHAR(100), -- Turkish translation, optional (many node names are numeric/codes)
+
     -- The Hierarchical Path (Campus.BlockA.Floor1.Room101)
     tree_path ltree NOT NULL,
     

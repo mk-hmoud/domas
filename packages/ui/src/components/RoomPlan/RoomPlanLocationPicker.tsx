@@ -28,7 +28,10 @@ const VIEWABLE_TYPES = new Set<LocationType>([
 export function RoomPlanLocationPicker({
   onChange,
 }: RoomPlanLocationPickerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const localizedLocationName = (loc: { name: string; nameTr?: string }) =>
+    isTr && loc.nameTr ? loc.nameTr : loc.name;
   const [levels, setLevels] = useState<SelectionLevel[]>([]);
   const [selectedIds, setSelectedIds] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
@@ -61,7 +64,7 @@ export function RoomPlanLocationPicker({
               parentId: root.id,
               options: drillable.map((c) => ({
                 value: c.id.toString(),
-                label: c.name,
+                label: localizedLocationName(c),
               })),
             },
           ]);
@@ -111,7 +114,7 @@ export function RoomPlanLocationPicker({
             parentId: locId,
             options: drillable.map((c) => ({
               value: c.id.toString(),
-              label: c.name,
+              label: localizedLocationName(c),
             })),
           },
         ]);

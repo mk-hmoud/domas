@@ -49,6 +49,7 @@ export function CreateLocationModal({
 
   // Bulk State
   const [prefix, setPrefix] = useState("Room");
+  const [prefixTr, setPrefixTr] = useState("");
   const [startNumber, setStartNumber] = useState(101);
   const [endNumber, setEndNumber] = useState(120);
   const [autoCreateBeds, setAutoCreateBeds] = useState(false);
@@ -57,6 +58,7 @@ export function CreateLocationModal({
   const form = useForm<CreateLocationDto>({
     initialValues: {
       name: "",
+      nameTr: "",
       type: LocationType.CAMPUS,
       parentId: parentId || undefined,
       genderLock: undefined,
@@ -114,9 +116,11 @@ export function CreateLocationModal({
     if (opened) {
       setAutoCreateBeds(false);
       setBedCount(3);
+      setPrefixTr("");
       if (initialValues) {
         form.setValues({
           name: initialValues.name,
+          nameTr: initialValues.nameTr || "",
           type: initialValues.type,
           genderLock: initialValues.genderLock || undefined,
           studentYearLock: initialValues.studentYearLock || undefined,
@@ -141,6 +145,7 @@ export function CreateLocationModal({
     setLoading(true);
     const payload = {
       ...values,
+      nameTr: values.nameTr || undefined,
       roomTypeId: values.roomTypeId ?? undefined,
     };
     try {
@@ -151,7 +156,8 @@ export function CreateLocationModal({
         const dtos: CreateLocationDto[] = [];
         for (let i = startNumber; i <= endNumber; i++) {
           const name = `${prefix} ${i}`;
-          dtos.push({ ...payload, name });
+          const nameTr = prefixTr ? `${prefixTr} ${i}` : undefined;
+          dtos.push({ ...payload, name, nameTr });
         }
         await onSubmit(dtos, autoCreateBeds ? bedCount : undefined);
       }
@@ -209,23 +215,43 @@ export function CreateLocationModal({
             </Tabs.List>
 
             <Tabs.Panel value="single" pt="xs">
-              <TextInput
-                label={t("name_label")}
-                placeholder={t("name_placeholder")}
-                required
-                mb="md"
-                {...form.getInputProps("name")}
-              />
+              <SimpleGrid cols={2} mb="md">
+                <TextInput
+                  label={t("name_label")}
+                  placeholder={t("name_placeholder")}
+                  required
+                  {...form.getInputProps("name")}
+                />
+                <TextInput
+                  label={t("name_tr_label", {
+                    defaultValue: "Turkish Name",
+                  })}
+                  placeholder={t("name_tr_placeholder", {
+                    defaultValue: "Optional",
+                  })}
+                  {...form.getInputProps("nameTr")}
+                />
+              </SimpleGrid>
             </Tabs.Panel>
 
             <Tabs.Panel value="bulk" pt="xs">
-              <SimpleGrid cols={3} mb="md">
+              <SimpleGrid cols={2} mb="md">
                 <TextInput
                   label={t("prefix")}
                   value={prefix}
                   onChange={(e) => setPrefix(e.currentTarget.value)}
                   required
                 />
+                <TextInput
+                  label={t("prefix_tr", { defaultValue: "Turkish Prefix" })}
+                  placeholder={t("name_tr_placeholder", {
+                    defaultValue: "Optional",
+                  })}
+                  value={prefixTr}
+                  onChange={(e) => setPrefixTr(e.currentTarget.value)}
+                />
+              </SimpleGrid>
+              <SimpleGrid cols={2} mb="md">
                 <NumberInput
                   label={t("start_number")}
                   value={startNumber}
@@ -244,13 +270,21 @@ export function CreateLocationModal({
         )}
 
         {initialValues && (
-          <TextInput
-            label={t("name_label")}
-            placeholder={t("name_placeholder")}
-            required
-            mb="md"
-            {...form.getInputProps("name")}
-          />
+          <SimpleGrid cols={2} mb="md">
+            <TextInput
+              label={t("name_label")}
+              placeholder={t("name_placeholder")}
+              required
+              {...form.getInputProps("name")}
+            />
+            <TextInput
+              label={t("name_tr_label", { defaultValue: "Turkish Name" })}
+              placeholder={t("name_tr_placeholder", {
+                defaultValue: "Optional",
+              })}
+              {...form.getInputProps("nameTr")}
+            />
+          </SimpleGrid>
         )}
 
         {form.values.type === LocationType.ROOM && !initialValues && (

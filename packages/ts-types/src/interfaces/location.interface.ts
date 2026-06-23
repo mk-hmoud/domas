@@ -6,6 +6,7 @@ import { StudentYearLock } from "../enums/student-year-lock.enum";
 export interface Location {
   id: number;
   name: string;
+  nameTr?: string;
   treePath: string;
   type: LocationType;
   genderLock: GenderType | null;

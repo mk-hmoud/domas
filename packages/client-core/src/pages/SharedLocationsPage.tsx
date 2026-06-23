@@ -94,7 +94,10 @@ import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
 
 function LocationsContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const localizedName = (node: { name: string; nameTr?: string }) =>
+    isTr && node.nameTr ? node.nameTr : node.name;
   const { countries } = useCountries();
   const { departments } = useDepartments();
   const {
@@ -314,7 +317,7 @@ function LocationsContent() {
 
   const breadcrumbs =
     locationPath?.map((n) => ({
-      label: n.name,
+      label: localizedName(n),
       onClick: () => selectNode(n),
     })) ?? [];
 
@@ -496,7 +499,7 @@ function LocationsContent() {
       title: t("delete_location_title"),
       children: (
         <Text size="sm">
-          {t("delete_location_message", { name: node.name })}
+          {t("delete_location_message", { name: localizedName(node) })}
         </Text>
       ),
       labels: { confirm: t("confirm"), cancel: t("cancel") },
@@ -959,7 +962,7 @@ function LocationsContent() {
           >
             {selectedNode ? (
               <LocationDetail
-                title={selectedNode.name}
+                title={localizedName(selectedNode)}
                 type={selectedNode.type}
                 breadcrumbs={breadcrumbs}
                 actions={
@@ -1300,7 +1303,7 @@ function LocationsContent() {
                             <RoomCard
                               key={child.id}
                               id={Number(child.id)}
-                              name={child.name}
+                              name={localizedName(child)}
                               genderLock={child.genderLock || undefined}
                               selected={selectedIds.includes(globalId)}
                               onClick={() => selectNode(child as any)}
@@ -1312,7 +1315,7 @@ function LocationsContent() {
                             <GenericLocationCard
                               key={child.id}
                               id={Number(child.id)}
-                              name={child.name}
+                              name={localizedName(child)}
                               icon={<LocationIcon type={child.type} />}
                               selected={selectedIds.includes(globalId)}
                               onClick={() => selectNode(child as any)}
@@ -1574,7 +1577,7 @@ function LocationsContent() {
                       <Text size="sm" fw={500}>
                         {node.type === LocationType.BED || node.type === "bed"
                           ? `${node.locationName || ""} - ${node.label || node.name}`
-                          : node.name}
+                          : localizedName(node)}
                       </Text>
                     </Group>
                     <ActionIcon

@@ -41,6 +41,7 @@ export interface RoomPlanBed {
 export interface RoomPlanRoom {
   id: number;
   name: string;
+  nameTr?: string;
   genderLock: GenderType | null;
   studentYearLock: StudentYearLock | null;
   isGuestZone: boolean;
@@ -52,5 +53,6 @@ export interface RoomPlanRoom {
   capacity: number;
   parentLocationId: number;
   parentLocationName: string;
+  parentLocationNameTr?: string;
   beds: RoomPlanBed[];
 }

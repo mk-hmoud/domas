@@ -296,6 +296,7 @@ export class LocationsService {
         room = {
           id: row.roomId,
           name: row.roomName,
+          nameTr: row.roomNameTr,
           genderLock: row.genderLock,
           studentYearLock: row.studentYearLock,
           isGuestZone: row.isGuestZone,
@@ -307,6 +308,7 @@ export class LocationsService {
           capacity: row.capacity,
           parentLocationId: row.parentLocationId,
           parentLocationName: row.parentLocationName,
+          parentLocationNameTr: row.parentLocationNameTr,
           beds: [],
         };
         rooms.set(row.roomId, room);

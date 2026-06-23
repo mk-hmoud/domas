@@ -6,6 +6,7 @@ import { LocationOwnership } from '../../../common/enums/location-ownership.enum
 export class Location {
   id!: number;
   name!: string;
+  nameTr?: string;
   treePath!: string;
   type!: LocationType;
   genderLock!: GenderType | null;

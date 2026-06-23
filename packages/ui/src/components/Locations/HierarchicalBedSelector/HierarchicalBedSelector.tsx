@@ -26,7 +26,10 @@ export function HierarchicalBedSelector({
   onChange,
   error,
 }: HierarchicalBedSelectorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const localizedLocationName = (loc: { name: string; nameTr?: string }) =>
+    isTr && loc.nameTr ? loc.nameTr : loc.name;
   const [levels, setLevels] = useState<SelectionLevel[]>([]);
   const [selectedIds, setSelectedIds] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
@@ -51,7 +54,7 @@ export function HierarchicalBedSelector({
             parentId: null,
             options: roots.map((r) => ({
               value: r.id.toString(),
-              label: r.name,
+              label: localizedLocationName(r),
             })),
           },
         ];
@@ -94,7 +97,7 @@ export function HierarchicalBedSelector({
                   parentId: currentLoc.id,
                   options: children.map((c) => ({
                     value: c.id.toString(),
-                    label: c.name,
+                    label: localizedLocationName(c),
                   })),
                 });
               }
@@ -191,7 +194,7 @@ export function HierarchicalBedSelector({
           parentId: locId,
           options: children.map((c) => ({
             value: c.id.toString(),
-            label: c.name,
+            label: localizedLocationName(c),
           })),
         };
         setLevels((prev) => [...prev.slice(0, levelIdx + 1), nextLevel]);
