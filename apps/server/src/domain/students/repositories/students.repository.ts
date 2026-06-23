@@ -170,20 +170,26 @@ export class StudentsRepository {
     }
 
     if (!scope?.unrestricted) {
-      // A student is only visible to scoped staff while they have a current
-      // active booking whose bed falls within the staff member's locations -
-      // students with no physical placement yet have no location to scope.
+      // A student with no current placement has no location to scope, so
+      // they're visible to any scoped staff. A placed student is only
+      // visible while their active booking's bed falls within the staff
+      // member's locations.
       const scopeFilter = this.locationScopeService.buildScopeClause(
         scope,
         'l.tree_path',
         values.length + 1,
       );
       if (scopeFilter.param) values.push(scopeFilter.param);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM bookings b
-        JOIN beds bd ON b.bed_id = bd.id
-        JOIN locations l ON bd.location_id = l.id
-        WHERE b.student_id = students.id AND b.status = 'active' AND ${scopeFilter.clause}
+      conditions.push(`(
+        NOT EXISTS (
+          SELECT 1 FROM bookings b WHERE b.student_id = students.id AND b.status = 'active'
+        )
+        OR EXISTS (
+          SELECT 1 FROM bookings b
+          JOIN beds bd ON b.bed_id = bd.id
+          JOIN locations l ON bd.location_id = l.id
+          WHERE b.student_id = students.id AND b.status = 'active' AND ${scopeFilter.clause}
+        )
       )`);
     }
 

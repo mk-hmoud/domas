@@ -154,10 +154,10 @@ export function UserLocationsPanel({
       ) : (
         <>
           {assigned.length === 0 ? (
-            <Text size="sm" c="dimmed">
+            <Text size="sm" c="orange">
               {t(
-                "staff_locations_unrestricted",
-                "No locations assigned — this user can see and manage everything.",
+                "staff_locations_unassigned",
+                "No locations assigned — this user cannot see or manage any students, beds, or other location-bound data until at least one location is assigned.",
               )}
             </Text>
           ) : (
