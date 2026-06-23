@@ -13,6 +13,7 @@ import {
   StudentApplication,
   ApplicationStatus,
   StudentHistoryBooking,
+  StudentNationalityStats,
 } from "@domas/ts-types";
 
 export const students = {
@@ -43,6 +44,12 @@ export const students = {
       "/students",
       { params },
     );
+    return response.data;
+  },
+
+  getStats: async (): Promise<StudentNationalityStats> => {
+    const response =
+      await apiClient.get<StudentNationalityStats>("/students/stats");
     return response.data;
   },
 

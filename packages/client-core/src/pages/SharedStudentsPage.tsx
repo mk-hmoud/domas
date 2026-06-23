@@ -25,6 +25,7 @@ import {
   Modal,
   ThemeIcon,
   Skeleton,
+  SimpleGrid,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -56,6 +57,8 @@ import {
   ApplicationStatus,
   StudentApplication,
   StudentHistoryBooking,
+  StudentNationalityStats,
+  GenderType,
 } from "@domas/ts-types";
 import {
   StudentModal,
@@ -312,8 +315,16 @@ export function SharedStudentsPage() {
 
   // Filter states
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [nationalityFilter, setNationalityFilter] = useState<string | null>(
+    null,
+  );
+  const [genderFilter, setGenderFilter] = useState<string | null>(null);
+
+  // Stats
+  const [stats, setStats] = useState<StudentNationalityStats | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<string | null>("students");
@@ -348,13 +359,21 @@ export function SharedStudentsPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // Reset to first page whenever a filter (other than search, which has its
+  // own debounce above) changes.
+  useEffect(() => {
+    setPage(1);
+  }, [limit, nationalityFilter, genderFilter]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
       const result = await students.findAll({
         page,
-        limit: 10,
+        limit,
         search: debouncedSearch || undefined,
+        nationalityCode: nationalityFilter || undefined,
+        gender: (genderFilter as GenderType) || undefined,
       });
       setData(result);
       setSelectedIds([]); // Clear selection on fetch
@@ -371,7 +390,20 @@ export function SharedStudentsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [page, debouncedSearch]);
+  }, [page, limit, debouncedSearch, nationalityFilter, genderFilter]);
+
+  const fetchStats = async () => {
+    try {
+      const result = await students.getStats();
+      setStats(result);
+    } catch {
+      // silently ignore - stats are a non-critical summary
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   const fetchApplications = async () => {
     setAppLoading(true);
@@ -429,6 +461,7 @@ export function SharedStudentsPage() {
           setAppSelected(null);
           fetchApplications();
           fetchData();
+          fetchStats();
         } catch (err: any) {
           notifications.show({
             title: t("error"),
@@ -500,6 +533,7 @@ export function SharedStudentsPage() {
         color: "green",
       });
       fetchData();
+      fetchStats();
       setCreateModalOpened(false);
     } catch (error) {
       notifications.show({
@@ -526,6 +560,7 @@ export function SharedStudentsPage() {
         color: "green",
       });
       fetchData();
+      fetchStats();
       setEditModalOpened(false);
       setEditingStudent(null);
     } catch (error) {
@@ -559,6 +594,7 @@ export function SharedStudentsPage() {
             color: "green",
           });
           fetchData();
+          fetchStats();
         } catch (error) {
           notifications.show({
             title: t("error"),
@@ -608,6 +644,7 @@ export function SharedStudentsPage() {
             color: "green",
           });
           fetchData();
+          fetchStats();
         } catch (error) {
           notifications.show({
             title: t("error"),
@@ -857,15 +894,84 @@ export function SharedStudentsPage() {
           </Tabs.List>
 
           <Tabs.Panel value="students">
-            <TextInput
-              placeholder={t("search_placeholder", {
-                defaultValue: "Search...",
-              })}
-              leftSection={<IconSearch size={16} />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.currentTarget.value)}
-              mb="md"
-            />
+            <SimpleGrid cols={{ base: 2, sm: 4 }} mb="md">
+              <Paper withBorder radius="md" p="sm">
+                <Text size="xs" c="dimmed">
+                  {t("total_students", "Total Students")}
+                </Text>
+                <Text size="xl" fw={700}>
+                  {stats?.total ?? "—"}
+                </Text>
+              </Paper>
+              <Paper withBorder radius="md" p="sm">
+                <Text size="xs" c="dimmed">
+                  {t("tr_students", "TR")}
+                </Text>
+                <Text size="xl" fw={700}>
+                  {stats?.tr ?? "—"}
+                </Text>
+              </Paper>
+              <Paper withBorder radius="md" p="sm">
+                <Text size="xs" c="dimmed">
+                  {t("trnc_students", "TRNC")}
+                </Text>
+                <Text size="xl" fw={700}>
+                  {stats?.trnc ?? "—"}
+                </Text>
+              </Paper>
+              <Paper withBorder radius="md" p="sm">
+                <Text size="xs" c="dimmed">
+                  {t("other_nationalities", "Other Nationalities")}
+                </Text>
+                <Text size="xl" fw={700}>
+                  {stats?.other ?? "—"}
+                </Text>
+              </Paper>
+            </SimpleGrid>
+
+            <Group mb="md" align="flex-end">
+              <TextInput
+                placeholder={t("search_placeholder", {
+                  defaultValue: "Search...",
+                })}
+                leftSection={<IconSearch size={16} />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                style={{ flex: 1 }}
+                miw={200}
+              />
+              <Select
+                placeholder={t("filter_by_country", "Country")}
+                data={COUNTRIES.map(([code, name]) => ({
+                  value: code,
+                  label: name,
+                }))}
+                value={nationalityFilter}
+                onChange={setNationalityFilter}
+                searchable
+                clearable
+                w={200}
+              />
+              <Select
+                placeholder={t("filter_by_gender", "Gender")}
+                data={[
+                  { value: GenderType.MALE, label: t("male") },
+                  { value: GenderType.FEMALE, label: t("female") },
+                ]}
+                value={genderFilter}
+                onChange={setGenderFilter}
+                clearable
+                w={160}
+              />
+              <Select
+                label={t("per_page", "Per page")}
+                data={["10", "20", "50", "100"]}
+                value={String(limit)}
+                onChange={(v) => setLimit(v ? parseInt(v, 10) : 10)}
+                allowDeselect={false}
+                w={100}
+              />
+            </Group>
 
             <Paper withBorder radius="md" style={{ position: "relative" }}>
               <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
@@ -884,9 +990,16 @@ export function SharedStudentsPage() {
               />
             </Paper>
 
-            <Group justify="flex-end" mt="md">
+            <Group justify="space-between" mt="md">
+              <Text size="sm" c="dimmed">
+                {t("showing_of_total", {
+                  defaultValue: "{{count}} of {{total}} students",
+                  count: data.data.length,
+                  total: data.total,
+                })}
+              </Text>
               <Pagination
-                total={Math.ceil(data.total / 10)}
+                total={Math.max(1, Math.ceil(data.total / limit))}
                 value={page}
                 onChange={setPage}
               />

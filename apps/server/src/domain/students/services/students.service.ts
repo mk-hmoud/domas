@@ -106,6 +106,12 @@ export class StudentsService {
     return this.studentsRepository.findAll(dto, undefined, context.locationScope);
   }
 
+  async getStats(
+    context: AuditUserContext,
+  ): Promise<{ total: number; tr: number; trnc: number; other: number }> {
+    return this.studentsRepository.getStats(context.locationScope);
+  }
+
   async findById(id: string, context: AuditUserContext): Promise<Student> {
     const student = await this.studentsRepository.findById(id);
     if (!student) {

@@ -32,6 +32,17 @@ export interface Student {
   createdByUserId?: string;
 }
 
+// Breakdown of visible students by nationality, as returned by
+// GET /students/stats. "trnc" and "tr" are broken out individually since
+// they're the two most common nationalities; everything else is summed
+// into "other".
+export interface StudentNationalityStats {
+  total: number;
+  tr: number;
+  trnc: number;
+  other: number;
+}
+
 // A room-change request nested inline under the booking it belongs to,
 // as returned by GET /students/:id/history
 export interface StudentHistoryRoomChange {
