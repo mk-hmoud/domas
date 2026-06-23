@@ -50,6 +50,7 @@ export interface RoomPlanRoom {
   ownership: LocationOwnership;
   roomTypeId: number;
   roomTypeName: string;
+  roomTypeNameTr?: string;
   capacity: number;
   parentLocationId: number;
   parentLocationName: string;

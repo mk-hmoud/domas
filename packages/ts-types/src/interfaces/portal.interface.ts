@@ -70,7 +70,9 @@ export interface PortalBuilding {
 export interface RoomTypeCatalogItem {
   id: number;
   name: string;
+  nameTr?: string;
   description?: string;
+  descriptionTr?: string;
   galleryUrls: string[];
   amenities: string[];
   capacity: number;
@@ -100,6 +102,7 @@ export interface StudentBookingView {
   semesterStatus: SemesterStatus;
   bedLabel: string;
   roomName: string;
+  roomNameTr?: string;
   roomId: number;
   locationPath: string;
 }
@@ -107,7 +110,9 @@ export interface StudentBookingView {
 export interface PortalRoomType {
   id: number;
   name: string;
+  nameTr?: string;
   description?: string;
+  descriptionTr?: string;
   galleryUrls: string[];
   amenities: string[];
 }
@@ -125,7 +130,9 @@ export interface StudentCurrentBooking extends StudentBookingView {
   // Room type display assets (null when room has no type assigned)
   roomTypeId: number | null;
   roomTypeName: string | null;
+  roomTypeNameTr: string | null;
   roomTypeDescription: string | null;
+  roomTypeDescriptionTr: string | null;
   roomTypeGalleryUrls: string[];
   roomTypeAmenities: string[];
   // Room change tracking

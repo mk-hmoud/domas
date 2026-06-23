@@ -17,6 +17,7 @@ export class Location {
   ownership!: LocationOwnership;
   roomTypeId!: number | null;
   roomTypeName?: string;
+  roomTypeNameTr?: string;
   locationPath?: string;
   createdAt!: Date;
   updatedAt!: Date;

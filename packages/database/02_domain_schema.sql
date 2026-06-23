@@ -743,9 +743,11 @@ ALTER TABLE damage_liabilities
 -- =============================================
 
 CREATE TABLE room_types (
-    id           SERIAL PRIMARY KEY,
-    name         VARCHAR(100) NOT NULL,
-    description  TEXT,
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    name_tr         VARCHAR(100),
+    description     TEXT,
+    description_tr  TEXT,
     gallery_urls TEXT[]       NOT NULL DEFAULT '{}',
     amenities    TEXT[]       NOT NULL DEFAULT '{}',
     -- 1 = Single, 2 = Double, 3 = Triple, 4 = Quad

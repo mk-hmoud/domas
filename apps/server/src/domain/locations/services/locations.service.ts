@@ -305,6 +305,7 @@ export class LocationsService {
           ownership: row.ownership,
           roomTypeId: row.roomTypeId,
           roomTypeName: row.roomTypeName,
+          roomTypeNameTr: row.roomTypeNameTr,
           capacity: row.capacity,
           parentLocationId: row.parentLocationId,
           parentLocationName: row.parentLocationName,

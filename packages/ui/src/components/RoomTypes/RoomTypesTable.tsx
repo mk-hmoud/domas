@@ -79,6 +79,11 @@ export function RoomTypesTable({
               <Table.Td>
                 <Stack gap={2}>
                   <Text fw={500}>{rt.name}</Text>
+                  {rt.nameTr && (
+                    <Text size="xs" c="blue">
+                      {rt.nameTr}
+                    </Text>
+                  )}
                   {rt.description && (
                     <Text size="xs" c="dimmed" lineClamp={1}>
                       {rt.description}

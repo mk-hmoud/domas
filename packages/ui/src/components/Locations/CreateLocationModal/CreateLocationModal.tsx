@@ -43,7 +43,8 @@ export function CreateLocationModal({
   initialValues,
   roomTypes = [],
 }: CreateLocationModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>("single");
 
@@ -334,7 +335,7 @@ export function CreateLocationModal({
             withAsterisk
             data={roomTypes.map((rt) => ({
               value: String(rt.id),
-              label: `${rt.name} (${rt.capacity} ${t("beds", { defaultValue: "beds" })})`,
+              label: `${isTr && rt.nameTr ? rt.nameTr : rt.name} (${rt.capacity} ${t("beds", { defaultValue: "beds" })})`,
             }))}
             value={
               form.values.roomTypeId ? String(form.values.roomTypeId) : null

@@ -20,7 +20,9 @@ export class RoomTypesRepository {
     return `
       id,
       name,
+      name_tr       AS "nameTr",
       description,
+      description_tr AS "descriptionTr",
       gallery_urls  AS "galleryUrls",
       amenities,
       capacity,
@@ -63,12 +65,14 @@ export class RoomTypesRepository {
 
   async create(data: CreateRoomTypeDto, client?: PoolClient): Promise<RoomType> {
     const result = await this.getClient(client).query<RoomType>(
-      `INSERT INTO room_types (name, description, gallery_urls, amenities, capacity)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO room_types (name, name_tr, description, description_tr, gallery_urls, amenities, capacity)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING ${this.selectColumns}`,
       [
         data.name,
+        data.nameTr ?? null,
         data.description ?? null,
+        data.descriptionTr ?? null,
         data.galleryUrls ?? [],
         data.amenities ?? [],
         data.capacity,
@@ -88,7 +92,9 @@ export class RoomTypesRepository {
     };
 
     if (data.name !== undefined) add('name', data.name);
+    if ('nameTr' in data) add('name_tr', data.nameTr ?? null);
     if (data.description !== undefined) add('description', data.description);
+    if ('descriptionTr' in data) add('description_tr', data.descriptionTr ?? null);
     if (data.galleryUrls !== undefined) add('gallery_urls', data.galleryUrls);
     if (data.amenities !== undefined) add('amenities', data.amenities);
     if (data.capacity !== undefined) add('capacity', data.capacity);

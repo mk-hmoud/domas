@@ -1091,7 +1091,9 @@ function LocationsContent() {
                       color="green"
                       leftSection={<IconCurrencyDollar size={14} />}
                     >
-                      {selectedNode.roomTypeName ??
+                      {(isTr && selectedNode.roomTypeNameTr
+                        ? selectedNode.roomTypeNameTr
+                        : selectedNode.roomTypeName) ??
                         `Type #${selectedNode.roomTypeId}`}
                     </Badge>
                   )}
