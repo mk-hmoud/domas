@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavStats } from '../hooks/useNavStats';
 import { useUnreadMessagesCount } from '../hooks/useUnreadMessagesCount';
+import { useNavBadgeNotifications } from '../hooks/useNavBadgeNotifications';
 import { Group, Text } from '@mantine/core';
 import { DashboardLayout as SharedDashboardLayout, UndoHistoryDrawer } from '@domas/ui';
 import {
@@ -234,6 +235,11 @@ export function DashboardLayout() {
             link: '/dashboard/document-templates',
             requiredPermission: 'document_templates.view',
           },
+          {
+            label: t('nav.lookups', { defaultValue: 'Countries & Departments' }),
+            link: '/dashboard/lookups',
+            requiredPermission: 'lookups.manage',
+          },
         ],
       },
       {
@@ -272,6 +278,8 @@ export function DashboardLayout() {
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [t, user, navStats, unreadMessagesCount]);
+
+  useNavBadgeNotifications(navData);
 
   return (
     <>

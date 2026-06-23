@@ -21,12 +21,17 @@ const VIEWABLE_TYPES = new Set<LocationType>([
   LocationType.FLOOR,
 ]);
 
-// University/Campus are just navigation steps to drill through - the room
-// plan itself can only be viewed scoped to a Building, Block, or Floor.
+// There is only ever a single University root node, so it isn't shown as a
+// selection step - the picker starts drilling from its direct children.
+// Campus is still a navigation step to drill through - the room plan itself
+// can only be viewed scoped to a Building, Block, or Floor.
 export function RoomPlanLocationPicker({
   onChange,
 }: RoomPlanLocationPickerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const localizedLocationName = (loc: { name: string; nameTr?: string }) =>
+    isTr && loc.nameTr ? loc.nameTr : loc.name;
   const [levels, setLevels] = useState<SelectionLevel[]>([]);
   const [selectedIds, setSelectedIds] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
@@ -36,22 +41,36 @@ export function RoomPlanLocationPicker({
       setLoading(true);
       try {
         const result = await locations.findAll({ limit: 100 });
-        const roots = result.data.filter(
+        const root = result.data.find(
           (l) => l.type === LocationType.UNIVERSITY,
         );
-        setLevels([
-          {
-            label: t("location_type.university", {
-              defaultValue: "University",
-            }),
-            type: LocationType.UNIVERSITY,
-            parentId: null,
-            options: roots.map((r) => ({
-              value: r.id.toString(),
-              label: r.name,
-            })),
-          },
-        ]);
+        if (!root) {
+          setLevels([]);
+          return;
+        }
+
+        const children = await locations.findChildren(root.id);
+        const drillable = children.filter(
+          (c) => c.type !== LocationType.ROOM && c.type !== LocationType.BED,
+        );
+        if (drillable.length > 0) {
+          const nextType = drillable[0].type;
+          setLevels([
+            {
+              label: t(`location_type.${nextType}`, {
+                defaultValue: nextType,
+              }),
+              type: nextType,
+              parentId: root.id,
+              options: drillable.map((c) => ({
+                value: c.id.toString(),
+                label: localizedLocationName(c),
+              })),
+            },
+          ]);
+        } else {
+          setLevels([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -95,7 +114,7 @@ export function RoomPlanLocationPicker({
             parentId: locId,
             options: drillable.map((c) => ({
               value: c.id.toString(),
-              label: c.name,
+              label: localizedLocationName(c),
             })),
           },
         ]);

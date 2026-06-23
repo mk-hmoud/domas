@@ -33,7 +33,8 @@ export function LocationRegistryTable({
   onToggleSelection,
   onToggleSelectAll,
 }: LocationRegistryTableProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
 
   const getGenderColor = (gender?: GenderType) => {
     switch (gender) {
@@ -97,7 +98,11 @@ export function LocationRegistryTable({
             <LocationIcon type={item.type as any} />
             <Stack gap={0}>
               <Text size="sm" fw={500}>
-                {isBed ? `${item.locationName} - ${item.label}` : item.name}
+                {isBed
+                  ? `${item.locationName} - ${item.label}`
+                  : isTr && item.nameTr
+                    ? item.nameTr
+                    : item.name}
               </Text>
               {item.locationPath && (
                 <Text size="xs" c="dimmed">

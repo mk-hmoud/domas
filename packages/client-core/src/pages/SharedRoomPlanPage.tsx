@@ -50,13 +50,16 @@ import {
   Semester,
   CreateBookingDto,
   CreateStudentDto,
-  COUNTRIES,
 } from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../context/AuthContext";
+import { useCountries, useDepartments } from "../hooks/useLookups";
 
 export function SharedRoomPlanPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
+  const { countries } = useCountries();
+  const { departments } = useDepartments();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const canMessage = hasPermission("messages.manage");
@@ -166,7 +169,10 @@ export function SharedRoomPlanPage() {
       } else {
         groups.set(room.parentLocationId, {
           id: room.parentLocationId,
-          name: room.parentLocationName,
+          name:
+            isTr && room.parentLocationNameTr
+              ? room.parentLocationNameTr
+              : room.parentLocationName,
           rooms: [room],
         });
       }
@@ -257,8 +263,8 @@ export function SharedRoomPlanPage() {
 
   const getCountryName = (code?: string) => {
     if (!code) return "—";
-    const found = COUNTRIES.find(([c]) => c === code);
-    return found ? found[1] : code;
+    const found = countries.find((c) => c.code === code);
+    return found ? (isTr ? found.nameTr : found.nameEn) : code;
   };
 
   const handleCreateStudent = async (values: CreateStudentDto) => {
@@ -341,6 +347,8 @@ export function SharedRoomPlanPage() {
             label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
           }))}
           semesters={allSemesters}
+          countries={countries}
+          departments={departments}
           initialBedId={bookingBedId}
         />
 

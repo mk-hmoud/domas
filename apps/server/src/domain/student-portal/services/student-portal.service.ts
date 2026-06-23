@@ -83,6 +83,7 @@ export class StudentPortalService {
     const updated = await this.studentsRepository.update(studentId, {
       email: dto.email,
       phoneNumber: dto.phoneNumber,
+      whatsappNumber: dto.whatsappNumber,
     });
     if (!updated) {
       throw new NotFoundException('Student not found');

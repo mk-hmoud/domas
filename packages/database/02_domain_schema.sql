@@ -9,7 +9,8 @@
 CREATE TABLE locations (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(100) NOT NULL, -- e.g., "Campus", "Block A", "Room 101"
-    
+    name_tr VARCHAR(100), -- Turkish translation, optional (many node names are numeric/codes)
+
     -- The Hierarchical Path (Campus.BlockA.Floor1.Room101)
     tree_path ltree NOT NULL,
     
@@ -109,7 +110,21 @@ CREATE INDEX idx_staff_locations_location ON staff_locations(location_id);
 -- =============================================
 CREATE TABLE countries (
     code VARCHAR(10) PRIMARY KEY, -- Supports ISO alpha-2/3 and custom codes (e.g., 'TRNC')
-    name VARCHAR(100) NOT NULL,
+    name_en VARCHAR(100) NOT NULL,
+    name_tr VARCHAR(100) NOT NULL,
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================
+-- 3.2 DEPARTMENTS (Admin-editable lookup list)
+-- =============================================
+-- name_en is the canonical key referenced by students.department (not a
+-- surrogate id) so renaming a department here cascades to existing students,
+-- mirroring how countries.code anchors nationality_code.
+CREATE TABLE departments (
+    name_en VARCHAR(150) PRIMARY KEY,
+    name_tr VARCHAR(150) NOT NULL,
 
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -131,7 +146,7 @@ CREATE TABLE students (
     national_id VARCHAR(50) NOT NULL,
     birth_date DATE NOT NULL,
     birth_place VARCHAR(100) NOT NULL,
-    department VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL REFERENCES departments(name_en) ON UPDATE CASCADE,
     
     -- 4. Contact (Might differ from User email)
     email VARCHAR(150),
@@ -728,9 +743,11 @@ ALTER TABLE damage_liabilities
 -- =============================================
 
 CREATE TABLE room_types (
-    id           SERIAL PRIMARY KEY,
-    name         VARCHAR(100) NOT NULL,
-    description  TEXT,
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    name_tr         VARCHAR(100),
+    description     TEXT,
+    description_tr  TEXT,
     gallery_urls TEXT[]       NOT NULL DEFAULT '{}',
     amenities    TEXT[]       NOT NULL DEFAULT '{}',
     -- 1 = Single, 2 = Double, 3 = Triple, 4 = Quad

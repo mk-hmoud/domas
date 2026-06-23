@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Select, ComboboxItem, Loader, Group, Text, Box } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
+import { useTranslation } from "react-i18next";
 import { locations } from "@domas/api-client";
 import { IconMapPin } from "@tabler/icons-react";
 
@@ -21,6 +22,8 @@ export function SmartLocationSelector({
   error,
   required,
 }: SmartLocationSelectorProps) {
+  const { i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearch] = useDebouncedValue(searchValue, 300);
   const [options, setOptions] = useState<ComboboxItem[]>([]);
@@ -31,8 +34,13 @@ export function SmartLocationSelector({
     if (value && !options.some((o) => o.value === value)) {
       const fetchInitial = async () => {
         try {
-          const loc = await locations.findById(parseInt(value));
-          setOptions([{ value: loc.id.toString(), label: loc.name }]);
+          const loc: any = await locations.findById(parseInt(value));
+          setOptions([
+            {
+              value: loc.id.toString(),
+              label: isTr && loc.nameTr ? loc.nameTr : loc.name,
+            },
+          ]);
         } catch (e) {
           // Ignore if not found
         }
@@ -54,7 +62,7 @@ export function SmartLocationSelector({
 
         const newOptions = results.map((loc: any) => ({
           value: loc.id.toString(),
-          label: loc.name,
+          label: isTr && loc.nameTr ? loc.nameTr : loc.name,
           // Store extra data for custom rendering
           description: loc.parentPath || "Root Location",
         }));

@@ -36,7 +36,8 @@ import { notifications } from "@mantine/notifications";
 import { useAuth } from "../context/AuthContext";
 
 export function SharedPreReservationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
   const { hasPermission } = useAuth();
 
   const [items, setItems] = useState<PreReservationView[]>([]);
@@ -213,7 +214,9 @@ export function SharedPreReservationsPage() {
                   {t("pre_reservation.preferred_type", {
                     defaultValue: "Preferred: ",
                   })}
-                  {item.roomTypeName}
+                  {isTr && item.roomTypeNameTr
+                    ? item.roomTypeNameTr
+                    : item.roomTypeName}
                 </Text>
               )}
               {item.note && (
@@ -384,7 +387,9 @@ export function SharedPreReservationsPage() {
                     })}
                   </Text>
                   <Text size="sm" c="blue" fw={500}>
-                    {selected.roomTypeName}
+                    {isTr && selected.roomTypeNameTr
+                      ? selected.roomTypeNameTr
+                      : selected.roomTypeName}
                   </Text>
                 </Box>
               )}

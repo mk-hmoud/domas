@@ -59,6 +59,7 @@ import { useDebouncedValue } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { DatePickerInput } from "@mantine/dates";
 import { useAuth } from "../context/AuthContext";
+import { useCountries, useDepartments } from "../hooks/useLookups";
 import dayjs from "dayjs";
 
 function bookingStatusColor(status: string): string {
@@ -84,6 +85,8 @@ function bookingStatusColor(status: string): string {
 
 export function SharedBookingsPage() {
   const { t } = useTranslation();
+  const { countries } = useCountries();
+  const { departments } = useDepartments();
   const { hasPermission } = useAuth();
   const [data, setData] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
@@ -561,6 +564,8 @@ export function SharedBookingsPage() {
             label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
           }))}
           semesters={allSemesters}
+          countries={countries}
+          departments={departments}
           initialStudentId={isEditMode ? bookingToEdit?.studentId : null}
           initialBedId={isEditMode ? bookingToEdit?.bedId : null}
           isEdit={isEditMode}

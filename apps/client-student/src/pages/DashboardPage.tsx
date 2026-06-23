@@ -360,7 +360,8 @@ function PreReservationCard({
   preReservation: StudentPreReservationView;
   onCancelled: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
   const [confirming, setConfirming] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -446,7 +447,9 @@ function PreReservationCard({
                   {t('portal.room_type_preference', { defaultValue: 'Preferred type' })}
                 </Text>
                 <Text size="sm" fw={500} c="blue">
-                  {preReservation.roomTypeName}
+                  {isTr && preReservation.roomTypeNameTr
+                    ? preReservation.roomTypeNameTr
+                    : preReservation.roomTypeName}
                 </Text>
               </Group>
             )}
@@ -620,7 +623,8 @@ function ActiveResidentCard({
   booking: StudentCurrentBooking;
   onViewBooking: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
   return (
     <Paper
       radius="xl"
@@ -687,7 +691,8 @@ function ActiveResidentCard({
                 {t('portal.room_bed_label')}
               </Text>
               <Text size="sm" fw={500}>
-                {booking.roomName}, {t('portal.bed_label', { label: booking.bedLabel })}
+                {isTr && booking.roomNameTr ? booking.roomNameTr : booking.roomName},{' '}
+                {t('portal.bed_label', { label: booking.bedLabel })}
               </Text>
             </Group>
             {booking.accessCardNumber && (
@@ -728,7 +733,7 @@ function ActiveResidentCard({
               <Group gap="xs" mb={booking.roomTypeAmenities?.length ? 8 : 0}>
                 <IconSparkles size={14} color="var(--mantine-color-blue-6)" />
                 <Text size="sm" fw={700} c="blue">
-                  {booking.roomTypeName}
+                  {isTr && booking.roomTypeNameTr ? booking.roomTypeNameTr : booking.roomTypeName}
                 </Text>
               </Group>
               {booking.roomTypeAmenities && booking.roomTypeAmenities.length > 0 && (

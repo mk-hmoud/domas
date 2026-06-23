@@ -7,7 +7,15 @@ export class CreateRoomTypeDto {
 
   @IsString()
   @IsOptional()
+  nameTr?: string;
+
+  @IsString()
+  @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  descriptionTr?: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -33,7 +41,15 @@ export class UpdateRoomTypeDto {
 
   @IsString()
   @IsOptional()
+  nameTr?: string;
+
+  @IsString()
+  @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  descriptionTr?: string;
 
   @IsArray()
   @IsString({ each: true })

@@ -7,10 +7,8 @@ import {
   Length,
   IsEmail,
   IsDateString,
-  IsIn,
 } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { DEPARTMENTS } from '../../../common/constants/departments';
 
 export class CreateStudentDto {
   @IsString()
@@ -48,7 +46,6 @@ export class CreateStudentDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(DEPARTMENTS)
   department!: string;
 
   @IsEmail()

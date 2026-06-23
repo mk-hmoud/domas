@@ -362,6 +362,7 @@ export class UndoService {
     if (!location.rows[0].deleted_at) throw new BadRequestException('Location is not deleted');
 
     const treePath = location.rows[0].tree_path;
+    const deletedAt = location.rows[0].deleted_at;
     if (treePath.includes('.')) {
       const parentPath = treePath.substring(0, treePath.lastIndexOf('.'));
       const parent = await client.query(
@@ -372,7 +373,20 @@ export class UndoService {
         throw new BadRequestException('Cannot restore: parent location is deleted or missing');
     }
 
-    await client.query('UPDATE locations SET deleted_at = NULL WHERE id = $1', [locationId]);
+    // Deleting a location cascades to its whole subtree (locations + beds) in
+    // one statement, so everything cascaded shares this exact deleted_at -
+    // restore only those rows, not anything deleted independently before or
+    // after.
+    await client.query(
+      'UPDATE locations SET deleted_at = NULL WHERE tree_path <@ $1 AND deleted_at = $2',
+      [treePath, deletedAt],
+    );
+    await client.query(
+      `UPDATE beds SET deleted_at = NULL
+       WHERE deleted_at = $2
+         AND location_id IN (SELECT id FROM locations WHERE tree_path <@ $1)`,
+      [treePath, deletedAt],
+    );
   }
 
   private async undoUpdateLocation(log: UndoLog, client: PoolClient): Promise<void> {
@@ -1484,21 +1498,29 @@ export class UndoService {
   }
 
   private async undoUpdateRoomType(log: UndoLog, client: PoolClient): Promise<void> {
-    const { name, description, capacity, amenities } = log.undoData;
+    const { name, nameTr, description, descriptionTr, capacity, amenities } = log.undoData;
     await client.query(
-      `UPDATE room_types SET name = $1, description = $2, capacity = $3, amenities = $4,
-       updated_at = NOW() WHERE id = $5`,
-      [name, description, capacity, amenities, log.entityId],
+      `UPDATE room_types SET name = $1, name_tr = $2, description = $3, description_tr = $4,
+       capacity = $5, amenities = $6, updated_at = NOW() WHERE id = $7`,
+      [name, nameTr ?? null, description, descriptionTr ?? null, capacity, amenities, log.entityId],
     );
   }
 
   private async undoDeleteRoomType(log: UndoLog, client: PoolClient): Promise<void> {
-    const { name, description, capacity, amenities } = log.undoData;
+    const { name, nameTr, description, descriptionTr, capacity, amenities } = log.undoData;
     await client.query(
-      `INSERT INTO room_types (id, name, description, capacity, amenities)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO room_types (id, name, name_tr, description, description_tr, capacity, amenities)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (id) DO NOTHING`,
-      [log.entityId, name, description, capacity, JSON.stringify(amenities ?? [])],
+      [
+        log.entityId,
+        name,
+        nameTr ?? null,
+        description,
+        descriptionTr ?? null,
+        capacity,
+        JSON.stringify(amenities ?? []),
+      ],
     );
   }
 

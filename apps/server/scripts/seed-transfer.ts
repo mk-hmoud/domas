@@ -172,7 +172,7 @@ async function bootstrap() {
         nationalId: '11111111111',
         birthDate: '2005-01-01',
         birthPlace: 'Ankara',
-        department: 'CS',
+        department: 'Computer Engineering',
         email: 'ali@test.com',
       },
       {
@@ -184,7 +184,7 @@ async function bootstrap() {
         nationalId: '22222222222',
         birthDate: '2005-02-02',
         birthPlace: 'Istanbul',
-        department: 'CS',
+        department: 'Computer Engineering',
         email: 'can@test.com',
       },
     ];

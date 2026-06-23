@@ -7,10 +7,8 @@ import {
   IsUUID,
   IsBoolean,
   IsDateString,
-  IsIn,
 } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { DEPARTMENTS } from '../../../common/constants/departments';
 
 export class UpdateStudentDto {
   @IsString()
@@ -48,7 +46,6 @@ export class UpdateStudentDto {
 
   @IsString()
   @IsOptional()
-  @IsIn(DEPARTMENTS)
   department?: string;
 
   @IsEmail()

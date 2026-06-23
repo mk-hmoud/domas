@@ -33,6 +33,8 @@ import { MessagesModule } from './domain/messages/messages.module';
 import { WorkOrdersModule } from './domain/work-orders/work-orders.module';
 import { TicketsModule } from './domain/tickets/tickets.module';
 import { DocumentTemplatesModule } from './domain/document-templates/document-templates.module';
+import { CountriesModule } from './domain/countries/countries.module';
+import { DepartmentsModule } from './domain/departments/departments.module';
 
 @Module({
   imports: [
@@ -70,6 +72,8 @@ import { DocumentTemplatesModule } from './domain/document-templates/document-te
     WorkOrdersModule,
     TicketsModule,
     DocumentTemplatesModule,
+    CountriesModule,
+    DepartmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -51,7 +51,8 @@ export class PreReservationsRepository {
         st.first_name || ' ' || st.last_name AS "studentName",
         st.student_number                    AS "studentNumber",
         s.display_name                       AS "semesterDisplayName",
-        rt.name                              AS "roomTypeName"
+        rt.name                              AS "roomTypeName",
+        rt.name_tr AS "roomTypeNameTr"
       FROM  pre_reservations pr
       JOIN  students  st ON pr.student_id  = st.id
       JOIN  semesters s  ON pr.semester_id = s.id
@@ -78,7 +79,8 @@ export class PreReservationsRepository {
         pr.resolved_at      AS "resolvedAt",
         pr.created_at       AS "createdAt",
         s.display_name      AS "semesterDisplayName",
-        rt.name             AS "roomTypeName"
+        rt.name             AS "roomTypeName",
+        rt.name_tr AS "roomTypeNameTr"
       FROM  pre_reservations pr
       JOIN  semesters s ON pr.semester_id = s.id
       LEFT JOIN room_types rt ON pr.room_type_id = rt.id
@@ -155,7 +157,8 @@ export class PreReservationsRepository {
         pr.resolved_at      AS "resolvedAt",
         pr.created_at       AS "createdAt",
         s.display_name      AS "semesterDisplayName",
-        rt.name             AS "roomTypeName"
+        rt.name             AS "roomTypeName",
+        rt.name_tr AS "roomTypeNameTr"
       FROM pr
       JOIN semesters s ON pr.semester_id = s.id
       LEFT JOIN room_types rt ON pr.room_type_id = rt.id
@@ -202,7 +205,8 @@ export class PreReservationsRepository {
         st.first_name || ' ' || st.last_name AS "studentName",
         st.student_number                    AS "studentNumber",
         s.display_name                       AS "semesterDisplayName",
-        rt.name                              AS "roomTypeName"
+        rt.name                              AS "roomTypeName",
+        rt.name_tr AS "roomTypeNameTr"
       FROM  pr
       JOIN  students  st ON pr.student_id  = st.id
       JOIN  semesters s  ON pr.semester_id = s.id
@@ -234,7 +238,8 @@ export class PreReservationsRepository {
         st.first_name || ' ' || st.last_name AS "studentName",
         st.student_number                    AS "studentNumber",
         s.display_name                       AS "semesterDisplayName",
-        rt.name                              AS "roomTypeName"
+        rt.name                              AS "roomTypeName",
+        rt.name_tr AS "roomTypeNameTr"
       FROM  pr
       JOIN  students  st ON pr.student_id  = st.id
       JOIN  semesters s  ON pr.semester_id = s.id

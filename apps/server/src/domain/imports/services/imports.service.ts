@@ -63,6 +63,7 @@ export class ImportsService {
         department: String(row.department || row['Department'] || ''),
         email: row.email || row['Email'],
         phoneNumber: row.phoneNumber || row['Phone Number'],
+        whatsappNumber: row.whatsappNumber || row['WhatsApp Number'],
         bedId: row.bedId ? Number(row.bedId) : undefined,
         semesterId: row.semesterId ? Number(row.semesterId) : undefined,
         startDate: row.startDate,
@@ -133,6 +134,10 @@ export class ImportsService {
           student.nationalityCode,
         );
         if (!nationality) throw new Error(`Invalid nationality code: ${student.nationalityCode}`);
+
+        // 3.1 Validate Department
+        const department = await this.importsRepository.validateDepartment(student.department);
+        if (!department) throw new Error(`Invalid department: ${student.department}`);
 
         // 4. Validate Booking & Internal Bed Conflicts
         if (student.bedId && student.semesterId) {
@@ -237,6 +242,7 @@ export class ImportsService {
                 lastName: studentData.lastName,
                 email: studentData.email,
                 phoneNumber: studentData.phoneNumber,
+                whatsappNumber: studentData.whatsappNumber,
                 department: studentData.department,
               },
               client,
@@ -259,6 +265,7 @@ export class ImportsService {
               lastName: studentData.lastName,
               email: studentData.email,
               phoneNumber: studentData.phoneNumber,
+              whatsappNumber: studentData.whatsappNumber,
               nationalId: studentData.nationalId,
               nationalityCode: studentData.nationalityCode,
               gender: studentData.gender,

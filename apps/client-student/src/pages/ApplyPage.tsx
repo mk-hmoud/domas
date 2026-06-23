@@ -421,7 +421,8 @@ function RoomCatalogStep({
   selected: RoomTypeCatalogItem | null;
   onSelect: (rt: RoomTypeCatalogItem | null) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
   const [catalog, setCatalog] = useState<RoomTypeCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -505,7 +506,7 @@ function RoomCatalogStep({
                   <>
                     <img
                       src={heroUrl}
-                      alt={rt.name}
+                      alt={isTr && rt.nameTr ? rt.nameTr : rt.name}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -546,7 +547,7 @@ function RoomCatalogStep({
                   <Group justify="space-between" align="flex-end" wrap="nowrap">
                     <Box>
                       <Text fw={800} c="white" size="md" lh={1.2}>
-                        {rt.name}
+                        {isTr && rt.nameTr ? rt.nameTr : rt.name}
                       </Text>
                     </Box>
                     <Box ta="right" style={{ flexShrink: 0 }}>
@@ -630,9 +631,9 @@ function RoomCatalogStep({
 
               {/* Card body */}
               <Box p="md">
-                {rt.description && (
+                {(isTr && rt.descriptionTr ? rt.descriptionTr : rt.description) && (
                   <Text size="xs" c="dimmed" lineClamp={2} mb={10}>
-                    {rt.description}
+                    {isTr && rt.descriptionTr ? rt.descriptionTr : rt.description}
                   </Text>
                 )}
 
@@ -1103,7 +1104,8 @@ function ReviewStep({
   bed: BedWithOccupancy;
   roomType: RoomTypeCatalogItem | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
 
   return (
     <Stack gap="md">
@@ -1182,7 +1184,7 @@ function ReviewStep({
                     <Group gap={6}>
                       <IconLayoutGrid size={13} color="white" />
                       <Text size="xs" fw={600} c="white">
-                        {roomType.name}
+                        {isTr && roomType.nameTr ? roomType.nameTr : roomType.name}
                       </Text>
                     </Group>
                   </Paper>
@@ -1485,7 +1487,8 @@ const STEP_LABELS_ICONS = [
 
 export function ApplyPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
   const { booking } = useCurrentBooking();
 
   const [step, setStep] = useState(0);
@@ -1610,7 +1613,7 @@ export function ApplyPage() {
     <BedStep
       semesterId={selectedSemester.id}
       roomTypeId={selectedRoomType?.id ?? null}
-      roomTypeName={selectedRoomType?.name ?? null}
+      roomTypeName={(isTr ? selectedRoomType?.nameTr : undefined) ?? selectedRoomType?.name ?? null}
       buildingName={
         filters.buildingId != null
           ? (buildings.find((b) => b.id === filters.buildingId)?.name ?? null)

@@ -38,6 +38,9 @@ export function LinksGroup({
   const hasLinks = Array.isArray(links);
   const isChildActive = hasLinks && links.some((l) => l.link === activeLink);
   const [opened, setOpened] = useState(initiallyOpened || isChildActive);
+  const groupBadgeTotal = hasLinks
+    ? links.reduce((sum, l) => sum + (l.badge && l.badge > 0 ? l.badge : 0), 0)
+    : 0;
 
   const items = (hasLinks ? links : []).map((l) => (
     <a
@@ -85,18 +88,25 @@ export function LinksGroup({
             />
             <span>{label}</span>
           </Box>
-          {hasLinks && (
-            <IconChevronRight
-              className={classes.chevron}
-              stroke={1.5}
-              style={{
-                width: rem(14),
-                height: rem(14),
-                transform: opened ? "rotate(90deg)" : "none",
-                color: "var(--mantine-color-gray-5)",
-              }}
-            />
-          )}
+          <Group gap={4} wrap="nowrap">
+            {groupBadgeTotal > 0 && (
+              <Badge size="xs" variant="filled" color="red" circle>
+                {groupBadgeTotal > 99 ? "99+" : groupBadgeTotal}
+              </Badge>
+            )}
+            {hasLinks && (
+              <IconChevronRight
+                className={classes.chevron}
+                stroke={1.5}
+                style={{
+                  width: rem(14),
+                  height: rem(14),
+                  transform: opened ? "rotate(90deg)" : "none",
+                  color: "var(--mantine-color-gray-5)",
+                }}
+              />
+            )}
+          </Group>
         </Group>
       </UnstyledButton>
       {hasLinks ? <Collapse in={opened}>{items}</Collapse> : null}

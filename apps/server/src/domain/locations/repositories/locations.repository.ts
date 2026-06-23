@@ -26,6 +26,7 @@ export class LocationsRepository implements ILocationsRepository {
     return `
       id,
       name,
+      name_tr as "nameTr",
       tree_path as "treePath",
       type,
       gender_lock as "genderLock",
@@ -43,13 +44,14 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
+        name, name_tr, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING ${this.selectColumns}
     `;
     const values = [
       data.name,
+      data.nameTr || null,
       data.treePath,
       data.type,
       data.genderLock || null,
@@ -90,7 +92,7 @@ export class LocationsRepository implements ILocationsRepository {
 
     if (q) {
       params.push(`%${q}%`);
-      conditions.push(`l.name ILIKE $${params.length}`);
+      conditions.push(`(l.name ILIKE $${params.length} OR l.name_tr ILIKE $${params.length})`);
     }
     if (type) {
       params.push(type);
@@ -143,10 +145,10 @@ export class LocationsRepository implements ILocationsRepository {
 
     let baseQuery = `
       SELECT
-        l.id, l.name, l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
+        l.id, l.name, l.name_tr as "nameTr", l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
         l.student_year_lock as "studentYearLock",
         l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
-        l.room_type_id as "roomTypeId", rt.name as "roomTypeName",
+        l.room_type_id as "roomTypeId", rt.name as "roomTypeName", rt.name_tr as "roomTypeNameTr",
         l.created_at as "createdAt", l.updated_at as "updatedAt",
         ${totalBedsSub} as "totalBeds",
         ${occupiedBedsSub} as "occupiedBeds",
@@ -258,6 +260,7 @@ export class LocationsRepository implements ILocationsRepository {
       SELECT
         l.id as "roomId",
         l.name as "roomName",
+        l.name_tr as "roomNameTr",
         l.gender_lock as "genderLock",
         l.student_year_lock as "studentYearLock",
         l.is_guest_zone as "isGuestZone",
@@ -266,9 +269,11 @@ export class LocationsRepository implements ILocationsRepository {
         l.ownership,
         rt.id as "roomTypeId",
         rt.name as "roomTypeName",
+        rt.name_tr as "roomTypeNameTr",
         rt.capacity as "capacity",
         parent.id as "parentLocationId",
         parent.name as "parentLocationName",
+        parent.name_tr as "parentLocationNameTr",
         bd.id as "bedId",
         bd.label as "bedLabel",
         bd.status as "bedStatus",
@@ -347,6 +352,7 @@ export class LocationsRepository implements ILocationsRepository {
     };
 
     if (data.name !== undefined) addUpdate('name', data.name);
+    if ('nameTr' in data) addUpdate('name_tr', data.nameTr ?? null);
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
@@ -383,6 +389,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.name !== undefined) {
       updates.push(`name = $${paramIndex++}`);
       values.push(data.name);
+    }
+    if ('nameTr' in data) {
+      updates.push(`name_tr = $${paramIndex++}`);
+      values.push(data.nameTr ?? null);
     }
     if (data.type !== undefined) {
       updates.push(`type = $${paramIndex++}`);
@@ -421,13 +431,29 @@ export class LocationsRepository implements ILocationsRepository {
     await this.getClient(client).query(query, values);
   }
 
+  // Cascades to the whole subtree (tree_path containment includes the node itself).
   async delete(id: number, client?: PoolClient): Promise<void> {
-    const query = `UPDATE locations SET deleted_at = NOW() WHERE id = $1`;
+    const query = `
+      UPDATE locations
+      SET deleted_at = NOW()
+      WHERE deleted_at IS NULL
+        AND tree_path <@ (SELECT tree_path FROM locations WHERE id = $1)
+    `;
     await this.getClient(client).query(query, [id]);
   }
 
+  // Cascades to the subtree under each id - safe to call with overlapping
+  // subtrees (e.g. a node and one of its own descendants both selected).
   async deleteMany(ids: number[], client?: PoolClient): Promise<void> {
-    const query = `UPDATE locations SET deleted_at = NOW() WHERE id = ANY($1)`;
+    const query = `
+      WITH target_paths AS (
+        SELECT tree_path FROM locations WHERE id = ANY($1)
+      )
+      UPDATE locations l
+      SET deleted_at = NOW()
+      FROM target_paths tp
+      WHERE l.tree_path <@ tp.tree_path AND l.deleted_at IS NULL
+    `;
     await this.getClient(client).query(query, [ids]);
   }
 
@@ -451,7 +477,7 @@ export class LocationsRepository implements ILocationsRepository {
     const query = `
       SELECT ${this.selectColumns}
       FROM locations
-      WHERE name ILIKE $1 AND deleted_at IS NULL
+      WHERE (name ILIKE $1 OR name_tr ILIKE $1) AND deleted_at IS NULL
       ORDER BY tree_path ASC
       LIMIT 20
     `;

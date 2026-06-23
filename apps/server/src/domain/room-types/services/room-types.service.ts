@@ -53,7 +53,9 @@ export class RoomTypesService {
         entityId: String(id),
         undoData: {
           name: existing.name,
+          nameTr: existing.nameTr,
           description: existing.description,
+          descriptionTr: existing.descriptionTr,
           capacity: existing.capacity,
           amenities: existing.amenities,
         },
@@ -94,7 +96,9 @@ export class RoomTypesService {
         entityId: String(id),
         undoData: {
           name: rt.name,
+          nameTr: rt.nameTr,
           description: rt.description,
+          descriptionTr: rt.descriptionTr,
           capacity: rt.capacity,
           amenities: rt.amenities,
         },

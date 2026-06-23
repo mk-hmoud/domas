@@ -63,7 +63,9 @@ export function RoomTypeModal({
   const form = useForm({
     initialValues: {
       name: "",
+      nameTr: "",
       description: "",
+      descriptionTr: "",
       amenities: [] as string[],
       capacity: undefined as number | undefined,
     },
@@ -86,7 +88,9 @@ export function RoomTypeModal({
       if (initialValues) {
         form.setValues({
           name: initialValues.name,
+          nameTr: initialValues.nameTr ?? "",
           description: initialValues.description ?? "",
+          descriptionTr: initialValues.descriptionTr ?? "",
           amenities: initialValues.amenities ?? [],
           capacity: initialValues.capacity,
         });
@@ -147,7 +151,9 @@ export function RoomTypeModal({
       await onSubmit(
         {
           name: values.name,
+          nameTr: values.nameTr || undefined,
           description: values.description || undefined,
+          descriptionTr: values.descriptionTr || undefined,
           amenities: values.amenities,
           capacity: values.capacity,
         },
@@ -177,11 +183,20 @@ export function RoomTypeModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          <TextInput
-            label={t("name")}
-            withAsterisk
-            {...form.getInputProps("name")}
-          />
+          <SimpleGrid cols={2}>
+            <TextInput
+              label={t("name")}
+              withAsterisk
+              {...form.getInputProps("name")}
+            />
+            <TextInput
+              label={t("name_tr_label", { defaultValue: "Turkish Name" })}
+              placeholder={t("name_tr_placeholder", {
+                defaultValue: "Optional",
+              })}
+              {...form.getInputProps("nameTr")}
+            />
+          </SimpleGrid>
 
           <Textarea
             label={t("description", { defaultValue: "Description" })}
@@ -192,6 +207,16 @@ export function RoomTypeModal({
             minRows={3}
             autosize
             {...form.getInputProps("description")}
+          />
+
+          <Textarea
+            label={t("description_tr_label", {
+              defaultValue: "Turkish Description",
+            })}
+            placeholder={t("name_tr_placeholder", { defaultValue: "Optional" })}
+            minRows={3}
+            autosize
+            {...form.getInputProps("descriptionTr")}
           />
 
           <NumberInput

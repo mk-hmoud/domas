@@ -8,4 +8,8 @@ export class UpdateStudentContactDto {
   @IsString()
   @IsOptional()
   phoneNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappNumber?: string;
 }

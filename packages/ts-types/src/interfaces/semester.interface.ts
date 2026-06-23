@@ -4,6 +4,7 @@ import { SemesterType } from "../enums/semester-type.enum";
 export interface SemesterRoomPricingRow {
   roomTypeId: number;
   roomTypeName: string;
+  roomTypeNameTr?: string;
   capacity: number;
   priceTry: number | null;
   priceForeign: number | null;

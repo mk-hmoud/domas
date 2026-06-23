@@ -49,7 +49,8 @@ export class StudentsService {
   ) {}
 
   // Students with no current placement have no location to check, so they're
-  // only visible to unrestricted staff.
+  // visible to any scoped staff - only placed students are restricted to the
+  // location their active booking falls under.
   private async assertStudentInScope(
     studentId: string,
     context: AuditUserContext,
@@ -57,7 +58,8 @@ export class StudentsService {
   ): Promise<void> {
     if (context.locationScope?.unrestricted) return;
     const treePath = await this.studentsRepository.getCurrentLocationTreePath(studentId, client);
-    this.locationScopeService.assertAccess(context.locationScope, treePath ?? '');
+    if (treePath === null) return;
+    this.locationScopeService.assertAccess(context.locationScope, treePath);
   }
 
   private validateNationalId(nationalityCode: string, nationalId: string): void {
@@ -102,6 +104,12 @@ export class StudentsService {
     context: AuditUserContext,
   ): Promise<PaginatedResult<Student>> {
     return this.studentsRepository.findAll(dto, undefined, context.locationScope);
+  }
+
+  async getStats(
+    context: AuditUserContext,
+  ): Promise<{ total: number; tr: number; trnc: number; other: number }> {
+    return this.studentsRepository.getStats(context.locationScope);
   }
 
   async findById(id: string, context: AuditUserContext): Promise<Student> {

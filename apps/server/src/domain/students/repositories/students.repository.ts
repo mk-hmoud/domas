@@ -138,12 +138,37 @@ export class StudentsRepository {
     return result.rows[0] ? this.mapRowToEntity(result.rows[0]) : null;
   }
 
+  // A student with no current placement has no location to scope, so they're
+  // visible to any scoped staff. A placed student is only visible while
+  // their active booking's bed falls within the staff member's locations.
+  // Pushes a param onto `values` if the scope clause needs one.
+  private buildScopeCondition(scope: LocationScope | undefined, values: any[]): string | null {
+    if (scope?.unrestricted) return null;
+    const scopeFilter = this.locationScopeService.buildScopeClause(
+      scope,
+      'l.tree_path',
+      values.length + 1,
+    );
+    if (scopeFilter.param) values.push(scopeFilter.param);
+    return `(
+      NOT EXISTS (
+        SELECT 1 FROM bookings b WHERE b.student_id = students.id AND b.status = 'active'
+      )
+      OR EXISTS (
+        SELECT 1 FROM bookings b
+        JOIN beds bd ON b.bed_id = bd.id
+        JOIN locations l ON bd.location_id = l.id
+        WHERE b.student_id = students.id AND b.status = 'active' AND ${scopeFilter.clause}
+      )
+    )`;
+  }
+
   async findAll(
     dto: FindAllStudentsDto,
     client?: PoolClient,
     scope?: LocationScope,
   ): Promise<PaginatedResult<Student>> {
-    const { page = 1, limit = 10, search } = dto;
+    const { page = 1, limit = 10, search, nationalityCode, gender } = dto;
     const offset = (page - 1) * limit;
 
     let query = `SELECT * FROM students`;
@@ -163,29 +188,26 @@ export class StudentsRepository {
       values.push(`%${search}%`);
     }
 
+    if (nationalityCode) {
+      const idx = values.length + 1;
+      conditions.push(`nationality_code = $${idx}`);
+      values.push(nationalityCode);
+    }
+
+    if (gender) {
+      const idx = values.length + 1;
+      conditions.push(`gender = $${idx}`);
+      values.push(gender);
+    }
+
     if ((dto as any).enrollmentStatus) {
       const idx = values.length + 1;
       conditions.push(`enrollment_status = $${idx}`);
       values.push((dto as any).enrollmentStatus);
     }
 
-    if (!scope?.unrestricted) {
-      // A student is only visible to scoped staff while they have a current
-      // active booking whose bed falls within the staff member's locations -
-      // students with no physical placement yet have no location to scope.
-      const scopeFilter = this.locationScopeService.buildScopeClause(
-        scope,
-        'l.tree_path',
-        values.length + 1,
-      );
-      if (scopeFilter.param) values.push(scopeFilter.param);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM bookings b
-        JOIN beds bd ON b.bed_id = bd.id
-        JOIN locations l ON bd.location_id = l.id
-        WHERE b.student_id = students.id AND b.status = 'active' AND ${scopeFilter.clause}
-      )`);
-    }
+    const scopeCondition = this.buildScopeCondition(scope, values);
+    if (scopeCondition) conditions.push(scopeCondition);
 
     if (conditions.length > 0) {
       const where = ` WHERE ${conditions.join(' AND ')}`;
@@ -206,6 +228,35 @@ export class StudentsRepository {
       total: parseInt(countResult.rows[0].count, 10),
       page,
       limit,
+    };
+  }
+
+  async getStats(
+    scope?: LocationScope,
+    client?: PoolClient,
+  ): Promise<{ total: number; tr: number; trnc: number; other: number }> {
+    const values: any[] = [];
+    const conditions: string[] = ['deleted_at IS NULL'];
+
+    const scopeCondition = this.buildScopeCondition(scope, values);
+    if (scopeCondition) conditions.push(scopeCondition);
+
+    const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+    const query = `
+      SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE nationality_code = 'TR') AS tr,
+        COUNT(*) FILTER (WHERE nationality_code = 'TRNC') AS trnc,
+        COUNT(*) FILTER (WHERE nationality_code NOT IN ('TR', 'TRNC')) AS other
+      FROM students${where}
+    `;
+    const result = await this.getClient(client).query(query, values);
+    const row = result.rows[0];
+    return {
+      total: parseInt(row.total, 10),
+      tr: parseInt(row.tr, 10),
+      trnc: parseInt(row.trnc, 10),
+      other: parseInt(row.other, 10),
     };
   }
 

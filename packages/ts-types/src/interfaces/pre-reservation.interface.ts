@@ -27,6 +27,7 @@ export interface PreReservationView extends PreReservation {
   studentNumber: string;
   semesterDisplayName: string;
   roomTypeName: string | null;
+  roomTypeNameTr?: string | null;
 }
 
 // Student-facing view
@@ -38,6 +39,7 @@ export interface StudentPreReservationView {
   endDate: string;
   roomTypeId: number | null;
   roomTypeName: string | null;
+  roomTypeNameTr?: string | null;
   note: string | null;
   status: PreReservationStatus;
   bookingId: string | null;

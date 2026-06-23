@@ -20,7 +20,8 @@ import { portalPreReservations, portalSemesters } from '@domas/api-client';
 
 export function PreReservePage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
 
   const [availableSemesters, setAvailableSemesters] = useState<PortalSemester[]>([]);
   const [roomTypes, setRoomTypes] = useState<RoomTypeCatalogItem[]>([]);
@@ -202,7 +203,10 @@ export function PreReservePage() {
                     })}
                     placeholder={t('portal.no_preference', { defaultValue: 'No preference' })}
                     clearable
-                    data={roomTypes.map((rt) => ({ value: String(rt.id), label: rt.name }))}
+                    data={roomTypes.map((rt) => ({
+                      value: String(rt.id),
+                      label: isTr && rt.nameTr ? rt.nameTr : rt.name,
+                    }))}
                     value={selectedRoomTypeId}
                     onChange={setSelectedRoomTypeId}
                     disabled={isLoadingRoomTypes}

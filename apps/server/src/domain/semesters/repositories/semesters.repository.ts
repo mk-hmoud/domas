@@ -212,6 +212,7 @@ export class SemestersRepository {
       SELECT
         rt.id             AS "roomTypeId",
         rt.name           AS "roomTypeName",
+        rt.name_tr        AS "roomTypeNameTr",
         rt.capacity,
         srp.price_try::numeric    AS "priceTry",
         srp.price_foreign::numeric AS "priceForeign"

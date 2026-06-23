@@ -17,6 +17,10 @@ export class CreateLocationDto {
   @IsNotEmpty()
   name!: string;
 
+  @IsString()
+  @IsOptional()
+  nameTr?: string;
+
   @IsNumber()
   @IsOptional()
   parentId?: number;

@@ -19,8 +19,8 @@ import {
   CreateStudentDto,
   Student,
   GenderType,
-  COUNTRIES,
-  DEPARTMENTS,
+  Country,
+  Department,
 } from "@domas/ts-types";
 import {
   IconPhone,
@@ -35,6 +35,8 @@ interface StudentModalProps {
   onClose: () => void;
   onSubmit: (values: CreateStudentDto, photo?: File | null) => Promise<void>;
   initialValues?: Student | null;
+  countries?: Country[];
+  departments?: Department[];
 }
 
 export function StudentModal({
@@ -42,21 +44,32 @@ export function StudentModal({
   onClose,
   onSubmit,
   initialValues,
+  countries = [],
+  departments = [],
 }: StudentModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
   const [loading, setLoading] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const countryOptions = useMemo(
-    () => COUNTRIES.map(([code, name]) => ({ value: code, label: name })),
-    [],
+    () =>
+      countries.map((c) => ({
+        value: c.code,
+        label: isTr ? c.nameTr : c.nameEn,
+      })),
+    [countries, isTr],
   );
 
   const departmentOptions = useMemo(
-    () => DEPARTMENTS.map((dept) => ({ value: dept, label: dept })),
-    [],
+    () =>
+      departments.map((d) => ({
+        value: d.nameEn,
+        label: isTr ? d.nameTr : d.nameEn,
+      })),
+    [departments, isTr],
   );
 
   const form = useForm<any>({

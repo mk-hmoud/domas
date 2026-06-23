@@ -8,6 +8,10 @@ export class UpdateLocationDto {
   @IsOptional()
   name?: string;
 
+  @IsString()
+  @IsOptional()
+  nameTr?: string;
+
   @IsEnum(LocationType)
   @IsOptional()
   type?: LocationType;

@@ -43,7 +43,8 @@ import { modals } from "@mantine/modals";
 import { handleApiError } from "../utils/api-error-handler";
 
 export function SharedSemestersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === "tr";
   const [data, setData] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -563,7 +564,11 @@ export function SharedSemestersPage() {
                     <Table.Tbody>
                       {pricingRows.map((row) => (
                         <Table.Tr key={row.roomTypeId}>
-                          <Table.Td>{row.roomTypeName}</Table.Td>
+                          <Table.Td>
+                            {isTr && row.roomTypeNameTr
+                              ? row.roomTypeNameTr
+                              : row.roomTypeName}
+                          </Table.Td>
                           <Table.Td>{row.capacity}</Table.Td>
                           <Table.Td>
                             <NumberInput

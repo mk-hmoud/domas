@@ -313,7 +313,9 @@ export class StudentPortalRepository {
       SELECT
         rt.id,
         rt.name,
+        rt.name_tr               AS "nameTr",
         rt.description,
+        rt.description_tr        AS "descriptionTr",
         rt.gallery_urls          AS "galleryUrls",
         rt.amenities,
         rt.capacity,
@@ -326,8 +328,8 @@ export class StudentPortalRepository {
         ON   srp.room_type_id = rt.id
         AND  srp.semester_id  = $3
       WHERE  ($6::int IS NULL OR rt.capacity = $6)
-      GROUP  BY rt.id, rt.name, rt.description, rt.gallery_urls, rt.amenities, rt.capacity,
-                srp.price_try, srp.price_foreign
+      GROUP  BY rt.id, rt.name, rt.name_tr, rt.description, rt.description_tr, rt.gallery_urls,
+                rt.amenities, rt.capacity, srp.price_try, srp.price_foreign
       HAVING COUNT(ab.bed_id) > 0
       ORDER  BY rt.name
     `;
@@ -453,6 +455,7 @@ export class StudentPortalRepository {
         -- Room info
         bd.label            AS "bedLabel",
         l.name              AS "roomName",
+        l.name_tr           AS "roomNameTr",
         l.id                AS "roomId",
         (
           SELECT string_agg(anc.name, ' > ' ORDER BY nlevel(anc.tree_path))
@@ -463,7 +466,9 @@ export class StudentPortalRepository {
         -- Room type (display assets)
         rt.id               AS "roomTypeId",
         rt.name             AS "roomTypeName",
+        rt.name_tr          AS "roomTypeNameTr",
         rt.description      AS "roomTypeDescription",
+        rt.description_tr   AS "roomTypeDescriptionTr",
         rt.gallery_urls     AS "roomTypeGalleryUrls",
         rt.amenities        AS "roomTypeAmenities",
         -- Access card

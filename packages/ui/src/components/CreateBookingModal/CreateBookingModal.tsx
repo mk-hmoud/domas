@@ -16,7 +16,13 @@ import {
 import { DatePickerInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateBookingDto, CreateStudentDto, Semester } from "@domas/ts-types";
+import {
+  CreateBookingDto,
+  CreateStudentDto,
+  Semester,
+  Country,
+  Department,
+} from "@domas/ts-types";
 import {
   IconPlus,
   IconCalendarEvent,
@@ -33,6 +39,8 @@ interface CreateBookingModalProps {
   onCreateStudent: (values: CreateStudentDto) => Promise<void>;
   students: { value: string; label: string }[];
   semesters: Semester[];
+  countries?: Country[];
+  departments?: Department[];
   initialStudentId?: string | null;
   initialBedId?: number | null;
   initialLocationId?: number | null;
@@ -46,6 +54,8 @@ export function CreateBookingModal({
   onCreateStudent,
   students,
   semesters,
+  countries,
+  departments,
   initialStudentId,
   initialBedId,
   initialLocationId,
@@ -304,6 +314,8 @@ export function CreateBookingModal({
         opened={studentModalOpened}
         onClose={() => setStudentModalOpened(false)}
         onSubmit={handleCreateStudent}
+        countries={countries}
+        departments={departments}
       />
     </>
   );

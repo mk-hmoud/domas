@@ -146,13 +146,18 @@ interface RoomShowcaseProps {
 }
 
 export function RoomShowcase({ booking }: RoomShowcaseProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isTr = i18n.language === 'tr';
 
   const hasType = !!booking.roomTypeId;
   const galleryUrls = booking.roomTypeGalleryUrls ?? [];
   const amenities = booking.roomTypeAmenities ?? [];
-  const description = booking.roomTypeDescription;
-  const typeName = booking.roomTypeName;
+  const description =
+    isTr && booking.roomTypeDescriptionTr
+      ? booking.roomTypeDescriptionTr
+      : booking.roomTypeDescription;
+  const typeName = isTr && booking.roomTypeNameTr ? booking.roomTypeNameTr : booking.roomTypeName;
+  const roomName = isTr && booking.roomNameTr ? booking.roomNameTr : booking.roomName;
 
   return (
     <Stack gap="lg">
@@ -160,7 +165,7 @@ export function RoomShowcase({ booking }: RoomShowcaseProps) {
       {hasType && (
         <Group gap="xs">
           <Text fw={600} size="sm">
-            {booking.roomName}
+            {roomName}
           </Text>
           <Badge variant="outline" color="blue" size="sm">
             {typeName}

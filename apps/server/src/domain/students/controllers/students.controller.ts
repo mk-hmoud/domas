@@ -111,6 +111,12 @@ export class StudentsController {
     return this.studentsService.findAll(query, context);
   }
 
+  @Get('stats')
+  @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
+  getStats(@UserContext() context: AuditUserContext) {
+    return this.studentsService.getStats(context);
+  }
+
   @Get(':id')
   @RequirePermissions(PERMISSIONS.STUDENTS_VIEW)
   findOne(@Param('id') id: string, @UserContext() context: AuditUserContext) {

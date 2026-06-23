@@ -5,6 +5,7 @@ import { StudentYearLock } from "../enums/student-year-lock.enum";
 
 export interface CreateLocationDto {
   name: string;
+  nameTr?: string;
   parentId?: number;
   type: LocationType;
   genderLock?: GenderType;
