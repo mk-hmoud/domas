@@ -161,4 +161,35 @@ export const students = {
     );
     return response.data;
   },
+
+  exportToExcel: async (
+    params?: Pick<FindAllStudentsDto, "search" | "nationalityCode" | "gender">,
+  ): Promise<void> => {
+    const response = await apiClient.get("/students/export", {
+      responseType: "blob",
+      params,
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "students.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadImportTemplate: async (): Promise<void> => {
+    const response = await apiClient.get("/students/import-template", {
+      responseType: "blob",
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "students_import_template.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
