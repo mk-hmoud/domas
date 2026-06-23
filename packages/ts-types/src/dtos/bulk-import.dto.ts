@@ -11,6 +11,7 @@ export interface ImportStudentRowDto {
   department: string;
   email?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
 
   // Booking Info
   bedId?: number;

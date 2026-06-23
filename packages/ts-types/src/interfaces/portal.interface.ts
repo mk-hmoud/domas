@@ -191,6 +191,7 @@ export interface StudentLoginDto {
 export interface UpdateStudentContactDto {
   email?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
 }
 
 export interface StudentCreateBookingDto {

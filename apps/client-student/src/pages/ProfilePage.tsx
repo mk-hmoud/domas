@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Avatar, Box, Button, Grid, Group, Paper, Stack, Text, TextInput } from '@domas/ui';
 import {
+  IconBrandWhatsapp,
   IconCheck,
   IconDeviceFloppy,
   IconInfoCircle,
@@ -18,6 +19,7 @@ export function ProfilePage() {
 
   const [email, setEmail] = useState(student?.email ?? '');
   const [phoneNumber, setPhoneNumber] = useState(student?.phoneNumber ?? '');
+  const [whatsappNumber, setWhatsappNumber] = useState(student?.whatsappNumber ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -28,7 +30,9 @@ export function ProfilePage() {
   const initials = `${student.firstName[0]}${student.lastName[0]}`.toUpperCase();
 
   const hasChanges =
-    email.trim() !== (student.email ?? '') || phoneNumber.trim() !== (student.phoneNumber ?? '');
+    email.trim() !== (student.email ?? '') ||
+    phoneNumber.trim() !== (student.phoneNumber ?? '') ||
+    whatsappNumber.trim() !== (student.whatsappNumber ?? '');
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -38,6 +42,7 @@ export function ProfilePage() {
       await portalProfile.updateContact({
         email: email.trim() || undefined,
         phoneNumber: phoneNumber.trim() || undefined,
+        whatsappNumber: whatsappNumber.trim() || undefined,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -149,6 +154,17 @@ export function ProfilePage() {
                   autoComplete="tel"
                   radius="lg"
                   leftSection={<IconPhone size={15} />}
+                />
+
+                <TextInput
+                  label={t('whatsapp_number', { defaultValue: 'WhatsApp Number' })}
+                  placeholder="+90 5XX XXX XX XX"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.currentTarget.value)}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  radius="lg"
+                  leftSection={<IconBrandWhatsapp size={15} />}
                 />
 
                 {saveError && (
