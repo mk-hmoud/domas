@@ -87,4 +87,8 @@ export enum UndoActionType {
   CHECK_IN_GUEST_STAY = 'check_in_guest_stay',
   CHECK_OUT_GUEST_STAY = 'check_out_guest_stay',
   CANCEL_GUEST_STAY = 'cancel_guest_stay',
+
+  // Student Applications
+  APPROVE_APPLICATION = 'approve_application',
+  REJECT_APPLICATION = 'reject_application',
 }

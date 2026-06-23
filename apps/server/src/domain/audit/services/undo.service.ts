@@ -282,6 +282,12 @@ export class UndoService {
       case UndoActionType.BULK_IMPORT_STUDENT:
         return this.undoBulkImport(log, client);
 
+      // Student Applications
+      case UndoActionType.APPROVE_APPLICATION:
+        return this.undoApproveApplication(log, client);
+      case UndoActionType.REJECT_APPLICATION:
+        return this.undoRejectApplication(log, client);
+
       // Pre-Reservations
       case UndoActionType.ASSIGN_PRE_RESERVATION:
         return this.undoAssignPreReservation(log, client);
@@ -1554,6 +1560,51 @@ export class UndoService {
       previousStatus,
       log.entityId,
     ]);
+  }
+
+  // ===========================================================================
+  // Student Application Handlers
+  // ===========================================================================
+
+  private async undoApproveApplication(log: UndoLog, client: PoolClient): Promise<void> {
+    const { studentId, previousEnrollmentStatus, studentCreatedDuringApproval, insertedCertId } =
+      log.undoData;
+    const appId = log.entityId;
+
+    // 1. Revert application back to pending
+    await client.query(
+      `UPDATE student_applications
+       SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL, student_id = NULL
+       WHERE id = $1`,
+      [appId],
+    );
+
+    if (studentCreatedDuringApproval) {
+      // 2a. Student was created as part of this approval — delete them
+      await client.query('DELETE FROM students WHERE id = $1', [studentId]);
+    } else {
+      // 2b. Student pre-existed — revert enrollment status
+      await client.query(
+        'UPDATE students SET enrollment_status = $1, updated_at = NOW() WHERE id = $2',
+        [previousEnrollmentStatus ?? 'pending', studentId],
+      );
+
+      // 3. Delete enrollment cert that was inserted (returning students only)
+      if (insertedCertId) {
+        await client.query('DELETE FROM student_enrollment_verifications WHERE id = $1', [
+          insertedCertId,
+        ]);
+      }
+    }
+  }
+
+  private async undoRejectApplication(log: UndoLog, client: PoolClient): Promise<void> {
+    await client.query(
+      `UPDATE student_applications
+       SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL, rejection_reason = NULL
+       WHERE id = $1`,
+      [log.entityId],
+    );
   }
 
   private async undoBulkImport(log: UndoLog, client: PoolClient): Promise<void> {

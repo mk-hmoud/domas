@@ -49,4 +49,8 @@ export enum UndoActionType {
 
   // Bulk Import
   BULK_IMPORT_STUDENT = "bulk_import_student",
+
+  // Student Applications
+  APPROVE_APPLICATION = "approve_application",
+  REJECT_APPLICATION = "reject_application",
 }
