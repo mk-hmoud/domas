@@ -81,6 +81,16 @@ export class AccessCardsController {
     return this.service.updateStatus(id, data, context);
   }
 
+  @Post('cards/:id/reinstate')
+  @RequirePermissions(PERMISSIONS.ACCESS_CARDS_REINSTATE)
+  reinstateCard(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { notes?: string },
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.service.reinstateCard(id, data, context);
+  }
+
   @Get('cards/:id/logs')
   @RequirePermissions(PERMISSIONS.ACCESS_CARDS_VIEW)
   getLogs(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {

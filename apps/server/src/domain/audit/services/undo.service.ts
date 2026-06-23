@@ -269,6 +269,11 @@ export class UndoService {
         return this.undoIssueCard(log, undoUserId, client);
       case UndoActionType.RETURN_CARD:
         return this.undoReturnCard(log, undoUserId, client);
+      case UndoActionType.MARK_CARD_LOST:
+      case UndoActionType.MARK_CARD_BROKEN:
+        return this.undoMarkCardQuarantined(log, undoUserId, client);
+      case UndoActionType.REINSTATE_CARD:
+        return this.undoReinstateCard(log, undoUserId, client);
 
       // Damages
       case UndoActionType.CREATE_DAMAGE_REPORT:
@@ -1308,6 +1313,62 @@ export class UndoService {
       `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
        VALUES ($1, $2, $3, 'returned', $4, $5)`,
       [cardId, previousHolderId, previousBookingId, undoUserId, 'Undo: Card return reversed'],
+    );
+  }
+
+  private async undoMarkCardQuarantined(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
+    const cardId = parseInt(log.entityId, 10);
+    const { previousStatus, previousHolderId, previousBookingId } = log.undoData;
+
+    await client.query(
+      `UPDATE access_cards
+       SET status = $1,
+           current_holder_id = $2,
+           current_booking_id = $3,
+           updated_at = NOW()
+       WHERE id = $4`,
+      [previousStatus, previousHolderId ?? null, previousBookingId ?? null, cardId],
+    );
+
+    await client.query(
+      `INSERT INTO access_card_logs (card_id, student_id, booking_id, action_type, performed_by, notes)
+       VALUES ($1, $2, $3, 'reversed', $4, $5)`,
+      [
+        cardId,
+        previousHolderId ?? null,
+        previousBookingId ?? null,
+        undoUserId,
+        'Undo: Card quarantine reversed',
+      ],
+    );
+  }
+
+  private async undoReinstateCard(
+    log: UndoLog,
+    undoUserId: string,
+    client: PoolClient,
+  ): Promise<void> {
+    const cardId = parseInt(log.entityId, 10);
+    const { previousStatus } = log.undoData;
+
+    await client.query(
+      `UPDATE access_cards
+       SET status = $1,
+           current_holder_id = NULL,
+           current_booking_id = NULL,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [previousStatus, cardId],
+    );
+
+    await client.query(
+      `INSERT INTO access_card_logs (card_id, action_type, performed_by, notes)
+       VALUES ($1, 'reversed', $2, $3)`,
+      [cardId, undoUserId, 'Undo: Card reinstatement reversed'],
     );
   }
 

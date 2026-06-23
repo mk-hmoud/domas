@@ -600,7 +600,7 @@ CREATE TABLE access_cards (
     card_number INT NOT NULL,
     
     -- State
-    status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'active', 'lost', 'void')),
+    status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'active', 'lost', 'broken', 'void')),
     
     -- Current Assignment (Who has it right now?)
     current_holder_id UUID REFERENCES students(id),
@@ -631,7 +631,7 @@ CREATE TABLE access_card_logs (
     card_id INT NOT NULL REFERENCES access_cards(id),
     student_id UUID REFERENCES students(id),
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
-    action_type VARCHAR(20) CHECK (action_type IN ('issued', 'returned', 'lost', 'void')),
+    action_type VARCHAR(20) CHECK (action_type IN ('issued', 'returned', 'lost', 'broken', 'void', 'reinstated', 'reversed')),
     
     performed_by UUID REFERENCES users(id),
     performed_at TIMESTAMPTZ DEFAULT NOW(),

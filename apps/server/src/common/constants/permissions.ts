@@ -48,6 +48,7 @@ export const PERMISSIONS = {
   // Access Cards
   ACCESS_CARDS_VIEW: 'access_cards.view',
   ACCESS_CARDS_MANAGE: 'access_cards.manage',
+  ACCESS_CARDS_REINSTATE: 'access_cards.reinstate', // Allow reuse of lost/broken card numbers
 
   // Damages
   DAMAGES_VIEW: 'damages.view',

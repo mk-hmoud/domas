@@ -6,6 +6,8 @@ import {
   IconArrowBackUp,
   IconUserShare,
   IconAlertTriangle,
+  IconTool,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { EmptyState } from "../EmptyState";
 import classes from "../Table/table.module.css";
@@ -15,6 +17,8 @@ interface AccessCardTableProps {
   onIssue?: (card: AccessCard) => void;
   onReturn?: (card: AccessCard) => void;
   onMarkLost?: (card: AccessCard) => void;
+  onMarkBroken?: (card: AccessCard) => void;
+  onReinstate?: (card: AccessCard) => void;
   onShowLogs?: (card: AccessCard) => void;
 }
 
@@ -23,6 +27,8 @@ export function AccessCardTable({
   onIssue,
   onReturn,
   onMarkLost,
+  onMarkBroken,
+  onReinstate,
   onShowLogs,
 }: AccessCardTableProps) {
   const { t } = useTranslation();
@@ -35,8 +41,10 @@ export function AccessCardTable({
         return "blue";
       case CardStatus.LOST:
         return "red";
-      case CardStatus.VOID:
+      case CardStatus.BROKEN:
         return "orange";
+      case CardStatus.VOID:
+        return "gray";
       default:
         return "gray";
     }
@@ -94,6 +102,31 @@ export function AccessCardTable({
               </ActionIcon>
             </Tooltip>
           )}
+          {card.status === CardStatus.ACTIVE && onMarkBroken && (
+            <Tooltip label={t("mark_broken", "Mark as Broken")}>
+              <ActionIcon
+                variant="subtle"
+                color="orange"
+                onClick={() => onMarkBroken(card)}
+              >
+                <IconTool size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          {(card.status === CardStatus.LOST ||
+            card.status === CardStatus.BROKEN ||
+            card.status === CardStatus.VOID) &&
+            onReinstate && (
+              <Tooltip label={t("reinstate_card", "Reinstate Card")}>
+                <ActionIcon
+                  variant="subtle"
+                  color="green"
+                  onClick={() => onReinstate(card)}
+                >
+                  <IconRefresh size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
           {onShowLogs && (
             <Tooltip label={t("card_logs")}>
               <ActionIcon

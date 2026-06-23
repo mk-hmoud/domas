@@ -37,6 +37,8 @@ export * from "./components/AccessCards/CardBatchModal";
 export * from "./components/AccessCards/CardBatchTable";
 export * from "./components/AccessCards/AccessCardTable";
 export * from "./components/AccessCards/ReportLostCardModal";
+export * from "./components/AccessCards/ReportBrokenCardModal";
+export * from "./components/AccessCards/ReinstateCardModal";
 export * from "./components/Damages/DamageReportTable";
 export * from "./components/Damages/CreateDamageModal";
 export * from "./components/Damages/DamageDetailsDrawer";
