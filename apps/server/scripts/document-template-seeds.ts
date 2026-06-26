@@ -81,7 +81,7 @@ I took over the Room numbered {{room.name}} (Bed: {{bed.label}}) on {{issueDate}
 
 <div class="page-break"></div>
 
-<h1 class="doc-title">Rules, regulations and general guidelines for all students of the residence halls</h1>
+<h1 class="rules-title">Rules, regulations and general guidelines for all students of the residence halls</h1>
 
 <p class="rule">1. Students of the residence halls are responsible for all items assigned to them by the residence hall staff including bed, tables, chairs etc. Items must not be moved or distributed to another rooms.</p>
 <p class="rule">2. Students of the residence halls are required to obey all the rules and regulations and keep their assigned rooms clean and tidy.</p>
@@ -186,7 +186,7 @@ const CHECK_IN_HTML_TR = `
 
 <div class="page-break"></div>
 
-<h1 class="doc-title">LAÜ YURT KURALLARI TEBLİĞ TUTANAĞI</h1>
+<h1 class="rules-title">LAÜ YURT KURALLARI TEBLİĞ TUTANAĞI</h1>
 
 <p class="rule">1. Yurt yönetimince, tahsis edilen oda, ranza, yatak dolap masa sandalye vb. den başka yer ve eşyayı işgal etmeyeceğimi ve kullanmayacağımı,</p>
 <p class="rule">2. Yurt yönetimince belirlenen yerler dışında (LAÜ öğrencisi bile olsa) misafir kabul etmeyeceğimi,</p>
@@ -247,9 +247,10 @@ p.note { font-weight: bold; font-size: 9pt; margin: 10px 0; }
 .sig-label { font-weight: bold; margin-bottom: 14px; }
 .sig-line { margin-top: 30px; }
 .page-break { page-break-before: always; }
-p.rule { text-align: justify; font-size: 8pt; margin: 3px 0; }
-.rules-footer { margin-top: 14px; font-weight: bold; font-size: 9pt; }
-.rules-footer p { margin: 3px 0; }
+.rules-title { text-align: center; text-decoration: underline; font-size: 12pt; margin: 6px 0 4px; }
+p.rule { text-align: justify; font-size: 7.5pt; line-height: 1.15; margin: 1px 0; }
+.rules-footer { margin-top: 6px; font-weight: bold; font-size: 9pt; page-break-inside: avoid; }
+.rules-footer p { margin: 1px 0; }
 `;
 
 const CHECK_OUT_HTML_EN = `
