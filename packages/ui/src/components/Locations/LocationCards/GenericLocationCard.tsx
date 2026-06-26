@@ -69,15 +69,7 @@ export function GenericLocationCard({
             {icon || <IconBuilding size={14} />}
           </ThemeIcon>
           <Box style={{ minWidth: 0, flex: 1 }}>
-            <Text
-              fw={600}
-              size="sm"
-              style={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+            <Text fw={600} size="sm">
               {name}
             </Text>
           </Box>

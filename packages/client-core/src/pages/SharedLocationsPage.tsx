@@ -785,7 +785,11 @@ function LocationsContent() {
   const handleUpdateBed = async (values: any) => {
     if (!bedToEdit) return;
     try {
-      await beds.update(bedToEdit.id, values);
+      const bedId =
+        typeof bedToEdit.id === "string" && bedToEdit.id.startsWith("bed-")
+          ? Number(bedToEdit.id.replace("bed-", ""))
+          : Number(bedToEdit.id);
+      await beds.update(bedId, values);
       notifications.show({
         title: t("success"),
         message: t("bed_updated", "Bed updated successfully"),

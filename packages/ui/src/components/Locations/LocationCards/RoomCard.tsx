@@ -72,15 +72,7 @@ export function RoomCard({
           </ThemeIcon>
           <Box style={{ minWidth: 0, flex: 1 }}>
             <Group gap={6} wrap="nowrap">
-              <Text
-                fw={600}
-                size="sm"
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
+              <Text fw={600} size="sm">
                 {name}
               </Text>
               {genderLock && (
