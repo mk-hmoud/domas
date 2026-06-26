@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   TextInput,
+  NumberInput,
   Button,
   Modal,
   Select,

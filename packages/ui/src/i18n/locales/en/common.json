@@ -1272,6 +1272,15 @@
   "failed_to_assign_location": "Failed to assign location",
   "failed_to_revoke_location": "Failed to remove location",
 
+  "mark_lost": "Mark as Lost",
+  "report_lost_card": "Report Lost Card",
+  "report_lost_card_warning": "Card #{{cardNumber}} will be marked as lost and can no longer be used.",
+  "confirm_lost": "Confirm Lost",
+  "card_marked_lost_replacement_issued": "Card marked as lost and replacement issued.",
+  "issue_replacement_card": "Issue a replacement card",
+  "card_batch_optional": "Card batch (optional)",
+  "any_available_batch": "Any available batch",
+
   "mark_broken": "Mark as Broken",
   "report_broken_card": "Report Broken Card",
   "report_broken_card_warning": "Card #{{cardNumber}} will be marked as broken and quarantined until a supervisor reinstates it.",

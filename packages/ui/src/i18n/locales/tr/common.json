@@ -1260,6 +1260,15 @@
   "failed_to_assign_location": "Konum atanamadı",
   "failed_to_revoke_location": "Konum kaldırılamadı",
 
+  "mark_lost": "Kayıp Olarak İşaretle",
+  "report_lost_card": "Kayıp Kart Bildir",
+  "report_lost_card_warning": "#{{cardNumber}} numaralı kart kayıp olarak işaretlenecek ve artık kullanılamayacak.",
+  "confirm_lost": "Kaybı Onayla",
+  "card_marked_lost_replacement_issued": "Kart kayıp olarak işaretlendi ve yedek kart verildi.",
+  "issue_replacement_card": "Yedek kart ver",
+  "card_batch_optional": "Kart grubu (isteğe bağlı)",
+  "any_available_batch": "Herhangi bir mevcut grup",
+
   "mark_broken": "Arızalı Olarak İşaretle",
   "report_broken_card": "Arızalı Kart Bildir",
   "report_broken_card_warning": "#{{cardNumber}} numaralı kart arızalı olarak işaretlenecek ve bir yetkili yeniden etkinleştirene kadar kullanım dışı kalacak.",
