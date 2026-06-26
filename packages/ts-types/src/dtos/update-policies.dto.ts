@@ -1,6 +1,5 @@
 import { GenderType } from "../enums/gender-type.enum";
 import { StudentYearLock } from "../enums/student-year-lock.enum";
-import { LocationOwnership } from "../enums/location-ownership.enum";
 
 export interface UpdateGenderLockDto {
   genderLock: GenderType | null;
@@ -27,8 +26,8 @@ export interface UpdateForeignerOnlyDto {
   cascade?: boolean;
 }
 
-export interface UpdateOwnershipDto {
-  ownership: LocationOwnership;
+export interface UpdateIsRectorateDto {
+  isRectorate: boolean;
   cascade?: boolean;
 }
 
@@ -56,8 +55,8 @@ export interface BulkUpdateForeignerOnlyDto {
   cascade?: boolean;
 }
 
-export interface BulkUpdateOwnershipDto {
+export interface BulkUpdateIsRectorateDto {
   ids: number[];
-  ownership: LocationOwnership;
+  isRectorate: boolean;
   cascade?: boolean;
 }

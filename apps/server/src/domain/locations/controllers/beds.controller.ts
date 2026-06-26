@@ -19,14 +19,14 @@ import {
   UpdateBedTrOnlyDto,
   UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
-  UpdateBedOwnershipDto,
+  UpdateBedIsRectorateDto,
 } from '../dto/update-bed-policies.dto';
 import { BulkCreateBedDto, BulkDeleteBedDto, BulkUpdateBedStatusDto } from '../dto/bulk-bed.dto';
 import {
   BulkUpdateBedTrOnlyDto,
   BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
-  BulkUpdateBedOwnershipDto,
+  BulkUpdateBedIsRectorateDto,
 } from '../dto/bulk-update-bed-policies.dto';
 import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
@@ -90,14 +90,14 @@ export class BedsController {
     return this.bedsService.updateForeignerOnlyMany(dto, context);
   }
 
-  @Patch('bulk-ownership')
+  @Patch('bulk-rectorate')
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  updateOwnershipMany(
-    @Body() dto: BulkUpdateBedOwnershipDto,
+  updateIsRectorateMany(
+    @Body() dto: BulkUpdateBedIsRectorateDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.bedsService.updateOwnershipMany(dto, context);
+    return this.bedsService.updateIsRectorateMany(dto, context);
   }
 
   @Patch('bulk-guest-zone')
@@ -152,14 +152,14 @@ export class BedsController {
     return this.bedsService.updateForeignerOnly(id, dto.isForeignerOnly, context);
   }
 
-  @Patch(':id/ownership')
+  @Patch(':id/rectorate')
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
-  updateOwnership(
+  updateIsRectorate(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateBedOwnershipDto,
+    @Body() dto: UpdateBedIsRectorateDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.bedsService.updateOwnership(id, dto.ownership, context);
+    return this.bedsService.updateIsRectorate(id, dto.isRectorate, context);
   }
 
   @Patch(':id/guest-zone')

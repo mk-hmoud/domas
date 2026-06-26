@@ -308,14 +308,14 @@ export class RoomChangesRepository {
         b.is_tr_only   AS "isTrOnly",
         b.is_foreigner_only AS "isForeignerOnly",
         b.is_guest_zone AS "isGuestZone",
-        b.ownership    AS "bedOwnership",
+        b.is_rectorate AS "bedIsRectorate",
         l.id           AS "roomId",
         l.room_type_id AS "roomTypeId",
         l.gender_lock  AS "genderLock",
         l.is_tr_only   AS "roomIsTrOnly",
         l.is_foreigner_only AS "roomIsForeignerOnly",
         l.is_guest_zone AS "roomIsGuestZone",
-        l.ownership    AS "roomOwnership",
+        l.is_rectorate AS "roomIsRectorate",
         l.tree_path    AS "treePath"
       FROM beds b
       JOIN locations l ON b.location_id = l.id
@@ -332,7 +332,7 @@ export class RoomChangesRepository {
         isTrOnly: row.isTrOnly,
         isForeignerOnly: row.isForeignerOnly,
         isGuestZone: row.isGuestZone,
-        ownership: row.bedOwnership,
+        isRectorate: row.bedIsRectorate,
         locationId: row.roomId,
       },
       room: {
@@ -342,7 +342,7 @@ export class RoomChangesRepository {
         isTrOnly: row.roomIsTrOnly,
         isForeignerOnly: row.roomIsForeignerOnly,
         isGuestZone: row.roomIsGuestZone,
-        ownership: row.roomOwnership,
+        isRectorate: row.roomIsRectorate,
         treePath: row.treePath,
       },
     };

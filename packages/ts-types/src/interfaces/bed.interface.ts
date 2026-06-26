@@ -1,5 +1,4 @@
 import { BedStatus } from "../enums/bed-status.enum";
-import { LocationOwnership } from "../enums/location-ownership.enum";
 
 export interface Bed {
   id: number;
@@ -9,7 +8,7 @@ export interface Bed {
   isTrOnly: boolean;
   isForeignerOnly: boolean;
   isGuestZone: boolean;
-  ownership: LocationOwnership;
+  isRectorate: boolean;
   updatedAt: Date;
   locationName?: string;
   locationPath?: string;

@@ -24,7 +24,7 @@ import { SubmitApplicationDto } from '../dto/submit-application.dto';
 import { UpdateStudentContactDto } from '../dto/update-student-contact.dto';
 import { StudentCreateBookingDto } from '../dto/student-create-booking.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
 
 @Injectable()
@@ -248,10 +248,7 @@ export class StudentPortalService {
       if (bed.isGuestZone || room.isGuestZone) {
         throw new ForbiddenException('Guest zone beds are not available for student bookings');
       }
-      if (
-        bed.ownership === LocationOwnership.RECTORATE ||
-        room.ownership === LocationOwnership.RECTORATE
-      ) {
+      if (bed.isRectorate || room.isRectorate) {
         throw new ForbiddenException('This bed is not available for student bookings');
       }
 

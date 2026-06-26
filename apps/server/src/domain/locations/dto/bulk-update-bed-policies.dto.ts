@@ -1,5 +1,4 @@
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty } from 'class-validator';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { IsArray, IsBoolean, IsInt, IsNotEmpty } from 'class-validator';
 
 export class BulkUpdateBedTrOnlyDto {
   @IsArray()
@@ -31,12 +30,12 @@ export class BulkUpdateBedGuestZoneDto {
   isGuestZone!: boolean;
 }
 
-export class BulkUpdateBedOwnershipDto {
+export class BulkUpdateBedIsRectorateDto {
   @IsArray()
   @IsInt({ each: true })
   ids!: number[];
 
-  @IsEnum(LocationOwnership)
+  @IsBoolean()
   @IsNotEmpty()
-  ownership!: LocationOwnership;
+  isRectorate!: boolean;
 }

@@ -708,7 +708,9 @@
     "occupied": "Dolu",
     "maintenance": "Bakımda"
   },
-  "ownership": "Mülkiyet",
+  "is_rectorate": "Rektörlük",
+  "rectorate": "Rektörlük",
+  "dorm": "Yurt",
   "is_tr_only": "Sadece TC Vatandaşı?",
   "is_foreigner_only": "Sadece Yabancı Uyruklu?",
   "base_price": "Taban Fiyat",
@@ -718,11 +720,6 @@
   "prefix": "Ön Ek",
   "start_number": "Başlangıç No",
   "end_number": "Bitiş No",
-  "ownerships": {
-    "dorm": "Yurt",
-    "rectorate": "Rektörlük"
-  },
-
   "portal": {
     "nav_menu": "Menü",
     "nav_home": "Anasayfa",

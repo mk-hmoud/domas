@@ -1,5 +1,4 @@
 import { BedStatus } from '../../../common/enums/bed-status.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class Bed {
   id!: number;
@@ -9,7 +8,7 @@ export class Bed {
   isTrOnly!: boolean;
   isForeignerOnly!: boolean;
   isGuestZone!: boolean;
-  ownership!: LocationOwnership;
+  isRectorate!: boolean;
   updatedAt!: Date;
 
   constructor(partial: Partial<Bed>) {

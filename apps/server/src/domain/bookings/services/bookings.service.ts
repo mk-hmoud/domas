@@ -26,7 +26,7 @@ import { LocationsRepository } from '../../locations/repositories/locations.repo
 import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
 import { UsersService } from '../../users/services/users.service';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { AccessCardsService } from '../../access-cards/services/access-cards.service';
 import { ContractsService } from '../../contracts/services/contracts.service';
@@ -110,9 +110,7 @@ export class BookingsService {
         throw new BadRequestException('This location is reserved for foreign students only');
       }
 
-      const isRectorate =
-        room.ownership === LocationOwnership.RECTORATE ||
-        bed.ownership === LocationOwnership.RECTORATE;
+      const isRectorate = room.isRectorate || bed.isRectorate;
 
       if (isRectorate) {
         const user = await this.usersService.findById(context.userId, context, client);

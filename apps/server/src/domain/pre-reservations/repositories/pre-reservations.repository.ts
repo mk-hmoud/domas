@@ -274,7 +274,7 @@ export class PreReservationsRepository {
       WHERE b.deleted_at IS NULL
         AND b.status = 'available'
         AND b.is_guest_zone = FALSE
-        AND b.ownership = 'dorm'
+        AND b.is_rectorate = FALSE
         -- exclude beds already booked during the requested date range in this semester
         AND b.id NOT IN (
           SELECT bed_id FROM bookings

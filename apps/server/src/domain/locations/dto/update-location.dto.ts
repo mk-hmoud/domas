@@ -1,7 +1,6 @@
 import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class UpdateLocationDto {
   @IsString()
@@ -32,9 +31,9 @@ export class UpdateLocationDto {
   @IsOptional()
   isForeignerOnly?: boolean;
 
-  @IsEnum(LocationOwnership)
+  @IsBoolean()
   @IsOptional()
-  ownership?: LocationOwnership;
+  isRectorate?: boolean;
 
   @ValidateIf((o) => o.roomTypeId !== null)
   @IsInt()

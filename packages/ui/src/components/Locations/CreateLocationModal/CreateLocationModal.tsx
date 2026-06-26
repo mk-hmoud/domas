@@ -16,7 +16,6 @@ import {
   LocationType,
   GenderType,
   StudentYearLock,
-  LocationOwnership,
   RoomType,
 } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
@@ -67,7 +66,7 @@ export function CreateLocationModal({
       isGuestZone: false,
       isTrOnly: false,
       isForeignerOnly: false,
-      ownership: LocationOwnership.DORM,
+      isRectorate: false,
       roomTypeId: undefined as number | undefined,
     },
     validate: {
@@ -128,7 +127,7 @@ export function CreateLocationModal({
           isGuestZone: initialValues.isGuestZone || false,
           isTrOnly: initialValues.isTrOnly || false,
           isForeignerOnly: initialValues.isForeignerOnly || false,
-          ownership: initialValues.ownership || LocationOwnership.DORM,
+          isRectorate: initialValues.isRectorate || false,
           roomTypeId: initialValues.roomTypeId ?? undefined,
         });
       } else {
@@ -200,10 +199,6 @@ export function CreateLocationModal({
       label: t("student_year_lock_current", "Current students"),
     },
   ];
-  const ownershipOptions = Object.values(LocationOwnership).map((o) => ({
-    value: o,
-    label: t(`ownerships.${o}`),
-  }));
   const showRoomFields =
     form.values.type === LocationType.ROOM ||
     form.values.type === LocationType.BED;
@@ -325,14 +320,7 @@ export function CreateLocationModal({
             required
             {...form.getInputProps("type")}
           />
-          {showRoomFields && (
-            <Select
-              label={t("ownership")}
-              data={ownershipOptions}
-              required
-              {...form.getInputProps("ownership")}
-            />
-          )}
+          {showRoomFields && <div />}
         </SimpleGrid>
 
         {isRoomType && (
@@ -391,6 +379,10 @@ export function CreateLocationModal({
             <Switch
               label={t("is_foreigner_only")}
               {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_rectorate", "Rectorate")}
+              {...form.getInputProps("isRectorate", { type: "checkbox" })}
             />
           </Group>
         )}

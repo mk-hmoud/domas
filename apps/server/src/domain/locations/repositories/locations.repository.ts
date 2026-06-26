@@ -7,7 +7,6 @@ import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
@@ -34,7 +33,7 @@ export class LocationsRepository implements ILocationsRepository {
       is_guest_zone as "isGuestZone",
       is_tr_only as "isTrOnly",
       is_foreigner_only as "isForeignerOnly",
-      ownership,
+      is_rectorate as "isRectorate",
       room_type_id as "roomTypeId",
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -44,7 +43,7 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, name_tr, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
+        name, name_tr, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, is_rectorate, room_type_id
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING ${this.selectColumns}
@@ -59,7 +58,7 @@ export class LocationsRepository implements ILocationsRepository {
       data.isGuestZone || false,
       data.isTrOnly || false,
       data.isForeignerOnly || false,
-      data.ownership || LocationOwnership.DORM,
+      data.isRectorate || false,
       data.roomTypeId || null,
     ];
     const result = await this.getClient(client).query<Location>(query, values);
@@ -80,7 +79,7 @@ export class LocationsRepository implements ILocationsRepository {
       isTrOnly,
       isForeignerOnly,
       isGuestZone,
-      ownership,
+      isRectorate,
       parentId,
       onlyVacant,
     } = filters;
@@ -114,9 +113,9 @@ export class LocationsRepository implements ILocationsRepository {
       params.push(isGuestZone);
       conditions.push(`l.is_guest_zone = $${params.length}`);
     }
-    if (ownership) {
-      params.push(ownership);
-      conditions.push(`l.ownership = $${params.length}`);
+    if (isRectorate !== undefined) {
+      params.push(isRectorate);
+      conditions.push(`l.is_rectorate = $${params.length}`);
     }
     if (parentId) {
       const parent = await this.findById(parentId, client);
@@ -147,7 +146,7 @@ export class LocationsRepository implements ILocationsRepository {
       SELECT
         l.id, l.name, l.name_tr as "nameTr", l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
         l.student_year_lock as "studentYearLock",
-        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
+        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.is_rectorate as "isRectorate",
         l.room_type_id as "roomTypeId", rt.name as "roomTypeName", rt.name_tr as "roomTypeNameTr",
         l.created_at as "createdAt", l.updated_at as "updatedAt",
         ${totalBedsSub} as "totalBeds",
@@ -266,7 +265,7 @@ export class LocationsRepository implements ILocationsRepository {
         l.is_guest_zone as "isGuestZone",
         l.is_tr_only as "isTrOnly",
         l.is_foreigner_only as "isForeignerOnly",
-        l.ownership,
+        l.is_rectorate as "isRectorate",
         rt.id as "roomTypeId",
         rt.name as "roomTypeName",
         rt.name_tr as "roomTypeNameTr",
@@ -360,7 +359,7 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
     if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
     if (data.isForeignerOnly !== undefined) addUpdate('is_foreigner_only', data.isForeignerOnly);
-    if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
+    if (data.isRectorate !== undefined) addUpdate('is_rectorate', data.isRectorate);
     if ('roomTypeId' in data) addUpdate('room_type_id', data.roomTypeId ?? null);
 
     if (updates.length === 0) {
@@ -414,9 +413,9 @@ export class LocationsRepository implements ILocationsRepository {
       updates.push(`is_foreigner_only = $${paramIndex++}`);
       values.push(data.isForeignerOnly);
     }
-    if (data.ownership !== undefined) {
-      updates.push(`ownership = $${paramIndex++}`);
-      values.push(data.ownership);
+    if (data.isRectorate !== undefined) {
+      updates.push(`is_rectorate = $${paramIndex++}`);
+      values.push(data.isRectorate);
     }
 
     if (updates.length === 0) return;
@@ -673,9 +672,9 @@ export class LocationsRepository implements ILocationsRepository {
     return target;
   }
 
-  async updateOwnership(
+  async updateIsRectorate(
     id: number,
-    ownership: any,
+    isRectorate: boolean,
     cascade: boolean,
     client?: PoolClient,
   ): Promise<Location> {
@@ -686,29 +685,29 @@ export class LocationsRepository implements ILocationsRepository {
 
     if (cascade) {
       await dbClient.query(
-        `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
-        [ownership, target.treePath],
+        `UPDATE locations SET is_rectorate = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isRectorate, target.treePath],
       );
       await dbClient.query(
         `
-        UPDATE beds SET ownership = $1 
+        UPDATE beds SET is_rectorate = $1
         WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
           AND deleted_at IS NULL
       `,
-        [ownership, target.treePath],
+        [isRectorate, target.treePath],
       );
     } else {
       await dbClient.query(
-        `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`,
-        [ownership, id],
+        `UPDATE locations SET is_rectorate = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isRectorate, id],
       );
       await dbClient.query(
-        `UPDATE beds SET ownership = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
-        [ownership, id],
+        `UPDATE beds SET is_rectorate = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isRectorate, id],
       );
     }
 
-    target.ownership = ownership;
+    target.isRectorate = isRectorate;
     return target;
   }
 

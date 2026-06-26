@@ -182,7 +182,7 @@ function LocationsContent() {
       genderLock: undefined,
       isTrOnly: undefined,
       isGuestZone: undefined,
-      ownership: undefined,
+      isRectorate: undefined,
       onlyVacant: undefined,
       status: undefined,
     });
@@ -439,11 +439,11 @@ function LocationsContent() {
               isForeignerOnly: values.isForeignerOnly,
             }),
           );
-        if (values.ownership)
+        if (values.isRectorate !== undefined)
           bedPromises.push(
-            beds.updateOwnershipMany({
+            beds.updateIsRectorateMany({
               ids: bedIds,
-              ownership: values.ownership,
+              isRectorate: values.isRectorate,
             }),
           );
         if (values.isGuestZone !== undefined)
@@ -1032,15 +1032,15 @@ function LocationsContent() {
                 }
               >
                 <Group mb="md" gap="xs">
-                  <Badge
-                    variant="light"
-                    color="blue"
-                    leftSection={<IconBuildingBank size={14} />}
-                  >
-                    {t(`ownerships.${selectedNode.ownership}`, {
-                      defaultValue: selectedNode.ownership,
-                    })}
-                  </Badge>
+                  {selectedNode.isRectorate && (
+                    <Badge
+                      variant="light"
+                      color="blue"
+                      leftSection={<IconBuildingBank size={14} />}
+                    >
+                      {t("rectorate")}
+                    </Badge>
+                  )}
                   {selectedNode.isTrOnly && (
                     <Badge
                       variant="light"

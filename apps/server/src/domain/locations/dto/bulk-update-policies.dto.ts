@@ -1,6 +1,5 @@
-import { IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class BulkUpdateGenderLockDto {
   @IsArray()
@@ -58,14 +57,14 @@ export class BulkUpdateForeignerOnlyDto {
   cascade?: boolean = true;
 }
 
-export class BulkUpdateOwnershipDto {
+export class BulkUpdateIsRectorateDto {
   @IsArray()
   @IsInt({ each: true })
   ids!: number[];
 
-  @IsEnum(LocationOwnership)
+  @IsBoolean()
   @IsNotEmpty()
-  ownership!: LocationOwnership;
+  isRectorate!: boolean;
 
   @IsBoolean()
   @IsOptional()

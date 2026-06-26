@@ -29,8 +29,8 @@ CREATE TABLE locations (
     is_guest_zone BOOLEAN DEFAULT FALSE,
     is_tr_only BOOLEAN DEFAULT FALSE,
     is_foreigner_only BOOLEAN DEFAULT FALSE,
-    ownership location_ownership_type DEFAULT 'dorm',
-    
+    is_rectorate BOOLEAN DEFAULT FALSE,
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL
@@ -238,8 +238,8 @@ CREATE TABLE beds (
     is_tr_only BOOLEAN DEFAULT FALSE,
     is_foreigner_only BOOLEAN DEFAULT FALSE,
     is_guest_zone BOOLEAN DEFAULT FALSE,
-    ownership location_ownership_type DEFAULT 'dorm',
-    
+    is_rectorate BOOLEAN DEFAULT FALSE,
+
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     

@@ -15,14 +15,14 @@ import {
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
   BulkUpdateForeignerOnlyDto,
-  BulkUpdateOwnershipDto,
+  BulkUpdateIsRectorateDto,
 } from '../dto/bulk-update-policies.dto';
 import {
   UpdateGenderLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,
-  UpdateOwnershipDto,
+  UpdateIsRectorateDto,
 } from '../dto/update-policies.dto';
 import { Location } from '../entities/location.entity';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
@@ -131,7 +131,7 @@ export class LocationsService {
             genderLock: parent.genderLock,
             isTrOnly: parent.isTrOnly,
             isGuestZone: parent.isGuestZone,
-            ownership: parent.ownership,
+            isRectorate: parent.isRectorate,
           };
         }
       } else {
@@ -302,7 +302,7 @@ export class LocationsService {
           isGuestZone: row.isGuestZone,
           isTrOnly: row.isTrOnly,
           isForeignerOnly: row.isForeignerOnly,
-          ownership: row.ownership,
+          isRectorate: row.isRectorate,
           roomTypeId: row.roomTypeId,
           roomTypeName: row.roomTypeName,
           roomTypeNameTr: row.roomTypeNameTr,
@@ -555,9 +555,9 @@ export class LocationsService {
     return this.db.transaction(operation, context);
   }
 
-  async updateOwnership(
+  async updateIsRectorate(
     id: number,
-    ownership: any,
+    isRectorate: boolean,
     cascade: boolean,
     context: AuditUserContext,
     externalClient?: PoolClient,
@@ -567,9 +567,9 @@ export class LocationsService {
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
 
-      const updated = await this.locationsRepository.updateOwnership(
+      const updated = await this.locationsRepository.updateIsRectorate(
         id,
-        ownership,
+        isRectorate,
         cascade,
         client,
       );
@@ -577,11 +577,11 @@ export class LocationsService {
       await this.undoService.registerUndo(
         {
           userId: context.userId,
-          actionType: UndoActionType.UPDATE_OWNERSHIP,
+          actionType: UndoActionType.UPDATE_IS_RECTORATE,
           entityType: 'location',
           entityId: id.toString(),
-          undoData: { previousOwnership: location.ownership, cascade },
-          description: `Updated ownership on ${location.name}`,
+          undoData: { previousIsRectorate: location.isRectorate, cascade },
+          description: `Updated rectorate flag on ${location.name}`,
         },
         client,
       );
@@ -591,7 +591,7 @@ export class LocationsService {
 
     if (externalClient) return operation(externalClient);
 
-    this.logger.log({ locationId: id, ownership, cascade }, 'Updating ownership');
+    this.logger.log({ locationId: id, isRectorate, cascade }, 'Updating rectorate flag');
     return this.db.transaction(operation, context);
   }
 
@@ -692,11 +692,17 @@ export class LocationsService {
     }, context);
   }
 
-  async updateOwnershipMany(dto: BulkUpdateOwnershipDto, context: AuditUserContext): Promise<void> {
-    this.logger.log({ count: dto.ids.length, ownership: dto.ownership }, 'Bulk updating ownership');
+  async updateIsRectorateMany(
+    dto: BulkUpdateIsRectorateDto,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log(
+      { count: dto.ids.length, isRectorate: dto.isRectorate },
+      'Bulk updating rectorate flag',
+    );
     await this.db.transaction(async (client) => {
       for (const id of dto.ids) {
-        await this.updateOwnership(id, dto.ownership, dto.cascade ?? true, context, client);
+        await this.updateIsRectorate(id, dto.isRectorate, dto.cascade ?? true, context, client);
       }
     }, context);
   }

@@ -706,7 +706,9 @@
     "occupied": "Occupied",
     "maintenance": "Maintenance"
   },
-  "ownership": "Ownership",
+  "is_rectorate": "Rectorate",
+  "rectorate": "Rectorate",
+  "dorm": "Dorm",
   "is_tr_only": "TR Citizens Only?",
   "is_foreigner_only": "Foreigners Only?",
   "base_price": "Base Price",
@@ -727,11 +729,6 @@
   "out_of_bounds_warning": "Note: Custom dates fall outside the standard semester period.",
   "auto_create_beds": "Auto Create Beds (A, B, C...)",
   "bed_count": "Bed Count",
-
-  "ownerships": {
-    "dorm": "Dorm",
-    "rectorate": "Rectorate"
-  },
 
   "portal": {
     "nav_menu": "Menu",

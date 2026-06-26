@@ -12,7 +12,6 @@ import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
 import {
   UpdateLocationDto,
-  LocationOwnership,
   GenderType,
   StudentYearLock,
 } from "@domas/ts-types";
@@ -34,7 +33,7 @@ export function BulkEditLocationModal({
   const [loading, setLoading] = useState(false);
 
   // States to track which fields to update
-  const [updateOwnership, setUpdateOwnership] = useState(false);
+  const [updateIsRectorate, setUpdateIsRectorate] = useState(false);
   const [updateTrOnly, setUpdateTrOnly] = useState(false);
   const [updateForeignerOnly, setUpdateForeignerOnly] = useState(false);
   const [updateGuestZone, setUpdateGuestZone] = useState(false);
@@ -43,7 +42,7 @@ export function BulkEditLocationModal({
 
   const form = useForm<UpdateLocationDto>({
     initialValues: {
-      ownership: LocationOwnership.DORM,
+      isRectorate: false,
       isTrOnly: false,
       isForeignerOnly: false,
       isGuestZone: false,
@@ -56,7 +55,7 @@ export function BulkEditLocationModal({
     setLoading(true);
     try {
       const payload: UpdateLocationDto = {};
-      if (updateOwnership) payload.ownership = values.ownership;
+      if (updateIsRectorate) payload.isRectorate = values.isRectorate;
       if (updateTrOnly) payload.isTrOnly = values.isTrOnly;
       if (updateForeignerOnly) payload.isForeignerOnly = values.isForeignerOnly;
       if (updateGuestZone) payload.isGuestZone = values.isGuestZone;
@@ -69,7 +68,7 @@ export function BulkEditLocationModal({
       }
 
       form.reset();
-      setUpdateOwnership(false);
+      setUpdateIsRectorate(false);
       setUpdateTrOnly(false);
       setUpdateForeignerOnly(false);
       setUpdateGuestZone(false);
@@ -82,11 +81,6 @@ export function BulkEditLocationModal({
       setLoading(false);
     }
   };
-
-  const ownershipOptions = Object.values(LocationOwnership).map((o) => ({
-    value: o,
-    label: t(`ownerships.${o}`),
-  }));
 
   const genderOptions = Object.values(GenderType).map((g) => ({
     value: g,
@@ -111,18 +105,16 @@ export function BulkEditLocationModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <SimpleGrid cols={1} spacing="md">
-          <Group align="flex-end">
+          <Group align="center">
             <Checkbox
-              checked={updateOwnership}
-              onChange={(e) => setUpdateOwnership(e.currentTarget.checked)}
-              label={t("ownership")}
+              checked={updateIsRectorate}
+              onChange={(e) => setUpdateIsRectorate(e.currentTarget.checked)}
+              label={t("is_rectorate", "Rectorate")}
               style={{ width: 150 }}
             />
-            <Select
-              data={ownershipOptions}
-              disabled={!updateOwnership}
-              style={{ flex: 1 }}
-              {...form.getInputProps("ownership")}
+            <Switch
+              disabled={!updateIsRectorate}
+              {...form.getInputProps("isRectorate", { type: "checkbox" })}
             />
           </Group>
 
@@ -210,7 +202,7 @@ export function BulkEditLocationModal({
             type="submit"
             loading={loading}
             disabled={
-              !updateOwnership &&
+              !updateIsRectorate &&
               !updateTrOnly &&
               !updateForeignerOnly &&
               !updateGuestZone &&

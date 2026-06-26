@@ -185,6 +185,35 @@ async function bootstrap() {
       console.log('\u2705 Locations already exist. Skipping root creation.');
     }
 
+    // 2.5 Migrate ownership column → is_rectorate boolean
+    const isRectorateColCheck = await db.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'locations' AND column_name = 'is_rectorate'
+    `);
+    if (isRectorateColCheck.rowCount === 0) {
+      console.log('🔄  Migrating ownership column to is_rectorate...');
+      await db.query(
+        `ALTER TABLE locations ADD COLUMN IF NOT EXISTS is_rectorate BOOLEAN DEFAULT FALSE`,
+      );
+      await db.query(
+        `UPDATE locations SET is_rectorate = (ownership = 'rectorate') WHERE ownership IS NOT NULL`,
+      );
+      await db.query(`ALTER TABLE locations DROP COLUMN IF EXISTS ownership`);
+
+      await db.query(
+        `ALTER TABLE beds ADD COLUMN IF NOT EXISTS is_rectorate BOOLEAN DEFAULT FALSE`,
+      );
+      await db.query(
+        `UPDATE beds SET is_rectorate = (ownership = 'rectorate') WHERE ownership IS NOT NULL`,
+      );
+      await db.query(`ALTER TABLE beds DROP COLUMN IF EXISTS ownership`);
+
+      await db.query(`DROP TYPE IF EXISTS location_ownership_type`);
+      console.log('✅ ownership → is_rectorate migration complete.');
+    } else {
+      console.log('✅ is_rectorate column already exists. Skipping migration.');
+    }
+
     // 3. Backfill staff_locations for existing users
     // Location scoping is deny-by-default: a staff user with zero rows in
     // staff_locations sees nothing location-bound. Anchor every existing

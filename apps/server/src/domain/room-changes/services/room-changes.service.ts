@@ -20,7 +20,7 @@ import { StudentCreateRoomChangeDto } from '../dto/student-create-room-change.dt
 import { ResolveRoomChangeDto } from '../dto/resolve-room-change.dto';
 import { StaffMoveBedDto } from '../dto/staff-move-bed.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 
@@ -93,10 +93,7 @@ export class RoomChangesService {
         if (bed.isGuestZone || room.isGuestZone) {
           throw new ForbiddenException('Guest zone beds are not available');
         }
-        if (
-          bed.ownership === LocationOwnership.RECTORATE ||
-          room.ownership === LocationOwnership.RECTORATE
-        ) {
+        if (bed.isRectorate || room.isRectorate) {
           throw new ForbiddenException('This bed is not available for student bookings');
         }
         if ((bed.isTrOnly || room.isTrOnly) && !isTr) {

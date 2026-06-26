@@ -1,5 +1,3 @@
-import { LocationOwnership } from "../enums/location-ownership.enum";
-
 export interface UpdateBedTrOnlyDto {
   isTrOnly: boolean;
 }
@@ -12,8 +10,8 @@ export interface UpdateBedGuestZoneDto {
   isGuestZone: boolean;
 }
 
-export interface UpdateBedOwnershipDto {
-  ownership: LocationOwnership;
+export interface UpdateBedIsRectorateDto {
+  isRectorate: boolean;
 }
 
 export interface BulkUpdateBedTrOnlyDto {
@@ -31,7 +29,7 @@ export interface BulkUpdateBedGuestZoneDto {
   isGuestZone: boolean;
 }
 
-export interface BulkUpdateBedOwnershipDto {
+export interface BulkUpdateBedIsRectorateDto {
   ids: number[];
-  ownership: LocationOwnership;
+  isRectorate: boolean;
 }

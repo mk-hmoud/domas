@@ -1,7 +1,6 @@
 import { GenderType } from '../../../common/enums/gender-type.enum';
 import { StudentYearLock } from '../../../common/enums/student-year-lock.enum';
 import { LocationType } from '../../../common/enums/location-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class Location {
   id!: number;
@@ -14,7 +13,7 @@ export class Location {
   isGuestZone!: boolean;
   isTrOnly!: boolean;
   isForeignerOnly!: boolean;
-  ownership!: LocationOwnership;
+  isRectorate!: boolean;
   roomTypeId!: number | null;
   roomTypeName?: string;
   roomTypeNameTr?: string;

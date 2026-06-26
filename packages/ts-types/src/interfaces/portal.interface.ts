@@ -3,7 +3,6 @@ import { PaymentStatus } from "../enums/payment-status.enum";
 import { SemesterStatus } from "../enums/semester-status.enum";
 import { SemesterType } from "../enums/semester-type.enum";
 import { GenderType } from "../enums/gender-type.enum";
-import { LocationOwnership } from "../enums/location-ownership.enum";
 
 // ─── Semesters ────────────────────────────────────────────────────────────────
 
@@ -32,7 +31,7 @@ export interface BedWithOccupancy {
   status: string;
   isTrOnly: boolean;
   isForeignerOnly: boolean;
-  ownership: LocationOwnership;
+  isRectorate: boolean;
   roomId: number;
   roomName: string;
   roomTypeId: number;
@@ -51,7 +50,7 @@ export interface AvailableBed {
   status: string;
   isTrOnly: boolean;
   isForeignerOnly: boolean;
-  ownership: LocationOwnership;
+  isRectorate: boolean;
   roomId: number;
   roomName: string;
   roomTypeId: number;

@@ -9,13 +9,13 @@ import {
   UpdateBedTrOnlyDto,
   UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
-  UpdateBedOwnershipDto,
+  UpdateBedIsRectorateDto,
 } from '../dto/update-bed-policies.dto';
 import {
   BulkUpdateBedTrOnlyDto,
   BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
-  BulkUpdateBedOwnershipDto,
+  BulkUpdateBedIsRectorateDto,
 } from '../dto/bulk-update-bed-policies.dto';
 import { Bed } from '../entities/bed.entity';
 import { DatabaseService } from '../../../core/database/database.service';
@@ -106,7 +106,7 @@ export class BedsService {
           ...data,
           isTrOnly: data.isTrOnly ?? room.isTrOnly,
           isGuestZone: data.isGuestZone ?? room.isGuestZone,
-          ownership: data.ownership ?? room.ownership,
+          isRectorate: data.isRectorate ?? room.isRectorate,
         },
         client,
       );
@@ -251,20 +251,24 @@ export class BedsService {
     }, context);
   }
 
-  async updateOwnership(id: number, ownership: any, context: AuditUserContext): Promise<Bed> {
+  async updateIsRectorate(
+    id: number,
+    isRectorate: boolean,
+    context: AuditUserContext,
+  ): Promise<Bed> {
     return this.db.transaction(async (client) => {
       const bed = await this.assertBedInScope(id, context, client);
 
-      const updated = await this.bedsRepository.updateOwnership(id, ownership, client);
+      const updated = await this.bedsRepository.updateIsRectorate(id, isRectorate, client);
 
       await this.undoService.registerUndo(
         {
           userId: context.userId,
-          actionType: UndoActionType.UPDATE_BED_OWNERSHIP,
+          actionType: UndoActionType.UPDATE_BED_IS_RECTORATE,
           entityType: 'bed',
           entityId: id.toString(),
-          undoData: { previousOwnership: bed.ownership },
-          description: `Updated ownership on bed ${bed.label}`,
+          undoData: { previousIsRectorate: bed.isRectorate },
+          description: `Updated rectorate flag on bed ${bed.label}`,
         },
         client,
       );
@@ -345,14 +349,14 @@ export class BedsService {
     }, context);
   }
 
-  async updateOwnershipMany(
-    dto: BulkUpdateBedOwnershipDto,
+  async updateIsRectorateMany(
+    dto: BulkUpdateBedIsRectorateDto,
     context: AuditUserContext,
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.assertBedInScope(id, context, client);
-        await this.bedsRepository.updateOwnership(id, dto.ownership, client);
+        await this.bedsRepository.updateIsRectorate(id, dto.isRectorate, client);
       }
     }, context);
   }

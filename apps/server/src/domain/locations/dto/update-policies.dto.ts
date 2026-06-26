@@ -1,7 +1,6 @@
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 import { StudentYearLock } from '../../../common/enums/student-year-lock.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class UpdateGenderLockDto {
   @IsEnum(GenderType)
@@ -53,10 +52,10 @@ export class UpdateForeignerOnlyDto {
   cascade?: boolean = true;
 }
 
-export class UpdateOwnershipDto {
-  @IsEnum(LocationOwnership)
+export class UpdateIsRectorateDto {
+  @IsBoolean()
   @IsNotEmpty()
-  ownership!: LocationOwnership;
+  isRectorate!: boolean;
 
   @IsBoolean()
   @IsOptional()
