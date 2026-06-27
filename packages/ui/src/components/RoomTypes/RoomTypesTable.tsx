@@ -54,6 +54,9 @@ export function RoomTypesTable({
             {t("capacity", { defaultValue: "Capacity" })}
           </Table.Th>
           <Table.Th className={classes.th}>
+            {t("flags", { defaultValue: "Flags" })}
+          </Table.Th>
+          <Table.Th className={classes.th}>
             {t("amenities", { defaultValue: "Amenities" })}
           </Table.Th>
           <Table.Th className={classes.th}>
@@ -65,7 +68,7 @@ export function RoomTypesTable({
       <Table.Tbody>
         {data.length === 0 ? (
           <Table.Tr>
-            <Table.Td colSpan={5} style={{ padding: 0 }}>
+            <Table.Td colSpan={6} style={{ padding: 0 }}>
               <EmptyState
                 title={t("no_room_types", {
                   defaultValue: "No room types yet",
@@ -93,6 +96,58 @@ export function RoomTypesTable({
               </Table.Td>
               <Table.Td>
                 <Text size="sm">{rt.capacity}</Text>
+              </Table.Td>
+              <Table.Td>
+                <Group gap={4} wrap="wrap">
+                  {rt.genderLock && (
+                    <Badge size="xs" variant="light" color="grape">
+                      {rt.genderLock === "male"
+                        ? t("male", { defaultValue: "Male" })
+                        : t("female", { defaultValue: "Female" })}
+                    </Badge>
+                  )}
+                  {rt.studentYearLock && (
+                    <Badge size="xs" variant="light" color="indigo">
+                      {rt.studentYearLock === "new"
+                        ? t("student_year_lock_new", {
+                            defaultValue: "New",
+                          })
+                        : t("student_year_lock_current", {
+                            defaultValue: "Current",
+                          })}
+                    </Badge>
+                  )}
+                  {rt.isGuestZone && (
+                    <Badge size="xs" variant="light" color="orange">
+                      {t("is_guest_zone_label", { defaultValue: "Guest" })}
+                    </Badge>
+                  )}
+                  {rt.isTrOnly && (
+                    <Badge size="xs" variant="light" color="teal">
+                      {t("is_tr_only", { defaultValue: "TR" })}
+                    </Badge>
+                  )}
+                  {rt.isForeignerOnly && (
+                    <Badge size="xs" variant="light" color="cyan">
+                      {t("is_foreigner_only", { defaultValue: "Foreign" })}
+                    </Badge>
+                  )}
+                  {rt.isRectorate && (
+                    <Badge size="xs" variant="light" color="violet">
+                      {t("rectorate", { defaultValue: "Rectorate" })}
+                    </Badge>
+                  )}
+                  {!rt.genderLock &&
+                    !rt.studentYearLock &&
+                    !rt.isGuestZone &&
+                    !rt.isTrOnly &&
+                    !rt.isForeignerOnly &&
+                    !rt.isRectorate && (
+                      <Text size="xs" c="dimmed">
+                        —
+                      </Text>
+                    )}
+                </Group>
               </Table.Td>
               <Table.Td>
                 <Group gap={4} wrap="wrap">

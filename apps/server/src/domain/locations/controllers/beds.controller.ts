@@ -175,7 +175,11 @@ export class BedsController {
   @Delete(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
-    return this.bedsService.delete(id, context);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('force') force: string,
+    @UserContext() context: AuditUserContext,
+  ) {
+    return this.bedsService.delete(id, context, force === 'true');
   }
 }

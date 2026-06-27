@@ -569,21 +569,13 @@ function LocationsContent() {
 
   const handleSubmitLocation = async (
     values: CreateLocationDto | UpdateLocationDto | CreateLocationDto[],
-    createBedsCount?: number,
   ) => {
     try {
       if (Array.isArray(values)) {
-        // Bulk create mode
+        // Bulk create mode — rooms always use the room-with-beds endpoint
         const isRoomBulk = values.every((v) => v.type === LocationType.ROOM);
-        if (createBedsCount && createBedsCount > 0 && isRoomBulk) {
-          // Use specialized bulk endpoint for rooms with beds
-          const roomsWithBeds = values.map((v) => ({
-            ...v,
-            bedCount: createBedsCount,
-          }));
-          await locations.createRoomsWithBedsMany({
-            rooms: roomsWithBeds as any,
-          });
+        if (isRoomBulk) {
+          await locations.createRoomsWithBedsMany({ rooms: values as any });
         } else {
           await locations.createMany({ locations: values });
         }
@@ -602,18 +594,10 @@ function LocationsContent() {
           color: "green",
         });
       } else {
-        // Single create mode
+        // Single create mode — rooms always use the room-with-beds endpoint
         const dto = values as CreateLocationDto;
-        if (
-          createBedsCount &&
-          createBedsCount > 0 &&
-          dto.type === LocationType.ROOM
-        ) {
-          // Use specialized endpoint for single room with beds
-          await locations.createRoomWithBeds({
-            ...dto,
-            bedCount: createBedsCount,
-          });
+        if (dto.type === LocationType.ROOM) {
+          await locations.createRoomWithBeds(dto as any);
         } else {
           await locations.create(dto);
         }

@@ -214,6 +214,28 @@ async function bootstrap() {
       console.log('✅ is_rectorate column already exists. Skipping migration.');
     }
 
+    // 2.6 Add policy flags to room_types
+    const roomTypeFlagsCheck = await db.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'room_types' AND column_name = 'is_guest_zone'
+    `);
+    if (roomTypeFlagsCheck.rowCount === 0) {
+      console.log('🔄  Adding policy flags to room_types...');
+      await db.query(`
+        ALTER TABLE room_types
+          ADD COLUMN gender_lock gender_type DEFAULT NULL,
+          ADD COLUMN student_year_lock VARCHAR(10) DEFAULT NULL
+            CHECK (student_year_lock IN ('new', 'current')),
+          ADD COLUMN is_guest_zone BOOLEAN NOT NULL DEFAULT FALSE,
+          ADD COLUMN is_tr_only BOOLEAN NOT NULL DEFAULT FALSE,
+          ADD COLUMN is_foreigner_only BOOLEAN NOT NULL DEFAULT FALSE,
+          ADD COLUMN is_rectorate BOOLEAN NOT NULL DEFAULT FALSE
+      `);
+      console.log('✅ room_types policy flags added.');
+    } else {
+      console.log('✅ room_types policy flags already exist. Skipping migration.');
+    }
+
     // 3. Backfill staff_locations for existing users
     // Location scoping is deny-by-default: a staff user with zero rows in
     // staff_locations sees nothing location-bound. Anchor every existing

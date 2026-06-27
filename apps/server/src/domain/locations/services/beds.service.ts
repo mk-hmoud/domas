@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { BedsRepository } from '../repositories/beds.repository';
@@ -206,9 +207,33 @@ export class BedsService {
     }, context);
   }
 
-  async delete(id: number, context: AuditUserContext): Promise<void> {
+  async delete(id: number, context: AuditUserContext, force = false): Promise<void> {
     return this.db.transaction(async (client) => {
       const existing = await this.assertBedInScope(id, context, client);
+
+      // Guard: prevent deletion if it would leave the room below its room type's required bed count
+      const capacityCheck = await client.query<{ capacity: number; bedCount: number }>(
+        `SELECT rt.capacity, COUNT(b.id)::int AS "bedCount"
+         FROM beds b
+         JOIN locations l ON l.id = b.location_id AND l.deleted_at IS NULL
+         JOIN room_types rt ON rt.id = l.room_type_id
+         WHERE b.location_id = $1 AND b.deleted_at IS NULL
+         GROUP BY rt.capacity`,
+        [existing.locationId],
+      );
+      if (capacityCheck.rows[0]) {
+        const { capacity, bedCount } = capacityCheck.rows[0];
+        if (bedCount <= capacity) {
+          const canForce =
+            force && context.permissions?.includes(PERMISSIONS.LOCATIONS_UPDATE) === true;
+          if (!canForce) {
+            throw new ConflictException(
+              `Cannot delete bed: the room requires ${capacity} bed(s) per its room type and currently has ${bedCount}. Use ?force=true with LOCATIONS_UPDATE permission to override.`,
+            );
+          }
+        }
+      }
+
       await this.bedsRepository.delete(id, client);
 
       await this.undoService.registerUndo(

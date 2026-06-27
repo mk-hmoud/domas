@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -75,21 +76,35 @@ export class LocationsService {
     externalClient?: PoolClient,
   ): Promise<Location> {
     const operation = async (client: PoolClient) => {
-      // 1. Create Room (Location)
+      // 1. Resolve bed count from room type capacity
+      if (!dto.roomTypeId) {
+        throw new BadRequestException('A room must have a room type assigned');
+      }
+      const rtResult = await client.query<{ capacity: number }>(
+        `SELECT capacity FROM room_types WHERE id = $1`,
+        [dto.roomTypeId],
+      );
+      if (!rtResult.rows[0]) {
+        throw new NotFoundException(`Room type ${dto.roomTypeId} not found`);
+      }
+      const bedCount = rtResult.rows[0].capacity;
+
+      // 2. Create Room (Location)
       const room = await this.create(dto, context, client);
 
-      // 2. Create Beds
+      // 3. Create Beds — one per room type capacity slot
       const bedPromises = [];
-      for (let i = 1; i <= dto.bedCount; i++) {
-        // Generate label: "A", "B", "C"... or "1", "2", "3"
-        // Using Letters A-Z for now
-        const label = String.fromCharCode(64 + i);
+      for (let i = 1; i <= bedCount; i++) {
+        const label = String.fromCharCode(64 + i); // A, B, C…
         bedPromises.push(
           this.bedsRepository.create(
             {
               locationId: room.id,
-              label: label,
+              label,
               status: BedStatus.AVAILABLE,
+              isTrOnly: room.isTrOnly,
+              isGuestZone: room.isGuestZone,
+              isRectorate: room.isRectorate,
             },
             client,
           ),
@@ -101,7 +116,7 @@ export class LocationsService {
 
     if (externalClient) return operation(externalClient);
 
-    this.logger.log({ room: dto.name, bedCount: dto.bedCount }, 'Creating room with beds');
+    this.logger.log({ room: dto.name, roomTypeId: dto.roomTypeId }, 'Creating room with beds');
     return this.db.transaction(operation, context);
   }
 
@@ -156,9 +171,29 @@ export class LocationsService {
         this.locationScopeService.assertAccess(context.locationScope, '');
       }
 
+      // Room type flags override parent flags — the room type is the source of truth
+      let roomTypeFlags: Partial<Location> = {};
+      if (data.type === LocationType.ROOM && data.roomTypeId) {
+        const rtResult = await client.query<{
+          genderLock: string | null;
+          studentYearLock: string | null;
+          isGuestZone: boolean;
+          isTrOnly: boolean;
+          isForeignerOnly: boolean;
+          isRectorate: boolean;
+        }>(
+          `SELECT gender_lock AS "genderLock", student_year_lock AS "studentYearLock",
+                  is_guest_zone AS "isGuestZone", is_tr_only AS "isTrOnly",
+                  is_foreigner_only AS "isForeignerOnly", is_rectorate AS "isRectorate"
+           FROM room_types WHERE id = $1`,
+          [data.roomTypeId],
+        );
+        if (rtResult.rows[0]) roomTypeFlags = rtResult.rows[0] as Partial<Location>;
+      }
+
       const tempPath = 'temp';
       const created = await this.locationsRepository.create(
-        { ...parentFlags, ...data, treePath: tempPath },
+        { ...parentFlags, ...data, ...roomTypeFlags, treePath: tempPath },
         client,
       );
 
@@ -384,6 +419,41 @@ export class LocationsService {
       }
       this.locationScopeService.assertAccess(context.locationScope, existing.treePath);
 
+      // When changing a room's type, ensure bed count matches new type's capacity
+      if (
+        'roomTypeId' in data &&
+        data.roomTypeId !== null &&
+        data.roomTypeId !== existing.roomTypeId
+      ) {
+        const rtResult = await client.query<{
+          capacity: number;
+          genderLock: string | null;
+          studentYearLock: string | null;
+          isGuestZone: boolean;
+          isTrOnly: boolean;
+          isForeignerOnly: boolean;
+          isRectorate: boolean;
+        }>(
+          `SELECT capacity, gender_lock AS "genderLock", student_year_lock AS "studentYearLock",
+                  is_guest_zone AS "isGuestZone", is_tr_only AS "isTrOnly",
+                  is_foreigner_only AS "isForeignerOnly", is_rectorate AS "isRectorate"
+           FROM room_types WHERE id = $1`,
+          [data.roomTypeId],
+        );
+        if (!rtResult.rows[0]) {
+          throw new NotFoundException(`Room type ${data.roomTypeId} not found`);
+        }
+        const { capacity, ...rtFlags } = rtResult.rows[0];
+        const bedCount = await this.bedsRepository.countByLocation(id, client);
+        if (bedCount !== capacity) {
+          throw new ConflictException(
+            `Cannot change room type: room has ${bedCount} bed(s) but the new type requires ${capacity}. Adjust the room's beds first.`,
+          );
+        }
+        // Apply new room type's flags to this room
+        Object.assign(data, rtFlags);
+      }
+
       const updated = await this.locationsRepository.update(id, data, client);
 
       await this.undoService.registerUndo(
@@ -433,6 +503,14 @@ export class LocationsService {
     this.logger.log({ locationId: id }, 'Location deleted successfully');
   }
 
+  private assertNotRoomTypeLocked(location: Location, context: AuditUserContext): void {
+    if (location.roomTypeId !== null && !context.isRecoveryAdmin) {
+      throw new ConflictException(
+        `This room's flags are managed by its room type (ID ${location.roomTypeId}). Update the room type to change them, or use a recovery admin account for a direct override.`,
+      );
+    }
+  }
+
   async updateGenderLock(
     id: number,
     genderLock: any,
@@ -444,6 +522,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateGenderLock(
         id,
@@ -484,6 +563,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateStudentYearLock(
         id,
@@ -512,6 +592,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateGuestZone(
         id,
@@ -552,6 +633,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
 
@@ -587,6 +669,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateIsRectorate(
         id,
@@ -663,6 +746,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateForeignerOnly(
         id,

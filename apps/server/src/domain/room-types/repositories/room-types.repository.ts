@@ -20,14 +20,20 @@ export class RoomTypesRepository {
     return `
       id,
       name,
-      name_tr       AS "nameTr",
+      name_tr              AS "nameTr",
       description,
-      description_tr AS "descriptionTr",
-      gallery_urls  AS "galleryUrls",
+      description_tr       AS "descriptionTr",
+      gallery_urls         AS "galleryUrls",
       amenities,
       capacity,
-      created_at    AS "createdAt",
-      updated_at    AS "updatedAt"
+      gender_lock          AS "genderLock",
+      student_year_lock    AS "studentYearLock",
+      is_guest_zone        AS "isGuestZone",
+      is_tr_only           AS "isTrOnly",
+      is_foreigner_only    AS "isForeignerOnly",
+      is_rectorate         AS "isRectorate",
+      created_at           AS "createdAt",
+      updated_at           AS "updatedAt"
     `;
   }
 
@@ -65,8 +71,11 @@ export class RoomTypesRepository {
 
   async create(data: CreateRoomTypeDto, client?: PoolClient): Promise<RoomType> {
     const result = await this.getClient(client).query<RoomType>(
-      `INSERT INTO room_types (name, name_tr, description, description_tr, gallery_urls, amenities, capacity)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO room_types (
+         name, name_tr, description, description_tr, gallery_urls, amenities, capacity,
+         gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, is_rectorate
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING ${this.selectColumns}`,
       [
         data.name,
@@ -76,6 +85,12 @@ export class RoomTypesRepository {
         data.galleryUrls ?? [],
         data.amenities ?? [],
         data.capacity,
+        data.genderLock ?? null,
+        data.studentYearLock ?? null,
+        data.isGuestZone ?? false,
+        data.isTrOnly ?? false,
+        data.isForeignerOnly ?? false,
+        data.isRectorate ?? false,
       ],
     );
     return this.mapRow(result.rows[0]);
@@ -98,6 +113,12 @@ export class RoomTypesRepository {
     if (data.galleryUrls !== undefined) add('gallery_urls', data.galleryUrls);
     if (data.amenities !== undefined) add('amenities', data.amenities);
     if (data.capacity !== undefined) add('capacity', data.capacity);
+    if ('genderLock' in data) add('gender_lock', data.genderLock ?? null);
+    if ('studentYearLock' in data) add('student_year_lock', data.studentYearLock ?? null);
+    if (data.isGuestZone !== undefined) add('is_guest_zone', data.isGuestZone);
+    if (data.isTrOnly !== undefined) add('is_tr_only', data.isTrOnly);
+    if (data.isForeignerOnly !== undefined) add('is_foreigner_only', data.isForeignerOnly);
+    if (data.isRectorate !== undefined) add('is_rectorate', data.isRectorate);
 
     if (updates.length === 0) return this.findById(id, client);
 
@@ -143,5 +164,72 @@ export class RoomTypesRepository {
   async delete(id: number, client?: PoolClient): Promise<boolean> {
     const result = await this.getClient(client).query(`DELETE FROM room_types WHERE id = $1`, [id]);
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // Returns rooms linked to this room type whose bed count differs from newCapacity
+  async checkCapacityConflicts(
+    roomTypeId: number,
+    newCapacity: number,
+    client?: PoolClient,
+  ): Promise<{ id: number; name: string; bedCount: number }[]> {
+    const result = await this.getClient(client).query<{
+      id: number;
+      name: string;
+      bedCount: number;
+    }>(
+      `SELECT l.id, l.name, COUNT(b.id)::int AS "bedCount"
+       FROM locations l
+       LEFT JOIN beds b ON b.location_id = l.id AND b.deleted_at IS NULL
+       WHERE l.room_type_id = $1 AND l.deleted_at IS NULL
+       GROUP BY l.id, l.name
+       HAVING COUNT(b.id) != $2`,
+      [roomTypeId, newCapacity],
+    );
+    return result.rows;
+  }
+
+  // Cascade policy flags from room type to all linked rooms
+  async cascadeFlags(
+    roomTypeId: number,
+    flags: {
+      genderLock: string | null;
+      studentYearLock: string | null;
+      isGuestZone: boolean;
+      isTrOnly: boolean;
+      isForeignerOnly: boolean;
+      isRectorate: boolean;
+    },
+    client?: PoolClient,
+  ): Promise<void> {
+    await this.getClient(client).query(
+      `UPDATE locations
+       SET gender_lock = $2, student_year_lock = $3, is_guest_zone = $4,
+           is_tr_only = $5, is_foreigner_only = $6, is_rectorate = $7, updated_at = NOW()
+       WHERE room_type_id = $1 AND deleted_at IS NULL`,
+      [
+        roomTypeId,
+        flags.genderLock,
+        flags.studentYearLock,
+        flags.isGuestZone,
+        flags.isTrOnly,
+        flags.isForeignerOnly,
+        flags.isRectorate,
+      ],
+    );
+  }
+
+  // Cascade is_rectorate from room type to all beds in linked rooms
+  async cascadeIsRectorateToBeds(
+    roomTypeId: number,
+    isRectorate: boolean,
+    client?: PoolClient,
+  ): Promise<void> {
+    await this.getClient(client).query(
+      `UPDATE beds SET is_rectorate = $2, updated_at = NOW()
+       WHERE location_id IN (
+         SELECT id FROM locations WHERE room_type_id = $1 AND deleted_at IS NULL
+       ) AND deleted_at IS NULL`,
+      [roomTypeId, isRectorate],
+    );
   }
 }
