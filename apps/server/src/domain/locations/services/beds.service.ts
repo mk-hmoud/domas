@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { BedsRepository } from '../repositories/beds.repository';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
@@ -29,6 +34,7 @@ import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { Inject, forwardRef } from '@nestjs/common';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 
 @Injectable()
 export class BedsService {
@@ -41,6 +47,13 @@ export class BedsService {
     private readonly db: DatabaseService,
     private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  private canAccessRectorate(context: AuditUserContext): boolean {
+    return (
+      context.isRecoveryAdmin === true ||
+      context.permissions?.includes(PERMISSIONS.LOCATIONS_RECTORATE) === true
+    );
+  }
 
   // Fetches the bed's room and asserts the current staff member's location
   // scope covers it. Used before any single-bed read or mutation.
@@ -85,7 +98,10 @@ export class BedsService {
   }
 
   async findAll(filters: FindAllBedsDto, context: AuditUserContext): Promise<PaginatedResult<Bed>> {
-    return this.bedsRepository.findAll(filters, undefined, context.locationScope);
+    const effectiveFilters = this.canAccessRectorate(context)
+      ? filters
+      : { ...filters, isRectorate: false };
+    return this.bedsRepository.findAll(effectiveFilters, undefined, context.locationScope);
   }
 
   async create(
@@ -93,6 +109,9 @@ export class BedsService {
     context: AuditUserContext,
     externalClient?: PoolClient,
   ): Promise<Bed> {
+    if (data.isRectorate && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to create rectorate beds');
+    }
     const operation = async (client: PoolClient) => {
       // Fetch room to copy initial state
       const room = await this.locationsRepository.findById(data.locationId, client);
@@ -145,6 +164,9 @@ export class BedsService {
   }
 
   async update(id: number, data: UpdateBedDto, context: AuditUserContext): Promise<Bed> {
+    if (data.isRectorate !== undefined && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to modify the rectorate flag');
+    }
     return this.db.transaction(async (client) => {
       const existing = await this.assertBedInScope(id, context, client);
 

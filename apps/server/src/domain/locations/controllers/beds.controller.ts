@@ -91,7 +91,7 @@ export class BedsController {
   }
 
   @Patch('bulk-rectorate')
-  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @RequirePermissions(PERMISSIONS.LOCATIONS_RECTORATE)
   @HttpCode(HttpStatus.NO_CONTENT)
   updateIsRectorateMany(
     @Body() dto: BulkUpdateBedIsRectorateDto,
@@ -153,7 +153,7 @@ export class BedsController {
   }
 
   @Patch(':id/rectorate')
-  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @RequirePermissions(PERMISSIONS.LOCATIONS_RECTORATE)
   updateIsRectorate(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateBedIsRectorateDto,

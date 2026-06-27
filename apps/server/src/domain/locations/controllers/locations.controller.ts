@@ -129,7 +129,7 @@ export class LocationsController {
   }
 
   @Patch('bulk-rectorate')
-  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @RequirePermissions(PERMISSIONS.LOCATIONS_RECTORATE)
   @HttpCode(HttpStatus.NO_CONTENT)
   updateIsRectorateMany(
     @Body() dto: BulkUpdateIsRectorateDto,
@@ -256,7 +256,7 @@ export class LocationsController {
   }
 
   @Patch(':id/rectorate')
-  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @RequirePermissions(PERMISSIONS.LOCATIONS_RECTORATE)
   updateIsRectorate(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateIsRectorateDto,

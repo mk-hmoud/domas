@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { BedsRepository } from '../repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
@@ -38,6 +44,7 @@ import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { Inject, forwardRef } from '@nestjs/common';
 
 import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 
 @Injectable()
 export class LocationsService {
@@ -55,7 +62,12 @@ export class LocationsService {
 
   // ... (existing create helper)
 
-  // ... (existing methods)
+  private canAccessRectorate(context: AuditUserContext): boolean {
+    return (
+      context.isRecoveryAdmin === true ||
+      context.permissions?.includes(PERMISSIONS.LOCATIONS_RECTORATE) === true
+    );
+  }
 
   async createRoomWithBeds(
     dto: CreateRoomWithBedsDto,
@@ -118,6 +130,9 @@ export class LocationsService {
   ): Promise<Location> {
     if (data.type === LocationType.ROOM && !data.roomTypeId) {
       throw new BadRequestException('A room must have a room type assigned');
+    }
+    if (data.isRectorate && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to create rectorate locations');
     }
 
     const operation = async (client: PoolClient) => {
@@ -231,7 +246,10 @@ export class LocationsService {
     filters: FindAllLocationsDto,
     context: AuditUserContext,
   ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
-    return this.locationsRepository.findAll(filters, undefined, context.locationScope);
+    const effectiveFilters = this.canAccessRectorate(context)
+      ? filters
+      : { ...filters, isRectorate: false };
+    return this.locationsRepository.findAll(effectiveFilters, undefined, context.locationScope);
   }
 
   async findById(id: number, context: AuditUserContext): Promise<Location> {
@@ -356,6 +374,9 @@ export class LocationsService {
 
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
     this.logger.log({ locationId: id, data }, 'Updating location');
+    if (data.isRectorate !== undefined && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to modify the rectorate flag');
+    }
     const location = await this.db.transaction(async (client) => {
       const existing = await this.locationsRepository.findById(id, client);
       if (!existing) {

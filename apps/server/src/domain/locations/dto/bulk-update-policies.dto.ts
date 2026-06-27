@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 
 export class BulkUpdateGenderLockDto {

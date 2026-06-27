@@ -25,7 +25,6 @@ import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 import { LocationsRepository } from '../../locations/repositories/locations.repository';
 import { BedsRepository } from '../../locations/repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
-import { UsersService } from '../../users/services/users.service';
 
 import { InventoryService } from '../../inventory/services/inventory.service';
 import { AccessCardsService } from '../../access-cards/services/access-cards.service';
@@ -40,6 +39,7 @@ import {
   NotificationType,
 } from '../../notifications/services/notifications.service';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 
 @Injectable()
 export class BookingsService {
@@ -50,7 +50,6 @@ export class BookingsService {
     private readonly locationsRepository: LocationsRepository,
     private readonly bedsRepository: BedsRepository,
     private readonly studentsRepository: StudentsRepository,
-    private readonly usersService: UsersService,
     private readonly undoService: UndoService,
     private readonly inventoryService: InventoryService,
     private readonly accessCardsService: AccessCardsService,
@@ -113,9 +112,11 @@ export class BookingsService {
       const isRectorate = room.isRectorate || bed.isRectorate;
 
       if (isRectorate) {
-        const user = await this.usersService.findById(context.userId, context, client);
-        if (!user || !user.isRecoveryAdmin) {
-          throw new ForbiddenException('Only Recovery Admin can book Rectorate-owned locations');
+        const canBook =
+          context.isRecoveryAdmin === true ||
+          context.permissions?.includes(PERMISSIONS.LOCATIONS_RECTORATE) === true;
+        if (!canBook) {
+          throw new ForbiddenException('You do not have permission to book rectorate locations');
         }
       }
 

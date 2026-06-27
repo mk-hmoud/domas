@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 import { GenderType } from '../../../common/enums/gender-type.enum';
 import { StudentYearLock } from '../../../common/enums/student-year-lock.enum';
 
