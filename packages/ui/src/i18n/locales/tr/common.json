@@ -701,6 +701,7 @@
   "students": "Öğrenciler",
   "occupied_status_lock_notice": "Bu yatak şu anda dolu. Durum değişikliği sadece çıkış veya geri alma işlemleriyle yapılabilir.",
   "create_bed": "Yatak Oluştur",
+  "edit_bed": "Yatak Düzenle",
   "bed_label": "Yatak {{label}}",
   "bed_label_field": "Yatak Etiketi",
   "bed_status": {

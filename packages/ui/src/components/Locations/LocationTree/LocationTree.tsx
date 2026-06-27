@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, ReactNode } from "react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ScrollArea,
@@ -41,7 +41,9 @@ export interface LocationTreeProps {
   selectedIds?: (number | string)[];
   onToggleSelection?: (id: number | string) => void;
   onSelectBranch?: (ids: (number | string)[]) => void;
+  onDeselectBranch?: (ids: (number | string)[]) => void;
   expandedIds?: Set<string | number>;
+  treeHeaderActions?: ReactNode;
 }
 
 interface TreeItemProps {
@@ -53,6 +55,7 @@ interface TreeItemProps {
   selectedIds?: (number | string)[];
   onToggleSelection?: (id: number | string) => void;
   onSelectBranch?: (ids: (number | string)[]) => void;
+  onDeselectBranch?: (ids: (number | string)[]) => void;
   expandedIds?: Set<string | number>;
 }
 
@@ -87,6 +90,7 @@ function TreeItem({
   selectedIds,
   onToggleSelection,
   onSelectBranch,
+  onDeselectBranch,
   expandedIds,
 }: TreeItemProps) {
   const { t, i18n } = useTranslation();
@@ -141,11 +145,18 @@ function TreeItem({
 
   const handleBranchSelection = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onSelectBranch) {
-      const ids = getAllDescendantIds(node);
+    const ids = getAllDescendantIds(node);
+    const allSelected = ids.every((id) => selectedIds?.includes(id));
+    if (allSelected && onDeselectBranch) {
+      onDeselectBranch(ids);
+    } else if (onSelectBranch) {
       onSelectBranch(ids);
     }
   };
+
+  const branchIds = getAllDescendantIds(node);
+  const allBranchSelected =
+    branchIds.length > 0 && branchIds.every((id) => selectedIds?.includes(id));
 
   const getStatusColor = (status?: string) => {
     if (status === "available") return "var(--mantine-color-green-filled)";
@@ -192,20 +203,28 @@ function TreeItem({
                 onClick={(e) => e.stopPropagation()}
                 size="xs"
               />
-              {hovered && onSelectBranch && hasChildren && (
-                <Tooltip
-                  label={t("select_branch", { defaultValue: "Select Branch" })}
-                >
-                  <ActionIcon
-                    size="xs"
-                    variant="subtle"
-                    color="blue"
-                    onClick={handleBranchSelection}
+              {hovered &&
+                (onSelectBranch || onDeselectBranch) &&
+                hasChildren && (
+                  <Tooltip
+                    label={
+                      allBranchSelected
+                        ? t("deselect_branch", {
+                            defaultValue: "Deselect Branch",
+                          })
+                        : t("select_branch", { defaultValue: "Select Branch" })
+                    }
                   >
-                    <IconListCheck size={12} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color={allBranchSelected ? "gray" : "blue"}
+                      onClick={handleBranchSelection}
+                    >
+                      <IconListCheck size={12} />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
             </Group>
           )}
 
@@ -264,6 +283,7 @@ function TreeItem({
               selectedIds={selectedIds}
               onToggleSelection={onToggleSelection}
               onSelectBranch={onSelectBranch}
+              onDeselectBranch={onDeselectBranch}
               expandedIds={expandedIds}
             />
           ))}
@@ -298,7 +318,9 @@ export function LocationTree({
   selectedIds,
   onToggleSelection,
   onSelectBranch,
+  onDeselectBranch,
   expandedIds,
+  treeHeaderActions,
 }: LocationTreeProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -308,6 +330,16 @@ export function LocationTree({
     () => filterTree(data, debouncedQuery),
     [data, debouncedQuery],
   );
+
+  // Unwrap university nodes — render their children as top-level items
+  const displayData = useMemo(
+    () =>
+      filteredData.flatMap((n) =>
+        n.type === LocationType.UNIVERSITY ? (n.children ?? []) : [n],
+      ),
+    [filteredData],
+  );
+
   const isFiltering = debouncedQuery.length > 0;
 
   return (
@@ -317,6 +349,16 @@ export function LocationTree({
       radius="md"
       style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}
     >
+      {treeHeaderActions && (
+        <div
+          style={{
+            padding: "0.5rem 0.75rem",
+            borderBottom: "1px solid var(--mantine-color-default-border)",
+          }}
+        >
+          {treeHeaderActions}
+        </div>
+      )}
       <div
         style={{
           padding: "0.75rem",
@@ -335,7 +377,7 @@ export function LocationTree({
       </div>
       <ScrollArea style={{ flex: 1 }}>
         <Box p="xs">
-          {filteredData.map((node) => (
+          {displayData.map((node) => (
             <TreeItem
               key={node.id}
               node={node}
@@ -346,10 +388,11 @@ export function LocationTree({
               selectedIds={selectedIds}
               onToggleSelection={onToggleSelection}
               onSelectBranch={onSelectBranch}
+              onDeselectBranch={onDeselectBranch}
               expandedIds={expandedIds}
             />
           ))}
-          {filteredData.length === 0 && (
+          {displayData.length === 0 && (
             <EmptyState
               title={t("no_locations_found", {
                 defaultValue: "No locations found",

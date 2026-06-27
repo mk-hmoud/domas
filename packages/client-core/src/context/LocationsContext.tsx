@@ -124,16 +124,30 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
 
       setTreeData(builtTree);
 
+      // Skip university on auto-select — start from first campus
+      const getFirstSelectable = (
+        nodes: LocationNode[],
+      ): LocationNode | null => {
+        for (const n of nodes) {
+          if (n.type !== LocationType.UNIVERSITY) return n;
+          const child = getFirstSelectable(n.children ?? []);
+          if (child) return child;
+        }
+        return null;
+      };
+
       // Restore selection if possible
       if (selectedNode) {
         const freshNode = findInTree(builtTree, selectedNode.id);
         if (freshNode) {
           selectNode(freshNode);
-        } else if (builtTree.length > 0) {
-          selectNode(builtTree[0]);
+        } else {
+          const first = getFirstSelectable(builtTree) ?? builtTree[0];
+          if (first) selectNode(first);
         }
-      } else if (builtTree.length > 0) {
-        selectNode(builtTree[0]);
+      } else {
+        const first = getFirstSelectable(builtTree) ?? builtTree[0];
+        if (first) selectNode(first);
       }
     } catch (error) {
       notifications.show({

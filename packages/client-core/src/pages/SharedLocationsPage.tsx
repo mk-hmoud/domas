@@ -14,6 +14,7 @@ import {
   Stack,
   Drawer,
   ActionIcon,
+  Tooltip,
   Divider,
   SegmentedControl,
   Pagination,
@@ -310,16 +311,24 @@ function LocationsContent() {
       .catch(() => {});
   }, []);
 
-  // Calculate breadcrumbs
+  // University node (used for "Add Campus" in the sidebar header, never rendered directly)
+  const universityNode = useMemo(
+    () => treeData.find((n) => n.type === LocationType.UNIVERSITY) ?? null,
+    [treeData],
+  );
+
+  // Calculate breadcrumbs — skip university level
   const locationPath = selectedNode
     ? findLocationPath(treeData, selectedNode.id)
     : null;
 
   const breadcrumbs =
-    locationPath?.map((n) => ({
-      label: localizedName(n),
-      onClick: () => selectNode(n),
-    })) ?? [];
+    locationPath
+      ?.filter((n) => n.type !== LocationType.UNIVERSITY)
+      .map((n) => ({
+        label: localizedName(n),
+        onClick: () => selectNode(n),
+      })) ?? [];
 
   // IDs of ancestor nodes that must be expanded in the tree to reveal the selected node
   const expandedIds = useMemo(() => {
@@ -349,6 +358,10 @@ function LocationsContent() {
 
   const handleSelectBranch = (ids: (number | string)[]) => {
     setSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
+  };
+
+  const handleDeselectBranch = (ids: (number | string)[]) => {
+    setSelectedIds((prev) => prev.filter((id) => !ids.includes(id as any)));
   };
 
   const handleBulkDelete = () => {
@@ -944,7 +957,37 @@ function LocationsContent() {
                 selectedIds={selectedIds}
                 onToggleSelection={handleToggleSelection}
                 onSelectBranch={handleSelectBranch}
+                onDeselectBranch={handleDeselectBranch}
                 expandedIds={expandedIds}
+                treeHeaderActions={
+                  universityNode ? (
+                    <Group justify="space-between" align="center">
+                      <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+                        {t("campuses", { defaultValue: "Campuses" })}
+                      </Text>
+                      <Tooltip
+                        label={t("add_campus", {
+                          defaultValue: "Add Campus",
+                        })}
+                      >
+                        <ActionIcon
+                          size="sm"
+                          variant="light"
+                          onClick={() => {
+                            setLocationToEdit(null);
+                            setParentForCreation({
+                              id: Number(universityNode.id),
+                              type: LocationType.UNIVERSITY,
+                            });
+                            setCreateModalOpened(true);
+                          }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  ) : undefined
+                }
               />
             }
           >
@@ -966,15 +1009,16 @@ function LocationsContent() {
                         {t("create_booking")}
                       </Button>
                     )}
-                    {selectedNode.type === LocationType.ROOM && (
-                      <Button
-                        variant="light"
-                        leftSection={<IconPlus size={16} />}
-                        onClick={() => setCreateBedModalOpened(true)}
-                      >
-                        {t("create_bed", { defaultValue: "Create Bed" })}
-                      </Button>
-                    )}
+                    {selectedNode.type === LocationType.ROOM &&
+                      !selectedNode.roomTypeId && (
+                        <Button
+                          variant="light"
+                          leftSection={<IconPlus size={16} />}
+                          onClick={() => setCreateBedModalOpened(true)}
+                        >
+                          {t("create_bed", { defaultValue: "Create Bed" })}
+                        </Button>
+                      )}
                     {selectedNode.type !== LocationType.ROOM &&
                       selectedNode.type !== LocationType.BED && (
                         <Button
@@ -1185,6 +1229,11 @@ function LocationsContent() {
                             id={bed.id}
                             label={bed.label}
                             status={bed.status}
+                            residentName={bed.residentName}
+                            isTrOnly={bed.isTrOnly}
+                            isGuestZone={bed.isGuestZone}
+                            isRectorate={bed.isRectorate}
+                            isForeignerOnly={bed.isForeignerOnly}
                             selected={selectedIds.includes(globalId)}
                             onClick={() =>
                               selectNode({
@@ -1199,7 +1248,6 @@ function LocationsContent() {
                             onEdit={() => {}}
                             onDelete={() => handleDeleteBed(bed)}
                             onBook={() => {
-                              // First select the node so the modal gets the right initialBedId
                               selectNode({
                                 children: [],
                                 ...bed,
@@ -1275,15 +1323,15 @@ function LocationsContent() {
                           checked={
                             children.length > 0 &&
                             children.every((c) =>
-                              selectedIds.includes(Number(c.id)),
+                              selectedIds.includes(`loc-${c.id}`),
                             )
                           }
                           indeterminate={
                             children.some((c) =>
-                              selectedIds.includes(Number(c.id)),
+                              selectedIds.includes(`loc-${c.id}`),
                             ) &&
                             !children.every((c) =>
-                              selectedIds.includes(Number(c.id)),
+                              selectedIds.includes(`loc-${c.id}`),
                             )
                           }
                           onChange={handleToggleSelectAllChildren}
@@ -1297,24 +1345,48 @@ function LocationsContent() {
                             child.type === LocationType.BED
                               ? `bed-${child.id}`
                               : `loc-${child.id}`;
-                          return selectedNode.type === LocationType.FLOOR ? (
-                            <RoomCard
-                              key={child.id}
-                              id={Number(child.id)}
-                              name={localizedName(child)}
-                              genderLock={child.genderLock || undefined}
-                              selected={selectedIds.includes(globalId)}
-                              onClick={() => selectNode(child as any)}
-                              onSelect={() => handleToggleSelection(globalId)}
-                              onEdit={() => handleEditChild(child as any)}
-                              onDelete={() => handleDeleteChild(child as any)}
-                            />
-                          ) : (
+                          if (child.type === LocationType.ROOM) {
+                            const childBeds = (child.children || []).filter(
+                              (b: any) => b.type === LocationType.BED,
+                            );
+                            const occupiedBeds = childBeds.filter(
+                              (b: any) => b.status === "occupied",
+                            ).length;
+                            return (
+                              <RoomCard
+                                key={child.id}
+                                id={Number(child.id)}
+                                name={localizedName(child)}
+                                genderLock={child.genderLock || undefined}
+                                roomTypeName={
+                                  isTr && child.roomTypeNameTr
+                                    ? child.roomTypeNameTr
+                                    : child.roomTypeName || undefined
+                                }
+                                totalBeds={childBeds.length || undefined}
+                                occupiedBeds={occupiedBeds}
+                                isTrOnly={child.isTrOnly}
+                                isGuestZone={child.isGuestZone}
+                                isRectorate={child.isRectorate}
+                                isForeignerOnly={child.isForeignerOnly}
+                                studentYearLock={
+                                  child.studentYearLock || undefined
+                                }
+                                selected={selectedIds.includes(globalId)}
+                                onClick={() => selectNode(child as any)}
+                                onSelect={() => handleToggleSelection(globalId)}
+                                onEdit={() => handleEditChild(child as any)}
+                                onDelete={() => handleDeleteChild(child as any)}
+                              />
+                            );
+                          }
+                          return (
                             <GenericLocationCard
                               key={child.id}
                               id={Number(child.id)}
                               name={localizedName(child)}
                               icon={<LocationIcon type={child.type} />}
+                              childCount={child.children?.length}
                               selected={selectedIds.includes(globalId)}
                               onClick={() => selectNode(child as any)}
                               onSelect={() => handleToggleSelection(globalId)}

@@ -9,6 +9,7 @@ import {
   ThemeIcon,
   Box,
   rem,
+  Stack,
 } from "@mantine/core";
 import {
   IconDotsVertical,
@@ -22,7 +23,14 @@ interface RoomCardProps {
   id: number;
   name: string;
   genderLock?: string;
-  occupancy?: number;
+  roomTypeName?: string;
+  totalBeds?: number;
+  occupiedBeds?: number;
+  isTrOnly?: boolean;
+  isGuestZone?: boolean;
+  isRectorate?: boolean;
+  isForeignerOnly?: boolean;
+  studentYearLock?: string;
   selected: boolean;
   onClick: () => void;
   onSelect: () => void;
@@ -33,7 +41,14 @@ interface RoomCardProps {
 export function RoomCard({
   name,
   genderLock,
-  occupancy = 0,
+  roomTypeName,
+  totalBeds,
+  occupiedBeds = 0,
+  isTrOnly,
+  isGuestZone,
+  isRectorate,
+  isForeignerOnly,
+  studentYearLock,
   selected,
   onClick,
   onSelect,
@@ -41,6 +56,12 @@ export function RoomCard({
   onDelete,
 }: RoomCardProps) {
   const { t } = useTranslation();
+  const hasFlags =
+    isTrOnly ||
+    isGuestZone ||
+    isRectorate ||
+    isForeignerOnly ||
+    !!studentYearLock;
 
   return (
     <Card
@@ -59,19 +80,31 @@ export function RoomCard({
           : undefined,
       }}
     >
-      <Group justify="space-between" wrap="nowrap" gap="xs">
-        <Group wrap="nowrap" gap="xs" style={{ flex: 1, minWidth: 0 }}>
+      <Group justify="space-between" wrap="nowrap" gap="xs" align="flex-start">
+        <Group
+          wrap="nowrap"
+          gap="xs"
+          style={{ flex: 1, minWidth: 0 }}
+          align="flex-start"
+        >
           <Checkbox
             size="xs"
             checked={selected}
             onChange={onSelect}
             onClick={(e) => e.stopPropagation()}
+            mt={2}
           />
-          <ThemeIcon variant="light" size={28} radius="sm" color="indigo">
+          <ThemeIcon
+            variant="light"
+            size={28}
+            radius="sm"
+            color="indigo"
+            style={{ flexShrink: 0 }}
+          >
             <IconDoor size={14} />
           </ThemeIcon>
-          <Box style={{ minWidth: 0, flex: 1 }}>
-            <Group gap={6} wrap="nowrap">
+          <Stack gap={3} style={{ minWidth: 0, flex: 1 }}>
+            <Group gap={6} wrap="wrap">
               <Text fw={600} size="sm">
                 {name}
               </Text>
@@ -86,12 +119,54 @@ export function RoomCard({
                 </Badge>
               )}
             </Group>
-            {occupancy > 0 && (
-              <Text size="xs" c="dimmed" mt={2}>
-                {occupancy} {t("occupied", { defaultValue: "occupied" })}
+
+            {roomTypeName && (
+              <Text size="xs" c="teal" fw={500}>
+                {roomTypeName}
               </Text>
             )}
-          </Box>
+
+            {totalBeds !== undefined && (
+              <Text size="xs" c="dimmed">
+                {occupiedBeds}/{totalBeds}{" "}
+                {t("occupied", { defaultValue: "occupied" })}
+              </Text>
+            )}
+
+            {hasFlags && (
+              <Group gap={4} wrap="wrap" mt={2}>
+                {isTrOnly && (
+                  <Badge size="xs" variant="dot" color="red">
+                    TR
+                  </Badge>
+                )}
+                {isForeignerOnly && (
+                  <Badge size="xs" variant="dot" color="grape">
+                    INT
+                  </Badge>
+                )}
+                {isGuestZone && (
+                  <Badge size="xs" variant="dot" color="orange">
+                    {t("is_guest_zone_label", { defaultValue: "Guest" })}
+                  </Badge>
+                )}
+                {isRectorate && (
+                  <Badge size="xs" variant="dot" color="violet">
+                    {t("rectorate", { defaultValue: "Rectorate" })}
+                  </Badge>
+                )}
+                {studentYearLock && (
+                  <Badge size="xs" variant="dot" color="indigo">
+                    {studentYearLock === "new"
+                      ? t("student_year_lock_new", { defaultValue: "New" })
+                      : t("student_year_lock_current", {
+                          defaultValue: "Current",
+                        })}
+                  </Badge>
+                )}
+              </Group>
+            )}
+          </Stack>
         </Group>
 
         <Menu shadow="md" width={150} position="bottom-end">
