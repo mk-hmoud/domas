@@ -69,7 +69,7 @@ import {
   InventoryAssignmentList,
   AssignInventoryModal,
   LocationRegistryTable,
-  LocationRegistryFilters,
+  RegistryItemDrawer,
   ApplyTemplateModal,
   CreateBookingModal,
   ComposeEmailModal,
@@ -138,7 +138,11 @@ function LocationsContent() {
 
       if (activeTab === "locations") {
         const result = await locations.findAll(cleanFilters);
-        setRegistryData(result.data);
+        setRegistryData(
+          result.data.filter(
+            (item: any) => item.type !== LocationType.UNIVERSITY,
+          ),
+        );
         setTotalRegistryRegistryItems(result.total);
       } else {
         const result = await beds.findAll({
@@ -164,29 +168,62 @@ function LocationsContent() {
     if (activeView === "registry") {
       fetchRegistryData();
     }
+    setAllMatchingSelected(false);
   }, [activeView, activeTab, registryFilters]);
 
+  const [allMatchingSelected, setAllMatchingSelected] = useState(false);
+  const [registryDetailItem, setRegistryDetailItem] = useState<any | null>(
+    null,
+  );
+  const [registryDetailOpen, setRegistryDetailOpen] = useState(false);
+
   const handleFilterChange = (key: string, value: any) => {
+    setAllMatchingSelected(false);
     setRegistryFilters((prev) => ({
       ...prev,
       [key]: value,
-      page: 1, // Reset to first page on filter change
+      page: 1,
+    }));
+  };
+
+  const handleBatchFilterChange = (updates: Record<string, any>) => {
+    setAllMatchingSelected(false);
+    setRegistryFilters((prev) => ({
+      ...prev,
+      ...updates,
+      page: 1,
     }));
   };
 
   const handleClearFilters = () => {
+    setAllMatchingSelected(false);
     setRegistryFilters({
       page: 1,
       limit: 10,
-      q: "",
+      q: undefined,
       type: undefined,
       genderLock: undefined,
       isTrOnly: undefined,
+      isForeignerOnly: undefined,
       isGuestZone: undefined,
       isRectorate: undefined,
       onlyVacant: undefined,
       status: undefined,
+      roomTypeId: undefined,
+      orderBy: undefined,
+      orderDir: undefined,
     });
+  };
+
+  const handleSelectAllMatching = () => {
+    if (allMatchingSelected) {
+      clearSelection();
+      setAllMatchingSelected(false);
+    } else {
+      // Mark all matching as selected — the actual IDs are fetched page by page
+      // so we flag it and use totalCount for bulk operations
+      setAllMatchingSelected(true);
+    }
   };
 
   const showInventory = useMemo(() => {
@@ -528,6 +565,73 @@ function LocationsContent() {
     confirmDeleteLocation(child);
   };
 
+  const handleOpenDetail = (item: any) => {
+    setRegistryDetailItem(item);
+    setRegistryDetailOpen(true);
+  };
+
+  const handleRegistryBook = (item: any) => {
+    setRegistryDetailOpen(false);
+    if (item.type === "bed") {
+      selectNode({
+        ...item,
+        id: `bed-${item.id}`,
+        name: item.label,
+        type: LocationType.BED,
+        children: [],
+      });
+    } else {
+      selectNode({ ...item, children: [] });
+    }
+    setBookingModalOpened(true);
+  };
+
+  const handleRegistryEdit = (item: any) => {
+    if (item.type === "bed") {
+      setBedToEdit(item);
+      setEditBedModalOpened(true);
+    } else {
+      setLocationToEdit(item);
+      setParentForCreation({ id: null });
+      setCreateModalOpened(true);
+    }
+  };
+
+  const handleRegistryDelete = (item: any) => {
+    if (item.type === "bed") {
+      modals.openConfirmModal({
+        title: t("delete_confirm"),
+        children: (
+          <Text size="sm">
+            {t("delete_location_message", { name: item.label || item.name })}
+          </Text>
+        ),
+        labels: { confirm: t("confirm"), cancel: t("cancel") },
+        confirmProps: { color: "red" },
+        onConfirm: async () => {
+          try {
+            await beds.deleteMany({ ids: [item.id] });
+            notifications.show({
+              title: t("success"),
+              message: t("bed_deleted", "Bed deleted successfully"),
+              color: "green",
+            });
+            fetchRegistryData();
+            refreshTree();
+          } catch (error) {
+            notifications.show({
+              title: t("error"),
+              message: t("failed_to_delete"),
+              color: "red",
+            });
+          }
+        },
+      });
+    } else {
+      confirmDeleteLocation(item);
+    }
+  };
+
   const handleEditLocation = () => {
     if (!selectedNode) return;
     if (selectedNode.type === LocationType.BED) {
@@ -560,6 +664,20 @@ function LocationsContent() {
       );
     } else {
       setSelectedIds((prev) => Array.from(new Set([...prev, ...childIds])));
+    }
+  };
+
+  const handleToggleSelectAllBeds = () => {
+    const allBedIds = roomBeds.map((b) => `bed-${b.id}`);
+    const allSelected = allBedIds.every((id) =>
+      (selectedIds as any[]).includes(id),
+    );
+    if (allSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !allBedIds.includes(id as string)),
+      );
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...allBedIds])));
     }
   };
 
@@ -1150,7 +1268,6 @@ function LocationsContent() {
                         {t(`bed_status.${selectedNode.status}`)}
                       </Badge>
                     </LabelValue>
-
                     {showInventory && (
                       <>
                         <Divider my="md" />
@@ -1198,25 +1315,7 @@ function LocationsContent() {
                               selectedIds.includes(`bed-${b.id}`),
                             )
                           }
-                          onChange={() => {
-                            const allBedIds = roomBeds.map(
-                              (b) => `bed-${b.id}`,
-                            );
-                            const allSelected = allBedIds.every((id) =>
-                              selectedIds.includes(id),
-                            );
-                            if (allSelected) {
-                              setSelectedIds((prev) =>
-                                prev.filter(
-                                  (id) => !allBedIds.includes(id as string),
-                                ),
-                              );
-                            } else {
-                              setSelectedIds((prev) =>
-                                Array.from(new Set([...prev, ...allBedIds])),
-                              );
-                            }
-                          }}
+                          onChange={handleToggleSelectAllBeds}
                         />
                       )}
                     </Group>
@@ -1245,7 +1344,10 @@ function LocationsContent() {
                               })
                             }
                             onSelect={() => handleToggleSelection(globalId)}
-                            onEdit={() => {}}
+                            onEdit={() => {
+                              setBedToEdit(bed);
+                              setEditBedModalOpened(true);
+                            }}
                             onDelete={() => handleDeleteBed(bed)}
                             onBook={() => {
                               selectNode({
@@ -1268,7 +1370,6 @@ function LocationsContent() {
                         })}
                       />
                     )}
-
                     {showInventory && (
                       <>
                         <Divider my="md" />
@@ -1399,7 +1500,6 @@ function LocationsContent() {
                     ) : (
                       <EmptyState title={t("no_sub_locations")} />
                     )}
-
                     {showInventory && (
                       <>
                         <Divider my="md" />
@@ -1443,66 +1543,66 @@ function LocationsContent() {
               </Tabs.List>
 
               <Tabs.Panel value="locations" pt="md">
-                <Stack gap="md">
-                  <LocationRegistryFilters
+                <Paper withBorder radius="md" style={{ position: "relative" }}>
+                  <LoadingOverlay visible={registryLoading} />
+                  <LocationRegistryTable
+                    mode="locations"
+                    data={registryData}
                     filters={registryFilters}
+                    totalCount={totalRegistryItems}
                     onFilterChange={handleFilterChange}
+                    onBatchFilterChange={handleBatchFilterChange}
                     onClearFilters={handleClearFilters}
+                    onOpenDetail={handleOpenDetail}
+                    onView={(loc) => {
+                      setActiveView("structure");
+                      selectNode(loc as any);
+                    }}
+                    onEdit={handleRegistryEdit}
+                    onDelete={handleRegistryDelete}
+                    onEmailResidents={(locationId) =>
+                      setEmailLocationId(locationId)
+                    }
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                    onSelectAllMatching={handleSelectAllMatching}
+                    allMatchingSelected={allMatchingSelected}
+                    roomTypes={roomTypesList}
                   />
-                  <Paper
-                    withBorder
-                    radius="md"
-                    style={{ position: "relative" }}
-                  >
-                    <LoadingOverlay visible={registryLoading} />
-                    <LocationRegistryTable
-                      data={registryData}
-                      onView={(loc) => {
-                        setActiveView("structure");
-                        selectNode(loc as any);
-                      }}
-                      onEmailResidents={(locationId) =>
-                        setEmailLocationId(locationId)
-                      }
-                      selectedIds={selectedIds}
-                      onToggleSelection={handleToggleSelection}
-                      onToggleSelectAll={handleToggleSelectAllRegistry}
-                    />
-                  </Paper>
-                </Stack>
+                </Paper>
               </Tabs.Panel>
 
               <Tabs.Panel value="beds" pt="md">
-                <Stack gap="md">
-                  <LocationRegistryFilters
+                <Paper withBorder radius="md" style={{ position: "relative" }}>
+                  <LoadingOverlay visible={registryLoading} />
+                  <LocationRegistryTable
+                    mode="beds"
+                    data={registryData}
                     filters={registryFilters}
+                    totalCount={totalRegistryItems}
                     onFilterChange={handleFilterChange}
+                    onBatchFilterChange={handleBatchFilterChange}
                     onClearFilters={handleClearFilters}
+                    onOpenDetail={handleOpenDetail}
+                    onView={(bed) => {
+                      setActiveView("structure");
+                      selectNode({
+                        ...bed,
+                        id: `bed-${bed.id}`,
+                        type: LocationType.BED,
+                      } as any);
+                    }}
+                    onEdit={handleRegistryEdit}
+                    onDelete={handleRegistryDelete}
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                    onSelectAllMatching={handleSelectAllMatching}
+                    allMatchingSelected={allMatchingSelected}
+                    roomTypes={roomTypesList}
                   />
-                  <Paper
-                    withBorder
-                    radius="md"
-                    style={{ position: "relative" }}
-                  >
-                    <LoadingOverlay visible={registryLoading} />
-                    <LocationRegistryTable
-                      data={registryData}
-                      onView={(bed) => {
-                        setActiveView("structure");
-                        // Convert virtual ID to bed- prefixed ID for the tree
-                        const targetId = `bed-${bed.id}`;
-                        selectNode({
-                          ...bed,
-                          id: targetId,
-                          type: LocationType.BED,
-                        } as any);
-                      }}
-                      selectedIds={selectedIds}
-                      onToggleSelection={handleToggleSelection}
-                      onToggleSelectAll={handleToggleSelectAllRegistry}
-                    />
-                  </Paper>
-                </Stack>
+                </Paper>
               </Tabs.Panel>
             </Tabs>
 
@@ -1668,6 +1768,40 @@ function LocationsContent() {
             )}
           </Stack>
         </Drawer>
+
+        <RegistryItemDrawer
+          item={registryDetailItem}
+          opened={registryDetailOpen}
+          onClose={() => setRegistryDetailOpen(false)}
+          isTr={isTr}
+          onEdit={(item) => {
+            setRegistryDetailOpen(false);
+            handleRegistryEdit(item);
+          }}
+          onDelete={(item) => {
+            setRegistryDetailOpen(false);
+            handleRegistryDelete(item);
+          }}
+          onBook={handleRegistryBook}
+          onNavigate={(item) => {
+            if (item.type === "bed") {
+              setActiveView("structure");
+              selectNode({
+                ...item,
+                id: `bed-${item.id}`,
+                type: LocationType.BED,
+                children: [],
+              } as any);
+            } else {
+              setActiveView("structure");
+              selectNode({ ...item, children: [] } as any);
+            }
+          }}
+          onEmailResidents={(locationId) => {
+            setRegistryDetailOpen(false);
+            setEmailLocationId(locationId);
+          }}
+        />
 
         <ComposeEmailModal
           opened={emailLocationId !== null}

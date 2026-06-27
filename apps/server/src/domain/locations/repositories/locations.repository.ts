@@ -82,6 +82,9 @@ export class LocationsRepository implements ILocationsRepository {
       isRectorate,
       parentId,
       onlyVacant,
+      roomTypeId,
+      orderBy,
+      orderDir,
     } = filters;
     const offset = (page - 1) * limit;
 
@@ -116,6 +119,10 @@ export class LocationsRepository implements ILocationsRepository {
     if (isRectorate !== undefined) {
       params.push(isRectorate);
       conditions.push(`l.is_rectorate = $${params.length}`);
+    }
+    if (roomTypeId !== undefined) {
+      params.push(roomTypeId);
+      conditions.push(`l.room_type_id = $${params.length}`);
     }
     if (parentId) {
       const parent = await this.findById(parentId, client);
@@ -157,13 +164,31 @@ export class LocationsRepository implements ILocationsRepository {
       ${whereClause}
     `;
 
-    if (onlyVacant) {
-      baseQuery = `SELECT * FROM (${baseQuery}) sub WHERE "occupiedBeds" < "totalBeds"`;
+    const dir = orderDir?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    let orderClause: string;
+    if (orderBy === 'name') {
+      orderClause = `l.name ${dir}`;
+    } else if (orderBy === 'type') {
+      orderClause = `l.type ${dir}, l.tree_path ASC`;
+    } else {
+      orderClause = `l.tree_path ASC`;
     }
 
-    const finalQuery = `${baseQuery} ORDER BY l.tree_path ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    const countQuery = onlyVacant
-      ? `SELECT COUNT(*)::INT FROM (${baseQuery}) sub`
+    // Always wrap when filtering by occupancy or ordering by it so we can reference the aliases
+    const needsWrap = onlyVacant || orderBy === 'occupancy';
+    let wrappedQuery = needsWrap
+      ? `SELECT * FROM (${baseQuery}) _sub${onlyVacant ? ' WHERE "occupiedBeds" < "totalBeds"' : ''}`
+      : baseQuery;
+
+    const outerOrder = needsWrap
+      ? orderBy === 'occupancy'
+        ? `("occupiedBeds"::float / NULLIF("totalBeds", 0)) ${dir} NULLS LAST`
+        : `"treePath" ASC`
+      : orderClause;
+
+    const finalQuery = `${wrappedQuery} ORDER BY ${outerOrder} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const countQuery = needsWrap
+      ? `SELECT COUNT(*)::INT FROM (${wrappedQuery}) _cnt`
       : `SELECT COUNT(*)::INT FROM locations l ${whereClause}`;
 
     const [result, countResult] = await Promise.all([

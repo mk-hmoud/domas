@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, ReactNode } from "react";
+import { useState, useMemo, useEffect, useRef, ReactNode, memo } from "react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ScrollArea,
@@ -52,7 +52,7 @@ interface TreeItemProps {
   onSelect: (n: LocationNode) => void;
   level: number;
   forceExpand?: boolean;
-  selectedIds?: (number | string)[];
+  selectedIdsSet?: Set<string | number>;
   onToggleSelection?: (id: number | string) => void;
   onSelectBranch?: (ids: (number | string)[]) => void;
   onDeselectBranch?: (ids: (number | string)[]) => void;
@@ -81,13 +81,13 @@ function getNodeFontWeight(type: LocationType): number | undefined {
   return undefined;
 }
 
-function TreeItem({
+const TreeItem = memo(function TreeItem({
   node,
   selectedId,
   onSelect,
   level,
   forceExpand,
-  selectedIds,
+  selectedIdsSet,
   onToggleSelection,
   onSelectBranch,
   onDeselectBranch,
@@ -108,7 +108,10 @@ function TreeItem({
       ? node.id
       : `loc-${node.id}`;
 
-  const isChecked = selectedIds?.includes(globalId);
+  const isChecked = selectedIdsSet?.has(globalId) ?? false;
+
+  // Memoize branch IDs — recomputed only when the node subtree changes
+  const branchIds = useMemo(() => getAllDescendantIds(node), [node]);
 
   // Auto-expand when this node is an ancestor of the selected node
   useEffect(() => {
@@ -145,18 +148,19 @@ function TreeItem({
 
   const handleBranchSelection = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const ids = getAllDescendantIds(node);
-    const allSelected = ids.every((id) => selectedIds?.includes(id));
+    const allSelected = branchIds.every(
+      (id) => selectedIdsSet?.has(id) ?? false,
+    );
     if (allSelected && onDeselectBranch) {
-      onDeselectBranch(ids);
+      onDeselectBranch(branchIds);
     } else if (onSelectBranch) {
-      onSelectBranch(ids);
+      onSelectBranch(branchIds);
     }
   };
 
-  const branchIds = getAllDescendantIds(node);
   const allBranchSelected =
-    branchIds.length > 0 && branchIds.every((id) => selectedIds?.includes(id));
+    branchIds.length > 0 &&
+    branchIds.every((id) => selectedIdsSet?.has(id) ?? false);
 
   const getStatusColor = (status?: string) => {
     if (status === "available") return "var(--mantine-color-green-filled)";
@@ -198,7 +202,7 @@ function TreeItem({
           {onToggleSelection && node.type !== LocationType.UNIVERSITY && (
             <Group gap={4} style={{ flexShrink: 0 }}>
               <Checkbox
-                checked={isChecked}
+                checked={!!isChecked}
                 onChange={handleCheckboxChange}
                 onClick={(e) => e.stopPropagation()}
                 size="xs"
@@ -280,7 +284,7 @@ function TreeItem({
               onSelect={onSelect}
               level={level + 1}
               forceExpand={forceExpand}
-              selectedIds={selectedIds}
+              selectedIdsSet={selectedIdsSet}
               onToggleSelection={onToggleSelection}
               onSelectBranch={onSelectBranch}
               onDeselectBranch={onDeselectBranch}
@@ -291,7 +295,7 @@ function TreeItem({
       )}
     </>
   );
-}
+});
 
 function filterTree(nodes: LocationNode[], query: string): LocationNode[] {
   if (!query) return nodes;
@@ -340,6 +344,12 @@ export function LocationTree({
     [filteredData],
   );
 
+  // O(1) lookup set — recreated only when selectedIds array reference changes
+  const selectedIdsSet = useMemo(
+    () => new Set<string | number>(selectedIds ?? []),
+    [selectedIds],
+  );
+
   const isFiltering = debouncedQuery.length > 0;
 
   return (
@@ -385,7 +395,7 @@ export function LocationTree({
               onSelect={onSelect}
               level={0}
               forceExpand={isFiltering}
-              selectedIds={selectedIds}
+              selectedIdsSet={selectedIdsSet}
               onToggleSelection={onToggleSelection}
               onSelectBranch={onSelectBranch}
               onDeselectBranch={onDeselectBranch}

@@ -14,4 +14,7 @@ export interface FindAllLocationsDto extends PaginationDto {
   parentId?: number;
   onlyVacant?: boolean;
   status?: BedStatus;
+  roomTypeId?: number;
+  orderBy?: string;
+  orderDir?: "asc" | "desc";
 }

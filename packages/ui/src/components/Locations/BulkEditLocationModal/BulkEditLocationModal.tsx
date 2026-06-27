@@ -108,7 +108,11 @@ export function BulkEditLocationModal({
           <Group align="center">
             <Checkbox
               checked={updateIsRectorate}
-              onChange={(e) => setUpdateIsRectorate(e.currentTarget.checked)}
+              onChange={(e) => {
+                setUpdateIsRectorate(e.currentTarget.checked);
+                if (e.currentTarget.checked)
+                  form.setFieldValue("isRectorate", true);
+              }}
               label={t("is_rectorate", "Rectorate")}
               style={{ width: 150 }}
             />
@@ -121,7 +125,11 @@ export function BulkEditLocationModal({
           <Group align="center">
             <Checkbox
               checked={updateTrOnly}
-              onChange={(e) => setUpdateTrOnly(e.currentTarget.checked)}
+              onChange={(e) => {
+                setUpdateTrOnly(e.currentTarget.checked);
+                if (e.currentTarget.checked)
+                  form.setFieldValue("isTrOnly", true);
+              }}
               label={t("is_tr_only")}
               style={{ width: 150 }}
             />
@@ -134,7 +142,11 @@ export function BulkEditLocationModal({
           <Group align="center">
             <Checkbox
               checked={updateForeignerOnly}
-              onChange={(e) => setUpdateForeignerOnly(e.currentTarget.checked)}
+              onChange={(e) => {
+                setUpdateForeignerOnly(e.currentTarget.checked);
+                if (e.currentTarget.checked)
+                  form.setFieldValue("isForeignerOnly", true);
+              }}
               label={t("is_foreigner_only")}
               style={{ width: 150 }}
             />
@@ -147,7 +159,11 @@ export function BulkEditLocationModal({
           <Group align="center">
             <Checkbox
               checked={updateGuestZone}
-              onChange={(e) => setUpdateGuestZone(e.currentTarget.checked)}
+              onChange={(e) => {
+                setUpdateGuestZone(e.currentTarget.checked);
+                if (e.currentTarget.checked)
+                  form.setFieldValue("isGuestZone", true);
+              }}
               label={t("is_guest_zone_label")}
               style={{ width: 150 }}
             />

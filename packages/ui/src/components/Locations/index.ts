@@ -5,6 +5,7 @@ export * from "./BulkEditLocationModal/BulkEditLocationModal";
 export * from "./BulkActionsBar/BulkActionsBar";
 export * from "./LocationTree/LocationTree";
 export * from "./LocationDetail/LocationDetail";
+export * from "./LocationDetailPanel";
 export * from "./LocationsManager";
 export * from "./LocationIcon";
 export * from "./LocationRegistry";

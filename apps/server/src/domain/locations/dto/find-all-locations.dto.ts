@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { LocationType } from '../../../common/enums/location-type.enum';
@@ -51,4 +51,17 @@ export class FindAllLocationsDto extends PaginationDto {
   @IsEnum(BedStatus)
   @IsOptional()
   status?: BedStatus;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  roomTypeId?: number;
+
+  @IsString()
+  @IsOptional()
+  orderBy?: string;
+
+  @IsIn(['asc', 'desc'])
+  @IsOptional()
+  orderDir?: 'asc' | 'desc';
 }
