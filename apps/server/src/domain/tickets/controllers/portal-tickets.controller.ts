@@ -6,8 +6,11 @@ import {
   HttpStatus,
   Post,
   Request,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import type { Request as ExpressRequest } from 'express';
 import { StudentAuthGuard } from '../../../common/guards/student-auth.guard';
 import { TicketsService } from '../services/tickets.service';
@@ -25,7 +28,12 @@ export class PortalTicketsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  createTicket(@Body() dto: CreateTicketDto, @Request() req: ExpressRequest) {
-    return this.ticketsService.createTicket(req.session.studentId!, dto);
+  @UseInterceptors(FilesInterceptor('photos', 5, { limits: { fileSize: 10 * 1024 * 1024 } }))
+  createTicket(
+    @Body() dto: CreateTicketDto,
+    @UploadedFiles() photos: Express.Multer.File[] = [],
+    @Request() req: ExpressRequest,
+  ) {
+    return this.ticketsService.createTicket(req.session.studentId!, dto, photos);
   }
 }

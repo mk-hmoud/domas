@@ -17,6 +17,7 @@ export interface Ticket {
   resolutionNotes: string | null;
   rejectionReason: string | null;
   resolvedAt: string | null;
+  photoKeys: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -35,4 +36,5 @@ export interface TicketView extends Ticket {
 // Student-facing view
 export interface StudentTicketView extends Ticket {
   locationName: string;
+  photoUrls: string[];
 }

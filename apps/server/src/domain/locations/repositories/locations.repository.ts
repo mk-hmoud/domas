@@ -276,9 +276,61 @@ export class LocationsRepository implements ILocationsRepository {
 
   // Flat bed-level rows for every room in the subtree under `locationId`.
   // The service groups these into nested room/bed/occupant shapes.
-  async findRoomPlan(locationId: number, client?: PoolClient): Promise<any[]> {
+  async findRoomPlan(locationId: number, semesterId?: number, client?: PoolClient): Promise<any[]> {
     const parent = await this.findById(locationId, client);
     if (!parent) return [];
+
+    const historical = semesterId !== undefined;
+    const params: any[] = [parent.treePath];
+    if (historical) params.push(semesterId);
+
+    const curJoin = historical
+      ? `LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
+               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
+               s.email, s.phone_number, s.whatsapp_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id AND b.semester_id = $2
+          AND b.status IN ('active', 'completed', 'transferred')
+        ORDER BY b.start_date DESC
+        LIMIT 1
+      ) cur ON true`
+      : `LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
+               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
+               s.email, s.phone_number, s.whatsapp_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id AND b.status = 'active'
+        ORDER BY b.start_date DESC
+        LIMIT 1
+      ) cur ON true`;
+
+    const pendJoin = historical
+      ? ``
+      : `LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.start_date, b.status,
+               s.first_name, s.last_name, s.student_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id
+          AND b.status IN ('pending_accounting', 'ready_for_checkin', 'confirmed')
+        ORDER BY b.start_date ASC
+        LIMIT 1
+      ) pend ON true`;
+
+    const pendColumns = historical
+      ? `NULL as "pendingBookingId", NULL as "pendingStudentId", NULL as "pendingFirstName",
+         NULL as "pendingLastName", NULL as "pendingStudentNumber", NULL as "pendingStartDate",
+         NULL as "pendingStatus"`
+      : `pend.booking_id as "pendingBookingId",
+        pend.student_id as "pendingStudentId",
+        pend.first_name as "pendingFirstName",
+        pend.last_name as "pendingLastName",
+        pend.student_number as "pendingStudentNumber",
+        pend.start_date as "pendingStartDate",
+        pend.status as "pendingStatus"`;
 
     const query = `
       SELECT
@@ -313,41 +365,17 @@ export class LocationsRepository implements ILocationsRepository {
         cur.whatsapp_number as "currentWhatsappNumber",
         cur.payment_status as "currentPaymentStatus",
         cur.checked_in_at as "currentCheckedInAt",
-        pend.booking_id as "pendingBookingId",
-        pend.student_id as "pendingStudentId",
-        pend.first_name as "pendingFirstName",
-        pend.last_name as "pendingLastName",
-        pend.student_number as "pendingStudentNumber",
-        pend.start_date as "pendingStartDate",
-        pend.status as "pendingStatus"
+        ${pendColumns}
       FROM locations l
       JOIN room_types rt ON rt.id = l.room_type_id
       LEFT JOIN locations parent ON parent.tree_path = subpath(l.tree_path, 0, nlevel(l.tree_path) - 1)
       LEFT JOIN beds bd ON bd.location_id = l.id AND bd.deleted_at IS NULL
-      LEFT JOIN LATERAL (
-        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
-               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
-               s.email, s.phone_number, s.whatsapp_number
-        FROM bookings b
-        JOIN students s ON s.id = b.student_id
-        WHERE b.bed_id = bd.id AND b.status = 'active'
-        ORDER BY b.start_date DESC
-        LIMIT 1
-      ) cur ON true
-      LEFT JOIN LATERAL (
-        SELECT b.id as booking_id, b.student_id, b.start_date, b.status,
-               s.first_name, s.last_name, s.student_number
-        FROM bookings b
-        JOIN students s ON s.id = b.student_id
-        WHERE b.bed_id = bd.id
-          AND b.status IN ('pending_accounting', 'ready_for_checkin', 'confirmed')
-        ORDER BY b.start_date ASC
-        LIMIT 1
-      ) pend ON true
+      ${curJoin}
+      ${pendJoin}
       WHERE l.type = 'room' AND l.deleted_at IS NULL AND l.tree_path <@ $1
       ORDER BY l.tree_path ASC, bd.label ASC
     `;
-    const result = await this.getClient(client).query(query, [parent.treePath]);
+    const result = await this.getClient(client).query(query, params);
     return result.rows;
   }
 
@@ -363,6 +391,86 @@ export class LocationsRepository implements ILocationsRepository {
       `;
     const result = await this.getClient(client).query<Location>(query, [target.treePath]);
     return result.rows.map((row) => new Location(row));
+  }
+
+  async findRoomHistory(
+    locationId: number,
+    client?: PoolClient,
+  ): Promise<{ flagChanges: any[]; residents: any[] }> {
+    const TRACKED_FLAGS = [
+      'gender_lock',
+      'room_type_id',
+      'is_tr_only',
+      'is_foreigner_only',
+      'is_rectorate',
+      'is_guest_zone',
+      'student_year_lock',
+      'name',
+      'name_tr',
+    ];
+
+    const [flagResult, residentResult] = await Promise.all([
+      this.getClient(client).query(
+        `SELECT event_timestamp, username, changed_fields, old_values, new_values
+         FROM audit.event_log
+         WHERE table_name = 'locations'
+           AND record_id = $1
+           AND action = 'U'
+           AND changed_fields && $2
+         ORDER BY event_timestamp DESC
+         LIMIT 200`,
+        [locationId.toString(), TRACKED_FLAGS],
+      ),
+      this.getClient(client).query(
+        `SELECT b.id as "bookingId", b.start_date as "startDate", b.end_date as "endDate",
+                b.status as "bookingStatus", b.checked_in_at as "checkedInAt",
+                b.checked_out_at as "checkedOutAt",
+                s.id as "studentId",
+                s.first_name as "firstName", s.last_name as "lastName",
+                s.student_number as "studentNumber",
+                s.nationality_code as "nationalityCode",
+                s.gender,
+                sem.display_name as "semesterName",
+                bd.label as "bedLabel"
+         FROM bookings b
+         JOIN students s ON s.id = b.student_id
+         JOIN beds bd ON bd.id = b.bed_id
+         JOIN semesters sem ON sem.id = b.semester_id
+         WHERE bd.location_id = $1
+         ORDER BY b.start_date DESC`,
+        [locationId],
+      ),
+    ]);
+
+    const flagChanges = flagResult.rows.map((row) => ({
+      eventTimestamp: row.event_timestamp,
+      performedBy: row.username,
+      changedFields: (row.changed_fields as string[])
+        .filter((f) => TRACKED_FLAGS.includes(f))
+        .map((f) => ({
+          field: f,
+          oldValue: row.old_values?.[f] ?? null,
+          newValue: row.new_values?.[f] ?? null,
+        })),
+    }));
+
+    const residents = residentResult.rows.map((row) => ({
+      bookingId: row.bookingId,
+      bedLabel: row.bedLabel,
+      studentId: row.studentId,
+      studentName: `${row.firstName} ${row.lastName}`,
+      studentNumber: row.studentNumber,
+      nationalityCode: row.nationalityCode,
+      gender: row.gender,
+      semesterName: row.semesterName,
+      bookingStatus: row.bookingStatus,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      checkedInAt: row.checkedInAt ?? undefined,
+      checkedOutAt: row.checkedOutAt ?? undefined,
+    }));
+
+    return { flagChanges, residents };
   }
 
   async update(id: number, data: Partial<Location>, client?: PoolClient): Promise<Location> {

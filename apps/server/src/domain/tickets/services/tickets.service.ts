@@ -5,6 +5,7 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 import { StudentPortalService } from '../../student-portal/services/student-portal.service';
 import { WorkOrdersService } from '../../work-orders/services/work-orders.service';
@@ -12,6 +13,7 @@ import {
   NotificationsService,
   NotificationType,
 } from '../../notifications/services/notifications.service';
+import { StorageService } from '../../../common/storage/storage.service';
 import type { AuditUserContext } from '../../../common/interfaces/audit-user-context.interface';
 import { TicketsRepository } from '../repositories/tickets.repository';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
@@ -30,28 +32,55 @@ export class TicketsService {
     private readonly workOrdersService: WorkOrdersService,
     private readonly notificationsService: NotificationsService,
     private readonly locationScopeService: LocationScopeService,
+    private readonly storage: StorageService,
   ) {}
 
   // ─── Student Portal ───────────────────────────────────────────────────────────
 
-  async createTicket(studentId: string, dto: CreateTicketDto): Promise<any> {
+  async createTicket(
+    studentId: string,
+    dto: CreateTicketDto,
+    photos: Express.Multer.File[] = [],
+  ): Promise<any> {
     const booking = await this.studentPortalService.getCurrentBooking(studentId);
     if (!booking) {
       throw new BadRequestException('You need an active booking to report an issue');
     }
 
-    return this.repository.create({
+    const photoKeys = await Promise.all(
+      photos.map(async (file) => {
+        const key = `tickets/${studentId}/${randomUUID()}`;
+        await this.storage.upload(key, file.buffer, file.mimetype);
+        return key;
+      }),
+    );
+
+    const ticket = await this.repository.create({
       studentId,
       bookingId: booking.id,
       locationId: booking.roomId,
       category: dto.category,
       title: dto.title,
       description: dto.description,
+      photoKeys,
     });
+
+    return { ...ticket, photoUrls: await this.resolvePhotoUrls(ticket.photoKeys) };
   }
 
   async getMyTickets(studentId: string): Promise<any[]> {
-    return this.repository.findByStudent(studentId);
+    const tickets = await this.repository.findByStudent(studentId);
+    return Promise.all(
+      tickets.map(async (t) => ({
+        ...t,
+        photoUrls: await this.resolvePhotoUrls(t.photoKeys ?? []),
+      })),
+    );
+  }
+
+  private async resolvePhotoUrls(keys: string[]): Promise<string[]> {
+    if (!keys?.length) return [];
+    return Promise.all(keys.map((k) => this.storage.presign(k, 3600)));
   }
 
   // ─── Staff ────────────────────────────────────────────────────────────────────

@@ -77,9 +77,20 @@ export const locations = {
     return response.data;
   },
 
-  getRoomPlan: async (id: number): Promise<RoomPlanRoom[]> => {
+  getRoomHistory: async (
+    id: number,
+  ): Promise<import("@domas/ts-types").RoomHistory> => {
+    const response = await apiClient.get(`/locations/${id}/room-history`);
+    return response.data;
+  },
+
+  getRoomPlan: async (
+    id: number,
+    semesterId?: number,
+  ): Promise<RoomPlanRoom[]> => {
     const response = await apiClient.get<RoomPlanRoom[]>(
       `/locations/${id}/room-plan`,
+      { params: semesterId !== undefined ? { semesterId } : undefined },
     );
     return response.data;
   },

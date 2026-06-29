@@ -16,6 +16,7 @@ export class Ticket {
   resolutionNotes?: string;
   rejectionReason?: string;
   resolvedAt?: Date;
+  photoKeys: string[] = [];
   createdAt!: Date;
   updatedAt!: Date;
 

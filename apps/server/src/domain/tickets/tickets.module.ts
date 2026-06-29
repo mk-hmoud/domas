@@ -6,9 +6,15 @@ import { PortalTicketsController } from './controllers/portal-tickets.controller
 import { StudentPortalModule } from '../student-portal/student-portal.module';
 import { WorkOrdersModule } from '../work-orders/work-orders.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StorageModule } from '../../common/storage/storage.module';
 
 @Module({
-  imports: [StudentPortalModule, forwardRef(() => WorkOrdersModule), NotificationsModule],
+  imports: [
+    StudentPortalModule,
+    forwardRef(() => WorkOrdersModule),
+    NotificationsModule,
+    StorageModule,
+  ],
   controllers: [TicketsController, PortalTicketsController],
   providers: [TicketsService, TicketsRepository],
   exports: [TicketsService],

@@ -152,41 +152,28 @@ function StatsBand({ booking }: { booking: StudentCurrentBooking }) {
         <Paper
           key={s.label}
           radius="lg"
-          style={{
-            cursor: 'pointer',
-            border: '1px solid var(--mantine-color-default-border)',
-            overflow: 'hidden',
-          }}
+          withBorder
+          style={{ cursor: 'pointer' }}
           onClick={s.onClick}
         >
-          <Group gap={0} wrap="nowrap">
-            <Box
-              style={{
-                width: 4,
-                alignSelf: 'stretch',
-                background: `var(--mantine-color-${s.color}-5)`,
-                flexShrink: 0,
-              }}
-            />
-            <Group gap="sm" p="md" wrap="nowrap" style={{ flex: 1 }}>
-              <ThemeIcon
-                size={34}
-                radius="md"
-                variant="light"
-                color={s.color}
-                style={{ flexShrink: 0 }}
-              >
-                <s.icon size={17} />
-              </ThemeIcon>
-              <Box style={{ minWidth: 0 }}>
-                <Text size="xs" c="dimmed" truncate>
-                  {s.label}
-                </Text>
-                <Text size="sm" fw={700} c={s.color} truncate>
-                  {s.value}
-                </Text>
-              </Box>
-            </Group>
+          <Group gap="sm" p="md" wrap="nowrap">
+            <ThemeIcon
+              size={34}
+              radius="md"
+              variant="light"
+              color={s.color}
+              style={{ flexShrink: 0 }}
+            >
+              <s.icon size={17} />
+            </ThemeIcon>
+            <Box style={{ minWidth: 0 }}>
+              <Text size="xs" c="dimmed" truncate>
+                {s.label}
+              </Text>
+              <Text size="sm" fw={700} c={s.color} truncate>
+                {s.value}
+              </Text>
+            </Box>
           </Group>
         </Paper>
       ))}
@@ -244,53 +231,36 @@ function NoBookingCard({
 
   const next = openSemesters[0];
   return (
-    <Paper
-      radius="xl"
-      style={{
-        overflow: 'hidden',
-        border: '2px solid var(--mantine-color-blue-4)',
-        boxShadow: '0 8px 28px rgba(34,139,230,0.14)',
-      }}
-    >
-      {/* Gradient header strip */}
+    <Paper radius="xl" withBorder style={{ overflow: 'hidden' }}>
       <Box
         px="xl"
         py="lg"
         style={{
-          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 50%, #0C8599 100%)',
+          background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
         }}
       >
         <Group justify="space-between" align="flex-start" wrap="nowrap">
           <Box>
             <Text
               size="xs"
-              c="white"
-              fw={600}
+              c="dimmed"
+              fw={500}
               tt="uppercase"
-              style={{ letterSpacing: '0.05em', opacity: 0.75, fontSize: 11, marginBottom: 4 }}
+              style={{ letterSpacing: '0.05em', fontSize: 11, marginBottom: 4 }}
             >
               {t('portal.applications_open')}
             </Text>
-            <Text fw={800} c="white" size="xl" lh={1.2}>
+            <Text fw={700} size="xl" lh={1.2}>
               {next.displayName}
             </Text>
           </Box>
-          <ThemeIcon
-            size={48}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
+          <ThemeIcon size={48} radius="xl" variant="light" color="blue" style={{ flexShrink: 0 }}>
             <IconCalendarPlus size={24} />
           </ThemeIcon>
         </Group>
       </Box>
 
-      {/* Body */}
       <Box p="xl">
         <Stack gap="xs" mb="lg">
           <Group gap="sm">
@@ -328,9 +298,8 @@ function NoBookingCard({
             leftSection={<IconCalendarPlus size={16} />}
             onClick={onApply}
             radius="xl"
-            variant="gradient"
-            gradient={{ from: 'blue', to: 'cyan' }}
-            style={{ boxShadow: '0 4px 14px rgba(34,139,230,0.35)' }}
+            variant="filled"
+            color="blue"
           >
             {t('portal.apply_now')}
           </Button>
@@ -340,7 +309,7 @@ function NoBookingCard({
               onClick={onPreReserve}
               radius="xl"
               variant="light"
-              color="teal"
+              color="blue"
             >
               {t('portal.pre_reserve', { defaultValue: 'Pre-Reserve' })}
             </Button>
@@ -388,20 +357,13 @@ function PreReservationCard({
   };
 
   return (
-    <Paper
-      radius="xl"
-      style={{
-        overflow: 'hidden',
-        border: '2px solid var(--mantine-color-teal-4)',
-        boxShadow: '0 6px 24px rgba(12,133,153,0.14)',
-      }}
-    >
+    <Paper radius="xl" withBorder style={{ overflow: 'hidden' }}>
       <Box
         px="xl"
         py="md"
         style={{
-          background: 'var(--mantine-color-teal-light)',
-          borderBottom: '1px solid var(--mantine-color-teal-3)',
+          background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
         }}
       >
         <Group justify="space-between" align="center">
@@ -416,7 +378,7 @@ function PreReservationCard({
               </Text>
             </Group>
           </Box>
-          <Badge color="yellow" variant="filled" radius="xl" size="lg" style={{ flexShrink: 0 }}>
+          <Badge color="yellow" variant="light" radius="xl" size="lg" style={{ flexShrink: 0 }}>
             {t('portal.pre_reservation_awaiting', { defaultValue: 'Awaiting Assignment' })}
           </Badge>
         </Group>
@@ -526,21 +488,13 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
   const color = statusColor(booking.status);
 
   return (
-    <Paper
-      radius="xl"
-      style={{
-        overflow: 'hidden',
-        border: `2px solid var(--mantine-color-${color}-4)`,
-        boxShadow: `0 6px 24px rgba(0,0,0,0.08)`,
-      }}
-    >
-      {/* Header */}
+    <Paper radius="xl" withBorder style={{ overflow: 'hidden' }}>
       <Box
         px="xl"
         py="md"
         style={{
-          background: `var(--mantine-color-${color}-light)`,
-          borderBottom: `1px solid var(--mantine-color-${color}-3)`,
+          background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
         }}
       >
         <Group justify="space-between" align="center">
@@ -555,7 +509,7 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
               </Text>
             </Group>
           </Box>
-          <Badge color={color} variant="filled" radius="xl" size="lg" style={{ flexShrink: 0 }}>
+          <Badge color={color} variant="light" radius="xl" size="lg" style={{ flexShrink: 0 }}>
             {statusLabel(booking.status)}
           </Badge>
         </Group>
@@ -564,37 +518,18 @@ function PendingBookingCard({ booking }: { booking: StudentCurrentBooking }) {
       <Box p="xl">
         <Stack gap="lg">
           {booking.status === BookingOpsStatus.REJECTED && (
-            <Paper
-              radius="lg"
-              p="sm"
-              style={{
-                background: 'var(--mantine-color-red-light)',
-                border: '1px solid var(--mantine-color-red-3)',
-              }}
-            >
-              <Text size="sm" c="red">
-                {t('portal.application_rejected_message')}
-              </Text>
-            </Paper>
+            <Alert icon={<IconX size={14} />} color="red" radius="lg" variant="light">
+              <Text size="sm">{t('portal.application_rejected_message')}</Text>
+            </Alert>
           )}
 
           {(booking.status === BookingOpsStatus.READY_FOR_CHECKIN ||
             booking.status === BookingOpsStatus.CONFIRMED) && (
-            <Paper
-              radius="lg"
-              p="sm"
-              style={{
-                background: 'var(--mantine-color-teal-light)',
-                border: '1px solid var(--mantine-color-teal-3)',
-              }}
-            >
-              <Group gap="xs">
-                <IconCheck size={16} color="var(--mantine-color-teal-6)" />
-                <Text size="sm" c="teal" fw={600}>
-                  {t('portal.application_approved_message')}
-                </Text>
-              </Group>
-            </Paper>
+            <Alert icon={<IconCheck size={14} />} color="teal" radius="lg" variant="light">
+              <Text size="sm" fw={600}>
+                {t('portal.application_approved_message')}
+              </Text>
+            </Alert>
           )}
 
           <BookingStatusStepper status={booking.status} />
@@ -626,50 +561,28 @@ function ActiveResidentCard({
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === 'tr';
   return (
-    <Paper
-      radius="xl"
-      style={{
-        overflow: 'hidden',
-        border: '2px solid var(--mantine-color-green-4)',
-        boxShadow: '0 6px 24px rgba(64,192,87,0.14)',
-      }}
-    >
-      {/* Gradient header */}
+    <Paper radius="xl" withBorder style={{ overflow: 'hidden' }}>
       <Box
         px="xl"
         py="lg"
         style={{
-          background: 'linear-gradient(135deg, #2F9E44 0%, #37B24D 50%, #2B8A3E 100%)',
+          background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
         }}
       >
         <Group justify="space-between" align="flex-start" wrap="nowrap">
           <Box>
-            <Text
-              size="xs"
-              c="white"
-              fw={600}
-              tt="uppercase"
-              style={{ letterSpacing: '0.05em', opacity: 0.8, fontSize: 11, marginBottom: 4 }}
-            >
+            <Badge color="green" variant="light" size="sm" radius="xl" mb={6}>
               {t('portal.status_active')}
-            </Text>
-            <Text fw={800} c="white" size="xl" lh={1.2}>
+            </Badge>
+            <Text fw={700} size="xl" lh={1.2}>
               {t('portal.active_resident_title')}
             </Text>
-            <Text size="xs" c="white" style={{ opacity: 0.8, marginTop: 4 }}>
+            <Text size="xs" c="dimmed" mt={4}>
               {booking.semesterDisplayName}
             </Text>
           </Box>
-          <ThemeIcon
-            size={52}
-            radius="xl"
-            style={{
-              background: 'rgba(255,255,255,0.2)',
-              color: 'white',
-              flexShrink: 0,
-              border: '1px solid rgba(255,255,255,0.3)',
-            }}
-          >
+          <ThemeIcon size={52} radius="xl" variant="light" color="green" style={{ flexShrink: 0 }}>
             <IconDoor size={26} />
           </ThemeIcon>
         </Group>
@@ -722,24 +635,17 @@ function ActiveResidentCard({
           </SimpleGrid>
 
           {booking.roomTypeName && (
-            <Paper
-              radius="lg"
-              p="sm"
-              style={{
-                background: 'var(--mantine-color-blue-light)',
-                border: '1px solid var(--mantine-color-blue-3)',
-              }}
-            >
+            <Paper radius="lg" p="sm" withBorder>
               <Group gap="xs" mb={booking.roomTypeAmenities?.length ? 8 : 0}>
-                <IconSparkles size={14} color="var(--mantine-color-blue-6)" />
-                <Text size="sm" fw={700} c="blue">
+                <IconSparkles size={14} color="var(--mantine-color-blue-5)" />
+                <Text size="sm" fw={600} c="blue">
                   {isTr && booking.roomTypeNameTr ? booking.roomTypeNameTr : booking.roomTypeName}
                 </Text>
               </Group>
               {booking.roomTypeAmenities && booking.roomTypeAmenities.length > 0 && (
                 <Group gap={4} wrap="wrap">
                   {booking.roomTypeAmenities.slice(0, 4).map((a) => (
-                    <Badge key={a} size="xs" variant="light" color="blue">
+                    <Badge key={a} size="xs" variant="light" color="gray">
                       {a}
                     </Badge>
                   ))}
@@ -755,19 +661,18 @@ function ActiveResidentCard({
 
           <Group gap="sm" wrap="wrap">
             <Button
-              variant="gradient"
-              gradient={{ from: 'green', to: 'teal' }}
+              variant="filled"
+              color="blue"
               leftSection={<IconDoor size={16} />}
               onClick={onViewBooking}
               radius="xl"
-              style={{ boxShadow: '0 4px 14px rgba(64,192,87,0.3)' }}
             >
               {t('portal.view_full_details')}
             </Button>
             {booking.contractSigned && (
               <Button
                 variant="light"
-                color="gray"
+                color="blue"
                 leftSection={<IconFileDownload size={16} />}
                 onClick={() => portalBookings.downloadContract(booking.id)}
                 radius="xl"
@@ -806,7 +711,6 @@ function AnnouncementsPanel({ limit = 3 }: { limit?: number }) {
       p="lg"
       style={{
         border: '1px solid var(--mantine-color-default-border)',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
       }}
     >
       <Group justify="space-between" mb="md" align="center">
@@ -886,7 +790,6 @@ function NotificationsPanel({ limit = 5 }: { limit?: number }) {
       p="lg"
       style={{
         border: '1px solid var(--mantine-color-default-border)',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
       }}
     >
       <Group justify="space-between" mb="md" align="center">

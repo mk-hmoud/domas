@@ -5,4 +5,5 @@ export interface FindAllStudentsDto extends PaginationDto {
   search?: string;
   nationalityCode?: string;
   gender?: GenderType;
+  eligible?: boolean;
 }

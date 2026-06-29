@@ -16,6 +16,8 @@ import {
   Modal,
   TextInput,
   Textarea,
+  Select,
+  Alert,
 } from "@mantine/core";
 import {
   IconBrandWhatsapp,
@@ -24,6 +26,7 @@ import {
   IconLogout,
   IconArrowsExchange,
   IconMessageCircle,
+  IconClockHour4,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -46,10 +49,12 @@ import {
 } from "@domas/api-client";
 import {
   RoomPlanRoom,
+  RoomHistory,
   Student,
   Semester,
   CreateBookingDto,
   CreateStudentDto,
+  SemesterStatus,
 } from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../context/AuthContext";
@@ -76,8 +81,14 @@ export function SharedRoomPlanPage() {
 
   const [bookingModalOpened, setBookingModalOpened] = useState(false);
   const [bookingBedId, setBookingBedId] = useState<number | null>(null);
+  const [bookingRoomGenderLock, setBookingRoomGenderLock] = useState<
+    string | null
+  >(null);
   const [studentList, setStudentList] = useState<Student[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(
+    null,
+  );
 
   const [studentDetailId, setStudentDetailId] = useState<string | null>(null);
   const [studentDetailKind, setStudentDetailKind] =
@@ -90,10 +101,15 @@ export function SharedRoomPlanPage() {
   const [messageBody, setMessageBody] = useState("");
   const [messageSending, setMessageSending] = useState(false);
 
-  const fetchRoomPlan = async (id: number) => {
+  const [historyRoomId, setHistoryRoomId] = useState<number | null>(null);
+  const [historyRoomName, setHistoryRoomName] = useState<string>("");
+  const [roomHistory, setRoomHistory] = useState<RoomHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchRoomPlan = async (id: number, semId?: number | null) => {
     setLoading(true);
     try {
-      const data = await locations.getRoomPlan(id);
+      const data = await locations.getRoomPlan(id, semId ?? undefined);
       setRooms(data);
     } catch (error) {
       notifications.show({
@@ -108,21 +124,25 @@ export function SharedRoomPlanPage() {
 
   useEffect(() => {
     if (locationId) {
-      fetchRoomPlan(locationId);
+      fetchRoomPlan(locationId, selectedSemesterId);
     } else {
       setRooms([]);
     }
-  }, [locationId]);
+  }, [locationId, selectedSemesterId]);
 
   useEffect(() => {
     const fetchBookingData = async () => {
       try {
         const [studentsRes, semestersRes] = await Promise.all([
-          students.findAll({ limit: 1000 }),
+          students.findAll({ limit: 1000, eligible: true }),
           semestersApi.findAll({ limit: 1000 }),
         ]);
         setStudentList(studentsRes.data);
         setAllSemesters(semestersRes.data);
+        const active = semestersRes.data.find(
+          (s) => s.status === SemesterStatus.ACTIVE,
+        );
+        if (active) setSelectedSemesterId(active.id);
       } catch (error) {
         console.error("Failed to fetch booking data:", error);
       }
@@ -184,7 +204,29 @@ export function SharedRoomPlanPage() {
 
   const handleCreateBooking = (bedId: number) => {
     setBookingBedId(bedId);
+    const room = rooms.find((r) => r.beds.some((b) => b.id === bedId));
+    setBookingRoomGenderLock(room?.genderLock ?? null);
     setBookingModalOpened(true);
+  };
+
+  const handleViewHistory = async (roomId: number) => {
+    const room = rooms.find((r) => r.id === roomId);
+    setHistoryRoomId(roomId);
+    setHistoryRoomName(isTr && room?.nameTr ? room.nameTr : (room?.name ?? ""));
+    setRoomHistory(null);
+    setHistoryLoading(true);
+    try {
+      const data = await locations.getRoomHistory(roomId);
+      setRoomHistory(data);
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleSubmitBooking = async (values: CreateBookingDto) => {
@@ -198,7 +240,7 @@ export function SharedRoomPlanPage() {
         color: "green",
       });
       setBookingModalOpened(false);
-      if (locationId) await fetchRoomPlan(locationId);
+      if (locationId) await fetchRoomPlan(locationId, selectedSemesterId);
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -277,7 +319,10 @@ export function SharedRoomPlanPage() {
         }),
         color: "green",
       });
-      const studentsRes = await students.findAll({ limit: 1000 });
+      const studentsRes = await students.findAll({
+        limit: 1000,
+        eligible: true,
+      });
       setStudentList(studentsRes.data);
     } catch (error) {
       notifications.show({
@@ -290,14 +335,55 @@ export function SharedRoomPlanPage() {
     }
   };
 
+  const selectedSemester = allSemesters.find(
+    (s) => s.id === selectedSemesterId,
+  );
+  const isHistorical = selectedSemester
+    ? selectedSemester.status !== SemesterStatus.ACTIVE
+    : false;
+
   return (
     <>
       <PageHeader title={t("room_plan", { defaultValue: "Room Plan" })} />
       <PageShell size="xl">
         <Stack gap="md">
           <Paper withBorder p="sm" radius="md">
-            <RoomPlanLocationPicker onChange={setLocationId} />
+            <Group align="flex-end" gap="sm" wrap="wrap">
+              <Select
+                label={t("semester_label")}
+                placeholder={t("select_semester")}
+                data={allSemesters.map((s) => ({
+                  value: s.id.toString(),
+                  label: s.displayName,
+                }))}
+                value={selectedSemesterId?.toString() ?? null}
+                onChange={(val) => {
+                  setSelectedSemesterId(val ? parseInt(val, 10) : null);
+                  setLocationId(null);
+                }}
+                w={220}
+              />
+              <RoomPlanLocationPicker
+                onChange={setLocationId}
+                key={selectedSemesterId ?? "none"}
+              />
+            </Group>
           </Paper>
+
+          {isHistorical && selectedSemester && (
+            <Alert
+              icon={<IconClockHour4 size={16} />}
+              color="blue"
+              variant="light"
+              radius="md"
+            >
+              {t("viewing_historical_semester", {
+                defaultValue:
+                  "Viewing historical data for {{name}} — read only",
+                name: selectedSemester.displayName,
+              })}
+            </Alert>
+          )}
 
           {locationId && (
             <RoomPlanFilters value={filters} onChange={setFilters} />
@@ -324,6 +410,8 @@ export function SharedRoomPlanPage() {
                     rooms={group.rooms}
                     onCreateBooking={handleCreateBooking}
                     onViewStudent={handleViewStudent}
+                    onViewHistory={handleViewHistory}
+                    isHistorical={isHistorical}
                   />
                 </Stack>
               ))}
@@ -333,19 +421,26 @@ export function SharedRoomPlanPage() {
               rooms={filteredRooms}
               onCreateBooking={handleCreateBooking}
               onViewStudent={handleViewStudent}
+              onViewHistory={handleViewHistory}
+              isHistorical={isHistorical}
             />
           )}
         </Stack>
 
         <CreateBookingModal
-          opened={bookingModalOpened}
+          opened={bookingModalOpened && !isHistorical}
           onClose={() => setBookingModalOpened(false)}
           onSubmit={handleSubmitBooking}
           onCreateStudent={handleCreateStudent}
-          students={studentList.map((s) => ({
-            value: s.id,
-            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
-          }))}
+          students={studentList
+            .filter(
+              (s) =>
+                !bookingRoomGenderLock || s.gender === bookingRoomGenderLock,
+            )
+            .map((s) => ({
+              value: s.id,
+              label: `${s.firstName} ${s.lastName} (${s.studentNumber}) · ${s.nationalityCode}`,
+            }))}
           semesters={allSemesters}
           countries={countries}
           departments={departments}
@@ -597,6 +692,146 @@ export function SharedRoomPlanPage() {
             </Group>
           </Stack>
         </Modal>
+
+        <Drawer
+          opened={!!historyRoomId}
+          onClose={() => {
+            setHistoryRoomId(null);
+            setRoomHistory(null);
+          }}
+          title={
+            historyRoomName ||
+            t("room_history", { defaultValue: "Room History" })
+          }
+          position="right"
+          size="lg"
+        >
+          <Stack gap="md">
+            <Alert
+              icon={<IconClockHour4 size={16} />}
+              color="yellow"
+              variant="light"
+            >
+              {t("flag_history_limit_notice", {
+                defaultValue:
+                  "Flag change history is available for up to 3 years. Older changes may not appear.",
+              })}
+            </Alert>
+
+            {historyLoading ? (
+              <Center h={200}>
+                <Loader />
+              </Center>
+            ) : roomHistory ? (
+              <>
+                <Text fw={700} size="sm">
+                  {t("flag_changes", { defaultValue: "Flag Changes" })}
+                </Text>
+                {roomHistory.flagChanges.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    {t("no_flag_changes", {
+                      defaultValue: "No flag changes recorded.",
+                    })}
+                  </Text>
+                ) : (
+                  <Stack gap="xs">
+                    {roomHistory.flagChanges.map((entry, i) => (
+                      <Paper key={i} withBorder p="xs" radius="md">
+                        <Group justify="space-between" mb={4}>
+                          <Text size="xs" c="dimmed">
+                            {new Date(entry.eventTimestamp).toLocaleString()}
+                          </Text>
+                          {entry.performedBy && (
+                            <Badge size="xs" variant="light" color="gray">
+                              {entry.performedBy}
+                            </Badge>
+                          )}
+                        </Group>
+                        <Stack gap={2}>
+                          {entry.changedFields.map((cf) => (
+                            <Text key={cf.field} size="xs">
+                              <Text span fw={600}>
+                                {cf.field}
+                              </Text>
+                              {": "}
+                              <Text span c="red">
+                                {String(cf.oldValue ?? "—")}
+                              </Text>
+                              {" → "}
+                              <Text span c="green">
+                                {String(cf.newValue ?? "—")}
+                              </Text>
+                            </Text>
+                          ))}
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+
+                <Divider />
+
+                <Text fw={700} size="sm">
+                  {t("resident_history", { defaultValue: "Resident History" })}
+                </Text>
+                {roomHistory.residents.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    {t("no_resident_history", {
+                      defaultValue: "No residents recorded.",
+                    })}
+                  </Text>
+                ) : (
+                  <Stack gap="xs">
+                    {roomHistory.residents.map((entry) => (
+                      <Paper
+                        key={entry.bookingId}
+                        withBorder
+                        p="xs"
+                        radius="md"
+                      >
+                        <Group justify="space-between" wrap="nowrap" mb={4}>
+                          <Group gap={6} wrap="nowrap">
+                            <Avatar
+                              size={28}
+                              radius="xl"
+                              color="initials"
+                              name={entry.studentName}
+                            />
+                            <div>
+                              <Text size="sm" fw={600}>
+                                {entry.studentName}
+                              </Text>
+                              <Text size="xs" c="dimmed">
+                                {entry.studentNumber} · {entry.nationalityCode}
+                              </Text>
+                            </div>
+                          </Group>
+                          <Stack gap={2} align="flex-end">
+                            <Badge size="xs" variant="light" color="blue">
+                              {t("bed_word", { defaultValue: "Bed" })}{" "}
+                              {entry.bedLabel}
+                            </Badge>
+                            <Badge size="xs" variant="light" color="gray">
+                              {entry.semesterName}
+                            </Badge>
+                          </Stack>
+                        </Group>
+                        <Text size="xs" c="dimmed">
+                          {new Date(entry.startDate).toLocaleDateString()} –{" "}
+                          {new Date(entry.endDate).toLocaleDateString()}
+                          {entry.checkedInAt &&
+                            ` · ${t("checked_in", { defaultValue: "Checked in" })}: ${new Date(entry.checkedInAt).toLocaleDateString()}`}
+                          {entry.checkedOutAt &&
+                            ` · ${t("checked_out", { defaultValue: "Checked out" })}: ${new Date(entry.checkedOutAt).toLocaleDateString()}`}
+                        </Text>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+              </>
+            ) : null}
+          </Stack>
+        </Drawer>
       </PageShell>
     </>
   );

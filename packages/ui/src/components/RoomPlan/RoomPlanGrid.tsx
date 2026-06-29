@@ -8,12 +8,16 @@ interface RoomPlanGridProps {
   rooms: RoomPlanRoom[];
   onCreateBooking: (bedId: number) => void;
   onViewStudent: (studentId: string, kind: RoomPlanStudentViewKind) => void;
+  onViewHistory?: (roomId: number) => void;
+  isHistorical?: boolean;
 }
 
 export function RoomPlanGrid({
   rooms,
   onCreateBooking,
   onViewStudent,
+  onViewHistory,
+  isHistorical,
 }: RoomPlanGridProps) {
   const { t } = useTranslation();
 
@@ -37,6 +41,8 @@ export function RoomPlanGrid({
           room={room}
           onCreateBooking={onCreateBooking}
           onViewStudent={onViewStudent}
+          onViewHistory={onViewHistory}
+          isHistorical={isHistorical}
         />
       ))}
     </SimpleGrid>

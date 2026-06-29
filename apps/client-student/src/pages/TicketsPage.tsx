@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Badge, Box, Button, Group, Loader, Paper, Stack, Text, ThemeIcon } from '@domas/ui';
+import {
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Group,
+  Image,
+  Loader,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Text,
+  ThemeIcon,
+} from '@domas/ui';
 import { IconAlertCircle, IconMessageReport, IconPlus } from '@tabler/icons-react';
 import { portalTickets } from '@domas/api-client';
 import { CreateTicketDto, StudentTicketView, TicketStatus } from '@domas/ts-types';
@@ -36,9 +49,9 @@ export function TicketsPage() {
     fetchTickets();
   }, []);
 
-  const handleSubmit = async (dto: CreateTicketDto) => {
+  const handleSubmit = async (dto: CreateTicketDto, photos: File[]) => {
     try {
-      await portalTickets.create(dto);
+      await portalTickets.create(dto, photos);
       notifications.show({ message: t('portal.ticket_submit_success'), color: 'green' });
       setModalOpened(false);
       fetchTickets();
@@ -153,6 +166,24 @@ function TicketCard({ ticket }: { ticket: StudentTicketView }) {
               <Text size="xs" c="green.7" mt={2}>
                 {ticket.resolutionNotes}
               </Text>
+            )}
+            {ticket.photoUrls?.length > 0 && (
+              <SimpleGrid cols={Math.min(ticket.photoUrls.length, 4)} spacing={4} mt={6}>
+                {ticket.photoUrls.map((url, i) => (
+                  <Image
+                    key={i}
+                    src={url}
+                    h={60}
+                    radius="sm"
+                    fit="cover"
+                    style={{
+                      border: '1px solid var(--mantine-color-default-border)',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                ))}
+              </SimpleGrid>
             )}
           </Box>
         </Group>

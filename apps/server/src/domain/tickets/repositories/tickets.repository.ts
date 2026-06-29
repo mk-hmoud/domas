@@ -34,6 +34,7 @@ export class TicketsRepository {
       t.resolution_notes   AS "resolutionNotes",
       t.rejection_reason   AS "rejectionReason",
       t.resolved_at        AS "resolvedAt",
+      t.photo_keys         AS "photoKeys",
       t.created_at         AS "createdAt",
       t.updated_at         AS "updatedAt"
     `;
@@ -124,17 +125,19 @@ export class TicketsRepository {
       category: TicketCategory;
       title: string;
       description: string;
+      photoKeys?: string[];
     },
     client?: PoolClient,
   ): Promise<Ticket> {
     const query = `
-      INSERT INTO tickets (student_id, booking_id, location_id, category, title, description)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO tickets (student_id, booking_id, location_id, category, title, description, photo_keys)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id, student_id AS "studentId", booking_id AS "bookingId", location_id AS "locationId",
                 category, title, description, status, work_order_id AS "workOrderId",
                 reviewed_by AS "reviewedBy", reviewed_at AS "reviewedAt",
                 resolution_notes AS "resolutionNotes", rejection_reason AS "rejectionReason",
-                resolved_at AS "resolvedAt", created_at AS "createdAt", updated_at AS "updatedAt"
+                resolved_at AS "resolvedAt", photo_keys AS "photoKeys",
+                created_at AS "createdAt", updated_at AS "updatedAt"
     `;
     const result = await this.getClient(client).query(query, [
       data.studentId,
@@ -143,6 +146,7 @@ export class TicketsRepository {
       data.category,
       data.title,
       data.description,
+      data.photoKeys ?? [],
     ]);
     return new Ticket(result.rows[0]);
   }

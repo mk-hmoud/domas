@@ -1232,7 +1232,7 @@ function LocationsContent() {
   const fetchBookingData = async () => {
     try {
       const [studentsRes, semestersRes] = await Promise.all([
-        students.findAll({ limit: 1000 }),
+        students.findAll({ limit: 1000, eligible: true }),
         semesters.findAll({ limit: 1000 }),
       ]);
       setStudentList(studentsRes.data);
@@ -1271,7 +1271,10 @@ function LocationsContent() {
         color: "green",
       });
       // Refresh student list
-      const studentsRes = await students.findAll({ limit: 1000 });
+      const studentsRes = await students.findAll({
+        limit: 1000,
+        eligible: true,
+      });
       setStudentList(studentsRes.data);
     } catch (error) {
       notifications.show({
@@ -2273,7 +2276,7 @@ function LocationsContent() {
           onCreateStudent={handleCreateStudent}
           students={studentList.map((s) => ({
             value: s.id,
-            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+            label: `${s.firstName} ${s.lastName} (${s.studentNumber}) · ${s.nationalityCode}`,
           }))}
           semesters={allSemesters}
           countries={countries}
