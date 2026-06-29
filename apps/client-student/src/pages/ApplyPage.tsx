@@ -72,7 +72,6 @@ function SemesterStep({
   onSelect: (s: PortalSemester) => void;
 }) {
   const { t } = useTranslation();
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   if (semesters.length === 0) {
     return (
@@ -89,7 +88,6 @@ function SemesterStep({
       </Text>
       {semesters.map((s) => {
         const isSelected = selected?.id === s.id;
-        const isHovered = hoveredId === s.id;
 
         const daysUntilDeadline = s.bookingEndDate
           ? Math.ceil((new Date(s.bookingEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -100,35 +98,25 @@ function SemesterStep({
           <Paper
             key={s.id}
             radius="lg"
+            withBorder
             style={{
               cursor: 'pointer',
-              overflow: 'hidden',
-              border: `2px solid ${
-                isSelected ? 'var(--mantine-color-blue-5)' : 'var(--mantine-color-default-border)'
-              }`,
-              transform: isHovered || isSelected ? 'translateY(-2px)' : 'none',
-              boxShadow: isSelected
-                ? '0 8px 28px rgba(34,139,230,0.22)'
-                : isHovered
-                  ? '0 4px 16px rgba(0,0,0,0.10)'
-                  : '0 1px 4px rgba(0,0,0,0.05)',
-              transition: 'all 0.2s ease',
+              borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
+              borderWidth: isSelected ? 2 : 1,
+              transition: 'border-color 0.15s ease',
             }}
             onClick={() => onSelect(s)}
-            onMouseEnter={() => setHoveredId(s.id)}
-            onMouseLeave={() => setHoveredId(null)}
           >
             <Group wrap="nowrap" gap={0}>
-              {/* Left accent strip */}
               <Box
                 style={{
-                  width: 6,
+                  width: 4,
                   alignSelf: 'stretch',
                   background: isSelected
-                    ? 'linear-gradient(180deg, #228BE6 0%, #0C7FD8 100%)'
+                    ? 'var(--mantine-color-blue-5)'
                     : 'var(--mantine-color-default-border)',
                   flexShrink: 0,
-                  transition: 'background 0.2s ease',
+                  transition: 'background 0.15s ease',
                 }}
               />
 
@@ -139,13 +127,9 @@ function SemesterStep({
                       <ThemeIcon
                         size={38}
                         radius="md"
-                        variant={isSelected ? 'gradient' : 'light'}
-                        gradient={{ from: 'blue', to: 'cyan' }}
+                        variant="light"
                         color="blue"
-                        style={{
-                          flexShrink: 0,
-                          boxShadow: isSelected ? '0 4px 12px rgba(34,139,230,0.35)' : undefined,
-                        }}
+                        style={{ flexShrink: 0 }}
                       >
                         <IconCalendar size={18} />
                       </ThemeIcon>
@@ -181,7 +165,7 @@ function SemesterStep({
 
                   <Stack gap={6} align="flex-end" style={{ flexShrink: 0 }}>
                     {isUrgent && daysUntilDeadline !== null && (
-                      <Badge color="red" variant="filled" size="sm">
+                      <Badge color="red" variant="light" size="sm">
                         {daysUntilDeadline <= 0 ? 'Deadline passed' : `${daysUntilDeadline}d left`}
                       </Badge>
                     )}
@@ -191,13 +175,7 @@ function SemesterStep({
                       </Badge>
                     )}
                     {isSelected ? (
-                      <ThemeIcon
-                        size={30}
-                        radius="xl"
-                        variant="gradient"
-                        gradient={{ from: 'blue', to: 'cyan' }}
-                        style={{ boxShadow: '0 4px 12px rgba(34,139,230,0.35)' }}
-                      >
+                      <ThemeIcon size={30} radius="xl" variant="filled" color="blue">
                         <IconCheck size={16} />
                       </ThemeIcon>
                     ) : (
@@ -223,21 +201,14 @@ function SemesterStep({
 
 // ─── Step 1: Filters ──────────────────────────────────────────────────────────
 
-const CAPACITY_OPTIONS = [
-  { value: 1, label: 'Single' },
-  { value: 2, label: 'Double' },
-  { value: 3, label: '3-bed' },
-  { value: 4, label: '4-bed' },
-  { value: 6, label: '6-bed' },
-  { value: 8, label: '8-bed' },
-];
-
 function FiltersStep({
   buildings,
+  capacities,
   filters,
   onChange,
 }: {
   buildings: PortalBuilding[];
+  capacities: number[];
   filters: Filters;
   onChange: (f: Filters) => void;
 }) {
@@ -264,13 +235,19 @@ function FiltersStep({
             {t('portal.filter_building', { defaultValue: 'Building preference' })}
           </Text>
           {filters.buildingId != null && (
-            <Badge size="xs" color="blue" variant="filled">
+            <Badge size="xs" color="blue" variant="light">
               Active
             </Badge>
           )}
         </Group>
 
-        {showBuildingCards ? (
+        {buildings.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            {t('portal.no_buildings', {
+              defaultValue: 'No building information is available for this semester.',
+            })}
+          </Text>
+        ) : showBuildingCards ? (
           <SimpleGrid cols={{ base: 2, xs: 3 } as any} spacing="sm">
             {buildings.map((b) => {
               const isSelected = filters.buildingId === b.id;
@@ -285,25 +262,19 @@ function FiltersStep({
                     cursor: isEmpty ? 'not-allowed' : 'pointer',
                     borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
                     borderWidth: isSelected ? 2 : 1,
-                    background: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
                     opacity: isEmpty && !isSelected ? 0.5 : 1,
-                    transition: 'all 0.15s ease',
+                    transition: 'border-color 0.15s ease',
                     textAlign: 'center',
                   }}
                   onClick={() =>
-                    !isEmpty &&
-                    onChange({
-                      ...filters,
-                      buildingId: isSelected ? null : b.id,
-                    })
+                    !isEmpty && onChange({ ...filters, buildingId: isSelected ? null : b.id })
                   }
                 >
                   <Stack align="center" gap={6}>
                     <ThemeIcon
                       size={36}
                       radius="md"
-                      variant={isSelected ? 'gradient' : 'light'}
-                      gradient={{ from: 'blue', to: 'indigo' }}
+                      variant="light"
                       color={isEmpty ? 'gray' : 'blue'}
                     >
                       <IconBuilding size={18} />
@@ -319,76 +290,75 @@ function FiltersStep({
               );
             })}
           </SimpleGrid>
-        ) : buildings.length > 0 ? (
+        ) : (
           <Select
-            placeholder={t('portal.filter_building_any', {
-              defaultValue: 'Any building',
-            })}
+            placeholder={t('portal.filter_building_any', { defaultValue: 'Any building' })}
             clearable
             data={buildingData}
             value={filters.buildingId != null ? String(filters.buildingId) : null}
             onChange={(v) =>
-              onChange({
-                ...filters,
-                buildingId: v != null ? parseInt(v, 10) : null,
-              })
+              onChange({ ...filters, buildingId: v != null ? parseInt(v, 10) : null })
             }
             radius="md"
             leftSection={<IconBuilding size={14} />}
           />
-        ) : null}
+        )}
       </Box>
 
       {/* Capacity */}
       <Box>
         <Group gap={6} mb="sm">
-          <ThemeIcon size={22} radius="sm" variant="light" color="violet">
+          <ThemeIcon size={22} radius="sm" variant="light" color="blue">
             <IconUsers size={13} />
           </ThemeIcon>
           <Text size="sm" fw={600}>
             {t('portal.filter_capacity', { defaultValue: 'Beds per room' })}
           </Text>
           {filters.capacity != null && (
-            <Badge size="xs" color="violet" variant="filled">
+            <Badge size="xs" color="blue" variant="light">
               Active
             </Badge>
           )}
         </Group>
 
-        <SimpleGrid cols={{ base: 3, xs: 6 } as any} spacing="sm">
-          {CAPACITY_OPTIONS.map(({ value }) => {
-            const isSelected = filters.capacity === value;
-            return (
-              <Paper
-                key={value}
-                withBorder
-                radius="lg"
-                p="sm"
-                style={{
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  borderColor: isSelected ? 'var(--mantine-color-violet-5)' : undefined,
-                  borderWidth: isSelected ? 2 : 1,
-                  background: isSelected ? 'var(--mantine-color-violet-light)' : undefined,
-                  transition: 'all 0.15s ease',
-                }}
-                onClick={() =>
-                  onChange({
-                    ...filters,
-                    capacity: filters.capacity === value ? null : value,
-                  })
-                }
-              >
-                <Text fw={800} size="lg" c={isSelected ? 'violet' : undefined} lh={1.1}>
-                  {value}
-                </Text>
-                <Text size="xs" c="dimmed" mt={2}>
-                  {value === 1 ? 'person' : 'people'}
-                </Text>
-              </Paper>
-            );
-          })}
-        </SimpleGrid>
+        {capacities.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            {t('portal.no_capacities', {
+              defaultValue: 'Room size information is not available for this semester.',
+            })}
+          </Text>
+        ) : (
+          <SimpleGrid cols={{ base: 3, xs: 6 } as any} spacing="sm">
+            {capacities.map((value) => {
+              const isSelected = filters.capacity === value;
+              return (
+                <Paper
+                  key={value}
+                  withBorder
+                  radius="lg"
+                  p="sm"
+                  style={{
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
+                    borderWidth: isSelected ? 2 : 1,
+                    transition: 'border-color 0.15s ease',
+                  }}
+                  onClick={() =>
+                    onChange({ ...filters, capacity: filters.capacity === value ? null : value })
+                  }
+                >
+                  <Text fw={800} size="lg" c={isSelected ? 'blue' : undefined} lh={1.1}>
+                    {value}
+                  </Text>
+                  <Text size="xs" c="dimmed" mt={2}>
+                    {value === 1 ? 'person' : 'people'}
+                  </Text>
+                </Paper>
+              );
+            })}
+          </SimpleGrid>
+        )}
       </Box>
 
       {activeFilterCount > 0 && (
@@ -425,15 +395,11 @@ function RoomCatalogStep({
   const isTr = i18n.language === 'tr';
   const [catalog, setCatalog] = useState<RoomTypeCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
     portalSemesters
-      .getRoomCatalog(semesterId, {
-        buildingId: filters.buildingId,
-        capacity: filters.capacity,
-      })
+      .getRoomCatalog(semesterId, { buildingId: filters.buildingId, capacity: filters.capacity })
       .then(setCatalog)
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -473,7 +439,6 @@ function RoomCatalogStep({
       <SimpleGrid cols={{ base: 1, xs: 2 } as any} spacing="md">
         {catalog.map((rt) => {
           const isSelected = selected?.id === rt.id;
-          const isHovered = hoveredId === rt.id;
           const heroUrl = rt.galleryUrls[0];
           const isSoldOut = rt.availableBedCount === 0;
 
@@ -481,26 +446,18 @@ function RoomCatalogStep({
             <Paper
               key={rt.id}
               radius="xl"
+              withBorder
               style={{
                 cursor: isSoldOut && !isSelected ? 'not-allowed' : 'pointer',
                 overflow: 'hidden',
-                border: `2px solid ${
-                  isSelected ? 'var(--mantine-color-blue-5)' : 'var(--mantine-color-default-border)'
-                }`,
-                transform: isHovered && !isSoldOut ? 'translateY(-5px)' : 'none',
-                boxShadow: isSelected
-                  ? '0 14px 36px rgba(34,139,230,0.28)'
-                  : isHovered
-                    ? '0 8px 24px rgba(0,0,0,0.14)'
-                    : '0 2px 8px rgba(0,0,0,0.06)',
-                transition: 'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+                borderColor: isSelected ? 'var(--mantine-color-blue-5)' : undefined,
+                borderWidth: isSelected ? 2 : 1,
                 opacity: isSoldOut && !isSelected ? 0.65 : 1,
+                transition: 'border-color 0.15s ease',
               }}
               onClick={() => !isSoldOut && onSelect(isSelected ? null : rt)}
-              onMouseEnter={() => setHoveredId(rt.id)}
-              onMouseLeave={() => setHoveredId(null)}
             >
-              {/* Hero image section */}
+              {/* Hero image */}
               <Box style={{ position: 'relative', height: 170 }}>
                 {heroUrl ? (
                   <>
@@ -524,109 +481,61 @@ function RoomCatalogStep({
                     style={{
                       height: '100%',
                       background:
-                        'linear-gradient(135deg, var(--mantine-color-blue-8) 0%, var(--mantine-color-indigo-8) 100%)',
+                        'light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <IconBed size={52} color="rgba(255,255,255,0.25)" />
+                    <IconBed size={52} color="var(--mantine-color-dimmed)" />
                   </Box>
                 )}
 
-                {/* Name + capacity overlay at bottom of image */}
-                <Box
-                  style={{
-                    position: 'absolute',
-                    bottom: 12,
-                    left: 14,
-                    right: 14,
-                    zIndex: 2,
-                  }}
-                >
+                {/* Name + price overlay */}
+                <Box style={{ position: 'absolute', bottom: 12, left: 14, right: 14, zIndex: 2 }}>
                   <Group justify="space-between" align="flex-end" wrap="nowrap">
-                    <Box>
-                      <Text fw={800} c="white" size="md" lh={1.2}>
-                        {isTr && rt.nameTr ? rt.nameTr : rt.name}
-                      </Text>
-                    </Box>
+                    <Text fw={700} c="white" size="md" lh={1.2}>
+                      {isTr && rt.nameTr ? rt.nameTr : rt.name}
+                    </Text>
                     <Box ta="right" style={{ flexShrink: 0 }}>
                       <Text size="xs" c="white" style={{ opacity: 0.75 }} lh={1}>
                         from
                       </Text>
-                      <Text fw={800} c="white" size="xl" lh={1.1}>
+                      <Text fw={700} c="white" size="xl" lh={1.1}>
                         ₺{Number(rt.priceTry).toLocaleString()}
                       </Text>
                     </Box>
                   </Group>
                 </Box>
 
-                {/* Capacity badge - top left */}
-                <Box
-                  style={{
-                    position: 'absolute',
-                    top: 10,
-                    left: 10,
-                    zIndex: 3,
-                  }}
-                >
+                {/* Capacity badge */}
+                <Box style={{ position: 'absolute', top: 10, left: 10, zIndex: 3 }}>
                   <Badge
                     size="sm"
                     variant="filled"
-                    style={{
-                      background: 'rgba(0,0,0,0.45)',
-                      backdropFilter: 'blur(4px)',
-                    }}
+                    style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
                     leftSection={<IconUsers size={10} />}
                   >
                     {rt.capacity === 1
                       ? t('portal.single_room', { defaultValue: 'Single' })
                       : rt.capacity === 2
                         ? t('portal.double_room', { defaultValue: 'Double' })
-                        : t('portal.n_bed_room', {
-                            defaultValue: '{{n}}-bed',
-                            n: rt.capacity,
-                          })}
+                        : t('portal.n_bed_room', { defaultValue: '{{n}}-bed', n: rt.capacity })}
                   </Badge>
                 </Box>
 
-                {/* Selected checkmark - top right */}
-                {isSelected && (
-                  <Box
-                    style={{
-                      position: 'absolute',
-                      top: 10,
-                      right: 10,
-                      zIndex: 3,
-                    }}
-                  >
-                    <ThemeIcon
-                      size={30}
-                      radius="xl"
-                      variant="gradient"
-                      gradient={{ from: 'blue', to: 'cyan' }}
-                      style={{ boxShadow: '0 2px 8px rgba(34,139,230,0.5)' }}
-                    >
+                {/* Selected / sold-out badge */}
+                <Box style={{ position: 'absolute', top: 10, right: 10, zIndex: 3 }}>
+                  {isSelected ? (
+                    <ThemeIcon size={30} radius="xl" variant="filled" color="blue">
                       <IconCheck size={15} />
                     </ThemeIcon>
-                  </Box>
-                )}
-
-                {/* Sold out overlay */}
-                {isSoldOut && (
-                  <Box
-                    style={{
-                      position: 'absolute',
-                      top: 10,
-                      right: 10,
-                      zIndex: 3,
-                    }}
-                  >
+                  ) : isSoldOut ? (
                     <Badge color="red" variant="filled" size="sm">
                       Sold out
                     </Badge>
-                  </Box>
-                )}
+                  ) : null}
+                </Box>
               </Box>
 
               {/* Card body */}
@@ -656,8 +565,8 @@ function RoomCatalogStep({
                   <Group gap={6} wrap="nowrap">
                     <Box
                       style={{
-                        width: 8,
-                        height: 8,
+                        width: 7,
+                        height: 7,
                         borderRadius: '50%',
                         background: isSoldOut
                           ? 'var(--mantine-color-red-5)'
@@ -694,7 +603,6 @@ function RoomCatalogStep({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Converts a 2-letter ISO country code to its flag emoji */
 function toFlagEmoji(code: string): string {
   return code
     .toUpperCase()
@@ -703,7 +611,7 @@ function toFlagEmoji(code: string): string {
     .join('');
 }
 
-// ─── Step 3: Bed picker (expandable room cards) ───────────────────────────────
+// ─── Step 3: Bed picker ───────────────────────────────────────────────────────
 
 function BedStep({
   semesterId,
@@ -737,20 +645,15 @@ function BedStep({
       .finally(() => setIsLoading(false));
   }, [semesterId, roomTypeId]);
 
-  // Auto-expand the room containing the selected bed
   useEffect(() => {
-    if (selected) {
-      setExpandedRooms((prev) => new Set([...prev, selected.roomId]));
-    }
+    if (selected) setExpandedRooms((prev) => new Set([...prev, selected.roomId]));
   }, [selected?.roomId]);
 
-  // Client-side building filter
   const visibleBeds = useMemo(() => {
     if (!buildingName) return beds;
     return beds.filter((b) => b.locationPath.split(' > ').includes(buildingName));
   }, [beds, buildingName]);
 
-  // Group by room
   const rooms = useMemo(() => {
     const map = new Map<
       number,
@@ -785,11 +688,8 @@ function BedStep({
   const toggleRoom = (roomId: number) => {
     setExpandedRooms((prev) => {
       const next = new Set(prev);
-      if (next.has(roomId)) {
-        next.delete(roomId);
-      } else {
-        next.add(roomId);
-      }
+      if (next.has(roomId)) next.delete(roomId);
+      else next.add(roomId);
       return next;
     });
   };
@@ -826,24 +726,16 @@ function BedStep({
   return (
     <Stack gap="md">
       {/* Summary bar */}
-      <Paper
-        radius="lg"
-        p="sm"
-        style={{
-          background:
-            'linear-gradient(135deg, var(--mantine-color-teal-light) 0%, var(--mantine-color-blue-light) 100%)',
-          border: '1px solid var(--mantine-color-teal-3)',
-        }}
-      >
+      <Paper radius="lg" p="sm" withBorder>
         <Group justify="space-between" align="center" wrap="nowrap">
           <Group gap="md" wrap="wrap">
             <Group gap={5}>
               <Box
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 7,
+                  height: 7,
                   borderRadius: '50%',
-                  background: 'var(--mantine-color-teal-6)',
+                  background: 'var(--mantine-color-teal-5)',
                 }}
               />
               <Text size="sm" fw={600} c="teal">
@@ -857,8 +749,8 @@ function BedStep({
           {roomTypeName && (
             <Badge
               size="sm"
-              variant="gradient"
-              gradient={{ from: 'blue', to: 'cyan' }}
+              variant="light"
+              color="blue"
               leftSection={<IconLayoutGrid size={10} />}
             >
               {roomTypeName}
@@ -879,31 +771,20 @@ function BedStep({
           <Paper
             key={room.roomId}
             radius="lg"
+            withBorder
             style={{
               overflow: 'hidden',
-              border: `2px solid ${
-                hasSelected ? 'var(--mantine-color-blue-5)' : 'var(--mantine-color-default-border)'
-              }`,
-              boxShadow: hasSelected
-                ? '0 6px 20px rgba(34,139,230,0.18)'
-                : '0 1px 4px rgba(0,0,0,0.06)',
-              transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              borderColor: hasSelected ? 'var(--mantine-color-blue-5)' : undefined,
+              borderWidth: hasSelected ? 2 : 1,
+              transition: 'border-color 0.15s ease',
             }}
           >
-            {/* Room header row */}
             <Group
               px="md"
               py="sm"
               justify="space-between"
               wrap="nowrap"
-              style={{
-                cursor: 'pointer',
-                background: hasSelected
-                  ? 'var(--mantine-color-blue-light)'
-                  : isFull
-                    ? 'var(--mantine-color-gray-light)'
-                    : 'var(--mantine-color-body)',
-              }}
+              style={{ cursor: 'pointer' }}
               onClick={() => toggleRoom(room.roomId)}
             >
               <Box style={{ minWidth: 0, flex: 1 }}>
@@ -911,8 +792,7 @@ function BedStep({
                   <ThemeIcon
                     size={34}
                     radius="md"
-                    variant={hasSelected ? 'gradient' : isFull ? 'light' : 'light'}
-                    gradient={hasSelected ? { from: 'blue', to: 'cyan' } : undefined}
+                    variant="light"
                     color={hasSelected ? 'blue' : isFull ? 'gray' : 'teal'}
                     style={{ flexShrink: 0 }}
                   >
@@ -939,7 +819,6 @@ function BedStep({
               </Box>
 
               <Group gap={10} wrap="nowrap" style={{ flexShrink: 0 }}>
-                {/* Occupancy progress */}
                 <Box style={{ width: 60 }} visibleFrom="xs">
                   <Text size="xs" c="dimmed" ta="right" mb={3}>
                     {room.availableCount}/{room.beds.length}
@@ -951,7 +830,6 @@ function BedStep({
                     color={isFull ? 'red' : occupancyPct > 60 ? 'orange' : 'teal'}
                   />
                 </Box>
-
                 <Badge
                   size="sm"
                   variant={isFull ? 'filled' : 'light'}
@@ -970,12 +848,11 @@ function BedStep({
               </Group>
             </Group>
 
-            {/* Expanded bed grid */}
             <Collapse in={isExpanded}>
               <Divider />
               <SimpleGrid cols={Math.min(room.beds.length, 4) as any} p="md" spacing="sm">
                 {room.beds.map((bed) => {
-                  const isSelected = selected?.id === bed.id;
+                  const isBedSelected = selected?.id === bed.id;
 
                   if (bed.isTaken) {
                     return (
@@ -1001,17 +878,15 @@ function BedStep({
                           p="sm"
                           style={{
                             background:
-                              'linear-gradient(145deg, var(--mantine-color-dark-7) 0%, var(--mantine-color-dark-6) 100%)',
-                            border: '1px solid var(--mantine-color-dark-4)',
+                              'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
+                            border: '1px solid var(--mantine-color-default-border)',
                             cursor: 'default',
                             textAlign: 'center',
                           }}
                         >
                           <Stack gap={4} align="center">
-                            <Box style={{ position: 'relative' }}>
-                              <IconBed size={22} color="var(--mantine-color-dark-3)" />
-                            </Box>
-                            <Text size="xs" fw={600} c="dark.3">
+                            <IconBed size={22} color="var(--mantine-color-dimmed)" />
+                            <Text size="xs" fw={600} c="dimmed">
                               {bed.label}
                             </Text>
                             {bed.occupantNationality && (
@@ -1020,7 +895,7 @@ function BedStep({
                               </Text>
                             )}
                             {bed.occupantDepartment && (
-                              <Text size="xs" c="dark.3" lineClamp={2} ta="center">
+                              <Text size="xs" c="dimmed" lineClamp={2} ta="center">
                                 {bed.occupantDepartment}
                               </Text>
                             )}
@@ -1035,19 +910,14 @@ function BedStep({
                       key={bed.id}
                       radius="md"
                       p="sm"
+                      withBorder
                       style={{
                         cursor: 'pointer',
                         textAlign: 'center',
-                        background: isSelected
-                          ? 'linear-gradient(135deg, var(--mantine-color-blue-6) 0%, var(--mantine-color-blue-5) 100%)'
-                          : 'var(--mantine-color-body)',
-                        border: `2px solid ${
-                          isSelected
-                            ? 'var(--mantine-color-blue-5)'
-                            : 'var(--mantine-color-default-border)'
-                        }`,
-                        boxShadow: isSelected ? '0 4px 14px rgba(34,139,230,0.35)' : undefined,
-                        transition: 'all 0.18s ease',
+                        borderColor: isBedSelected ? 'var(--mantine-color-blue-5)' : undefined,
+                        borderWidth: isBedSelected ? 2 : 1,
+                        background: isBedSelected ? 'var(--mantine-color-blue-light)' : undefined,
+                        transition: 'all 0.15s ease',
                       }}
                       onClick={() => onSelect(bed)}
                     >
@@ -1055,28 +925,16 @@ function BedStep({
                         <ThemeIcon
                           size={26}
                           radius="md"
-                          variant={isSelected ? 'filled' : 'light'}
-                          color={isSelected ? 'white' : 'teal'}
-                          style={
-                            isSelected
-                              ? { background: 'rgba(255,255,255,0.25)', color: 'white' }
-                              : undefined
-                          }
+                          variant={isBedSelected ? 'filled' : 'light'}
+                          color={isBedSelected ? 'blue' : 'teal'}
                         >
                           <IconBed size={14} />
                         </ThemeIcon>
-                        <Text size="xs" fw={700} c={isSelected ? 'white' : undefined}>
+                        <Text size="xs" fw={700} c={isBedSelected ? 'blue' : undefined}>
                           {bed.label}
                         </Text>
-                        {isSelected && (
-                          <Badge
-                            size="xs"
-                            style={{
-                              background: 'rgba(255,255,255,0.25)',
-                              color: 'white',
-                              border: '1px solid rgba(255,255,255,0.4)',
-                            }}
-                          >
+                        {isBedSelected && (
+                          <Badge size="xs" color="blue" variant="light">
                             Selected
                           </Badge>
                         )}
@@ -1109,18 +967,13 @@ function ReviewStep({
 
   return (
     <Stack gap="md">
-      {/* Gradient header card */}
-      <Paper
-        radius="xl"
-        style={{
-          overflow: 'hidden',
-          boxShadow: '0 8px 28px rgba(25,113,194,0.22)',
-        }}
-      >
+      <Paper radius="xl" withBorder style={{ overflow: 'hidden' }}>
+        {/* Header */}
         <Box
           p="lg"
           style={{
-            background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 40%, #1098AD 100%)',
+            background: 'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
+            borderBottom: '1px solid var(--mantine-color-default-border)',
           }}
         >
           <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -1129,78 +982,50 @@ function ReviewStep({
                 <ThemeIcon
                   size={40}
                   radius="xl"
-                  style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    flexShrink: 0,
-                  }}
+                  variant="light"
+                  color="blue"
+                  style={{ flexShrink: 0 }}
                 >
                   <IconBed size={20} />
                 </ThemeIcon>
                 <Box>
-                  <Text fw={800} c="white" size="lg" lh={1.2}>
+                  <Text fw={700} size="lg" lh={1.2}>
                     {bed.roomName}
                   </Text>
                   <Group gap={4}>
                     <IconMapPin
                       size={12}
-                      color="rgba(255,255,255,0.65)"
+                      color="var(--mantine-color-dimmed)"
                       style={{ flexShrink: 0 }}
                     />
-                    <Text size="xs" c="white" style={{ opacity: 0.7 }} lineClamp={1}>
+                    <Text size="xs" c="dimmed" lineClamp={1}>
                       {bed.locationPath}
                     </Text>
                   </Group>
                 </Box>
               </Group>
 
-              <Group gap="md" wrap="wrap">
-                <Paper
-                  px="sm"
-                  py={4}
-                  radius="xl"
-                  style={{
-                    background: 'rgba(255,255,255,0.18)',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                  }}
-                >
-                  <Group gap={6}>
-                    <IconBed size={13} color="white" />
-                    <Text size="xs" fw={600} c="white">
-                      {t('portal.bed_label', { label: bed.label })}
-                    </Text>
-                  </Group>
-                </Paper>
+              <Group gap="sm" wrap="wrap">
+                <Badge variant="light" color="blue" leftSection={<IconBed size={11} />}>
+                  {t('portal.bed_label', { label: bed.label })}
+                </Badge>
                 {roomType && (
-                  <Paper
-                    px="sm"
-                    py={4}
-                    radius="xl"
-                    style={{
-                      background: 'rgba(255,255,255,0.18)',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                    }}
-                  >
-                    <Group gap={6}>
-                      <IconLayoutGrid size={13} color="white" />
-                      <Text size="xs" fw={600} c="white">
-                        {isTr && roomType.nameTr ? roomType.nameTr : roomType.name}
-                      </Text>
-                    </Group>
-                  </Paper>
+                  <Badge variant="light" color="blue" leftSection={<IconLayoutGrid size={11} />}>
+                    {isTr && roomType.nameTr ? roomType.nameTr : roomType.name}
+                  </Badge>
                 )}
               </Group>
             </Box>
 
             <Box ta="right" style={{ flexShrink: 0 }}>
-              <Text size="xs" c="white" style={{ opacity: 0.7 }}>
+              <Text size="xs" c="dimmed">
                 Semester price
               </Text>
-              <Text fw={800} c="white" size="xl" lh={1.1}>
+              <Text fw={700} size="xl" lh={1.1}>
                 ₺{Number(bed.priceTry).toLocaleString()}
               </Text>
               {bed.priceForeign != null && (
-                <Text size="xs" c="white" style={{ opacity: 0.65 }}>
+                <Text size="xs" c="dimmed">
                   / {Number(bed.priceForeign).toLocaleString()} {semester.foreignCurrencyCode}
                 </Text>
               )}
@@ -1209,7 +1034,7 @@ function ReviewStep({
         </Box>
 
         {/* Receipt rows */}
-        <Stack gap={0} style={{ background: 'var(--mantine-color-body)' }}>
+        <Stack gap={0}>
           <Group
             justify="space-between"
             px="lg"
@@ -1241,46 +1066,42 @@ function ReviewStep({
             </Text>
           </Group>
 
-          {/* Price breakdown */}
-          <Box
+          <Group
+            justify="space-between"
             px="lg"
             py="md"
-            style={{
-              background: 'var(--mantine-color-blue-light)',
-              borderBottom: '1px solid var(--mantine-color-default-border)',
-            }}
+            style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
           >
-            <Group justify="space-between" mb={8}>
-              <Text size="sm" c="dimmed">
-                {t('portal.accommodation_price_label', {
-                  defaultValue: 'Accommodation price',
-                })}
-              </Text>
-              <Text size="sm" fw={700} c="blue">
-                ₺{Number(bed.priceTry).toLocaleString()}
-              </Text>
-            </Group>
-            <Group justify="space-between">
-              <Text size="sm" c="dimmed">
-                {t('portal.deposit_due_label')}
-              </Text>
-              <Text size="sm" fw={600}>
-                {semester.depositAmountTry > 0
-                  ? `₺${semester.depositAmountTry.toLocaleString()}`
-                  : `${semester.depositAmountForeign} ${semester.foreignCurrencyCode}`}
-              </Text>
-            </Group>
-          </Box>
+            <Text size="sm" c="dimmed">
+              {t('portal.accommodation_price_label', { defaultValue: 'Accommodation price' })}
+            </Text>
+            <Text size="sm" fw={700}>
+              ₺{Number(bed.priceTry).toLocaleString()}
+            </Text>
+          </Group>
+
+          <Group
+            justify="space-between"
+            px="lg"
+            py="md"
+            style={
+              semester.paymentDeadlineDate
+                ? { borderBottom: '1px solid var(--mantine-color-default-border)' }
+                : undefined
+            }
+          >
+            <Text size="sm" c="dimmed">
+              {t('portal.deposit_due_label')}
+            </Text>
+            <Text size="sm" fw={600}>
+              {semester.depositAmountTry > 0
+                ? `₺${semester.depositAmountTry.toLocaleString()}`
+                : `${semester.depositAmountForeign} ${semester.foreignCurrencyCode}`}
+            </Text>
+          </Group>
 
           {semester.paymentDeadlineDate && (
-            <Group
-              justify="space-between"
-              px="lg"
-              py="sm"
-              style={{
-                background: 'var(--mantine-color-orange-light)',
-              }}
-            >
+            <Group justify="space-between" px="lg" py="sm">
               <Group gap={6}>
                 <IconClock size={14} color="var(--mantine-color-orange-6)" />
                 <Text size="sm" c="orange" fw={500}>
@@ -1309,55 +1130,27 @@ const STEP_ICONS = [IconCalendar, IconFilter, IconLayoutGrid, IconBed, IconCheck
 function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
   const { t } = useTranslation();
   const STEPS = [
-    {
-      label: t('portal.step_semester_label'),
-      description: t('portal.step_semester_desc'),
-    },
+    { label: t('portal.step_semester_label'), description: t('portal.step_semester_desc') },
     {
       label: t('portal.step_filters_label', { defaultValue: 'Preferences' }),
-      description: t('portal.step_filters_desc', {
-        defaultValue: 'Building & room size',
-      }),
+      description: t('portal.step_filters_desc', { defaultValue: 'Building & room size' }),
     },
     {
       label: t('portal.step_catalog_label', { defaultValue: 'Room Type' }),
-      description: t('portal.step_catalog_desc', {
-        defaultValue: 'Choose a room style',
-      }),
+      description: t('portal.step_catalog_desc', { defaultValue: 'Choose a room style' }),
     },
-    {
-      label: t('portal.step_bed_label'),
-      description: t('portal.step_bed_desc'),
-    },
-    {
-      label: t('portal.step_confirm_label'),
-      description: t('portal.step_confirm_desc'),
-    },
+    { label: t('portal.step_bed_label'), description: t('portal.step_bed_desc') },
+    { label: t('portal.step_confirm_label'), description: t('portal.step_confirm_desc') },
   ];
 
   return (
-    <Paper
-      radius="xl"
-      p="lg"
-      style={{
-        height: '100%',
-        border: '1px solid var(--mantine-color-default-border)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-      }}
-    >
-      {/* Sidebar header */}
+    <Paper radius="xl" p="lg" withBorder style={{ height: '100%' }}>
       <Group gap="sm" mb="xl">
-        <ThemeIcon
-          size={34}
-          radius="md"
-          variant="gradient"
-          gradient={{ from: 'blue', to: 'cyan' }}
-          style={{ boxShadow: '0 4px 12px rgba(34,139,230,0.3)' }}
-        >
+        <ThemeIcon size={34} radius="md" variant="light" color="blue">
           <IconHome size={17} />
         </ThemeIcon>
         <Box>
-          <Text fw={800} size="sm" lh={1.2}>
+          <Text fw={700} size="sm" lh={1.2}>
             {t('portal.application_steps')}
           </Text>
           <Text size="xs" c="dimmed">
@@ -1366,7 +1159,6 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
         </Box>
       </Group>
 
-      {/* Overall progress bar */}
       <Box mb="xl">
         <Progress
           value={(activeStep / (STEPS.length - 1)) * 100}
@@ -1386,7 +1178,6 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
           return (
             <Box key={s.label}>
               <Group gap="sm" align="flex-start" wrap="nowrap">
-                {/* Indicator column */}
                 <Box
                   style={{
                     display: 'flex',
@@ -1398,17 +1189,8 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
                   <ThemeIcon
                     size={34}
                     radius="xl"
-                    variant={isDone ? 'filled' : isActive ? 'gradient' : 'light'}
-                    gradient={isActive ? { from: 'blue', to: 'cyan' } : undefined}
-                    color={isDone ? 'green' : isActive ? 'blue' : 'gray'}
-                    style={{
-                      boxShadow: isActive
-                        ? '0 4px 14px rgba(34,139,230,0.38)'
-                        : isDone
-                          ? '0 2px 8px rgba(64,192,87,0.25)'
-                          : undefined,
-                      transition: 'all 0.25s ease',
-                    }}
+                    variant={isDone ? 'filled' : isActive ? 'filled' : 'light'}
+                    color={isDone ? 'blue' : isActive ? 'blue' : 'gray'}
                   >
                     {isDone ? <IconCheck size={16} /> : <StepIcon size={15} />}
                   </ThemeIcon>
@@ -1419,27 +1201,17 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
                         width: 2,
                         height: 28,
                         background: isDone
-                          ? 'linear-gradient(180deg, var(--mantine-color-green-5), var(--mantine-color-green-4))'
-                          : isActive
-                            ? 'linear-gradient(180deg, var(--mantine-color-blue-4), var(--mantine-color-gray-3))'
-                            : 'var(--mantine-color-gray-3)',
+                          ? 'var(--mantine-color-blue-4)'
+                          : 'var(--mantine-color-gray-3)',
                         margin: '4px 0',
                         borderRadius: 2,
-                        transition: 'background 0.3s ease',
+                        transition: 'background 0.2s ease',
                       }}
                     />
                   )}
                 </Box>
 
-                {/* Step text */}
-                <Box
-                  style={{
-                    paddingBottom: isLast ? 0 : 4,
-                    paddingTop: 4,
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
+                <Box style={{ paddingBottom: isLast ? 0 : 4, paddingTop: 4, flex: 1, minWidth: 0 }}>
                   <Text
                     size="sm"
                     fw={isActive ? 700 : isDone ? 500 : 400}
@@ -1451,20 +1223,6 @@ function DesktopStepsSidebar({ activeStep }: { activeStep: number }) {
                   <Text size="xs" c="dimmed" lh={1.3}>
                     {s.description}
                   </Text>
-
-                  {isActive && (
-                    <Box mt={6} mb={2}>
-                      <Box
-                        style={{
-                          height: 3,
-                          background:
-                            'linear-gradient(90deg, var(--mantine-color-blue-5), var(--mantine-color-cyan-5))',
-                          borderRadius: 2,
-                          width: '55%',
-                        }}
-                      />
-                    </Box>
-                  )}
                 </Box>
               </Group>
             </Box>
@@ -1496,10 +1254,8 @@ export function ApplyPage() {
   const [isLoadingSemesters, setIsLoadingSemesters] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState<PortalSemester | null>(null);
   const [buildings, setBuildings] = useState<PortalBuilding[]>([]);
-  const [filters, setFilters] = useState<Filters>({
-    buildingId: null,
-    capacity: null,
-  });
+  const [availableCapacities, setAvailableCapacities] = useState<number[]>([]);
+  const [filters, setFilters] = useState<Filters>({ buildingId: null, capacity: null });
   const [selectedRoomType, setSelectedRoomType] = useState<RoomTypeCatalogItem | null>(null);
   const [selectedBed, setSelectedBed] = useState<BedWithOccupancy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1516,15 +1272,22 @@ export function ApplyPage() {
       .finally(() => setIsLoadingSemesters(false));
   }, []);
 
-  // Fetch buildings whenever the selected semester changes
   useEffect(() => {
     if (!selectedSemester) {
       setBuildings([]);
+      setAvailableCapacities([]);
       return;
     }
     portalSemesters
       .getBuildings(selectedSemester.id)
       .then(setBuildings)
+      .catch(() => {});
+    portalSemesters
+      .getRoomCatalog(selectedSemester.id)
+      .then((catalog) => {
+        const caps = [...new Set(catalog.map((rt) => rt.capacity))].sort((a, b) => a - b);
+        setAvailableCapacities(caps);
+      })
       .catch(() => {});
   }, [selectedSemester?.id]);
 
@@ -1549,10 +1312,7 @@ export function ApplyPage() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await portalBookings.create({
-        semesterId: selectedSemester.id,
-        bedId: selectedBed.id,
-      });
+      await portalBookings.create({ semesterId: selectedSemester.id, bedId: selectedBed.id });
       navigate('/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? t('portal.submit_error');
@@ -1592,6 +1352,7 @@ export function ApplyPage() {
   ) : step === 1 && selectedSemester ? (
     <FiltersStep
       buildings={buildings}
+      capacities={availableCapacities}
       filters={filters}
       onChange={(f) => {
         setFilters(f);
@@ -1643,11 +1404,8 @@ export function ApplyPage() {
           onClick={handleNext}
           disabled={!canAdvance}
           radius="xl"
-          variant="gradient"
-          gradient={{ from: 'blue', to: 'cyan' }}
-          style={{
-            boxShadow: canAdvance ? '0 4px 14px rgba(34,139,230,0.35)' : undefined,
-          }}
+          variant="filled"
+          color="blue"
         >
           {step === 2 && !selectedRoomType
             ? t('portal.skip_to_beds', { defaultValue: 'Browse all beds' })
@@ -1659,12 +1417,8 @@ export function ApplyPage() {
           onClick={handleSubmit}
           disabled={isSubmitting || hasActiveBooking}
           radius="xl"
-          variant="gradient"
-          gradient={{ from: 'teal', to: 'green' }}
-          style={{
-            boxShadow:
-              !isSubmitting && !hasActiveBooking ? '0 4px 14px rgba(64,192,87,0.35)' : undefined,
-          }}
+          variant="filled"
+          color="blue"
         >
           {isSubmitting ? t('portal.submitting') : t('portal.submit_application')}
         </Button>
@@ -1674,71 +1428,18 @@ export function ApplyPage() {
 
   return (
     <Stack gap="lg">
-      {/* ── Hero header ── */}
-      <Paper
-        radius="xl"
-        style={{
-          overflow: 'hidden',
-          background: 'linear-gradient(135deg, #1864AB 0%, #1971C2 45%, #0C8599 100%)',
-          boxShadow: '0 8px 32px rgba(25,113,194,0.25)',
-        }}
-      >
-        <Box px="xl" py="lg">
-          <Group justify="space-between" align="flex-start" wrap="nowrap">
-            <Box style={{ flex: 1 }}>
-              <Text
-                size="xs"
-                c="white"
-                style={{
-                  opacity: 0.72,
-                  marginBottom: 4,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                }}
-                fw={600}
-              >
-                Student Housing Portal
-              </Text>
-              <Title order={2} c="white" fw={800} lh={1.2}>
-                {t('portal.apply_title')}
-              </Title>
-              <Text size="sm" c="white" style={{ opacity: 0.78, marginTop: 6 }}>
-                {t('portal.apply_subtitle')}
-              </Text>
-            </Box>
-            <ThemeIcon
-              size={64}
-              radius="xl"
-              style={{
-                background: 'rgba(255,255,255,0.18)',
-                color: 'white',
-                flexShrink: 0,
-                border: '1px solid rgba(255,255,255,0.25)',
-              }}
-            >
-              <IconBed size={30} />
-            </ThemeIcon>
-          </Group>
-
-          <Box mt="md">
-            <Group justify="space-between" mb={6}>
-              <Text size="xs" c="white" style={{ opacity: 0.72 }} fw={500}>
-                Step {step + 1} of 5
-              </Text>
-              <Text size="xs" c="white" style={{ opacity: 0.72 }} fw={500}>
-                {Math.round((step / 4) * 100)}% complete
-              </Text>
-            </Group>
-            <Progress
-              value={(step / 4) * 100}
-              size="sm"
-              radius="xl"
-              color="white"
-              style={{ background: 'rgba(255,255,255,0.25)' }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+      {/* Page header */}
+      <Box>
+        <Text size="xs" c="dimmed" fw={500} tt="uppercase" style={{ letterSpacing: '0.04em' }}>
+          {t('portal.apply_page_label', { defaultValue: 'Student Housing' })}
+        </Text>
+        <Title order={2} fw={700} lh={1.2}>
+          {t('portal.apply_title')}
+        </Title>
+        <Text size="sm" c="dimmed" mt={2}>
+          {t('portal.apply_subtitle')}
+        </Text>
+      </Box>
 
       {hasActiveBooking && (
         <Alert icon={<IconInfoCircle size={16} />} color="orange" radius="lg" variant="light">
@@ -1756,26 +1457,16 @@ export function ApplyPage() {
         </Alert>
       )}
 
-      {/* ── Desktop layout: step sidebar + content panel ── */}
+      {/* Desktop layout */}
       <Box visibleFrom="sm">
         <Group align="flex-start" gap="lg" wrap="nowrap">
-          {/* Left: step list */}
           <Box style={{ width: 230, flexShrink: 0 }}>
             <DesktopStepsSidebar activeStep={step} />
           </Box>
 
-          {/* Right: active step content */}
           <Box style={{ flex: 1, minWidth: 0 }}>
             <Stack gap="md">
-              <Card
-                radius="xl"
-                p="xl"
-                style={{
-                  minHeight: 320,
-                  border: '1px solid var(--mantine-color-default-border)',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                }}
-              >
+              <Card radius="xl" p="xl" withBorder style={{ minHeight: 320 }}>
                 {stepContent}
               </Card>
 
@@ -1797,7 +1488,7 @@ export function ApplyPage() {
         </Group>
       </Box>
 
-      {/* ── Mobile layout: horizontal stepper + content card ── */}
+      {/* Mobile layout */}
       <Box hiddenFrom="sm">
         <Stack gap="md">
           <Stepper active={step} size="xs" radius="xl">
@@ -1810,14 +1501,7 @@ export function ApplyPage() {
             ))}
           </Stepper>
 
-          <Card
-            radius="xl"
-            p="md"
-            style={{
-              border: '1px solid var(--mantine-color-default-border)',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-            }}
-          >
+          <Card radius="xl" p="md" withBorder>
             {stepContent}
           </Card>
 
