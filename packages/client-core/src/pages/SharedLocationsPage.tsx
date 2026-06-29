@@ -17,7 +17,6 @@ import {
   Tooltip,
   Divider,
   SegmentedControl,
-  Pagination,
   LoadingOverlay,
   Tabs,
   Menu,
@@ -367,7 +366,7 @@ function LocationsContent() {
   const [emailLocationId, setEmailLocationId] = useState<number | null>(null);
   const [registryFilters, setRegistryFilters] = useState<FindAllLocationsDto>({
     page: 1,
-    limit: 10,
+    limit: 1000,
   });
   const [totalRegistryItems, setTotalRegistryRegistryItems] = useState(0);
 
@@ -2184,16 +2183,6 @@ function LocationsContent() {
                 </Paper>
               </Tabs.Panel>
             </Tabs>
-
-            <Group justify="flex-end">
-              <Pagination
-                total={Math.ceil(
-                  totalRegistryItems / (registryFilters.limit || 10),
-                )}
-                value={registryFilters.page}
-                onChange={(p) => handleFilterChange("page", p)}
-              />
-            </Group>
           </Stack>
         )}
 
