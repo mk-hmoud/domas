@@ -26,10 +26,11 @@ import {
   IconMail,
   IconX,
 } from "@tabler/icons-react";
-import { LocationType, GenderType } from "@domas/ts-types";
+import { LocationType, GenderType, LocationFlagContext } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { ReactNode } from "react";
 import { LocationIcon } from "../LocationIcon";
+import { FlagInheritancePanel } from "../FlagInheritancePanel";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ export interface RegistryItemDrawerProps {
   onBook?: (item: any) => void;
   onNavigate: (item: any) => void;
   onEmailResidents?: (locationId: number) => void;
+  flagContext?: LocationFlagContext | null;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -120,6 +122,7 @@ export function RegistryItemDrawer({
   onBook,
   onNavigate,
   onEmailResidents,
+  flagContext,
 }: RegistryItemDrawerProps) {
   const { t } = useTranslation();
 
@@ -265,6 +268,23 @@ export function RegistryItemDrawer({
           </Group>
         </Group>
       </Box>
+
+      {/* ── ANCESTOR FLAG INHERITANCE ──────────────────────────────────── */}
+      {flagContext?.ancestorFlags && (
+        <Box px="xl" pt="sm" style={{ flexShrink: 0 }}>
+          <FlagInheritancePanel
+            ancestorFlags={flagContext.ancestorFlags}
+            ownFlags={{
+              isTrOnly: item.isTrOnly,
+              isForeignerOnly: item.isForeignerOnly,
+              isGuestZone: item.isGuestZone,
+              isRectorate: item.isRectorate,
+              genderLock: item.genderLock,
+              studentYearLock: item.studentYearLock,
+            }}
+          />
+        </Box>
+      )}
 
       {/* ── BED STATUS ─────────────────────────────────────────────────── */}
       {isBed && (

@@ -185,6 +185,12 @@ export class LocationsController {
     return this.locationsService.findWithAncestors(id, context);
   }
 
+  @Get(':id/flag-context')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
+  getFlagContext(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.getFlagContext(id, context);
+  }
+
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
   update(

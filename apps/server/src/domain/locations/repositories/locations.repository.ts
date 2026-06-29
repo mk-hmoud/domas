@@ -767,4 +767,44 @@ export class LocationsRepository implements ILocationsRepository {
     `;
     await this.getClient(client).query(query, [gender, locationId]);
   }
+
+  async countDescendants(
+    id: number,
+    client?: PoolClient,
+  ): Promise<{ locations: number; beds: number }> {
+    const target = await this.findById(id, client);
+    if (!target) return { locations: 0, beds: 0 };
+    const result = await this.getClient(client).query<{ locationCount: number; bedCount: number }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM locations WHERE tree_path <@ $1 AND id != $2 AND deleted_at IS NULL) AS "locationCount",
+         (SELECT COUNT(*)::int FROM beds b
+          JOIN locations l ON l.id = b.location_id
+          WHERE l.tree_path <@ $1 AND b.deleted_at IS NULL) AS "bedCount"`,
+      [target.treePath, id],
+    );
+    return { locations: result.rows[0].locationCount, beds: result.rows[0].bedCount };
+  }
+
+  async getDescendantPreview(
+    id: number,
+    limit = 10,
+    client?: PoolClient,
+  ): Promise<{ id: number; name: string; nameTr?: string; type: string }[]> {
+    const target = await this.findById(id, client);
+    if (!target) return [];
+    const result = await this.getClient(client).query<{
+      id: number;
+      name: string;
+      nameTr?: string;
+      type: string;
+    }>(
+      `SELECT id, name, name_tr AS "nameTr", type
+       FROM locations
+       WHERE tree_path <@ $1 AND id != $2 AND deleted_at IS NULL
+       ORDER BY tree_path ASC
+       LIMIT $3`,
+      [target.treePath, id, limit],
+    );
+    return result.rows;
+  }
 }

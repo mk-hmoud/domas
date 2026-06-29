@@ -47,6 +47,27 @@ import { Inject, forwardRef } from '@nestjs/common';
 import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PERMISSIONS } from '../../../common/constants/permissions';
 
+interface AncestorFlagSource {
+  value: any;
+  sourceId: number;
+  sourceName: string;
+}
+
+interface AncestorFlagsResult {
+  isTrOnly: AncestorFlagSource | null;
+  isForeignerOnly: AncestorFlagSource | null;
+  isGuestZone: AncestorFlagSource | null;
+  isRectorate: AncestorFlagSource | null;
+  genderLock: AncestorFlagSource | null;
+  studentYearLock: AncestorFlagSource | null;
+}
+
+interface LocationFlagContext {
+  ancestorFlags: AncestorFlagsResult;
+  descendantCount: { locations: number; beds: number };
+  descendantPreview: { id: number; name: string; nameTr?: string; type: string }[];
+}
+
 @Injectable()
 export class LocationsService {
   private readonly logger = new Logger(LocationsService.name);
@@ -474,6 +495,49 @@ export class LocationsService {
     return location;
   }
 
+  async getFlagContext(id: number, context: AuditUserContext): Promise<LocationFlagContext> {
+    const location = await this.locationsRepository.findById(id);
+    if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+
+    const [ancestors, descendantCount, descendantPreview] = await Promise.all([
+      this.locationsRepository.findWithAncestors(id),
+      this.locationsRepository.countDescendants(id),
+      this.locationsRepository.getDescendantPreview(id, 10),
+    ]);
+
+    const ancestorChain = ancestors.filter((a) => a.id !== id).reverse();
+
+    const findSrc = (
+      predicate: (a: Location) => boolean,
+    ): { sourceId: number; sourceName: string } | null => {
+      const found = ancestorChain.find(predicate);
+      return found ? { sourceId: found.id, sourceName: found.name } : null;
+    };
+
+    const trSrc = findSrc((a) => a.isTrOnly);
+    const foreignerSrc = findSrc((a) => a.isForeignerOnly);
+    const guestSrc = findSrc((a) => a.isGuestZone);
+    const rectorSrc = findSrc((a) => a.isRectorate);
+    const genderSrc = findSrc((a) => !!a.genderLock);
+    const yearSrc = findSrc((a) => !!a.studentYearLock);
+
+    const ancestorFlags: AncestorFlagsResult = {
+      isTrOnly: trSrc ? { value: true, ...trSrc } : null,
+      isForeignerOnly: foreignerSrc ? { value: true, ...foreignerSrc } : null,
+      isGuestZone: guestSrc ? { value: true, ...guestSrc } : null,
+      isRectorate: rectorSrc ? { value: true, ...rectorSrc } : null,
+      genderLock: genderSrc
+        ? { value: ancestorChain.find((a) => !!a.genderLock)!.genderLock, ...genderSrc }
+        : null,
+      studentYearLock: yearSrc
+        ? { value: ancestorChain.find((a) => !!a.studentYearLock)!.studentYearLock, ...yearSrc }
+        : null,
+    };
+
+    return { ancestorFlags, descendantCount, descendantPreview };
+  }
+
   async delete(id: number, context: AuditUserContext): Promise<void> {
     this.logger.log({ locationId: id }, 'Deleting location');
     await this.db.transaction(async (client) => {
@@ -569,6 +633,18 @@ export class LocationsService {
         id,
         studentYearLock,
         cascade,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_STUDENT_YEAR_LOCK,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousStudentYearLock: location.studentYearLock, cascade },
+          description: `Updated student year lock on ${location.name}`,
+        },
         client,
       );
 

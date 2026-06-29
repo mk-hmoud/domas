@@ -3,6 +3,7 @@ export enum UndoActionType {
   UPDATE_LOCATION = 'update_location',
   DELETE_LOCATION = 'delete_location',
   UPDATE_GENDER_LOCK = 'update_gender_lock',
+  UPDATE_STUDENT_YEAR_LOCK = 'update_student_year_lock',
   UPDATE_GUEST_ZONE = 'update_guest_zone',
   UPDATE_TR_ONLY = 'update_tr_only',
   UPDATE_FOREIGNER_ONLY = 'update_foreigner_only',

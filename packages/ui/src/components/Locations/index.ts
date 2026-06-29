@@ -10,3 +10,5 @@ export * from "./LocationsManager";
 export * from "./LocationIcon";
 export * from "./LocationRegistry";
 export * from "./HierarchicalBedSelector";
+export * from "./FlagInheritancePanel";
+export * from "./FlagCascadeConfirmModal";

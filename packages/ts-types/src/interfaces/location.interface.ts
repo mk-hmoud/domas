@@ -21,3 +21,29 @@ export interface Location {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface AncestorFlagSource {
+  value: any;
+  sourceId: number;
+  sourceName: string;
+}
+
+export interface AncestorFlagsResult {
+  isTrOnly: AncestorFlagSource | null;
+  isForeignerOnly: AncestorFlagSource | null;
+  isGuestZone: AncestorFlagSource | null;
+  isRectorate: AncestorFlagSource | null;
+  genderLock: AncestorFlagSource | null;
+  studentYearLock: AncestorFlagSource | null;
+}
+
+export interface LocationFlagContext {
+  ancestorFlags: AncestorFlagsResult;
+  descendantCount: { locations: number; beds: number };
+  descendantPreview: {
+    id: number;
+    name: string;
+    nameTr?: string;
+    type: string;
+  }[];
+}

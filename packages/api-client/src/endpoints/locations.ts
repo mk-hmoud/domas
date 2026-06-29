@@ -22,6 +22,7 @@ import {
   CreateRoomWithBedsDto,
   BulkCreateRoomWithBedsDto,
   RoomPlanRoom,
+  LocationFlagContext,
 } from "@domas/ts-types";
 
 export const locations = {
@@ -210,6 +211,13 @@ export const locations = {
     data: BulkUpdateIsRectorateDto,
   ): Promise<void> => {
     await apiClient.patch("/locations/bulk-rectorate", data);
+  },
+
+  getFlagContext: async (id: number): Promise<LocationFlagContext> => {
+    const response = await apiClient.get<LocationFlagContext>(
+      `/locations/${id}/flag-context`,
+    );
+    return response.data;
   },
 
   delete: async (id: number): Promise<void> => {

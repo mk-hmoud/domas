@@ -18,9 +18,11 @@ import {
   GenderType,
   StudentYearLock,
   RoomType,
+  AncestorFlagsResult,
 } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { FlagInheritancePanel } from "../FlagInheritancePanel";
 
 interface CreateLocationModalProps {
   opened: boolean;
@@ -30,6 +32,7 @@ interface CreateLocationModalProps {
   parentType?: LocationType;
   initialValues?: any;
   roomTypes?: RoomType[];
+  parentAncestorFlags?: AncestorFlagsResult | null;
 }
 
 export function CreateLocationModal({
@@ -40,6 +43,7 @@ export function CreateLocationModal({
   parentType,
   initialValues,
   roomTypes = [],
+  parentAncestorFlags,
 }: CreateLocationModalProps) {
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === "tr";
@@ -174,10 +178,14 @@ export function CreateLocationModal({
   };
 
   const allowedTypes = getValidTypes(parentType);
-  const typeOptions = allowedTypes.map((t) => ({
-    value: t,
-    label: t.toUpperCase(),
-  }));
+  const typeOptions = initialValues
+    ? [
+        {
+          value: initialValues.type as string,
+          label: (initialValues.type as string).toUpperCase(),
+        },
+      ]
+    : allowedTypes.map((t) => ({ value: t, label: t.toUpperCase() }));
   const genderOptions = Object.values(GenderType).map((t) => ({
     value: t,
     label: t,
@@ -207,7 +215,13 @@ export function CreateLocationModal({
     <Modal
       opened={opened}
       onClose={onClose}
-      title={parentId ? t("add_child_location") : t("create_root_location")}
+      title={
+        initialValues
+          ? t("edit_location", "Edit Location")
+          : parentId
+            ? t("add_child_location")
+            : t("create_root_location")
+      }
       size="lg"
     >
       <form onSubmit={form.onSubmit(handleSubmit)} noValidate>
@@ -296,6 +310,7 @@ export function CreateLocationModal({
             label={t("type_label")}
             data={typeOptions}
             required
+            disabled={!!initialValues}
             {...form.getInputProps("type")}
           />
           {showRoomFields && <div />}
@@ -363,9 +378,27 @@ export function CreateLocationModal({
           </Alert>
         )}
 
-        {/* For rooms: no editable flag fields — controlled by room type */}
-        {/* For beds: show full flag controls */}
-        {isBedType && (
+        {parentAncestorFlags && (
+          <FlagInheritancePanel
+            ancestorFlags={parentAncestorFlags}
+            ownFlags={
+              initialValues
+                ? {
+                    isTrOnly: initialValues.isTrOnly,
+                    isForeignerOnly: initialValues.isForeignerOnly,
+                    isGuestZone: initialValues.isGuestZone,
+                    isRectorate: initialValues.isRectorate,
+                    genderLock: initialValues.genderLock,
+                    studentYearLock: initialValues.studentYearLock,
+                  }
+                : undefined
+            }
+          />
+        )}
+
+        {/* Rooms: flags are controlled by room type — no direct editing */}
+        {/* Beds + all structural types: show full flag controls */}
+        {!isRoomType && (
           <>
             <SimpleGrid cols={2} mt="md">
               <Select

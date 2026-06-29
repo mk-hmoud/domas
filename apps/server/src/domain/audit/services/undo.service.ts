@@ -161,6 +161,8 @@ export class UndoService {
         return this.undoDeleteLocation(log, client);
       case UndoActionType.UPDATE_GENDER_LOCK:
         return this.undoUpdateGenderLock(log, client);
+      case UndoActionType.UPDATE_STUDENT_YEAR_LOCK:
+        return this.undoUpdateStudentYearLock(log, client);
       case UndoActionType.UPDATE_GUEST_ZONE:
         return this.undoUpdateGuestZone(log, client);
       case UndoActionType.UPDATE_TR_ONLY:
@@ -452,6 +454,29 @@ export class UndoService {
       await client.query(
         `UPDATE locations SET gender_lock = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
         [previousGenderLock, locationId],
+      );
+    }
+  }
+
+  private async undoUpdateStudentYearLock(log: UndoLog, client: PoolClient): Promise<void> {
+    const { previousStudentYearLock, cascade } = log.undoData;
+    const locationId = parseInt(log.entityId, 10);
+
+    const location = await client.query('SELECT tree_path FROM locations WHERE id = $1', [
+      locationId,
+    ]);
+    if (location.rowCount === 0) return;
+    const treePath = location.rows[0].tree_path;
+
+    if (cascade) {
+      await client.query(
+        `UPDATE locations SET student_year_lock = $1, updated_at = NOW() WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [previousStudentYearLock, treePath],
+      );
+    } else {
+      await client.query(
+        `UPDATE locations SET student_year_lock = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+        [previousStudentYearLock, locationId],
       );
     }
   }
