@@ -168,7 +168,7 @@ export class StudentsRepository {
     client?: PoolClient,
     scope?: LocationScope,
   ): Promise<PaginatedResult<Student>> {
-    const { page = 1, limit = 10, search, nationalityCode, gender } = dto;
+    const { page = 1, limit = 10, search, nationalityCode, gender, eligible } = dto;
     const offset = (page - 1) * limit;
 
     let query = `SELECT * FROM students`;
@@ -204,6 +204,14 @@ export class StudentsRepository {
       const idx = values.length + 1;
       conditions.push(`enrollment_status = $${idx}`);
       values.push((dto as any).enrollmentStatus);
+    }
+
+    if (eligible) {
+      conditions.push(`is_active = true`);
+      conditions.push(`enrollment_status = 'enrolled'`);
+      conditions.push(
+        `NOT EXISTS (SELECT 1 FROM bookings b WHERE b.student_id = students.id AND b.status = 'active')`,
+      );
     }
 
     const scopeCondition = this.buildScopeCondition(scope, values);

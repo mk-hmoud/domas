@@ -118,7 +118,7 @@ export function SharedRoomPlanPage() {
     const fetchBookingData = async () => {
       try {
         const [studentsRes, semestersRes] = await Promise.all([
-          students.findAll({ limit: 1000 }),
+          students.findAll({ limit: 1000, eligible: true }),
           semestersApi.findAll({ limit: 1000 }),
         ]);
         setStudentList(studentsRes.data);
@@ -277,7 +277,10 @@ export function SharedRoomPlanPage() {
         }),
         color: "green",
       });
-      const studentsRes = await students.findAll({ limit: 1000 });
+      const studentsRes = await students.findAll({
+        limit: 1000,
+        eligible: true,
+      });
       setStudentList(studentsRes.data);
     } catch (error) {
       notifications.show({
