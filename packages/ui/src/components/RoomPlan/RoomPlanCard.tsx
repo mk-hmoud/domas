@@ -192,6 +192,9 @@ export function RoomPlanCard({
                       defaultValue: bed.occupant.gender,
                     })}
                   </Badge>
+                  <Badge size="sm" variant="outline" color="gray">
+                    {bed.occupant.nationalityCode}
+                  </Badge>
                   <Badge
                     size="sm"
                     variant="light"

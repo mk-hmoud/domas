@@ -185,7 +185,7 @@ export function CreateBookingModal({
               data={students}
               searchable
               required
-              disabled={isEdit} // Can't change student during edit
+              disabled={isEdit}
               style={{ flex: 1 }}
               {...form.getInputProps("studentId")}
             />
@@ -202,6 +202,16 @@ export function CreateBookingModal({
               </ActionIcon>
             )}
           </Group>
+          {!isEdit && students.length === 0 && (
+            <Alert
+              icon={<IconInfoCircle size={16} />}
+              color="yellow"
+              variant="light"
+              mb="sm"
+            >
+              {t("no_eligible_students")}
+            </Alert>
+          )}
 
           <Select
             label={t("semester_label")}

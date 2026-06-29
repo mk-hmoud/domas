@@ -727,6 +727,7 @@
   "time": "Time",
   "undone": "Undone",
   "no_eligible_beds_available": "No eligible beds available in this location.",
+  "no_eligible_students": "No eligible students available. A student must be active, enrolled, and have no existing active booking.",
   "out_of_bounds_warning": "Note: Custom dates fall outside the standard semester period.",
   "auto_create_beds": "Auto Create Beds (A, B, C...)",
   "bed_count": "Bed Count",

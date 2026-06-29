@@ -2274,7 +2274,7 @@ function LocationsContent() {
           onCreateStudent={handleCreateStudent}
           students={studentList.map((s) => ({
             value: s.id,
-            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+            label: `${s.firstName} ${s.lastName} (${s.studentNumber}) · ${s.nationalityCode}`,
           }))}
           semesters={allSemesters}
           countries={countries}

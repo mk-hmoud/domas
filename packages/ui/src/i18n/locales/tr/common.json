@@ -676,6 +676,7 @@
   "student_number": "Öğrenci Numarası",
   "national_id": "Kimlik No / Pasaport No",
   "no_eligible_beds_available": "Bu lokasyonda uygun yatak bulunmamaktadır.",
+  "no_eligible_students": "Uygun öğrenci bulunamadı. Öğrencinin aktif, kayıtlı ve mevcut aktif rezervasyonu olmaması gerekmektedir.",
   "out_of_bounds_warning": "Not: Özel tarihler standart dönem aralığının dışındadır.",
   "auto_create_beds": "Yatakları Otomatik Oluştur (A, B, C...)",
   "bed_count": "Yatak Sayısı",

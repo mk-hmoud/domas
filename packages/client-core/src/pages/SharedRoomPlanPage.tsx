@@ -76,6 +76,9 @@ export function SharedRoomPlanPage() {
 
   const [bookingModalOpened, setBookingModalOpened] = useState(false);
   const [bookingBedId, setBookingBedId] = useState<number | null>(null);
+  const [bookingRoomGenderLock, setBookingRoomGenderLock] = useState<
+    string | null
+  >(null);
   const [studentList, setStudentList] = useState<Student[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
 
@@ -184,6 +187,8 @@ export function SharedRoomPlanPage() {
 
   const handleCreateBooking = (bedId: number) => {
     setBookingBedId(bedId);
+    const room = rooms.find((r) => r.beds.some((b) => b.id === bedId));
+    setBookingRoomGenderLock(room?.genderLock ?? null);
     setBookingModalOpened(true);
   };
 
@@ -345,10 +350,15 @@ export function SharedRoomPlanPage() {
           onClose={() => setBookingModalOpened(false)}
           onSubmit={handleSubmitBooking}
           onCreateStudent={handleCreateStudent}
-          students={studentList.map((s) => ({
-            value: s.id,
-            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
-          }))}
+          students={studentList
+            .filter(
+              (s) =>
+                !bookingRoomGenderLock || s.gender === bookingRoomGenderLock,
+            )
+            .map((s) => ({
+              value: s.id,
+              label: `${s.firstName} ${s.lastName} (${s.studentNumber}) · ${s.nationalityCode}`,
+            }))}
           semesters={allSemesters}
           countries={countries}
           departments={departments}
