@@ -136,6 +136,10 @@ ALTER TABLE access_card_logs
 --     END IF;
 -- END $$;
 
+-- ── 11. tickets: add photo_keys ───────────────────────────────────────────
+ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS photo_keys TEXT[] NOT NULL DEFAULT '{}';
+
 COMMIT;
 
 -- ── POST-MIGRATION CHECKLIST ───────────────────────────────────────────────
