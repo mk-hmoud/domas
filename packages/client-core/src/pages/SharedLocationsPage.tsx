@@ -1989,7 +1989,7 @@ function LocationsContent() {
                                       : `loc-${child.id}`;
                                   if (child.type === LocationType.ROOM) {
                                     const childBeds = (
-                                      child.children || []
+                                      (child as any).children || []
                                     ).filter(
                                       (b: any) => b.type === LocationType.BED,
                                     );
@@ -2042,7 +2042,9 @@ function LocationsContent() {
                                       id={Number(child.id)}
                                       name={localizedName(child)}
                                       icon={<LocationIcon type={child.type} />}
-                                      childCount={child.children?.length}
+                                      childCount={
+                                        (child as any).children?.length
+                                      }
                                       selected={selectedIds.includes(globalId)}
                                       onClick={() => selectNode(child as any)}
                                       onSelect={() =>
