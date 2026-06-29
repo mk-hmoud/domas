@@ -85,7 +85,7 @@ export class StudentPortalRepository {
         b.status,
         b.is_tr_only              AS "isTrOnly",
         b.is_foreigner_only       AS "isForeignerOnly",
-        b.ownership,
+        b.is_rectorate AS "isRectorate",
         l.id                      AS "roomId",
         l.name                    AS "roomName",
         l.room_type_id            AS "roomTypeId",
@@ -108,8 +108,8 @@ export class StudentPortalRepository {
         AND b.status = 'available'
         AND b.is_guest_zone = FALSE
         AND l.is_guest_zone = FALSE
-        AND b.ownership   != 'rectorate'
-        AND l.ownership   != 'rectorate'
+        AND b.is_rectorate = FALSE
+        AND l.is_rectorate = FALSE
         AND (l.gender_lock IS NULL OR l.gender_lock = $1)
         AND NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
         AND NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
@@ -153,7 +153,7 @@ export class StudentPortalRepository {
         b.status,
         b.is_tr_only               AS "isTrOnly",
         b.is_foreigner_only        AS "isForeignerOnly",
-        b.ownership,
+        b.is_rectorate             AS "isRectorate",
         l.id                       AS "roomId",
         l.name                     AS "roomName",
         l.room_type_id             AS "roomTypeId",
@@ -183,8 +183,8 @@ export class StudentPortalRepository {
       WHERE b.deleted_at IS NULL
         AND b.is_guest_zone = FALSE
         AND l.is_guest_zone = FALSE
-        AND b.ownership   != 'rectorate'
-        AND l.ownership   != 'rectorate'
+        AND b.is_rectorate = FALSE
+        AND l.is_rectorate = FALSE
         AND (l.gender_lock IS NULL OR l.gender_lock = $1)
         AND NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
         AND NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
@@ -227,8 +227,8 @@ export class StudentPortalRepository {
           AND  b.status = 'available'
           AND  b.is_guest_zone = FALSE
           AND  l.is_guest_zone = FALSE
-          AND  b.ownership   != 'rectorate'
-          AND  l.ownership   != 'rectorate'
+          AND  b.is_rectorate = FALSE
+          AND  l.is_rectorate = FALSE
           AND  (l.gender_lock IS NULL OR l.gender_lock = $1)
           AND  NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
           AND  NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
@@ -290,8 +290,8 @@ export class StudentPortalRepository {
           AND  b.status = 'available'
           AND  b.is_guest_zone = FALSE
           AND  l.is_guest_zone = FALSE
-          AND  b.ownership   != 'rectorate'
-          AND  l.ownership   != 'rectorate'
+          AND  b.is_rectorate = FALSE
+          AND  l.is_rectorate = FALSE
           AND  (l.gender_lock IS NULL OR l.gender_lock = $1)
           AND  NOT (b.is_tr_only        = TRUE AND $2 = FALSE)
           AND  NOT (b.is_foreigner_only = TRUE AND $2 = TRUE)
@@ -583,14 +583,14 @@ export class StudentPortalRepository {
         b.is_tr_only   AS "isTrOnly",
         b.is_foreigner_only AS "isForeignerOnly",
         b.is_guest_zone AS "isGuestZone",
-        b.ownership    AS "bedOwnership",
+        b.is_rectorate AS "bedIsRectorate",
         l.id           AS "roomId",
         l.room_type_id AS "roomTypeId",
         l.gender_lock  AS "genderLock",
         l.is_tr_only   AS "roomIsTrOnly",
         l.is_foreigner_only AS "roomIsForeignerOnly",
         l.is_guest_zone AS "roomIsGuestZone",
-        l.ownership    AS "roomOwnership"
+        l.is_rectorate AS "roomIsRectorate"
       FROM beds b
       JOIN locations l ON b.location_id = l.id
       WHERE b.id = $1 AND b.deleted_at IS NULL
@@ -606,7 +606,7 @@ export class StudentPortalRepository {
         isTrOnly: row.isTrOnly,
         isForeignerOnly: row.isForeignerOnly,
         isGuestZone: row.isGuestZone,
-        ownership: row.bedOwnership,
+        isRectorate: row.bedIsRectorate,
         locationId: row.roomId,
       },
       room: {
@@ -616,7 +616,7 @@ export class StudentPortalRepository {
         isTrOnly: row.roomIsTrOnly,
         isForeignerOnly: row.roomIsForeignerOnly,
         isGuestZone: row.roomIsGuestZone,
-        ownership: row.roomOwnership,
+        isRectorate: row.roomIsRectorate,
       },
     };
   }

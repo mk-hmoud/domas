@@ -8,14 +8,14 @@ import {
   UpdateBedTrOnlyDto,
   UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
-  UpdateBedOwnershipDto,
+  UpdateBedIsRectorateDto,
   BulkCreateBedDto,
   BulkDeleteBedDto,
   BulkUpdateBedStatusDto,
   BulkUpdateBedTrOnlyDto,
   BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
-  BulkUpdateBedOwnershipDto,
+  BulkUpdateBedIsRectorateDto,
 } from "@domas/ts-types";
 
 export const beds = {
@@ -71,11 +71,11 @@ export const beds = {
     return response.data;
   },
 
-  updateOwnership: async (
+  updateIsRectorate: async (
     id: number,
-    data: UpdateBedOwnershipDto,
+    data: UpdateBedIsRectorateDto,
   ): Promise<Bed> => {
-    const response = await apiClient.patch<Bed>(`/beds/${id}/ownership`, data);
+    const response = await apiClient.patch<Bed>(`/beds/${id}/rectorate`, data);
     return response.data;
   },
 
@@ -110,10 +110,10 @@ export const beds = {
     await apiClient.patch("/beds/bulk-foreigner-only", data);
   },
 
-  updateOwnershipMany: async (
-    data: BulkUpdateBedOwnershipDto,
+  updateIsRectorateMany: async (
+    data: BulkUpdateBedIsRectorateDto,
   ): Promise<void> => {
-    await apiClient.patch("/beds/bulk-ownership", data);
+    await apiClient.patch("/beds/bulk-rectorate", data);
   },
 
   updateGuestZoneMany: async (

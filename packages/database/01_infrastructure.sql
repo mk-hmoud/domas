@@ -26,9 +26,6 @@ DO $$ BEGIN
     CREATE TYPE location_type AS ENUM ('university', 'campus', 'building', 'block', 'floor', 'room', 'bed');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN
-    CREATE TYPE location_ownership_type AS ENUM ('dorm', 'rectorate');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
     CREATE TYPE semester_status_enum AS ENUM ('planned', 'open', 'active', 'closed', 'archived');

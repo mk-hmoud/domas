@@ -23,6 +23,7 @@ export const PERMISSIONS = {
   LOCATIONS_CREATE: 'locations.create',
   LOCATIONS_UPDATE: 'locations.update',
   LOCATIONS_DELETE: 'locations.delete',
+  LOCATIONS_RECTORATE: 'locations.rectorate',
 
   // Staff <-> Location scoping
   STAFF_LOCATIONS_VIEW: 'staff_locations.view',

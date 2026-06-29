@@ -22,6 +22,7 @@ interface GenericLocationCardProps {
   id: number;
   name: string;
   icon: ReactNode;
+  childCount?: number;
   selected: boolean;
   onClick: () => void;
   onSelect: () => void;
@@ -32,6 +33,7 @@ interface GenericLocationCardProps {
 export function GenericLocationCard({
   name,
   icon,
+  childCount,
   selected,
   onClick,
   onSelect,
@@ -69,17 +71,14 @@ export function GenericLocationCard({
             {icon || <IconBuilding size={14} />}
           </ThemeIcon>
           <Box style={{ minWidth: 0, flex: 1 }}>
-            <Text
-              fw={600}
-              size="sm"
-              style={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+            <Text fw={600} size="sm">
               {name}
             </Text>
+            {childCount !== undefined && childCount > 0 && (
+              <Text size="xs" c="dimmed" mt={2}>
+                {childCount} {childCount === 1 ? "item" : "items"}
+              </Text>
+            )}
           </Box>
         </Group>
 

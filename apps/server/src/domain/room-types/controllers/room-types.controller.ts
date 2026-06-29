@@ -55,7 +55,7 @@ export class RoomTypesController {
     @Body() dto: UpdateRoomTypeDto,
     @UserContext() ctx: AuditUserContext,
   ) {
-    return this.service.update(id, dto, ctx.userId);
+    return this.service.update(id, dto, ctx);
   }
 
   @Post(':id/images')

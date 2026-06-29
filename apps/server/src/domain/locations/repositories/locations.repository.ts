@@ -7,7 +7,6 @@ import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
 import { LocationType } from '../../../common/enums/location-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 import { LocationScope } from '../../../common/interfaces/location-scope.interface';
 
@@ -34,7 +33,7 @@ export class LocationsRepository implements ILocationsRepository {
       is_guest_zone as "isGuestZone",
       is_tr_only as "isTrOnly",
       is_foreigner_only as "isForeignerOnly",
-      ownership,
+      is_rectorate as "isRectorate",
       room_type_id as "roomTypeId",
       created_at as "createdAt",
       updated_at as "updatedAt"
@@ -44,7 +43,7 @@ export class LocationsRepository implements ILocationsRepository {
   async create(data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const query = `
       INSERT INTO locations (
-        name, name_tr, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, ownership, room_type_id
+        name, name_tr, tree_path, type, gender_lock, student_year_lock, is_guest_zone, is_tr_only, is_foreigner_only, is_rectorate, room_type_id
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING ${this.selectColumns}
@@ -59,7 +58,7 @@ export class LocationsRepository implements ILocationsRepository {
       data.isGuestZone || false,
       data.isTrOnly || false,
       data.isForeignerOnly || false,
-      data.ownership || LocationOwnership.DORM,
+      data.isRectorate || false,
       data.roomTypeId || null,
     ];
     const result = await this.getClient(client).query<Location>(query, values);
@@ -80,9 +79,12 @@ export class LocationsRepository implements ILocationsRepository {
       isTrOnly,
       isForeignerOnly,
       isGuestZone,
-      ownership,
+      isRectorate,
       parentId,
       onlyVacant,
+      roomTypeId,
+      orderBy,
+      orderDir,
     } = filters;
     const offset = (page - 1) * limit;
 
@@ -114,9 +116,13 @@ export class LocationsRepository implements ILocationsRepository {
       params.push(isGuestZone);
       conditions.push(`l.is_guest_zone = $${params.length}`);
     }
-    if (ownership) {
-      params.push(ownership);
-      conditions.push(`l.ownership = $${params.length}`);
+    if (isRectorate !== undefined) {
+      params.push(isRectorate);
+      conditions.push(`l.is_rectorate = $${params.length}`);
+    }
+    if (roomTypeId !== undefined) {
+      params.push(roomTypeId);
+      conditions.push(`l.room_type_id = $${params.length}`);
     }
     if (parentId) {
       const parent = await this.findById(parentId, client);
@@ -147,7 +153,7 @@ export class LocationsRepository implements ILocationsRepository {
       SELECT
         l.id, l.name, l.name_tr as "nameTr", l.tree_path as "treePath", l.type, l.gender_lock as "genderLock",
         l.student_year_lock as "studentYearLock",
-        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.ownership,
+        l.is_guest_zone as "isGuestZone", l.is_tr_only as "isTrOnly", l.is_foreigner_only as "isForeignerOnly", l.is_rectorate as "isRectorate",
         l.room_type_id as "roomTypeId", rt.name as "roomTypeName", rt.name_tr as "roomTypeNameTr",
         l.created_at as "createdAt", l.updated_at as "updatedAt",
         ${totalBedsSub} as "totalBeds",
@@ -158,13 +164,31 @@ export class LocationsRepository implements ILocationsRepository {
       ${whereClause}
     `;
 
-    if (onlyVacant) {
-      baseQuery = `SELECT * FROM (${baseQuery}) sub WHERE "occupiedBeds" < "totalBeds"`;
+    const dir = orderDir?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    let orderClause: string;
+    if (orderBy === 'name') {
+      orderClause = `l.name ${dir}`;
+    } else if (orderBy === 'type') {
+      orderClause = `l.type ${dir}, l.tree_path ASC`;
+    } else {
+      orderClause = `l.tree_path ASC`;
     }
 
-    const finalQuery = `${baseQuery} ORDER BY l.tree_path ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    const countQuery = onlyVacant
-      ? `SELECT COUNT(*)::INT FROM (${baseQuery}) sub`
+    // Always wrap when filtering by occupancy or ordering by it so we can reference the aliases
+    const needsWrap = onlyVacant || orderBy === 'occupancy';
+    let wrappedQuery = needsWrap
+      ? `SELECT * FROM (${baseQuery}) _sub${onlyVacant ? ' WHERE "occupiedBeds" < "totalBeds"' : ''}`
+      : baseQuery;
+
+    const outerOrder = needsWrap
+      ? orderBy === 'occupancy'
+        ? `("occupiedBeds"::float / NULLIF("totalBeds", 0)) ${dir} NULLS LAST`
+        : `"treePath" ASC`
+      : orderClause;
+
+    const finalQuery = `${wrappedQuery} ORDER BY ${outerOrder} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    const countQuery = needsWrap
+      ? `SELECT COUNT(*)::INT FROM (${wrappedQuery}) _cnt`
       : `SELECT COUNT(*)::INT FROM locations l ${whereClause}`;
 
     const [result, countResult] = await Promise.all([
@@ -266,7 +290,7 @@ export class LocationsRepository implements ILocationsRepository {
         l.is_guest_zone as "isGuestZone",
         l.is_tr_only as "isTrOnly",
         l.is_foreigner_only as "isForeignerOnly",
-        l.ownership,
+        l.is_rectorate as "isRectorate",
         rt.id as "roomTypeId",
         rt.name as "roomTypeName",
         rt.name_tr as "roomTypeNameTr",
@@ -360,7 +384,7 @@ export class LocationsRepository implements ILocationsRepository {
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
     if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
     if (data.isForeignerOnly !== undefined) addUpdate('is_foreigner_only', data.isForeignerOnly);
-    if (data.ownership !== undefined) addUpdate('ownership', data.ownership);
+    if (data.isRectorate !== undefined) addUpdate('is_rectorate', data.isRectorate);
     if ('roomTypeId' in data) addUpdate('room_type_id', data.roomTypeId ?? null);
 
     if (updates.length === 0) {
@@ -414,9 +438,9 @@ export class LocationsRepository implements ILocationsRepository {
       updates.push(`is_foreigner_only = $${paramIndex++}`);
       values.push(data.isForeignerOnly);
     }
-    if (data.ownership !== undefined) {
-      updates.push(`ownership = $${paramIndex++}`);
-      values.push(data.ownership);
+    if (data.isRectorate !== undefined) {
+      updates.push(`is_rectorate = $${paramIndex++}`);
+      values.push(data.isRectorate);
     }
 
     if (updates.length === 0) return;
@@ -673,9 +697,9 @@ export class LocationsRepository implements ILocationsRepository {
     return target;
   }
 
-  async updateOwnership(
+  async updateIsRectorate(
     id: number,
-    ownership: any,
+    isRectorate: boolean,
     cascade: boolean,
     client?: PoolClient,
   ): Promise<Location> {
@@ -686,29 +710,29 @@ export class LocationsRepository implements ILocationsRepository {
 
     if (cascade) {
       await dbClient.query(
-        `UPDATE locations SET ownership = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
-        [ownership, target.treePath],
+        `UPDATE locations SET is_rectorate = $1 WHERE tree_path <@ $2 AND deleted_at IS NULL`,
+        [isRectorate, target.treePath],
       );
       await dbClient.query(
         `
-        UPDATE beds SET ownership = $1 
+        UPDATE beds SET is_rectorate = $1
         WHERE location_id IN (SELECT id FROM locations WHERE tree_path <@ $2)
           AND deleted_at IS NULL
       `,
-        [ownership, target.treePath],
+        [isRectorate, target.treePath],
       );
     } else {
       await dbClient.query(
-        `UPDATE locations SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL`,
-        [ownership, id],
+        `UPDATE locations SET is_rectorate = $1 WHERE id = $2 AND deleted_at IS NULL`,
+        [isRectorate, id],
       );
       await dbClient.query(
-        `UPDATE beds SET ownership = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
-        [ownership, id],
+        `UPDATE beds SET is_rectorate = $1 WHERE location_id = $2 AND deleted_at IS NULL`,
+        [isRectorate, id],
       );
     }
 
-    target.ownership = ownership;
+    target.isRectorate = isRectorate;
     return target;
   }
 
@@ -742,5 +766,45 @@ export class LocationsRepository implements ILocationsRepository {
       WHERE id = $2 AND gender_lock IS NULL
     `;
     await this.getClient(client).query(query, [gender, locationId]);
+  }
+
+  async countDescendants(
+    id: number,
+    client?: PoolClient,
+  ): Promise<{ locations: number; beds: number }> {
+    const target = await this.findById(id, client);
+    if (!target) return { locations: 0, beds: 0 };
+    const result = await this.getClient(client).query<{ locationCount: number; bedCount: number }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM locations WHERE tree_path <@ $1 AND id != $2 AND deleted_at IS NULL) AS "locationCount",
+         (SELECT COUNT(*)::int FROM beds b
+          JOIN locations l ON l.id = b.location_id
+          WHERE l.tree_path <@ $1 AND b.deleted_at IS NULL) AS "bedCount"`,
+      [target.treePath, id],
+    );
+    return { locations: result.rows[0].locationCount, beds: result.rows[0].bedCount };
+  }
+
+  async getDescendantPreview(
+    id: number,
+    limit = 10,
+    client?: PoolClient,
+  ): Promise<{ id: number; name: string; nameTr?: string; type: string }[]> {
+    const target = await this.findById(id, client);
+    if (!target) return [];
+    const result = await this.getClient(client).query<{
+      id: number;
+      name: string;
+      nameTr?: string;
+      type: string;
+    }>(
+      `SELECT id, name, name_tr AS "nameTr", type
+       FROM locations
+       WHERE tree_path <@ $1 AND id != $2 AND deleted_at IS NULL
+       ORDER BY tree_path ASC
+       LIMIT $3`,
+      [target.treePath, id, limit],
+    );
+    return result.rows;
   }
 }

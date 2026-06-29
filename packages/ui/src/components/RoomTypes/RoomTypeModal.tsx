@@ -15,9 +15,13 @@ import {
   NumberInput,
   ActionIcon,
   Loader,
+  Select,
+  Switch,
+  Divider,
+  Alert,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { IconPhoto, IconUpload } from "@tabler/icons-react";
+import { IconPhoto, IconUpload, IconInfoCircle } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
   RoomType,
@@ -28,7 +32,6 @@ import {
 export interface RoomTypeModalProps {
   opened: boolean;
   onClose: () => void;
-  // pendingFiles is populated only in create mode (no initialValues)
   onSubmit: (
     data: CreateRoomTypeDto | UpdateRoomTypeDto,
     pendingFiles: File[],
@@ -50,10 +53,7 @@ export function RoomTypeModal({
   const [loading, setLoading] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
-  // Edit mode: pre-signed URLs from the server
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
-
-  // Create mode: local File objects + object URL previews
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
 
@@ -68,6 +68,12 @@ export function RoomTypeModal({
       descriptionTr: "",
       amenities: [] as string[],
       capacity: undefined as number | undefined,
+      genderLock: null as string | null,
+      studentYearLock: null as string | null,
+      isGuestZone: false,
+      isTrOnly: false,
+      isForeignerOnly: false,
+      isRectorate: false,
     },
     validate: {
       name: (v) =>
@@ -93,13 +99,18 @@ export function RoomTypeModal({
           descriptionTr: initialValues.descriptionTr ?? "",
           amenities: initialValues.amenities ?? [],
           capacity: initialValues.capacity,
+          genderLock: initialValues.genderLock ?? null,
+          studentYearLock: initialValues.studentYearLock ?? null,
+          isGuestZone: initialValues.isGuestZone ?? false,
+          isTrOnly: initialValues.isTrOnly ?? false,
+          isForeignerOnly: initialValues.isForeignerOnly ?? false,
+          isRectorate: initialValues.isRectorate ?? false,
         });
         setGalleryUrls(initialValues.galleryUrls ?? []);
       } else {
         form.reset();
         setGalleryUrls([]);
       }
-      // Clear pending files whenever modal opens
       pendingPreviews.forEach((url) => URL.revokeObjectURL(url));
       setPendingFiles([]);
       setPendingPreviews([]);
@@ -112,7 +123,6 @@ export function RoomTypeModal({
     e.target.value = "";
 
     if (isEditMode && onUploadImage) {
-      // Edit: upload immediately
       setUploadingIndex(-1);
       try {
         const updated = await onUploadImage(file);
@@ -121,7 +131,6 @@ export function RoomTypeModal({
         setUploadingIndex(null);
       }
     } else {
-      // Create: store locally
       const preview = URL.createObjectURL(file);
       setPendingFiles((prev) => [...prev, file]);
       setPendingPreviews((prev) => [...prev, preview]);
@@ -156,6 +165,12 @@ export function RoomTypeModal({
           descriptionTr: values.descriptionTr || undefined,
           amenities: values.amenities,
           capacity: values.capacity,
+          genderLock: values.genderLock || undefined,
+          studentYearLock: values.studentYearLock || undefined,
+          isGuestZone: values.isGuestZone,
+          isTrOnly: values.isTrOnly,
+          isForeignerOnly: values.isForeignerOnly,
+          isRectorate: values.isRectorate,
         },
         pendingFiles,
       );
@@ -169,6 +184,24 @@ export function RoomTypeModal({
 
   const displayUrls = isEditMode ? galleryUrls : pendingPreviews;
   const isUploading = uploadingIndex !== null;
+
+  const genderOptions = [
+    { value: "male", label: t("male", { defaultValue: "Male" }) },
+    { value: "female", label: t("female", { defaultValue: "Female" }) },
+  ];
+
+  const studentYearOptions = [
+    {
+      value: "new",
+      label: t("student_year_lock_new", { defaultValue: "New students" }),
+    },
+    {
+      value: "current",
+      label: t("student_year_lock_current", {
+        defaultValue: "Current students",
+      }),
+    },
+  ];
 
   return (
     <Modal
@@ -221,6 +254,10 @@ export function RoomTypeModal({
 
           <NumberInput
             label={t("capacity", { defaultValue: "Capacity (beds per room)" })}
+            description={t("capacity_description", {
+              defaultValue:
+                "Rooms of this type will always have exactly this many beds.",
+            })}
             placeholder={t("capacity_placeholder", { defaultValue: "e.g. 2" })}
             withAsterisk
             min={1}
@@ -235,6 +272,69 @@ export function RoomTypeModal({
             })}
             {...form.getInputProps("amenities")}
           />
+
+          <Divider
+            label={t("room_type_flags", { defaultValue: "Policy Flags" })}
+            labelPosition="left"
+          />
+
+          <Alert
+            icon={<IconInfoCircle size={14} />}
+            color="blue"
+            variant="light"
+            p="xs"
+          >
+            <Text size="xs">
+              {t("room_type_flags_cascade_note", {
+                defaultValue:
+                  "These flags are applied to all rooms of this type and cascade automatically when updated.",
+              })}
+            </Text>
+          </Alert>
+
+          <SimpleGrid cols={2}>
+            <Select
+              label={t("gender_lock_label", { defaultValue: "Gender Lock" })}
+              placeholder={t("none", { defaultValue: "None" })}
+              data={genderOptions}
+              clearable
+              value={form.values.genderLock}
+              onChange={(v) => form.setFieldValue("genderLock", v)}
+            />
+            <Select
+              label={t("student_year_lock_label", {
+                defaultValue: "Student Year",
+              })}
+              placeholder={t("none", { defaultValue: "None" })}
+              data={studentYearOptions}
+              clearable
+              value={form.values.studentYearLock}
+              onChange={(v) => form.setFieldValue("studentYearLock", v)}
+            />
+          </SimpleGrid>
+
+          <Group>
+            <Switch
+              label={t("is_guest_zone_label", {
+                defaultValue: "Guest Zone",
+              })}
+              {...form.getInputProps("isGuestZone", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_tr_only", { defaultValue: "TR Only" })}
+              {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_foreigner_only", {
+                defaultValue: "Foreigners Only",
+              })}
+              {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_rectorate", { defaultValue: "Rectorate" })}
+              {...form.getInputProps("isRectorate", { type: "checkbox" })}
+            />
+          </Group>
 
           {/* Gallery */}
           <Box>

@@ -1,5 +1,4 @@
-import { IsBoolean, IsEnum, IsNotEmpty } from 'class-validator';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
+import { IsBoolean, IsNotEmpty } from 'class-validator';
 
 export class UpdateBedTrOnlyDto {
   @IsBoolean()
@@ -19,8 +18,8 @@ export class UpdateBedGuestZoneDto {
   isGuestZone!: boolean;
 }
 
-export class UpdateBedOwnershipDto {
-  @IsEnum(LocationOwnership)
+export class UpdateBedIsRectorateDto {
+  @IsBoolean()
   @IsNotEmpty()
-  ownership!: LocationOwnership;
+  isRectorate!: boolean;
 }

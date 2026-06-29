@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useTranslation } from "react-i18next";
-import { CreateBedDto, BedStatus, LocationOwnership } from "@domas/ts-types";
+import { CreateBedDto, BedStatus } from "@domas/ts-types";
 import { IconInfoCircle } from "@tabler/icons-react";
 
 interface CreateBedModalProps {
@@ -44,7 +44,7 @@ export function CreateBedModal({
       isTrOnly: false,
       isForeignerOnly: false,
       isGuestZone: false,
-      ownership: LocationOwnership.DORM,
+      isRectorate: false,
     },
     validate: {
       label: (val) => (val ? null : t("field_required")),
@@ -59,7 +59,7 @@ export function CreateBedModal({
           isTrOnly: initialValues.isTrOnly || false,
           isForeignerOnly: initialValues.isForeignerOnly || false,
           isGuestZone: initialValues.isGuestZone || false,
-          ownership: initialValues.ownership || LocationOwnership.DORM,
+          isRectorate: initialValues.isRectorate || false,
         });
       } else {
         form.reset();
@@ -156,6 +156,10 @@ export function CreateBedModal({
             <Switch
               label={t("is_guest_zone_label")}
               {...form.getInputProps("isGuestZone", { type: "checkbox" })}
+            />
+            <Switch
+              label={t("is_rectorate", "Rectorate")}
+              {...form.getInputProps("isRectorate", { type: "checkbox" })}
             />
           </Group>
         </Stack>

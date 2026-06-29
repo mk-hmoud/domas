@@ -21,7 +21,7 @@ import {
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,
-  UpdateOwnershipDto,
+  UpdateIsRectorateDto,
 } from '../dto/update-policies.dto';
 import {
   BulkCreateLocationDto,
@@ -33,7 +33,7 @@ import {
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
   BulkUpdateForeignerOnlyDto,
-  BulkUpdateOwnershipDto,
+  BulkUpdateIsRectorateDto,
 } from '../dto/bulk-update-policies.dto';
 import { CreateRoomWithBedsDto, BulkCreateRoomWithBedsDto } from '../dto/create-room-with-beds.dto';
 import { AuthenticatedGuard } from '../../auth/guards/authenticated.guard';
@@ -128,14 +128,14 @@ export class LocationsController {
     return this.locationsService.updateForeignerOnlyMany(dto, context);
   }
 
-  @Patch('bulk-ownership')
-  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
+  @Patch('bulk-rectorate')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_RECTORATE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  updateOwnershipMany(
-    @Body() dto: BulkUpdateOwnershipDto,
+  updateIsRectorateMany(
+    @Body() dto: BulkUpdateIsRectorateDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.locationsService.updateOwnershipMany(dto, context);
+    return this.locationsService.updateIsRectorateMany(dto, context);
   }
 
   @Get()
@@ -183,6 +183,12 @@ export class LocationsController {
     @UserContext() context: AuditUserContext,
   ) {
     return this.locationsService.findWithAncestors(id, context);
+  }
+
+  @Get(':id/flag-context')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
+  getFlagContext(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.getFlagContext(id, context);
   }
 
   @Patch(':id')
@@ -255,14 +261,19 @@ export class LocationsController {
     );
   }
 
-  @Patch(':id/ownership')
-  @RequirePermissions(PERMISSIONS.LOCATIONS_UPDATE)
-  updateOwnership(
+  @Patch(':id/rectorate')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_RECTORATE)
+  updateIsRectorate(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateOwnershipDto,
+    @Body() dto: UpdateIsRectorateDto,
     @UserContext() context: AuditUserContext,
   ) {
-    return this.locationsService.updateOwnership(id, dto.ownership, dto.cascade ?? true, context);
+    return this.locationsService.updateIsRectorate(
+      id,
+      dto.isRectorate,
+      dto.cascade ?? true,
+      context,
+    );
   }
 
   @Delete(':id')

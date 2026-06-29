@@ -15,12 +15,7 @@ import {
   IconAdjustmentsHorizontal,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import {
-  LocationType,
-  GenderType,
-  LocationOwnership,
-  BedStatus,
-} from "@domas/ts-types";
+import { LocationType, GenderType, BedStatus } from "@domas/ts-types";
 
 interface LocationRegistryFiltersProps {
   filters: any;
@@ -59,7 +54,7 @@ export function LocationRegistryFilters({
             filters.isTrOnly ||
             filters.isForeignerOnly ||
             filters.isGuestZone ||
-            filters.ownership ||
+            filters.isRectorate !== undefined ||
             filters.onlyVacant ||
             filters.status) && (
             <Button
@@ -117,14 +112,23 @@ export function LocationRegistryFilters({
             />
 
             <Select
-              label={t("ownership", "Ownership")}
+              label={t("is_rectorate", "Rectorate")}
               placeholder={t("all", "All")}
-              data={Object.values(LocationOwnership).map((type) => ({
-                value: type,
-                label: t(`ownerships.${type}`, type),
-              }))}
-              value={filters.ownership || null}
-              onChange={(val) => onFilterChange("ownership", val)}
+              data={[
+                { value: "true", label: t("rectorate") },
+                { value: "false", label: t("dorm") },
+              ]}
+              value={
+                filters.isRectorate !== undefined
+                  ? String(filters.isRectorate)
+                  : null
+              }
+              onChange={(val) =>
+                onFilterChange(
+                  "isRectorate",
+                  val === null ? undefined : val === "true",
+                )
+              }
               clearable
               style={{ width: 150 }}
             />

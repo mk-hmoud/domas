@@ -7,6 +7,12 @@ export interface RoomType {
   galleryUrls: string[];
   amenities: string[];
   capacity: number;
+  genderLock?: string | null;
+  studentYearLock?: string | null;
+  isGuestZone: boolean;
+  isTrOnly: boolean;
+  isForeignerOnly: boolean;
+  isRectorate: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +25,12 @@ export interface CreateRoomTypeDto {
   descriptionTr?: string;
   galleryUrls?: string[];
   amenities?: string[];
+  genderLock?: string | null;
+  studentYearLock?: string | null;
+  isGuestZone?: boolean;
+  isTrOnly?: boolean;
+  isForeignerOnly?: boolean;
+  isRectorate?: boolean;
 }
 
 export interface UpdateRoomTypeDto {
@@ -29,4 +41,10 @@ export interface UpdateRoomTypeDto {
   galleryUrls?: string[];
   amenities?: string[];
   capacity?: number;
+  genderLock?: string | null;
+  studentYearLock?: string | null;
+  isGuestZone?: boolean;
+  isTrOnly?: boolean;
+  isForeignerOnly?: boolean;
+  isRectorate?: boolean;
 }

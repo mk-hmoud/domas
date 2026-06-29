@@ -8,6 +8,7 @@ import { SemestersService } from '../src/domain/semesters/services/semesters.ser
 import { BookingsService } from '../src/domain/bookings/services/bookings.service';
 import { UsersService } from '../src/domain/users/services/users.service';
 import { InventoryService } from '../src/domain/inventory/services/inventory.service';
+import { RoomTypesService } from '../src/domain/room-types/services/room-types.service';
 import { LocationType } from '../src/common/enums/location-type.enum';
 import { SemesterStatus } from '../src/common/enums/semester-status.enum';
 import { SemesterType } from '../src/common/enums/semester-type.enum';
@@ -29,6 +30,7 @@ async function bootstrap() {
   const bookingsService = app.get(BookingsService);
   const usersService = app.get(UsersService);
   const inventoryService = app.get(InventoryService);
+  const roomTypesService = app.get(RoomTypesService);
   const logger = new Logger('TransferSeed');
 
   const adminUser = await usersService.findByEmail('recovery_admin@dorm.com');
@@ -115,6 +117,16 @@ async function bootstrap() {
       );
     }
 
+    const allRoomTypes = await roomTypesService.findAll();
+    let doubleRoomType = allRoomTypes.find((rt) => rt.name === 'Transfer Double Room');
+    if (!doubleRoomType) {
+      doubleRoomType = await roomTypesService.create(
+        { name: 'Transfer Double Room', capacity: 2 },
+        adminUser.id,
+      );
+      logger.log('Created Transfer Double Room type');
+    }
+
     let room = allLocations.data.find((l) => l.name === 'Transfer-Room-101');
     if (!room) {
       room = await locationsService.createRoomWithBeds(
@@ -122,7 +134,7 @@ async function bootstrap() {
           name: 'Transfer-Room-101',
           type: LocationType.ROOM,
           parentId: campus.id,
-          bedCount: 2,
+          roomTypeId: doubleRoomType.id,
           genderLock: GenderType.MALE,
         },
         seedContext,

@@ -2,7 +2,6 @@ export * from "./constants/countries";
 export * from "./constants/departments";
 
 export * from "./enums/location-type.enum";
-export * from "./enums/location-ownership.enum";
 export * from "./enums/gender-type.enum";
 export * from "./enums/student-year-lock.enum";
 
@@ -82,12 +81,12 @@ export type {
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,
-  UpdateOwnershipDto,
+  UpdateIsRectorateDto,
   BulkUpdateGenderLockDto,
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
   BulkUpdateForeignerOnlyDto,
-  BulkUpdateOwnershipDto,
+  BulkUpdateIsRectorateDto,
 } from "./dtos/update-policies.dto";
 export * from "./dtos/create-room-with-beds.dto";
 export * from "./dtos/bulk-bed.dto";
@@ -95,11 +94,11 @@ export type {
   UpdateBedTrOnlyDto,
   UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
-  UpdateBedOwnershipDto,
+  UpdateBedIsRectorateDto,
   BulkUpdateBedTrOnlyDto,
   BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
-  BulkUpdateBedOwnershipDto,
+  BulkUpdateBedIsRectorateDto,
 } from "./dtos/update-bed-policies.dto";
 export * from "./dtos/account.dto";
 export * from "./dtos/inventory.dto";

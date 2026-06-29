@@ -9,6 +9,7 @@ import {
   Checkbox,
   Box,
   rem,
+  Stack,
 } from "@mantine/core";
 import {
   IconDotsVertical,
@@ -23,6 +24,11 @@ interface BedCardProps {
   id: number;
   label: string;
   status: string;
+  residentName?: string;
+  isTrOnly?: boolean;
+  isGuestZone?: boolean;
+  isRectorate?: boolean;
+  isForeignerOnly?: boolean;
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -40,6 +46,11 @@ function getStatusColor(status: string) {
 export function BedCard({
   label,
   status,
+  residentName,
+  isTrOnly,
+  isGuestZone,
+  isRectorate,
+  isForeignerOnly,
   onClick,
   onEdit,
   onDelete,
@@ -49,6 +60,7 @@ export function BedCard({
 }: BedCardProps) {
   const { t } = useTranslation();
   const color = getStatusColor(status);
+  const hasFlags = isTrOnly || isGuestZone || isRectorate || isForeignerOnly;
 
   return (
     <Card
@@ -81,7 +93,7 @@ export function BedCard({
           <ThemeIcon variant="light" size={28} radius="sm" color={color}>
             <IconBed size={14} />
           </ThemeIcon>
-          <Box style={{ minWidth: 0, flex: 1 }}>
+          <Stack gap={3} style={{ minWidth: 0, flex: 1 }}>
             <Text
               fw={600}
               size="sm"
@@ -93,10 +105,39 @@ export function BedCard({
             >
               {label}
             </Text>
-            <Badge size="xs" variant="light" color={color} mt={2}>
+            <Badge size="xs" variant="light" color={color}>
               {t(`bed_status.${status}`)}
             </Badge>
-          </Box>
+            {residentName && (
+              <Text size="xs" c="dimmed">
+                {residentName}
+              </Text>
+            )}
+            {hasFlags && (
+              <Group gap={4} wrap="wrap">
+                {isTrOnly && (
+                  <Badge size="xs" variant="dot" color="red">
+                    TR
+                  </Badge>
+                )}
+                {isForeignerOnly && (
+                  <Badge size="xs" variant="dot" color="grape">
+                    INT
+                  </Badge>
+                )}
+                {isGuestZone && (
+                  <Badge size="xs" variant="dot" color="orange">
+                    {t("is_guest_zone_label", { defaultValue: "Guest" })}
+                  </Badge>
+                )}
+                {isRectorate && (
+                  <Badge size="xs" variant="dot" color="violet">
+                    {t("rectorate", { defaultValue: "Rectorate" })}
+                  </Badge>
+                )}
+              </Group>
+            )}
+          </Stack>
         </Group>
 
         <Menu shadow="md" width={160} position="bottom-end">

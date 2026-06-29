@@ -1,6 +1,5 @@
 import { GenderType } from "../enums/gender-type.enum";
 import { StudentYearLock } from "../enums/student-year-lock.enum";
-import { LocationOwnership } from "../enums/location-ownership.enum";
 import { BedStatus } from "../enums/bed-status.enum";
 import { BookingOpsStatus } from "../enums/booking-ops-status.enum";
 import { PaymentStatus } from "../enums/payment-status.enum";
@@ -47,7 +46,7 @@ export interface RoomPlanRoom {
   isGuestZone: boolean;
   isTrOnly: boolean;
   isForeignerOnly: boolean;
-  ownership: LocationOwnership;
+  isRectorate: boolean;
   roomTypeId: number;
   roomTypeName: string;
   roomTypeNameTr?: string;

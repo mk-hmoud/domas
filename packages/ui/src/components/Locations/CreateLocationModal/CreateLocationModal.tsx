@@ -9,6 +9,8 @@ import {
   Tabs,
   SimpleGrid,
   Switch,
+  Text,
+  Alert,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
@@ -16,22 +18,22 @@ import {
   LocationType,
   GenderType,
   StudentYearLock,
-  LocationOwnership,
   RoomType,
+  AncestorFlagsResult,
 } from "@domas/ts-types";
 import { useTranslation } from "react-i18next";
+import { IconInfoCircle } from "@tabler/icons-react";
+import { FlagInheritancePanel } from "../FlagInheritancePanel";
 
 interface CreateLocationModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (
-    values: CreateLocationDto | CreateLocationDto[],
-    createBedsCount?: number,
-  ) => Promise<void>;
+  onSubmit: (values: CreateLocationDto | CreateLocationDto[]) => Promise<void>;
   parentId?: number | null;
   parentType?: LocationType;
   initialValues?: any;
   roomTypes?: RoomType[];
+  parentAncestorFlags?: AncestorFlagsResult | null;
 }
 
 export function CreateLocationModal({
@@ -42,6 +44,7 @@ export function CreateLocationModal({
   parentType,
   initialValues,
   roomTypes = [],
+  parentAncestorFlags,
 }: CreateLocationModalProps) {
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === "tr";
@@ -53,8 +56,6 @@ export function CreateLocationModal({
   const [prefixTr, setPrefixTr] = useState("");
   const [startNumber, setStartNumber] = useState("101");
   const [endNumber, setEndNumber] = useState("120");
-  const [autoCreateBeds, setAutoCreateBeds] = useState(false);
-  const [bedCount, setBedCount] = useState(3);
 
   const form = useForm<CreateLocationDto>({
     initialValues: {
@@ -67,7 +68,7 @@ export function CreateLocationModal({
       isGuestZone: false,
       isTrOnly: false,
       isForeignerOnly: false,
-      ownership: LocationOwnership.DORM,
+      isRectorate: false,
       roomTypeId: undefined as number | undefined,
     },
     validate: {
@@ -86,7 +87,7 @@ export function CreateLocationModal({
   });
 
   const getValidTypes = (pType?: LocationType) => {
-    if (!pType) return []; // Prevent creating University or anything without a parent
+    if (!pType) return [];
 
     switch (pType) {
       case LocationType.UNIVERSITY:
@@ -112,11 +113,8 @@ export function CreateLocationModal({
     }
   };
 
-  // Suggest next type based on parent or set initial values
   useEffect(() => {
     if (opened) {
-      setAutoCreateBeds(false);
-      setBedCount(3);
       setPrefixTr("");
       if (initialValues) {
         form.setValues({
@@ -128,7 +126,7 @@ export function CreateLocationModal({
           isGuestZone: initialValues.isGuestZone || false,
           isTrOnly: initialValues.isTrOnly || false,
           isForeignerOnly: initialValues.isForeignerOnly || false,
-          ownership: initialValues.ownership || LocationOwnership.DORM,
+          isRectorate: initialValues.isRectorate || false,
           roomTypeId: initialValues.roomTypeId ?? undefined,
         });
       } else {
@@ -151,9 +149,8 @@ export function CreateLocationModal({
     };
     try {
       if (activeTab === "single") {
-        await onSubmit(payload, autoCreateBeds ? bedCount : undefined);
+        await onSubmit(payload);
       } else {
-        // Bulk Create
         const start = parseInt(startNumber, 10);
         const end = parseInt(endNumber, 10);
         const hasLeadingZero =
@@ -170,7 +167,7 @@ export function CreateLocationModal({
           const nameTr = prefixTr ? `${prefixTr} ${numStr}` : undefined;
           dtos.push({ ...payload, name, nameTr });
         }
-        await onSubmit(dtos, autoCreateBeds ? bedCount : undefined);
+        await onSubmit(dtos);
       }
       form.reset();
       onClose();
@@ -182,10 +179,14 @@ export function CreateLocationModal({
   };
 
   const allowedTypes = getValidTypes(parentType);
-  const typeOptions = allowedTypes.map((t) => ({
-    value: t,
-    label: t.toUpperCase(),
-  }));
+  const typeOptions = initialValues
+    ? [
+        {
+          value: initialValues.type as string,
+          label: (initialValues.type as string).toUpperCase(),
+        },
+      ]
+    : allowedTypes.map((t) => ({ value: t, label: t.toUpperCase() }));
   const genderOptions = Object.values(GenderType).map((t) => ({
     value: t,
     label: t,
@@ -200,21 +201,28 @@ export function CreateLocationModal({
       label: t("student_year_lock_current", "Current students"),
     },
   ];
-  const ownershipOptions = Object.values(LocationOwnership).map((o) => ({
-    value: o,
-    label: t(`ownerships.${o}`),
-  }));
-  const showRoomFields =
-    form.values.type === LocationType.ROOM ||
-    form.values.type === LocationType.BED;
 
   const isRoomType = form.values.type === LocationType.ROOM;
+  const isBedType = form.values.type === LocationType.BED;
+  const showRoomFields = isRoomType || isBedType;
+
+  // Find the selected room type to preview its flags
+  const selectedRoomType =
+    isRoomType && form.values.roomTypeId
+      ? roomTypes.find((rt) => rt.id === form.values.roomTypeId)
+      : null;
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
-      title={parentId ? t("add_child_location") : t("create_root_location")}
+      title={
+        initialValues
+          ? t("edit_location", "Edit Location")
+          : parentId
+            ? t("add_child_location")
+            : t("create_root_location")
+      }
       size="lg"
     >
       <form onSubmit={form.onSubmit(handleSubmit)} noValidate>
@@ -298,47 +306,25 @@ export function CreateLocationModal({
           </SimpleGrid>
         )}
 
-        {form.values.type === LocationType.ROOM && !initialValues && (
-          <Group mb="md" align="flex-end">
-            <Switch
-              label={t("auto_create_beds")}
-              checked={autoCreateBeds}
-              onChange={(e) => setAutoCreateBeds(e.currentTarget.checked)}
-            />
-            {autoCreateBeds && (
-              <NumberInput
-                label={t("bed_count")}
-                value={bedCount}
-                onChange={(val) => setBedCount(Number(val))}
-                min={1}
-                max={6}
-                style={{ width: 100 }}
-              />
-            )}
-          </Group>
-        )}
-
         <SimpleGrid cols={2}>
           <Select
             label={t("type_label")}
             data={typeOptions}
             required
+            disabled={!!initialValues}
             {...form.getInputProps("type")}
           />
-          {showRoomFields && (
-            <Select
-              label={t("ownership")}
-              data={ownershipOptions}
-              required
-              {...form.getInputProps("ownership")}
-            />
-          )}
+          {showRoomFields && <div />}
         </SimpleGrid>
 
         {isRoomType && (
           <Select
             mt="md"
             label={t("room_type", { defaultValue: "Room Type" })}
+            description={t("room_type_auto_beds_note", {
+              defaultValue:
+                "Beds will be created automatically based on the room type's capacity.",
+            })}
             placeholder={t("select_room_type", {
               defaultValue: "Select a room type",
             })}
@@ -357,42 +343,100 @@ export function CreateLocationModal({
           />
         )}
 
-        <SimpleGrid cols={2} mt="md">
-          {showRoomFields && (
-            <Select
-              label={t("gender_lock_label")}
-              placeholder={t("none")}
-              data={genderOptions}
-              clearable
-              {...form.getInputProps("genderLock")}
-            />
-          )}
-          {showRoomFields && (
-            <Select
-              label={t("student_year_lock_label", "Student year")}
-              placeholder={t("none")}
-              data={studentYearLockOptions}
-              clearable
-              {...form.getInputProps("studentYearLock")}
-            />
-          )}
-        </SimpleGrid>
+        {/* For rooms: show read-only flag preview from room type */}
+        {isRoomType && selectedRoomType && (
+          <Alert
+            mt="md"
+            icon={<IconInfoCircle size={14} />}
+            color="blue"
+            variant="light"
+            p="xs"
+          >
+            <Text size="xs" fw={500} mb={4}>
+              {t("flags_from_room_type", {
+                defaultValue: "Flags inherited from room type:",
+              })}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {[
+                selectedRoomType.genderLock &&
+                  `${t("gender_lock_label", { defaultValue: "Gender" })}: ${selectedRoomType.genderLock}`,
+                selectedRoomType.studentYearLock &&
+                  `${t("student_year_lock_label", { defaultValue: "Year" })}: ${selectedRoomType.studentYearLock}`,
+                selectedRoomType.isGuestZone &&
+                  t("is_guest_zone_label", { defaultValue: "Guest Zone" }),
+                selectedRoomType.isTrOnly &&
+                  t("is_tr_only", { defaultValue: "TR Only" }),
+                selectedRoomType.isForeignerOnly &&
+                  t("is_foreigner_only", { defaultValue: "Foreigners Only" }),
+                selectedRoomType.isRectorate &&
+                  t("is_rectorate", { defaultValue: "Rectorate" }),
+              ]
+                .filter(Boolean)
+                .join(" · ") ||
+                t("no_flags_set", { defaultValue: "No special flags" })}
+            </Text>
+          </Alert>
+        )}
 
-        {showRoomFields && (
-          <Group pt={24}>
-            <Switch
-              label={t("is_guest_zone_label")}
-              {...form.getInputProps("isGuestZone", { type: "checkbox" })}
-            />
-            <Switch
-              label={t("is_tr_only")}
-              {...form.getInputProps("isTrOnly", { type: "checkbox" })}
-            />
-            <Switch
-              label={t("is_foreigner_only")}
-              {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
-            />
-          </Group>
+        {parentAncestorFlags && (
+          <FlagInheritancePanel
+            ancestorFlags={parentAncestorFlags}
+            ownFlags={
+              initialValues
+                ? {
+                    isTrOnly: initialValues.isTrOnly,
+                    isForeignerOnly: initialValues.isForeignerOnly,
+                    isGuestZone: initialValues.isGuestZone,
+                    isRectorate: initialValues.isRectorate,
+                    genderLock: initialValues.genderLock,
+                    studentYearLock: initialValues.studentYearLock,
+                  }
+                : undefined
+            }
+          />
+        )}
+
+        {/* Rooms: flags are controlled by room type — no direct editing */}
+        {/* Beds + all structural types: show full flag controls */}
+        {!isRoomType && (
+          <>
+            <SimpleGrid cols={2} mt="md">
+              <Select
+                label={t("gender_lock_label")}
+                placeholder={t("none")}
+                data={genderOptions}
+                clearable
+                {...form.getInputProps("genderLock")}
+              />
+              <Select
+                label={t("student_year_lock_label", "Student year")}
+                placeholder={t("none")}
+                data={studentYearLockOptions}
+                clearable
+                {...form.getInputProps("studentYearLock")}
+              />
+            </SimpleGrid>
+
+            <Group pt={24}>
+              <Switch
+                label={t("is_guest_zone_label")}
+                {...form.getInputProps("isGuestZone", { type: "checkbox" })}
+              />
+              <Switch
+                label={t("is_tr_only")}
+                {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+              />
+              <Switch
+                label={t("is_foreigner_only")}
+                {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+              />
+              <Switch
+                label={t("is_rectorate", "Rectorate")}
+                {...form.getInputProps("isRectorate", { type: "checkbox" })}
+              />
+            </Group>
+          </>
         )}
 
         <Group justify="flex-end" mt="xl">

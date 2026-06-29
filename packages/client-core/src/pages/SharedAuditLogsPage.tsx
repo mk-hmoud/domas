@@ -10,6 +10,8 @@ import {
   Text,
   Group,
   Select,
+  ActionIcon,
+  Tooltip,
   Code,
   ScrollArea,
   Timeline,
@@ -33,6 +35,7 @@ import {
   IconFilter,
   IconCalendar,
   IconClock,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { audit } from "@domas/api-client";
@@ -274,16 +277,31 @@ export function SharedAuditLogsPage() {
       <PageHeader
         title={t("nav.audit_logs", { defaultValue: "Audit Logs" })}
         actions={
-          <Select
-            label={t("audit.rows_per_page", { defaultValue: "Rows per page" })}
-            value={limit}
-            onChange={(val) => {
-              setLimit(val || "50");
-              setPage(1);
-            }}
-            data={["20", "50", "100", "200"]}
-            w={130}
-          />
+          <Group gap="sm">
+            <Select
+              label={t("audit.rows_per_page", {
+                defaultValue: "Rows per page",
+              })}
+              value={limit}
+              onChange={(val) => {
+                setLimit(val || "50");
+                setPage(1);
+              }}
+              data={["20", "50", "100", "200"]}
+              w={130}
+            />
+            <Tooltip label={t("refresh", { defaultValue: "Refresh" })}>
+              <ActionIcon
+                variant="default"
+                size="lg"
+                mt={24}
+                onClick={fetchData}
+                loading={loading}
+              >
+                <IconRefresh size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         }
       />
       <PageShell size="xl">

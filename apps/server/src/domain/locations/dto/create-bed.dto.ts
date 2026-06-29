@@ -1,6 +1,5 @@
 import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class CreateBedDto {
   @IsNumber()
@@ -27,7 +26,7 @@ export class CreateBedDto {
   @IsOptional()
   isGuestZone?: boolean;
 
-  @IsEnum(LocationOwnership)
+  @IsBoolean()
   @IsOptional()
-  ownership?: LocationOwnership;
+  isRectorate?: boolean;
 }

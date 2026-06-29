@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, ReactNode } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
 import {
   Button,
@@ -14,12 +14,16 @@ import {
   Stack,
   Drawer,
   ActionIcon,
+  Tooltip,
   Divider,
   SegmentedControl,
   Pagination,
   LoadingOverlay,
   Tabs,
   Menu,
+  ScrollArea,
+  Progress,
+  ThemeIcon,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -51,6 +55,7 @@ import {
   CreateBookingDto,
   CreateStudentDto,
   RoomType,
+  LocationFlagContext,
 } from "@domas/ts-types";
 import {
   LocationsManager,
@@ -68,12 +73,14 @@ import {
   InventoryAssignmentList,
   AssignInventoryModal,
   LocationRegistryTable,
-  LocationRegistryFilters,
+  RegistryItemDrawer,
   ApplyTemplateModal,
   CreateBookingModal,
   ComposeEmailModal,
   EmptyState,
   LabelValue,
+  FlagCascadeConfirmModal,
+  FlagChange,
 } from "@domas/ui";
 import { LocationsProvider, useLocations } from "../context/LocationsContext";
 import { useTranslation } from "react-i18next";
@@ -92,6 +99,246 @@ import { useCountries, useDepartments } from "../hooks/useLookups";
 import { findLocationPath } from "../utils/location-utils";
 import { notifications } from "@mantine/notifications";
 import { modals } from "@mantine/modals";
+
+interface BedStats {
+  totalBeds: number;
+  occupiedBeds: number;
+  availableBeds: number;
+  maintenanceBeds: number;
+  totalRooms: number;
+  roomsWithoutType: number;
+  maleRooms: number;
+  femaleRooms: number;
+  noLockRooms: number;
+}
+
+function collectBedStats(node: any): BedStats {
+  if (node.type === LocationType.BED) {
+    return {
+      totalBeds: 1,
+      occupiedBeds: node.status === "occupied" ? 1 : 0,
+      availableBeds: node.status === "available" ? 1 : 0,
+      maintenanceBeds: node.status === "maintenance" ? 1 : 0,
+      totalRooms: 0,
+      roomsWithoutType: 0,
+      maleRooms: 0,
+      femaleRooms: 0,
+      noLockRooms: 0,
+    };
+  }
+  const isRoom = node.type === LocationType.ROOM;
+  const stats: BedStats = {
+    totalBeds: 0,
+    occupiedBeds: 0,
+    availableBeds: 0,
+    maintenanceBeds: 0,
+    totalRooms: isRoom ? 1 : 0,
+    roomsWithoutType: isRoom && !node.roomTypeId ? 1 : 0,
+    maleRooms: isRoom && node.genderLock === "male" ? 1 : 0,
+    femaleRooms: isRoom && node.genderLock === "female" ? 1 : 0,
+    noLockRooms: isRoom && !node.genderLock ? 1 : 0,
+  };
+  for (const child of node.children ?? []) {
+    const sub = collectBedStats(child);
+    stats.totalBeds += sub.totalBeds;
+    stats.occupiedBeds += sub.occupiedBeds;
+    stats.availableBeds += sub.availableBeds;
+    stats.maintenanceBeds += sub.maintenanceBeds;
+    stats.totalRooms += sub.totalRooms;
+    stats.roomsWithoutType += sub.roomsWithoutType;
+    stats.maleRooms += sub.maleRooms;
+    stats.femaleRooms += sub.femaleRooms;
+    stats.noLockRooms += sub.noLockRooms;
+  }
+  return stats;
+}
+
+function ColumnPanel({
+  title,
+  flex = 1,
+  headerRight,
+  hideHeader,
+  loading,
+  children,
+}: {
+  title?: string;
+  flex?: number;
+  headerRight?: ReactNode;
+  hideHeader?: boolean;
+  loading?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Paper
+      withBorder
+      style={{
+        flex,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        minWidth: 0,
+      }}
+    >
+      {!hideHeader && (
+        <Box
+          px="sm"
+          style={{
+            height: 34,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid var(--mantine-color-default-border)",
+            flexShrink: 0,
+          }}
+        >
+          <Text size="xs" fw={700} tt="uppercase" c="dimmed">
+            {title}
+          </Text>
+          {headerRight}
+        </Box>
+      )}
+      <ScrollArea style={{ flex: 1 }}>
+        <Box p="sm">
+          {loading ? (
+            <Center p="lg">
+              <Loader size="sm" />
+            </Center>
+          ) : (
+            children
+          )}
+        </Box>
+      </ScrollArea>
+    </Paper>
+  );
+}
+
+function OccupancyPanel({
+  stats,
+  t,
+}: {
+  stats: BedStats | null;
+  t: (key: string, opts?: any) => string;
+}) {
+  if (!stats) return null;
+  const occupancyPct =
+    stats.totalBeds > 0
+      ? Math.round((stats.occupiedBeds / stats.totalBeds) * 100)
+      : 0;
+
+  return (
+    <Stack gap="sm">
+      <Group gap="xs" justify="space-between">
+        <Text size="xs" c="dimmed">
+          {t("total_rooms")}
+        </Text>
+        <Text size="xs" fw={600}>
+          {stats.totalRooms}
+        </Text>
+      </Group>
+      <Group gap="xs" justify="space-between">
+        <Text size="xs" c="dimmed">
+          {t("total_beds")}
+        </Text>
+        <Text size="xs" fw={600}>
+          {stats.totalBeds}
+        </Text>
+      </Group>
+
+      <Divider />
+
+      <Box>
+        <Group gap="xs" justify="space-between" mb={4}>
+          <Text size="xs" c="dimmed">
+            {t("occupancy")}
+          </Text>
+          <Text size="xs" fw={700}>
+            {occupancyPct}%
+          </Text>
+        </Group>
+        <Progress
+          value={occupancyPct}
+          color={
+            occupancyPct > 80 ? "red" : occupancyPct > 50 ? "yellow" : "green"
+          }
+          size="sm"
+          radius="xs"
+        />
+      </Box>
+
+      <Group gap="xs" justify="space-between">
+        <Text size="xs" c="dimmed">
+          {t("bed_status.occupied")}
+        </Text>
+        <Badge size="xs" variant="light" color="blue">
+          {stats.occupiedBeds}
+        </Badge>
+      </Group>
+      <Group gap="xs" justify="space-between">
+        <Text size="xs" c="dimmed">
+          {t("bed_status.available")}
+        </Text>
+        <Badge size="xs" variant="light" color="green">
+          {stats.availableBeds}
+        </Badge>
+      </Group>
+      <Group gap="xs" justify="space-between">
+        <Text size="xs" c="dimmed">
+          {t("bed_status.maintenance")}
+        </Text>
+        <Badge size="xs" variant="light" color="orange">
+          {stats.maintenanceBeds}
+        </Badge>
+      </Group>
+
+      {stats.roomsWithoutType > 0 && (
+        <>
+          <Divider />
+          <Group gap="xs" justify="space-between">
+            <Text size="xs" c="dimmed">
+              {t("rooms_without_type")}
+            </Text>
+            <Badge size="xs" variant="light" color="yellow">
+              {stats.roomsWithoutType}
+            </Badge>
+          </Group>
+        </>
+      )}
+
+      {stats.totalRooms > 0 && (
+        <>
+          <Divider />
+          <Text size="xs" c="dimmed" fw={600}>
+            {t("gender_lock")}
+          </Text>
+          {stats.maleRooms > 0 && (
+            <Group gap="xs" justify="space-between">
+              <Text size="xs">{t("male")}</Text>
+              <Badge size="xs" variant="light" color="blue">
+                {stats.maleRooms}
+              </Badge>
+            </Group>
+          )}
+          {stats.femaleRooms > 0 && (
+            <Group gap="xs" justify="space-between">
+              <Text size="xs">{t("female")}</Text>
+              <Badge size="xs" variant="light" color="pink">
+                {stats.femaleRooms}
+              </Badge>
+            </Group>
+          )}
+          {stats.noLockRooms > 0 && (
+            <Group gap="xs" justify="space-between">
+              <Text size="xs">{t("no_gender_restriction")}</Text>
+              <Badge size="xs" variant="light" color="gray">
+                {stats.noLockRooms}
+              </Badge>
+            </Group>
+          )}
+        </>
+      )}
+    </Stack>
+  );
+}
 
 function LocationsContent() {
   const { t, i18n } = useTranslation();
@@ -137,7 +384,11 @@ function LocationsContent() {
 
       if (activeTab === "locations") {
         const result = await locations.findAll(cleanFilters);
-        setRegistryData(result.data);
+        setRegistryData(
+          result.data.filter(
+            (item: any) => item.type !== LocationType.UNIVERSITY,
+          ),
+        );
         setTotalRegistryRegistryItems(result.total);
       } else {
         const result = await beds.findAll({
@@ -163,29 +414,76 @@ function LocationsContent() {
     if (activeView === "registry") {
       fetchRegistryData();
     }
+    setAllMatchingSelected(false);
   }, [activeView, activeTab, registryFilters]);
 
+  const [allMatchingSelected, setAllMatchingSelected] = useState(false);
+  const [registryDetailItem, setRegistryDetailItem] = useState<any | null>(
+    null,
+  );
+  const [registryDetailOpen, setRegistryDetailOpen] = useState(false);
+  const [registryItemFlagContext, setRegistryItemFlagContext] =
+    useState<LocationFlagContext | null>(null);
+
+  // Flag cascade state
+  const [editFlagContext, setEditFlagContext] =
+    useState<LocationFlagContext | null>(null);
+  const [cascadeModalOpened, setCascadeModalOpened] = useState(false);
+  const [cascadeLoading, setCascadeLoading] = useState(false);
+  const [pendingEdit, setPendingEdit] = useState<{
+    id: number;
+    values: UpdateLocationDto;
+    flagChanges: FlagChange[];
+    name: string;
+  } | null>(null);
+
   const handleFilterChange = (key: string, value: any) => {
+    setAllMatchingSelected(false);
     setRegistryFilters((prev) => ({
       ...prev,
       [key]: value,
-      page: 1, // Reset to first page on filter change
+      page: 1,
+    }));
+  };
+
+  const handleBatchFilterChange = (updates: Record<string, any>) => {
+    setAllMatchingSelected(false);
+    setRegistryFilters((prev) => ({
+      ...prev,
+      ...updates,
+      page: 1,
     }));
   };
 
   const handleClearFilters = () => {
+    setAllMatchingSelected(false);
     setRegistryFilters({
       page: 1,
       limit: 10,
-      q: "",
+      q: undefined,
       type: undefined,
       genderLock: undefined,
       isTrOnly: undefined,
+      isForeignerOnly: undefined,
       isGuestZone: undefined,
-      ownership: undefined,
+      isRectorate: undefined,
       onlyVacant: undefined,
       status: undefined,
+      roomTypeId: undefined,
+      orderBy: undefined,
+      orderDir: undefined,
     });
+  };
+
+  const handleSelectAllMatching = () => {
+    if (allMatchingSelected) {
+      clearSelection();
+      setAllMatchingSelected(false);
+    } else {
+      // Mark all matching as selected — the actual IDs are fetched page by page
+      // so we flag it and use totalCount for bulk operations
+      setAllMatchingSelected(true);
+    }
   };
 
   const showInventory = useMemo(() => {
@@ -231,6 +529,10 @@ function LocationsContent() {
   const [bookingModalOpened, setBookingModalOpened] = useState(false);
   const [studentList, setStudentList] = useState<Student[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
+
+  // Residents State (for ROOM view dashboard panel)
+  const [roomResidents, setRoomResidents] = useState<any[]>([]);
+  const [residentsLoading, setResidentsLoading] = useState(false);
 
   // Bed Management
   const {
@@ -310,16 +612,58 @@ function LocationsContent() {
       .catch(() => {});
   }, []);
 
-  // Calculate breadcrumbs
+  useEffect(() => {
+    if (createModalOpened && locationToEdit?.id) {
+      locations
+        .getFlagContext(Number(locationToEdit.id))
+        .then(setEditFlagContext)
+        .catch(() => {});
+    } else if (!createModalOpened) {
+      setEditFlagContext(null);
+    }
+  }, [createModalOpened, locationToEdit]);
+
+  useEffect(() => {
+    if (selectedNode?.type === LocationType.ROOM) {
+      setResidentsLoading(true);
+      locations
+        .getResidents(Number(selectedNode.id))
+        .then(setRoomResidents)
+        .catch(() => {})
+        .finally(() => setResidentsLoading(false));
+    } else {
+      setRoomResidents([]);
+    }
+  }, [selectedNode?.id, selectedNode?.type]);
+
+  const nodeStats = useMemo(() => {
+    if (
+      !selectedNode ||
+      selectedNode.type === LocationType.ROOM ||
+      selectedNode.type === LocationType.BED
+    )
+      return null;
+    return collectBedStats(selectedNode);
+  }, [selectedNode]);
+
+  // University node (used for "Add Campus" in the sidebar header, never rendered directly)
+  const universityNode = useMemo(
+    () => treeData.find((n) => n.type === LocationType.UNIVERSITY) ?? null,
+    [treeData],
+  );
+
+  // Calculate breadcrumbs — skip university level
   const locationPath = selectedNode
     ? findLocationPath(treeData, selectedNode.id)
     : null;
 
   const breadcrumbs =
-    locationPath?.map((n) => ({
-      label: localizedName(n),
-      onClick: () => selectNode(n),
-    })) ?? [];
+    locationPath
+      ?.filter((n) => n.type !== LocationType.UNIVERSITY)
+      .map((n) => ({
+        label: localizedName(n),
+        onClick: () => selectNode(n),
+      })) ?? [];
 
   // IDs of ancestor nodes that must be expanded in the tree to reveal the selected node
   const expandedIds = useMemo(() => {
@@ -349,6 +693,10 @@ function LocationsContent() {
 
   const handleSelectBranch = (ids: (number | string)[]) => {
     setSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
+  };
+
+  const handleDeselectBranch = (ids: (number | string)[]) => {
+    setSelectedIds((prev) => prev.filter((id) => !ids.includes(id as any)));
   };
 
   const handleBulkDelete = () => {
@@ -439,11 +787,11 @@ function LocationsContent() {
               isForeignerOnly: values.isForeignerOnly,
             }),
           );
-        if (values.ownership)
+        if (values.isRectorate !== undefined)
           bedPromises.push(
-            beds.updateOwnershipMany({
+            beds.updateIsRectorateMany({
               ids: bedIds,
-              ownership: values.ownership,
+              isRectorate: values.isRectorate,
             }),
           );
         if (values.isGuestZone !== undefined)
@@ -515,6 +863,80 @@ function LocationsContent() {
     confirmDeleteLocation(child);
   };
 
+  const handleOpenDetail = (item: any) => {
+    setRegistryDetailItem(item);
+    setRegistryDetailOpen(true);
+    setRegistryItemFlagContext(null);
+    if (item.type !== "bed" && item.id) {
+      locations
+        .getFlagContext(Number(item.id))
+        .then(setRegistryItemFlagContext)
+        .catch(() => {});
+    }
+  };
+
+  const handleRegistryBook = (item: any) => {
+    setRegistryDetailOpen(false);
+    if (item.type === "bed") {
+      selectNode({
+        ...item,
+        id: `bed-${item.id}`,
+        name: item.label,
+        type: LocationType.BED,
+        children: [],
+      });
+    } else {
+      selectNode({ ...item, children: [] });
+    }
+    setBookingModalOpened(true);
+  };
+
+  const handleRegistryEdit = (item: any) => {
+    if (item.type === "bed") {
+      setBedToEdit(item);
+      setEditBedModalOpened(true);
+    } else {
+      setLocationToEdit(item);
+      setParentForCreation({ id: null });
+      setCreateModalOpened(true);
+    }
+  };
+
+  const handleRegistryDelete = (item: any) => {
+    if (item.type === "bed") {
+      modals.openConfirmModal({
+        title: t("delete_confirm"),
+        children: (
+          <Text size="sm">
+            {t("delete_location_message", { name: item.label || item.name })}
+          </Text>
+        ),
+        labels: { confirm: t("confirm"), cancel: t("cancel") },
+        confirmProps: { color: "red" },
+        onConfirm: async () => {
+          try {
+            await beds.deleteMany({ ids: [item.id] });
+            notifications.show({
+              title: t("success"),
+              message: t("bed_deleted", "Bed deleted successfully"),
+              color: "green",
+            });
+            fetchRegistryData();
+            refreshTree();
+          } catch (error) {
+            notifications.show({
+              title: t("error"),
+              message: t("failed_to_delete"),
+              color: "red",
+            });
+          }
+        },
+      });
+    } else {
+      confirmDeleteLocation(item);
+    }
+  };
+
   const handleEditLocation = () => {
     if (!selectedNode) return;
     if (selectedNode.type === LocationType.BED) {
@@ -550,6 +972,20 @@ function LocationsContent() {
     }
   };
 
+  const handleToggleSelectAllBeds = () => {
+    const allBedIds = roomBeds.map((b) => `bed-${b.id}`);
+    const allSelected = allBedIds.every((id) =>
+      (selectedIds as any[]).includes(id),
+    );
+    if (allSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !allBedIds.includes(id as string)),
+      );
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...allBedIds])));
+    }
+  };
+
   const handleToggleSelectAllRegistry = () => {
     const allIds = registryData.map((item) =>
       item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`,
@@ -567,23 +1003,129 @@ function LocationsContent() {
     }
   };
 
+  const FLAG_LABELS: Record<string, string> = {
+    isTrOnly: "TR Only",
+    isForeignerOnly: "INT Only",
+    isGuestZone: "Guest Zone",
+    isRectorate: "Rectorate",
+    genderLock: "Gender Lock",
+    studentYearLock: "Student Year Lock",
+  };
+
+  const FLAG_KEYS = [
+    "isTrOnly",
+    "isForeignerOnly",
+    "isGuestZone",
+    "isRectorate",
+    "genderLock",
+    "studentYearLock",
+  ] as const;
+
+  const applyLocationUpdate = async (
+    id: number,
+    values: UpdateLocationDto,
+    cascade: boolean,
+  ) => {
+    const flagKeys = FLAG_KEYS;
+    const nonFlagPayload: UpdateLocationDto = {};
+    const flagPayload: Partial<Record<(typeof flagKeys)[number], any>> = {};
+
+    for (const [k, v] of Object.entries(values)) {
+      if (flagKeys.includes(k as any)) {
+        (flagPayload as any)[k] = v;
+      } else {
+        (nonFlagPayload as any)[k] = v;
+      }
+    }
+
+    if (Object.keys(nonFlagPayload).length > 0) {
+      await locations.update(id, nonFlagPayload);
+    }
+
+    if (cascade) {
+      const promises: Promise<any>[] = [];
+      if ("isTrOnly" in flagPayload)
+        promises.push(
+          locations.updateTrOnly(id, {
+            isTrOnly: flagPayload.isTrOnly,
+            cascade: true,
+          }),
+        );
+      if ("isForeignerOnly" in flagPayload)
+        promises.push(
+          locations.updateForeignerOnly(id, {
+            isForeignerOnly: flagPayload.isForeignerOnly,
+            cascade: true,
+          }),
+        );
+      if ("isGuestZone" in flagPayload)
+        promises.push(
+          locations.updateGuestZone(id, {
+            isGuestZone: flagPayload.isGuestZone,
+            cascade: true,
+          }),
+        );
+      if ("isRectorate" in flagPayload)
+        promises.push(
+          locations.updateIsRectorate(id, {
+            isRectorate: flagPayload.isRectorate,
+            cascade: true,
+          }),
+        );
+      if ("genderLock" in flagPayload)
+        promises.push(
+          locations.updateGenderLock(id, {
+            genderLock: flagPayload.genderLock,
+            cascade: true,
+          }),
+        );
+      if ("studentYearLock" in flagPayload)
+        promises.push(
+          locations.updateStudentYearLock(id, {
+            studentYearLock: flagPayload.studentYearLock ?? null,
+            cascade: true,
+          }),
+        );
+      await Promise.all(promises);
+    } else if (Object.keys(flagPayload).length > 0) {
+      await locations.update(id, flagPayload as UpdateLocationDto);
+    }
+  };
+
+  const handleCascadeConfirm = async (cascade: boolean) => {
+    if (!pendingEdit) return;
+    setCascadeLoading(true);
+    try {
+      await applyLocationUpdate(pendingEdit.id, pendingEdit.values, cascade);
+      notifications.show({
+        title: t("success"),
+        message: t("location_updated", "Location updated successfully"),
+        color: "green",
+      });
+      await refreshTree();
+      if (activeView === "registry") fetchRegistryData();
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_save_role"),
+        color: "red",
+      });
+    } finally {
+      setCascadeLoading(false);
+      setCascadeModalOpened(false);
+      setPendingEdit(null);
+    }
+  };
+
   const handleSubmitLocation = async (
     values: CreateLocationDto | UpdateLocationDto | CreateLocationDto[],
-    createBedsCount?: number,
   ) => {
     try {
       if (Array.isArray(values)) {
-        // Bulk create mode
+        // Bulk create mode — rooms always use the room-with-beds endpoint
         const isRoomBulk = values.every((v) => v.type === LocationType.ROOM);
-        if (createBedsCount && createBedsCount > 0 && isRoomBulk) {
-          // Use specialized bulk endpoint for rooms with beds
-          const roomsWithBeds = values.map((v) => ({
-            ...v,
-            bedCount: createBedsCount,
-          }));
-          await locations.createRoomsWithBedsMany({
-            rooms: roomsWithBeds as any,
-          });
+        if (isRoomBulk) {
+          await locations.createRoomsWithBedsMany({ rooms: values as any });
         } else {
           await locations.createMany({ locations: values });
         }
@@ -593,27 +1135,63 @@ function LocationsContent() {
           message: t("locations_created", "Locations created successfully"),
           color: "green",
         });
+        await refreshTree();
+        if (activeView === "registry") fetchRegistryData();
       } else if (locationToEdit) {
-        // Update mode
-        await locations.update(Number(locationToEdit.id), values);
+        // Update mode — check for flag changes and descendants
+        const id = Number(locationToEdit.id);
+        const old = locationToEdit;
+        const flagChanges: FlagChange[] = [];
+
+        for (const key of FLAG_KEYS) {
+          const oldVal = old[key] ?? null;
+          const newVal = (values as any)[key] ?? null;
+          if (String(oldVal) !== String(newVal)) {
+            flagChanges.push({
+              label: FLAG_LABELS[key],
+              from: oldVal,
+              to: newVal,
+            });
+          }
+        }
+
+        const hasDescendants =
+          editFlagContext &&
+          editFlagContext.descendantCount.locations +
+            editFlagContext.descendantCount.beds >
+            0;
+
+        if (flagChanges.length > 0 && hasDescendants) {
+          // Store pending and show cascade dialog
+          setPendingEdit({
+            id,
+            values: values as UpdateLocationDto,
+            flagChanges,
+            name:
+              (isTr && (locationToEdit as any).nameTr
+                ? (locationToEdit as any).nameTr
+                : locationToEdit.name) ?? "",
+          });
+          setCascadeModalOpened(true);
+          setCreateModalOpened(false);
+          setLocationToEdit(null);
+          return;
+        }
+
+        // No flag changes or no descendants — apply directly
+        await applyLocationUpdate(id, values as UpdateLocationDto, false);
         notifications.show({
           title: t("success"),
           message: t("location_updated", "Location updated successfully"),
           color: "green",
         });
+        await refreshTree();
+        if (activeView === "registry") fetchRegistryData();
       } else {
-        // Single create mode
+        // Single create mode — rooms always use the room-with-beds endpoint
         const dto = values as CreateLocationDto;
-        if (
-          createBedsCount &&
-          createBedsCount > 0 &&
-          dto.type === LocationType.ROOM
-        ) {
-          // Use specialized endpoint for single room with beds
-          await locations.createRoomWithBeds({
-            ...dto,
-            bedCount: createBedsCount,
-          });
+        if (dto.type === LocationType.ROOM) {
+          await locations.createRoomWithBeds(dto as any);
         } else {
           await locations.create(dto);
         }
@@ -623,11 +1201,9 @@ function LocationsContent() {
           message: t("location_created", "Location created successfully"),
           color: "green",
         });
+        await refreshTree();
+        if (activeView === "registry") fetchRegistryData();
       }
-
-      // Refresh data
-      await refreshTree();
-      if (activeView === "registry") fetchRegistryData();
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -785,7 +1361,11 @@ function LocationsContent() {
   const handleUpdateBed = async (values: any) => {
     if (!bedToEdit) return;
     try {
-      await beds.update(bedToEdit.id, values);
+      const bedId =
+        typeof bedToEdit.id === "string" && bedToEdit.id.startsWith("bed-")
+          ? Number(bedToEdit.id.replace("bed-", ""))
+          : Number(bedToEdit.id);
+      await beds.update(bedId, values);
       notifications.show({
         title: t("success"),
         message: t("bed_updated", "Bed updated successfully"),
@@ -956,7 +1536,37 @@ function LocationsContent() {
                 selectedIds={selectedIds}
                 onToggleSelection={handleToggleSelection}
                 onSelectBranch={handleSelectBranch}
+                onDeselectBranch={handleDeselectBranch}
                 expandedIds={expandedIds}
+                treeHeaderActions={
+                  universityNode ? (
+                    <Group justify="space-between" align="center">
+                      <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+                        {t("campuses", { defaultValue: "Campuses" })}
+                      </Text>
+                      <Tooltip
+                        label={t("add_campus", {
+                          defaultValue: "Add Campus",
+                        })}
+                      >
+                        <ActionIcon
+                          size="sm"
+                          variant="light"
+                          onClick={() => {
+                            setLocationToEdit(null);
+                            setParentForCreation({
+                              id: Number(universityNode.id),
+                              type: LocationType.UNIVERSITY,
+                            });
+                            setCreateModalOpened(true);
+                          }}
+                        >
+                          <IconPlus size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  ) : undefined
+                }
               />
             }
           >
@@ -965,6 +1575,7 @@ function LocationsContent() {
                 title={localizedName(selectedNode)}
                 type={selectedNode.type}
                 breadcrumbs={breadcrumbs}
+                noScroll={selectedNode.type !== LocationType.BED}
                 actions={
                   <>
                     {(selectedNode.type === LocationType.ROOM ||
@@ -978,15 +1589,16 @@ function LocationsContent() {
                         {t("create_booking")}
                       </Button>
                     )}
-                    {selectedNode.type === LocationType.ROOM && (
-                      <Button
-                        variant="light"
-                        leftSection={<IconPlus size={16} />}
-                        onClick={() => setCreateBedModalOpened(true)}
-                      >
-                        {t("create_bed", { defaultValue: "Create Bed" })}
-                      </Button>
-                    )}
+                    {selectedNode.type === LocationType.ROOM &&
+                      !selectedNode.roomTypeId && (
+                        <Button
+                          variant="light"
+                          leftSection={<IconPlus size={16} />}
+                          onClick={() => setCreateBedModalOpened(true)}
+                        >
+                          {t("create_bed", { defaultValue: "Create Bed" })}
+                        </Button>
+                      )}
                     {selectedNode.type !== LocationType.ROOM &&
                       selectedNode.type !== LocationType.BED && (
                         <Button
@@ -1027,16 +1639,17 @@ function LocationsContent() {
                   </>
                 }
               >
-                <Group mb="md" gap="xs">
-                  <Badge
-                    variant="light"
-                    color="blue"
-                    leftSection={<IconBuildingBank size={14} />}
-                  >
-                    {t(`ownerships.${selectedNode.ownership}`, {
-                      defaultValue: selectedNode.ownership,
-                    })}
-                  </Badge>
+                {/* ── Badges ──────────────────────────────────────────── */}
+                <Group mb="xs" gap="xs" style={{ flexShrink: 0 }}>
+                  {selectedNode.isRectorate && (
+                    <Badge
+                      variant="light"
+                      color="blue"
+                      leftSection={<IconBuildingBank size={14} />}
+                    >
+                      {t("rectorate")}
+                    </Badge>
+                  )}
                   {selectedNode.isTrOnly && (
                     <Badge
                       variant="light"
@@ -1099,6 +1712,7 @@ function LocationsContent() {
                   )}
                 </Group>
 
+                {/* ── BED: detail view (single-column, scrollable) ─────── */}
                 {selectedNode.type === LocationType.BED ? (
                   <Stack gap="md" p="md">
                     <LabelValue label={t("label", { defaultValue: "Label" })}>
@@ -1118,7 +1732,6 @@ function LocationsContent() {
                         {t(`bed_status.${selectedNode.status}`)}
                       </Badge>
                     </LabelValue>
-
                     {showInventory && (
                       <>
                         <Divider my="md" />
@@ -1134,215 +1747,161 @@ function LocationsContent() {
                     )}
                   </Stack>
                 ) : selectedNode.type === LocationType.ROOM ? (
-                  <>
-                    <Group justify="space-between" align="center" mb="sm">
-                      <Text
-                        size="xs"
-                        c="dimmed"
-                        fw={600}
-                        tt="uppercase"
-                        style={{ letterSpacing: "0.05em" }}
+                  /* ── ROOM: [Beds | Residents] + Inventory strip ─────────── */
+                  <Box
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    <Box
+                      style={{
+                        flex: 1,
+                        minHeight: 0,
+                        display: "flex",
+                        gap: 12,
+                      }}
+                    >
+                      {/* Main — Beds */}
+                      <ColumnPanel
+                        title={`${t("beds", { defaultValue: "Beds" })} (${roomBeds.length})`}
+                        flex={2}
+                        headerRight={
+                          roomBeds.length > 0 ? (
+                            <Checkbox
+                              size="xs"
+                              label={t("select_all", {
+                                defaultValue: "Select All",
+                              })}
+                              checked={
+                                roomBeds.length > 0 &&
+                                roomBeds.every((b) =>
+                                  selectedIds.includes(`bed-${b.id}`),
+                                )
+                              }
+                              indeterminate={
+                                roomBeds.some((b) =>
+                                  selectedIds.includes(`bed-${b.id}`),
+                                ) &&
+                                !roomBeds.every((b) =>
+                                  selectedIds.includes(`bed-${b.id}`),
+                                )
+                              }
+                              onChange={handleToggleSelectAllBeds}
+                            />
+                          ) : undefined
+                        }
                       >
-                        {t("beds", { defaultValue: "Beds" })} ({roomBeds.length}
-                        )
-                      </Text>
-                      {roomBeds.length > 0 && (
-                        <Checkbox
-                          size="xs"
-                          label={t("select_all", {
-                            defaultValue: "Select All",
-                          })}
-                          checked={
-                            roomBeds.length > 0 &&
-                            roomBeds.every((b) =>
-                              selectedIds.includes(`bed-${b.id}`),
-                            )
-                          }
-                          indeterminate={
-                            roomBeds.some((b) =>
-                              selectedIds.includes(`bed-${b.id}`),
-                            ) &&
-                            !roomBeds.every((b) =>
-                              selectedIds.includes(`bed-${b.id}`),
-                            )
-                          }
-                          onChange={() => {
-                            const allBedIds = roomBeds.map(
-                              (b) => `bed-${b.id}`,
-                            );
-                            const allSelected = allBedIds.every((id) =>
-                              selectedIds.includes(id),
-                            );
-                            if (allSelected) {
-                              setSelectedIds((prev) =>
-                                prev.filter(
-                                  (id) => !allBedIds.includes(id as string),
-                                ),
+                        {roomBeds.length > 0 ? (
+                          <SimpleGrid cols={2} spacing="sm">
+                            {roomBeds.map((bed) => {
+                              const globalId = `bed-${bed.id}`;
+                              return (
+                                <BedCard
+                                  key={bed.id}
+                                  id={bed.id}
+                                  label={bed.label}
+                                  status={bed.status}
+                                  residentName={bed.residentName}
+                                  isTrOnly={bed.isTrOnly}
+                                  isGuestZone={bed.isGuestZone}
+                                  isRectorate={bed.isRectorate}
+                                  isForeignerOnly={bed.isForeignerOnly}
+                                  selected={selectedIds.includes(globalId)}
+                                  onClick={() =>
+                                    selectNode({
+                                      children: [],
+                                      ...bed,
+                                      id: globalId,
+                                      name: bed.label,
+                                      type: LocationType.BED,
+                                    })
+                                  }
+                                  onSelect={() =>
+                                    handleToggleSelection(globalId)
+                                  }
+                                  onEdit={() => {
+                                    setBedToEdit(bed);
+                                    setEditBedModalOpened(true);
+                                  }}
+                                  onDelete={() => handleDeleteBed(bed)}
+                                  onBook={() => {
+                                    selectNode({
+                                      children: [],
+                                      ...bed,
+                                      id: globalId,
+                                      name: bed.label,
+                                      type: LocationType.BED,
+                                    });
+                                    setBookingModalOpened(true);
+                                  }}
+                                />
                               );
-                            } else {
-                              setSelectedIds((prev) =>
-                                Array.from(new Set([...prev, ...allBedIds])),
-                              );
-                            }
-                          }}
-                        />
-                      )}
-                    </Group>
-                    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
-                      {roomBeds.map((bed) => {
-                        const globalId = `bed-${bed.id}`;
-                        return (
-                          <BedCard
-                            key={bed.id}
-                            id={bed.id}
-                            label={bed.label}
-                            status={bed.status}
-                            selected={selectedIds.includes(globalId)}
-                            onClick={() =>
-                              selectNode({
-                                children: [],
-                                ...bed,
-                                id: globalId,
-                                name: bed.label,
-                                type: LocationType.BED,
-                              })
-                            }
-                            onSelect={() => handleToggleSelection(globalId)}
-                            onEdit={() => {}}
-                            onDelete={() => handleDeleteBed(bed)}
-                            onBook={() => {
-                              // First select the node so the modal gets the right initialBedId
-                              selectNode({
-                                children: [],
-                                ...bed,
-                                id: globalId,
-                                name: bed.label,
-                                type: LocationType.BED,
-                              });
-                              setBookingModalOpened(true);
-                            }}
+                            })}
+                          </SimpleGrid>
+                        ) : (
+                          <EmptyState
+                            title={t("no_beds_found", {
+                              defaultValue: "No beds found",
+                            })}
                           />
-                        );
-                      })}
-                    </SimpleGrid>
-                    {roomBeds.length === 0 && (
-                      <EmptyState
-                        title={t("no_beds_found", {
-                          defaultValue: "No beds found",
-                        })}
-                      />
-                    )}
+                        )}
+                      </ColumnPanel>
 
-                    {showInventory && (
-                      <>
-                        <Divider my="md" />
-                        <InventoryAssignmentList
-                          data={inventoryAssignments}
-                          loading={inventoryLoading}
-                          onAddClick={() => setAssignModalOpened(true)}
-                          onRemove={handleDeleteAssignment}
-                          onUpdateQuantity={handleUpdateAssignmentQuantity}
-                          onApplyTemplate={handleApplyBlueprintForNode}
-                        />
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Group justify="space-between" align="center" mb="sm">
-                      <Text
-                        size="xs"
-                        c="dimmed"
-                        fw={600}
-                        tt="uppercase"
-                        style={{ letterSpacing: "0.05em" }}
+                      {/* Sidebar — Residents */}
+                      <ColumnPanel
+                        title={`${t("residents")} (${roomResidents.length})`}
+                        flex={1}
+                        loading={residentsLoading}
                       >
-                        {selectedNode.type === LocationType.UNIVERSITY
-                          ? children.every(
-                              (c) => c.type === LocationType.CAMPUS,
-                            )
-                            ? t("campuses", { defaultValue: "Campuses" })
-                            : t("locations", { defaultValue: "Locations" })
-                          : selectedNode.type === LocationType.CAMPUS
-                            ? children.every(
-                                (c) => c.type === LocationType.BUILDING,
-                              )
-                              ? t("buildings", { defaultValue: "Buildings" })
-                              : t("locations", { defaultValue: "Locations" })
-                            : selectedNode.type === LocationType.BUILDING
-                              ? t("floors", { defaultValue: "Floors" })
-                              : selectedNode.type === LocationType.FLOOR
-                                ? t("rooms", { defaultValue: "Rooms" })
-                                : t("locations", {
-                                    defaultValue: "Locations",
-                                  })}{" "}
-                        ({children.length})
-                      </Text>
-                      {children.length > 0 && (
-                        <Checkbox
-                          size="xs"
-                          label={t("select_all", {
-                            defaultValue: "Select All",
-                          })}
-                          checked={
-                            children.length > 0 &&
-                            children.every((c) =>
-                              selectedIds.includes(Number(c.id)),
-                            )
-                          }
-                          indeterminate={
-                            children.some((c) =>
-                              selectedIds.includes(Number(c.id)),
-                            ) &&
-                            !children.every((c) =>
-                              selectedIds.includes(Number(c.id)),
-                            )
-                          }
-                          onChange={handleToggleSelectAllChildren}
-                        />
-                      )}
-                    </Group>
-                    {children.length > 0 ? (
-                      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 4 }}>
-                        {children.map((child) => {
-                          const globalId =
-                            child.type === LocationType.BED
-                              ? `bed-${child.id}`
-                              : `loc-${child.id}`;
-                          return selectedNode.type === LocationType.FLOOR ? (
-                            <RoomCard
-                              key={child.id}
-                              id={Number(child.id)}
-                              name={localizedName(child)}
-                              genderLock={child.genderLock || undefined}
-                              selected={selectedIds.includes(globalId)}
-                              onClick={() => selectNode(child as any)}
-                              onSelect={() => handleToggleSelection(globalId)}
-                              onEdit={() => handleEditChild(child as any)}
-                              onDelete={() => handleDeleteChild(child as any)}
-                            />
-                          ) : (
-                            <GenericLocationCard
-                              key={child.id}
-                              id={Number(child.id)}
-                              name={localizedName(child)}
-                              icon={<LocationIcon type={child.type} />}
-                              selected={selectedIds.includes(globalId)}
-                              onClick={() => selectNode(child as any)}
-                              onSelect={() => handleToggleSelection(globalId)}
-                              onEdit={() => handleEditChild(child as any)}
-                              onDelete={() => handleDeleteChild(child as any)}
-                            />
-                          );
-                        })}
-                      </SimpleGrid>
-                    ) : (
-                      <EmptyState title={t("no_sub_locations")} />
-                    )}
+                        {roomResidents.length > 0 ? (
+                          <Stack gap="xs">
+                            {roomResidents.map((r) => (
+                              <Paper
+                                key={r.bookingId}
+                                withBorder
+                                p="xs"
+                                radius="sm"
+                              >
+                                <Group gap="xs" wrap="nowrap">
+                                  <ThemeIcon
+                                    size="sm"
+                                    variant="light"
+                                    color="blue"
+                                    radius="xl"
+                                  >
+                                    <IconUser size={12} />
+                                  </ThemeIcon>
+                                  <Box style={{ flex: 1, minWidth: 0 }}>
+                                    <Text size="xs" fw={600} lineClamp={1}>
+                                      {r.firstName} {r.lastName}
+                                    </Text>
+                                    <Text size="xs" c="dimmed">
+                                      {r.studentNumber} · {r.bedLabel}
+                                    </Text>
+                                  </Box>
+                                </Group>
+                              </Paper>
+                            ))}
+                          </Stack>
+                        ) : (
+                          <EmptyState title={t("no_residents")} />
+                        )}
+                      </ColumnPanel>
+                    </Box>
 
+                    {/* Inventory — full-width strip at bottom */}
                     {showInventory && (
-                      <>
-                        <Divider my="md" />
+                      <Paper
+                        withBorder
+                        radius="md"
+                        px="sm"
+                        py={4}
+                        style={{ flexShrink: 0 }}
+                      >
                         <InventoryAssignmentList
                           data={inventoryAssignments}
                           loading={inventoryLoading}
@@ -1351,9 +1910,187 @@ function LocationsContent() {
                           onUpdateQuantity={handleUpdateAssignmentQuantity}
                           onApplyTemplate={handleApplyBlueprintForNode}
                         />
-                      </>
+                      </Paper>
                     )}
-                  </>
+                  </Box>
+                ) : (
+                  /* ── FLOOR/BUILDING/etc.: main (sub-locs) + sidebar (occupancy / inventory) ── */
+                  (() => {
+                    const childrenLabel =
+                      selectedNode.type === LocationType.UNIVERSITY
+                        ? children.every((c) => c.type === LocationType.CAMPUS)
+                          ? t("campuses", { defaultValue: "Campuses" })
+                          : t("locations", { defaultValue: "Locations" })
+                        : selectedNode.type === LocationType.CAMPUS
+                          ? children.every(
+                              (c) => c.type === LocationType.BUILDING,
+                            )
+                            ? t("buildings", { defaultValue: "Buildings" })
+                            : t("locations", { defaultValue: "Locations" })
+                          : selectedNode.type === LocationType.BUILDING
+                            ? t("floors", { defaultValue: "Floors" })
+                            : selectedNode.type === LocationType.FLOOR
+                              ? t("rooms", { defaultValue: "Rooms" })
+                              : t("locations", { defaultValue: "Locations" });
+                    return (
+                      <Box
+                        style={{
+                          flex: 1,
+                          minHeight: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 12,
+                        }}
+                      >
+                        <Box
+                          style={{
+                            flex: 1,
+                            minHeight: 0,
+                            display: "flex",
+                            gap: 12,
+                          }}
+                        >
+                          {/* Main — Sub-locations */}
+                          <ColumnPanel
+                            title={`${childrenLabel} (${children.length})`}
+                            flex={2}
+                            headerRight={
+                              children.length > 0 ? (
+                                <Checkbox
+                                  size="xs"
+                                  label={t("select_all", {
+                                    defaultValue: "Select All",
+                                  })}
+                                  checked={
+                                    children.length > 0 &&
+                                    children.every((c) =>
+                                      selectedIds.includes(`loc-${c.id}`),
+                                    )
+                                  }
+                                  indeterminate={
+                                    children.some((c) =>
+                                      selectedIds.includes(`loc-${c.id}`),
+                                    ) &&
+                                    !children.every((c) =>
+                                      selectedIds.includes(`loc-${c.id}`),
+                                    )
+                                  }
+                                  onChange={handleToggleSelectAllChildren}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            {children.length > 0 ? (
+                              <SimpleGrid cols={2} spacing="sm">
+                                {children.map((child) => {
+                                  const globalId =
+                                    child.type === LocationType.BED
+                                      ? `bed-${child.id}`
+                                      : `loc-${child.id}`;
+                                  if (child.type === LocationType.ROOM) {
+                                    const childBeds = (
+                                      child.children || []
+                                    ).filter(
+                                      (b: any) => b.type === LocationType.BED,
+                                    );
+                                    const occupiedBeds = childBeds.filter(
+                                      (b: any) => b.status === "occupied",
+                                    ).length;
+                                    return (
+                                      <RoomCard
+                                        key={child.id}
+                                        id={Number(child.id)}
+                                        name={localizedName(child)}
+                                        genderLock={
+                                          child.genderLock || undefined
+                                        }
+                                        roomTypeName={
+                                          isTr && child.roomTypeNameTr
+                                            ? child.roomTypeNameTr
+                                            : child.roomTypeName || undefined
+                                        }
+                                        totalBeds={
+                                          childBeds.length || undefined
+                                        }
+                                        occupiedBeds={occupiedBeds}
+                                        isTrOnly={child.isTrOnly}
+                                        isGuestZone={child.isGuestZone}
+                                        isRectorate={child.isRectorate}
+                                        isForeignerOnly={child.isForeignerOnly}
+                                        studentYearLock={
+                                          child.studentYearLock || undefined
+                                        }
+                                        selected={selectedIds.includes(
+                                          globalId,
+                                        )}
+                                        onClick={() => selectNode(child as any)}
+                                        onSelect={() =>
+                                          handleToggleSelection(globalId)
+                                        }
+                                        onEdit={() =>
+                                          handleEditChild(child as any)
+                                        }
+                                        onDelete={() =>
+                                          handleDeleteChild(child as any)
+                                        }
+                                      />
+                                    );
+                                  }
+                                  return (
+                                    <GenericLocationCard
+                                      key={child.id}
+                                      id={Number(child.id)}
+                                      name={localizedName(child)}
+                                      icon={<LocationIcon type={child.type} />}
+                                      childCount={child.children?.length}
+                                      selected={selectedIds.includes(globalId)}
+                                      onClick={() => selectNode(child as any)}
+                                      onSelect={() =>
+                                        handleToggleSelection(globalId)
+                                      }
+                                      onEdit={() =>
+                                        handleEditChild(child as any)
+                                      }
+                                      onDelete={() =>
+                                        handleDeleteChild(child as any)
+                                      }
+                                    />
+                                  );
+                                })}
+                              </SimpleGrid>
+                            ) : (
+                              <EmptyState title={t("no_sub_locations")} />
+                            )}
+                          </ColumnPanel>
+
+                          {/* Sidebar — Occupancy */}
+                          <ColumnPanel title={t("occupancy")} flex={1}>
+                            <OccupancyPanel stats={nodeStats} t={t} />
+                          </ColumnPanel>
+                        </Box>
+
+                        {/* Inventory — full-width strip at bottom */}
+                        {showInventory && (
+                          <Paper
+                            withBorder
+                            radius="md"
+                            px="sm"
+                            py={4}
+                            style={{ flexShrink: 0 }}
+                          >
+                            <InventoryAssignmentList
+                              data={inventoryAssignments}
+                              loading={inventoryLoading}
+                              onAddClick={() => setAssignModalOpened(true)}
+                              onRemove={handleDeleteAssignment}
+                              onUpdateQuantity={handleUpdateAssignmentQuantity}
+                              onApplyTemplate={handleApplyBlueprintForNode}
+                            />
+                          </Paper>
+                        )}
+                      </Box>
+                    );
+                  })()
                 )}
               </LocationDetail>
             ) : (
@@ -1383,66 +2120,66 @@ function LocationsContent() {
               </Tabs.List>
 
               <Tabs.Panel value="locations" pt="md">
-                <Stack gap="md">
-                  <LocationRegistryFilters
+                <Paper withBorder radius="md" style={{ position: "relative" }}>
+                  <LoadingOverlay visible={registryLoading} />
+                  <LocationRegistryTable
+                    mode="locations"
+                    data={registryData}
                     filters={registryFilters}
+                    totalCount={totalRegistryItems}
                     onFilterChange={handleFilterChange}
+                    onBatchFilterChange={handleBatchFilterChange}
                     onClearFilters={handleClearFilters}
+                    onOpenDetail={handleOpenDetail}
+                    onView={(loc) => {
+                      setActiveView("structure");
+                      selectNode(loc as any);
+                    }}
+                    onEdit={handleRegistryEdit}
+                    onDelete={handleRegistryDelete}
+                    onEmailResidents={(locationId) =>
+                      setEmailLocationId(locationId)
+                    }
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                    onSelectAllMatching={handleSelectAllMatching}
+                    allMatchingSelected={allMatchingSelected}
+                    roomTypes={roomTypesList}
                   />
-                  <Paper
-                    withBorder
-                    radius="md"
-                    style={{ position: "relative" }}
-                  >
-                    <LoadingOverlay visible={registryLoading} />
-                    <LocationRegistryTable
-                      data={registryData}
-                      onView={(loc) => {
-                        setActiveView("structure");
-                        selectNode(loc as any);
-                      }}
-                      onEmailResidents={(locationId) =>
-                        setEmailLocationId(locationId)
-                      }
-                      selectedIds={selectedIds}
-                      onToggleSelection={handleToggleSelection}
-                      onToggleSelectAll={handleToggleSelectAllRegistry}
-                    />
-                  </Paper>
-                </Stack>
+                </Paper>
               </Tabs.Panel>
 
               <Tabs.Panel value="beds" pt="md">
-                <Stack gap="md">
-                  <LocationRegistryFilters
+                <Paper withBorder radius="md" style={{ position: "relative" }}>
+                  <LoadingOverlay visible={registryLoading} />
+                  <LocationRegistryTable
+                    mode="beds"
+                    data={registryData}
                     filters={registryFilters}
+                    totalCount={totalRegistryItems}
                     onFilterChange={handleFilterChange}
+                    onBatchFilterChange={handleBatchFilterChange}
                     onClearFilters={handleClearFilters}
+                    onOpenDetail={handleOpenDetail}
+                    onView={(bed) => {
+                      setActiveView("structure");
+                      selectNode({
+                        ...bed,
+                        id: `bed-${bed.id}`,
+                        type: LocationType.BED,
+                      } as any);
+                    }}
+                    onEdit={handleRegistryEdit}
+                    onDelete={handleRegistryDelete}
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAllRegistry}
+                    onSelectAllMatching={handleSelectAllMatching}
+                    allMatchingSelected={allMatchingSelected}
+                    roomTypes={roomTypesList}
                   />
-                  <Paper
-                    withBorder
-                    radius="md"
-                    style={{ position: "relative" }}
-                  >
-                    <LoadingOverlay visible={registryLoading} />
-                    <LocationRegistryTable
-                      data={registryData}
-                      onView={(bed) => {
-                        setActiveView("structure");
-                        // Convert virtual ID to bed- prefixed ID for the tree
-                        const targetId = `bed-${bed.id}`;
-                        selectNode({
-                          ...bed,
-                          id: targetId,
-                          type: LocationType.BED,
-                        } as any);
-                      }}
-                      selectedIds={selectedIds}
-                      onToggleSelection={handleToggleSelection}
-                      onToggleSelectAll={handleToggleSelectAllRegistry}
-                    />
-                  </Paper>
-                </Stack>
+                </Paper>
               </Tabs.Panel>
             </Tabs>
 
@@ -1469,6 +2206,9 @@ function LocationsContent() {
           parentType={parentForCreation.type}
           initialValues={locationToEdit}
           roomTypes={roomTypesList}
+          parentAncestorFlags={
+            locationToEdit ? editFlagContext?.ancestorFlags : null
+          }
         />
 
         <CreateBedModal
@@ -1608,6 +2348,62 @@ function LocationsContent() {
             )}
           </Stack>
         </Drawer>
+
+        <RegistryItemDrawer
+          item={registryDetailItem}
+          opened={registryDetailOpen}
+          onClose={() => {
+            setRegistryDetailOpen(false);
+            setRegistryItemFlagContext(null);
+          }}
+          isTr={isTr}
+          flagContext={registryItemFlagContext}
+          onEdit={(item) => {
+            setRegistryDetailOpen(false);
+            handleRegistryEdit(item);
+          }}
+          onDelete={(item) => {
+            setRegistryDetailOpen(false);
+            handleRegistryDelete(item);
+          }}
+          onBook={handleRegistryBook}
+          onNavigate={(item) => {
+            if (item.type === "bed") {
+              setActiveView("structure");
+              selectNode({
+                ...item,
+                id: `bed-${item.id}`,
+                type: LocationType.BED,
+                children: [],
+              } as any);
+            } else {
+              setActiveView("structure");
+              selectNode({ ...item, children: [] } as any);
+            }
+          }}
+          onEmailResidents={(locationId) => {
+            setRegistryDetailOpen(false);
+            setEmailLocationId(locationId);
+          }}
+        />
+
+        <FlagCascadeConfirmModal
+          opened={cascadeModalOpened}
+          onClose={() => {
+            setCascadeModalOpened(false);
+            setPendingEdit(null);
+          }}
+          onConfirmCascade={() => handleCascadeConfirm(true)}
+          onConfirmSingleOnly={() => handleCascadeConfirm(false)}
+          locationName={pendingEdit?.name ?? ""}
+          flagChanges={pendingEdit?.flagChanges ?? []}
+          descendantCount={
+            editFlagContext?.descendantCount ?? { locations: 0, beds: 0 }
+          }
+          descendantPreview={editFlagContext?.descendantPreview ?? []}
+          isTr={isTr}
+          loading={cascadeLoading}
+        />
 
         <ComposeEmailModal
           opened={emailLocationId !== null}

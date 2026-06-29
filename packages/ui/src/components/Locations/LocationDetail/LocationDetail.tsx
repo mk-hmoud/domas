@@ -7,6 +7,7 @@ import {
   ScrollArea,
   Badge,
   ThemeIcon,
+  Box,
 } from "@mantine/core";
 import { ReactNode } from "react";
 import { LocationType } from "@domas/ts-types";
@@ -18,6 +19,7 @@ interface LocationDetailProps {
   breadcrumbs?: { label: string; href?: string; onClick?: () => void }[];
   actions?: ReactNode;
   children: ReactNode;
+  noScroll?: boolean;
 }
 
 export function LocationDetail({
@@ -26,17 +28,21 @@ export function LocationDetail({
   breadcrumbs,
   actions,
   children,
+  noScroll,
 }: LocationDetailProps) {
   return (
     <Paper
       withBorder
       h="100%"
-      p="md"
       radius="md"
-      style={{ display: "flex", flexDirection: "column" }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        padding: noScroll ? "12px 12px 8px" : "var(--mantine-spacing-md)",
+      }}
     >
       {/* HEADER */}
-      <Group justify="space-between" mb="md" align="flex-start">
+      <Group justify="space-between" mb="sm" align="flex-start">
         <div>
           {breadcrumbs && (
             <Breadcrumbs mb="xs">
@@ -77,7 +83,21 @@ export function LocationDetail({
       </Group>
 
       {/* CONTENT AREA */}
-      <ScrollArea style={{ flex: 1 }}>{children}</ScrollArea>
+      {noScroll ? (
+        <Box
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            minHeight: 0,
+          }}
+        >
+          {children}
+        </Box>
+      ) : (
+        <ScrollArea style={{ flex: 1 }}>{children}</ScrollArea>
+      )}
     </Paper>
   );
 }

@@ -1,9 +1,8 @@
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { LocationType } from '../../../common/enums/location-type.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 
 export class FindAllLocationsDto extends PaginationDto {
@@ -34,9 +33,10 @@ export class FindAllLocationsDto extends PaginationDto {
   @Type(() => Boolean)
   isGuestZone?: boolean;
 
-  @IsEnum(LocationOwnership)
+  @IsBoolean()
   @IsOptional()
-  ownership?: LocationOwnership;
+  @Type(() => Boolean)
+  isRectorate?: boolean;
 
   @IsNumber()
   @IsOptional()
@@ -51,4 +51,17 @@ export class FindAllLocationsDto extends PaginationDto {
   @IsEnum(BedStatus)
   @IsOptional()
   status?: BedStatus;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  roomTypeId?: number;
+
+  @IsString()
+  @IsOptional()
+  orderBy?: string;
+
+  @IsIn(['asc', 'desc'])
+  @IsOptional()
+  orderDir?: 'asc' | 'desc';
 }

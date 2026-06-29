@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { BedsRepository } from '../repositories/beds.repository';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
@@ -9,13 +15,13 @@ import {
   UpdateBedTrOnlyDto,
   UpdateBedForeignerOnlyDto,
   UpdateBedGuestZoneDto,
-  UpdateBedOwnershipDto,
+  UpdateBedIsRectorateDto,
 } from '../dto/update-bed-policies.dto';
 import {
   BulkUpdateBedTrOnlyDto,
   BulkUpdateBedForeignerOnlyDto,
   BulkUpdateBedGuestZoneDto,
-  BulkUpdateBedOwnershipDto,
+  BulkUpdateBedIsRectorateDto,
 } from '../dto/bulk-update-bed-policies.dto';
 import { Bed } from '../entities/bed.entity';
 import { DatabaseService } from '../../../core/database/database.service';
@@ -29,6 +35,7 @@ import { UndoService } from '../../audit/services/undo.service';
 import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { Inject, forwardRef } from '@nestjs/common';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
+import { PERMISSIONS } from '../../../common/constants/permissions';
 
 @Injectable()
 export class BedsService {
@@ -41,6 +48,13 @@ export class BedsService {
     private readonly db: DatabaseService,
     private readonly locationScopeService: LocationScopeService,
   ) {}
+
+  private canAccessRectorate(context: AuditUserContext): boolean {
+    return (
+      context.isRecoveryAdmin === true ||
+      context.permissions?.includes(PERMISSIONS.LOCATIONS_RECTORATE) === true
+    );
+  }
 
   // Fetches the bed's room and asserts the current staff member's location
   // scope covers it. Used before any single-bed read or mutation.
@@ -85,7 +99,10 @@ export class BedsService {
   }
 
   async findAll(filters: FindAllBedsDto, context: AuditUserContext): Promise<PaginatedResult<Bed>> {
-    return this.bedsRepository.findAll(filters, undefined, context.locationScope);
+    const effectiveFilters = this.canAccessRectorate(context)
+      ? filters
+      : { ...filters, isRectorate: false };
+    return this.bedsRepository.findAll(effectiveFilters, undefined, context.locationScope);
   }
 
   async create(
@@ -93,6 +110,9 @@ export class BedsService {
     context: AuditUserContext,
     externalClient?: PoolClient,
   ): Promise<Bed> {
+    if (data.isRectorate && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to create rectorate beds');
+    }
     const operation = async (client: PoolClient) => {
       // Fetch room to copy initial state
       const room = await this.locationsRepository.findById(data.locationId, client);
@@ -106,7 +126,7 @@ export class BedsService {
           ...data,
           isTrOnly: data.isTrOnly ?? room.isTrOnly,
           isGuestZone: data.isGuestZone ?? room.isGuestZone,
-          ownership: data.ownership ?? room.ownership,
+          isRectorate: data.isRectorate ?? room.isRectorate,
         },
         client,
       );
@@ -145,6 +165,9 @@ export class BedsService {
   }
 
   async update(id: number, data: UpdateBedDto, context: AuditUserContext): Promise<Bed> {
+    if (data.isRectorate !== undefined && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to modify the rectorate flag');
+    }
     return this.db.transaction(async (client) => {
       const existing = await this.assertBedInScope(id, context, client);
 
@@ -184,9 +207,33 @@ export class BedsService {
     }, context);
   }
 
-  async delete(id: number, context: AuditUserContext): Promise<void> {
+  async delete(id: number, context: AuditUserContext, force = false): Promise<void> {
     return this.db.transaction(async (client) => {
       const existing = await this.assertBedInScope(id, context, client);
+
+      // Guard: prevent deletion if it would leave the room below its room type's required bed count
+      const capacityCheck = await client.query<{ capacity: number; bedCount: number }>(
+        `SELECT rt.capacity, COUNT(b.id)::int AS "bedCount"
+         FROM beds b
+         JOIN locations l ON l.id = b.location_id AND l.deleted_at IS NULL
+         JOIN room_types rt ON rt.id = l.room_type_id
+         WHERE b.location_id = $1 AND b.deleted_at IS NULL
+         GROUP BY rt.capacity`,
+        [existing.locationId],
+      );
+      if (capacityCheck.rows[0]) {
+        const { capacity, bedCount } = capacityCheck.rows[0];
+        if (bedCount <= capacity) {
+          const canForce =
+            force && context.permissions?.includes(PERMISSIONS.LOCATIONS_UPDATE) === true;
+          if (!canForce) {
+            throw new ConflictException(
+              `Cannot delete bed: the room requires ${capacity} bed(s) per its room type and currently has ${bedCount}. Use ?force=true with LOCATIONS_UPDATE permission to override.`,
+            );
+          }
+        }
+      }
+
       await this.bedsRepository.delete(id, client);
 
       await this.undoService.registerUndo(
@@ -251,20 +298,24 @@ export class BedsService {
     }, context);
   }
 
-  async updateOwnership(id: number, ownership: any, context: AuditUserContext): Promise<Bed> {
+  async updateIsRectorate(
+    id: number,
+    isRectorate: boolean,
+    context: AuditUserContext,
+  ): Promise<Bed> {
     return this.db.transaction(async (client) => {
       const bed = await this.assertBedInScope(id, context, client);
 
-      const updated = await this.bedsRepository.updateOwnership(id, ownership, client);
+      const updated = await this.bedsRepository.updateIsRectorate(id, isRectorate, client);
 
       await this.undoService.registerUndo(
         {
           userId: context.userId,
-          actionType: UndoActionType.UPDATE_BED_OWNERSHIP,
+          actionType: UndoActionType.UPDATE_BED_IS_RECTORATE,
           entityType: 'bed',
           entityId: id.toString(),
-          undoData: { previousOwnership: bed.ownership },
-          description: `Updated ownership on bed ${bed.label}`,
+          undoData: { previousIsRectorate: bed.isRectorate },
+          description: `Updated rectorate flag on bed ${bed.label}`,
         },
         client,
       );
@@ -345,14 +396,14 @@ export class BedsService {
     }, context);
   }
 
-  async updateOwnershipMany(
-    dto: BulkUpdateBedOwnershipDto,
+  async updateIsRectorateMany(
+    dto: BulkUpdateBedIsRectorateDto,
     context: AuditUserContext,
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.assertBedInScope(id, context, client);
-        await this.bedsRepository.updateOwnership(id, dto.ownership, client);
+        await this.bedsRepository.updateIsRectorate(id, dto.isRectorate, client);
       }
     }, context);
   }

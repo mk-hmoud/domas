@@ -1,4 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { LocationsRepository } from '../repositories/locations.repository';
 import { BedsRepository } from '../repositories/beds.repository';
 import { StudentsRepository } from '../../students/repositories/students.repository';
@@ -15,14 +22,14 @@ import {
   BulkUpdateGuestZoneDto,
   BulkUpdateTrOnlyDto,
   BulkUpdateForeignerOnlyDto,
-  BulkUpdateOwnershipDto,
+  BulkUpdateIsRectorateDto,
 } from '../dto/bulk-update-policies.dto';
 import {
   UpdateGenderLockDto,
   UpdateGuestZoneDto,
   UpdateTrOnlyDto,
   UpdateForeignerOnlyDto,
-  UpdateOwnershipDto,
+  UpdateIsRectorateDto,
 } from '../dto/update-policies.dto';
 import { Location } from '../entities/location.entity';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
@@ -38,6 +45,28 @@ import { UndoActionType } from '../../../common/enums/undo-action-type.enum';
 import { Inject, forwardRef } from '@nestjs/common';
 
 import { FindAllLocationsDto } from '../dto/find-all-locations.dto';
+import { PERMISSIONS } from '../../../common/constants/permissions';
+
+interface AncestorFlagSource {
+  value: any;
+  sourceId: number;
+  sourceName: string;
+}
+
+interface AncestorFlagsResult {
+  isTrOnly: AncestorFlagSource | null;
+  isForeignerOnly: AncestorFlagSource | null;
+  isGuestZone: AncestorFlagSource | null;
+  isRectorate: AncestorFlagSource | null;
+  genderLock: AncestorFlagSource | null;
+  studentYearLock: AncestorFlagSource | null;
+}
+
+interface LocationFlagContext {
+  ancestorFlags: AncestorFlagsResult;
+  descendantCount: { locations: number; beds: number };
+  descendantPreview: { id: number; name: string; nameTr?: string; type: string }[];
+}
 
 @Injectable()
 export class LocationsService {
@@ -55,7 +84,12 @@ export class LocationsService {
 
   // ... (existing create helper)
 
-  // ... (existing methods)
+  private canAccessRectorate(context: AuditUserContext): boolean {
+    return (
+      context.isRecoveryAdmin === true ||
+      context.permissions?.includes(PERMISSIONS.LOCATIONS_RECTORATE) === true
+    );
+  }
 
   async createRoomWithBeds(
     dto: CreateRoomWithBedsDto,
@@ -63,21 +97,35 @@ export class LocationsService {
     externalClient?: PoolClient,
   ): Promise<Location> {
     const operation = async (client: PoolClient) => {
-      // 1. Create Room (Location)
+      // 1. Resolve bed count from room type capacity
+      if (!dto.roomTypeId) {
+        throw new BadRequestException('A room must have a room type assigned');
+      }
+      const rtResult = await client.query<{ capacity: number }>(
+        `SELECT capacity FROM room_types WHERE id = $1`,
+        [dto.roomTypeId],
+      );
+      if (!rtResult.rows[0]) {
+        throw new NotFoundException(`Room type ${dto.roomTypeId} not found`);
+      }
+      const bedCount = rtResult.rows[0].capacity;
+
+      // 2. Create Room (Location)
       const room = await this.create(dto, context, client);
 
-      // 2. Create Beds
+      // 3. Create Beds — one per room type capacity slot
       const bedPromises = [];
-      for (let i = 1; i <= dto.bedCount; i++) {
-        // Generate label: "A", "B", "C"... or "1", "2", "3"
-        // Using Letters A-Z for now
-        const label = String.fromCharCode(64 + i);
+      for (let i = 1; i <= bedCount; i++) {
+        const label = String.fromCharCode(64 + i); // A, B, C…
         bedPromises.push(
           this.bedsRepository.create(
             {
               locationId: room.id,
-              label: label,
+              label,
               status: BedStatus.AVAILABLE,
+              isTrOnly: room.isTrOnly,
+              isGuestZone: room.isGuestZone,
+              isRectorate: room.isRectorate,
             },
             client,
           ),
@@ -89,7 +137,7 @@ export class LocationsService {
 
     if (externalClient) return operation(externalClient);
 
-    this.logger.log({ room: dto.name, bedCount: dto.bedCount }, 'Creating room with beds');
+    this.logger.log({ room: dto.name, roomTypeId: dto.roomTypeId }, 'Creating room with beds');
     return this.db.transaction(operation, context);
   }
 
@@ -119,6 +167,9 @@ export class LocationsService {
     if (data.type === LocationType.ROOM && !data.roomTypeId) {
       throw new BadRequestException('A room must have a room type assigned');
     }
+    if (data.isRectorate && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to create rectorate locations');
+    }
 
     const operation = async (client: PoolClient) => {
       let parentFlags: Partial<Location> = {};
@@ -131,7 +182,7 @@ export class LocationsService {
             genderLock: parent.genderLock,
             isTrOnly: parent.isTrOnly,
             isGuestZone: parent.isGuestZone,
-            ownership: parent.ownership,
+            isRectorate: parent.isRectorate,
           };
         }
       } else {
@@ -141,9 +192,29 @@ export class LocationsService {
         this.locationScopeService.assertAccess(context.locationScope, '');
       }
 
+      // Room type flags override parent flags — the room type is the source of truth
+      let roomTypeFlags: Partial<Location> = {};
+      if (data.type === LocationType.ROOM && data.roomTypeId) {
+        const rtResult = await client.query<{
+          genderLock: string | null;
+          studentYearLock: string | null;
+          isGuestZone: boolean;
+          isTrOnly: boolean;
+          isForeignerOnly: boolean;
+          isRectorate: boolean;
+        }>(
+          `SELECT gender_lock AS "genderLock", student_year_lock AS "studentYearLock",
+                  is_guest_zone AS "isGuestZone", is_tr_only AS "isTrOnly",
+                  is_foreigner_only AS "isForeignerOnly", is_rectorate AS "isRectorate"
+           FROM room_types WHERE id = $1`,
+          [data.roomTypeId],
+        );
+        if (rtResult.rows[0]) roomTypeFlags = rtResult.rows[0] as Partial<Location>;
+      }
+
       const tempPath = 'temp';
       const created = await this.locationsRepository.create(
-        { ...parentFlags, ...data, treePath: tempPath },
+        { ...parentFlags, ...data, ...roomTypeFlags, treePath: tempPath },
         client,
       );
 
@@ -231,7 +302,10 @@ export class LocationsService {
     filters: FindAllLocationsDto,
     context: AuditUserContext,
   ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
-    return this.locationsRepository.findAll(filters, undefined, context.locationScope);
+    const effectiveFilters = this.canAccessRectorate(context)
+      ? filters
+      : { ...filters, isRectorate: false };
+    return this.locationsRepository.findAll(effectiveFilters, undefined, context.locationScope);
   }
 
   async findById(id: number, context: AuditUserContext): Promise<Location> {
@@ -302,7 +376,7 @@ export class LocationsService {
           isGuestZone: row.isGuestZone,
           isTrOnly: row.isTrOnly,
           isForeignerOnly: row.isForeignerOnly,
-          ownership: row.ownership,
+          isRectorate: row.isRectorate,
           roomTypeId: row.roomTypeId,
           roomTypeName: row.roomTypeName,
           roomTypeNameTr: row.roomTypeNameTr,
@@ -356,12 +430,50 @@ export class LocationsService {
 
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
     this.logger.log({ locationId: id, data }, 'Updating location');
+    if (data.isRectorate !== undefined && !this.canAccessRectorate(context)) {
+      throw new ForbiddenException('You do not have permission to modify the rectorate flag');
+    }
     const location = await this.db.transaction(async (client) => {
       const existing = await this.locationsRepository.findById(id, client);
       if (!existing) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
       this.locationScopeService.assertAccess(context.locationScope, existing.treePath);
+
+      // When changing a room's type, ensure bed count matches new type's capacity
+      if (
+        'roomTypeId' in data &&
+        data.roomTypeId !== null &&
+        data.roomTypeId !== existing.roomTypeId
+      ) {
+        const rtResult = await client.query<{
+          capacity: number;
+          genderLock: string | null;
+          studentYearLock: string | null;
+          isGuestZone: boolean;
+          isTrOnly: boolean;
+          isForeignerOnly: boolean;
+          isRectorate: boolean;
+        }>(
+          `SELECT capacity, gender_lock AS "genderLock", student_year_lock AS "studentYearLock",
+                  is_guest_zone AS "isGuestZone", is_tr_only AS "isTrOnly",
+                  is_foreigner_only AS "isForeignerOnly", is_rectorate AS "isRectorate"
+           FROM room_types WHERE id = $1`,
+          [data.roomTypeId],
+        );
+        if (!rtResult.rows[0]) {
+          throw new NotFoundException(`Room type ${data.roomTypeId} not found`);
+        }
+        const { capacity, ...rtFlags } = rtResult.rows[0];
+        const bedCount = await this.bedsRepository.countByLocation(id, client);
+        if (bedCount !== capacity) {
+          throw new ConflictException(
+            `Cannot change room type: room has ${bedCount} bed(s) but the new type requires ${capacity}. Adjust the room's beds first.`,
+          );
+        }
+        // Apply new room type's flags to this room
+        Object.assign(data, rtFlags);
+      }
 
       const updated = await this.locationsRepository.update(id, data, client);
 
@@ -381,6 +493,49 @@ export class LocationsService {
     }, context);
     this.logger.log({ locationId: id }, 'Location updated successfully');
     return location;
+  }
+
+  async getFlagContext(id: number, context: AuditUserContext): Promise<LocationFlagContext> {
+    const location = await this.locationsRepository.findById(id);
+    if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+
+    const [ancestors, descendantCount, descendantPreview] = await Promise.all([
+      this.locationsRepository.findWithAncestors(id),
+      this.locationsRepository.countDescendants(id),
+      this.locationsRepository.getDescendantPreview(id, 10),
+    ]);
+
+    const ancestorChain = ancestors.filter((a) => a.id !== id).reverse();
+
+    const findSrc = (
+      predicate: (a: Location) => boolean,
+    ): { sourceId: number; sourceName: string } | null => {
+      const found = ancestorChain.find(predicate);
+      return found ? { sourceId: found.id, sourceName: found.name } : null;
+    };
+
+    const trSrc = findSrc((a) => a.isTrOnly);
+    const foreignerSrc = findSrc((a) => a.isForeignerOnly);
+    const guestSrc = findSrc((a) => a.isGuestZone);
+    const rectorSrc = findSrc((a) => a.isRectorate);
+    const genderSrc = findSrc((a) => !!a.genderLock);
+    const yearSrc = findSrc((a) => !!a.studentYearLock);
+
+    const ancestorFlags: AncestorFlagsResult = {
+      isTrOnly: trSrc ? { value: true, ...trSrc } : null,
+      isForeignerOnly: foreignerSrc ? { value: true, ...foreignerSrc } : null,
+      isGuestZone: guestSrc ? { value: true, ...guestSrc } : null,
+      isRectorate: rectorSrc ? { value: true, ...rectorSrc } : null,
+      genderLock: genderSrc
+        ? { value: ancestorChain.find((a) => !!a.genderLock)!.genderLock, ...genderSrc }
+        : null,
+      studentYearLock: yearSrc
+        ? { value: ancestorChain.find((a) => !!a.studentYearLock)!.studentYearLock, ...yearSrc }
+        : null,
+    };
+
+    return { ancestorFlags, descendantCount, descendantPreview };
   }
 
   async delete(id: number, context: AuditUserContext): Promise<void> {
@@ -412,6 +567,14 @@ export class LocationsService {
     this.logger.log({ locationId: id }, 'Location deleted successfully');
   }
 
+  private assertNotRoomTypeLocked(location: Location, context: AuditUserContext): void {
+    if (location.roomTypeId !== null && !context.isRecoveryAdmin) {
+      throw new ConflictException(
+        `This room's flags are managed by its room type (ID ${location.roomTypeId}). Update the room type to change them, or use a recovery admin account for a direct override.`,
+      );
+    }
+  }
+
   async updateGenderLock(
     id: number,
     genderLock: any,
@@ -423,6 +586,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateGenderLock(
         id,
@@ -463,11 +627,24 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateStudentYearLock(
         id,
         studentYearLock,
         cascade,
+        client,
+      );
+
+      await this.undoService.registerUndo(
+        {
+          userId: context.userId,
+          actionType: UndoActionType.UPDATE_STUDENT_YEAR_LOCK,
+          entityType: 'location',
+          entityId: id.toString(),
+          undoData: { previousStudentYearLock: location.studentYearLock, cascade },
+          description: `Updated student year lock on ${location.name}`,
+        },
         client,
       );
 
@@ -491,6 +668,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateGuestZone(
         id,
@@ -531,6 +709,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
 
@@ -555,9 +734,9 @@ export class LocationsService {
     return this.db.transaction(operation, context);
   }
 
-  async updateOwnership(
+  async updateIsRectorate(
     id: number,
-    ownership: any,
+    isRectorate: boolean,
     cascade: boolean,
     context: AuditUserContext,
     externalClient?: PoolClient,
@@ -566,10 +745,11 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
-      const updated = await this.locationsRepository.updateOwnership(
+      const updated = await this.locationsRepository.updateIsRectorate(
         id,
-        ownership,
+        isRectorate,
         cascade,
         client,
       );
@@ -577,11 +757,11 @@ export class LocationsService {
       await this.undoService.registerUndo(
         {
           userId: context.userId,
-          actionType: UndoActionType.UPDATE_OWNERSHIP,
+          actionType: UndoActionType.UPDATE_IS_RECTORATE,
           entityType: 'location',
           entityId: id.toString(),
-          undoData: { previousOwnership: location.ownership, cascade },
-          description: `Updated ownership on ${location.name}`,
+          undoData: { previousIsRectorate: location.isRectorate, cascade },
+          description: `Updated rectorate flag on ${location.name}`,
         },
         client,
       );
@@ -591,7 +771,7 @@ export class LocationsService {
 
     if (externalClient) return operation(externalClient);
 
-    this.logger.log({ locationId: id, ownership, cascade }, 'Updating ownership');
+    this.logger.log({ locationId: id, isRectorate, cascade }, 'Updating rectorate flag');
     return this.db.transaction(operation, context);
   }
 
@@ -642,6 +822,7 @@ export class LocationsService {
       const location = await this.locationsRepository.findById(id, client);
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+      this.assertNotRoomTypeLocked(location, context);
 
       const updated = await this.locationsRepository.updateForeignerOnly(
         id,
@@ -692,11 +873,17 @@ export class LocationsService {
     }, context);
   }
 
-  async updateOwnershipMany(dto: BulkUpdateOwnershipDto, context: AuditUserContext): Promise<void> {
-    this.logger.log({ count: dto.ids.length, ownership: dto.ownership }, 'Bulk updating ownership');
+  async updateIsRectorateMany(
+    dto: BulkUpdateIsRectorateDto,
+    context: AuditUserContext,
+  ): Promise<void> {
+    this.logger.log(
+      { count: dto.ids.length, isRectorate: dto.isRectorate },
+      'Bulk updating rectorate flag',
+    );
     await this.db.transaction(async (client) => {
       for (const id of dto.ids) {
-        await this.updateOwnership(id, dto.ownership, dto.cascade ?? true, context, client);
+        await this.updateIsRectorate(id, dto.isRectorate, dto.cascade ?? true, context, client);
       }
     }, context);
   }

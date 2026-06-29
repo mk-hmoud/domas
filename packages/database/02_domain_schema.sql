@@ -29,8 +29,8 @@ CREATE TABLE locations (
     is_guest_zone BOOLEAN DEFAULT FALSE,
     is_tr_only BOOLEAN DEFAULT FALSE,
     is_foreigner_only BOOLEAN DEFAULT FALSE,
-    ownership location_ownership_type DEFAULT 'dorm',
-    
+    is_rectorate BOOLEAN DEFAULT FALSE,
+
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL
@@ -238,8 +238,8 @@ CREATE TABLE beds (
     is_tr_only BOOLEAN DEFAULT FALSE,
     is_foreigner_only BOOLEAN DEFAULT FALSE,
     is_guest_zone BOOLEAN DEFAULT FALSE,
-    ownership location_ownership_type DEFAULT 'dorm',
-    
+    is_rectorate BOOLEAN DEFAULT FALSE,
+
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     
@@ -751,7 +751,14 @@ CREATE TABLE room_types (
     gallery_urls TEXT[]       NOT NULL DEFAULT '{}',
     amenities    TEXT[]       NOT NULL DEFAULT '{}',
     -- 1 = Single, 2 = Double, 3 = Triple, 4 = Quad
-    capacity     SMALLINT     NOT NULL CHECK (capacity BETWEEN 1 AND 8),
+    capacity        SMALLINT     NOT NULL CHECK (capacity BETWEEN 1 AND 8),
+    -- Policy flags — cascade to all rooms of this type on update
+    gender_lock     gender_type  DEFAULT NULL,
+    student_year_lock VARCHAR(10) DEFAULT NULL CHECK (student_year_lock IN ('new', 'current')),
+    is_guest_zone   BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_tr_only      BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_foreigner_only BOOLEAN    NOT NULL DEFAULT FALSE,
+    is_rectorate    BOOLEAN      NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ  DEFAULT NOW(),
     updated_at   TIMESTAMPTZ  DEFAULT NOW()
 );

@@ -1,7 +1,6 @@
 import { PaginationDto } from "./pagination.dto";
 import { LocationType } from "../enums/location-type.enum";
 import { GenderType } from "../enums/gender-type.enum";
-import { LocationOwnership } from "../enums/location-ownership.enum";
 import { BedStatus } from "../enums/bed-status.enum";
 
 export interface FindAllLocationsDto extends PaginationDto {
@@ -11,8 +10,11 @@ export interface FindAllLocationsDto extends PaginationDto {
   isTrOnly?: boolean;
   isForeignerOnly?: boolean;
   isGuestZone?: boolean;
-  ownership?: LocationOwnership;
+  isRectorate?: boolean;
   parentId?: number;
   onlyVacant?: boolean;
   status?: BedStatus;
+  roomTypeId?: number;
+  orderBy?: string;
+  orderDir?: "asc" | "desc";
 }

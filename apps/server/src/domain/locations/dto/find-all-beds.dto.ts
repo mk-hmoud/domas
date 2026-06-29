@@ -3,7 +3,6 @@ import { Type } from 'class-transformer';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { GenderType } from '../../../common/enums/gender-type.enum';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 
 export class FindAllBedsDto extends PaginationDto {
   @IsOptional()
@@ -39,6 +38,7 @@ export class FindAllBedsDto extends PaginationDto {
   isGuestZone?: boolean;
 
   @IsOptional()
-  @IsEnum(LocationOwnership)
-  ownership?: LocationOwnership;
+  @IsBoolean()
+  @Type(() => Boolean)
+  isRectorate?: boolean;
 }

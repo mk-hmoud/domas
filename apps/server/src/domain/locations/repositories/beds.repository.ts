@@ -7,7 +7,6 @@ import { BedStatus } from '../../../common/enums/bed-status.enum';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { FindAllBedsDto } from '../dto/find-all-beds.dto';
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface';
-import { LocationOwnership } from '../../../common/enums/location-ownership.enum';
 import { isTurkishNational } from '../../../common/utils/nationality.utils';
 import { LocationScopeService } from '../../../core/location-scope/location-scope.service';
 import { LocationScope } from '../../../common/interfaces/location-scope.interface';
@@ -32,14 +31,14 @@ export class BedsRepository implements IBedsRepository {
       is_tr_only as "isTrOnly",
       is_foreigner_only as "isForeignerOnly",
       is_guest_zone as "isGuestZone",
-      ownership,
+      is_rectorate as "isRectorate",
       updated_at as "updatedAt"
     `;
   }
 
   async create(data: Partial<Bed>, client?: PoolClient): Promise<Bed> {
     const query = `
-      INSERT INTO beds (location_id, label, status, is_tr_only, is_foreigner_only, is_guest_zone, ownership)
+      INSERT INTO beds (location_id, label, status, is_tr_only, is_foreigner_only, is_guest_zone, is_rectorate)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING ${this.selectColumns}
     `;
@@ -50,7 +49,7 @@ export class BedsRepository implements IBedsRepository {
       data.isTrOnly || false,
       data.isForeignerOnly || false,
       data.isGuestZone || false,
-      data.ownership || LocationOwnership.DORM,
+      data.isRectorate || false,
     ];
     const result = await this.getClient(client).query<Bed>(query, values);
     return new Bed(result.rows[0]);
@@ -70,7 +69,7 @@ export class BedsRepository implements IBedsRepository {
       isTrOnly,
       isForeignerOnly,
       isGuestZone,
-      ownership,
+      isRectorate,
       q,
     } = filters;
     const offset = (page - 1) * limit;
@@ -81,10 +80,10 @@ export class BedsRepository implements IBedsRepository {
         b.location_id as "locationId", 
         b.label, 
         b.status, 
-        b.is_tr_only as "isTrOnly", 
+        b.is_tr_only as "isTrOnly",
         b.is_foreigner_only as "isForeignerOnly",
-        b.is_guest_zone as "isGuestZone", 
-        b.ownership, 
+        b.is_guest_zone as "isGuestZone",
+        b.is_rectorate as "isRectorate",
         b.updated_at as "updatedAt",
         'bed' as "type",
         l.name as "locationName",
@@ -124,9 +123,9 @@ export class BedsRepository implements IBedsRepository {
       conditions.push(`b.is_guest_zone = $${values.length + 1}`);
       values.push(isGuestZone);
     }
-    if (ownership) {
-      conditions.push(`b.ownership = $${values.length + 1}`);
-      values.push(ownership);
+    if (isRectorate !== undefined) {
+      conditions.push(`b.is_rectorate = $${values.length + 1}`);
+      values.push(isRectorate);
     }
     if (q) {
       values.push(`%${q}%`);
@@ -248,9 +247,9 @@ export class BedsRepository implements IBedsRepository {
       updates.push(`is_guest_zone = $${paramIndex++}`);
       values.push(data.isGuestZone);
     }
-    if (data.ownership !== undefined) {
-      updates.push(`ownership = $${paramIndex++}`);
-      values.push(data.ownership);
+    if (data.isRectorate !== undefined) {
+      updates.push(`is_rectorate = $${paramIndex++}`);
+      values.push(data.isRectorate);
     }
 
     if (updates.length === 0) {
@@ -343,7 +342,7 @@ export class BedsRepository implements IBedsRepository {
         b.status, 
         b.is_tr_only as "isTrOnly",
         b.is_guest_zone as "isGuestZone",
-        b.ownership,
+        b.is_rectorate as "isRectorate",
         b.updated_at as "updatedAt",
         l.name as "locationName"
       FROM beds b
@@ -380,9 +379,9 @@ export class BedsRepository implements IBedsRepository {
     return new Bed(result.rows[0]);
   }
 
-  async updateOwnership(id: number, ownership: any, client?: PoolClient): Promise<Bed> {
-    const query = `UPDATE beds SET ownership = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
-    const result = await this.getClient(client).query<Bed>(query, [ownership, id]);
+  async updateIsRectorate(id: number, isRectorate: boolean, client?: PoolClient): Promise<Bed> {
+    const query = `UPDATE beds SET is_rectorate = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING ${this.selectColumns}`;
+    const result = await this.getClient(client).query<Bed>(query, [isRectorate, id]);
     return new Bed(result.rows[0]);
   }
 
