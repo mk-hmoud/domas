@@ -1040,6 +1040,8 @@ CREATE TABLE tickets (
     rejection_reason  TEXT,
     resolved_at       TIMESTAMPTZ,
 
+    photo_keys        TEXT[]      NOT NULL DEFAULT '{}',
+
     created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

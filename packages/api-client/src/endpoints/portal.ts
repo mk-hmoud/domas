@@ -341,10 +341,18 @@ export const portalTickets = {
     return response.data;
   },
 
-  create: async (dto: CreateTicketDto): Promise<StudentTicketView> => {
+  create: async (
+    dto: CreateTicketDto,
+    photos: File[] = [],
+  ): Promise<StudentTicketView> => {
+    const form = new FormData();
+    form.append("category", dto.category);
+    form.append("title", dto.title);
+    form.append("description", dto.description);
+    photos.forEach((f) => form.append("photos", f));
     const response = await apiClient.post<StudentTicketView>(
       "/portal/tickets",
-      dto,
+      form,
     );
     return response.data;
   },
