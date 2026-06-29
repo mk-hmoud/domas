@@ -134,22 +134,17 @@ export function BookingPage() {
         ? t('portal.status_ready_checkin')
         : t('portal.status_under_review');
 
-  const headerColor = isActive ? 'green' : isRejected ? 'red' : 'blue';
+  const badgeColor = isActive ? 'green' : isRejected ? 'red' : 'blue';
 
   return (
     <Stack gap="lg">
       <PortalPageHeader
         icon={IconBed}
-        color={headerColor}
+        color={badgeColor}
         title={booking.roomName}
         subtitle={`${booking.locationPath} · ${t('portal.bed_label', { label: booking.bedLabel })} · ${booking.semesterDisplayName}`}
         action={
-          <Badge
-            color={isRejected ? 'red' : isActive ? 'green' : 'blue'}
-            variant="filled"
-            size="lg"
-            radius="xl"
-          >
+          <Badge color={badgeColor} variant="light" size="lg" radius="xl">
             {statusBadgeLabel}
           </Badge>
         }
@@ -158,24 +153,13 @@ export function BookingPage() {
       <Grid gutter="lg" align="flex-start">
         {/* Left — status stepper */}
         <Grid.Col span={{ base: 12, lg: 5 }}>
-          <Paper
-            radius="xl"
-            p="lg"
-            style={{
-              border: `2px solid var(--mantine-color-${headerColor}-3)`,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-            }}
-          >
+          <Paper radius="xl" p="lg" withBorder>
             <Stack gap="md">
               <Group justify="space-between" align="center">
                 <Text fw={700} size="sm">
                   {t('portal.application_status')}
                 </Text>
-                <Badge
-                  color={isRejected ? 'red' : isActive ? 'green' : 'blue'}
-                  variant="light"
-                  radius="xl"
-                >
+                <Badge color={badgeColor} variant="light" radius="xl">
                   {statusBadgeLabel}
                 </Badge>
               </Group>
@@ -194,14 +178,7 @@ export function BookingPage() {
             )}
 
             {!isRejected && (
-              <Paper
-                radius="xl"
-                style={{
-                  overflow: 'hidden',
-                  border: '1px solid var(--mantine-color-default-border)',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                }}
-              >
+              <Paper radius="xl" withBorder style={{ overflow: 'hidden' }}>
                 <Tabs defaultValue="details" radius={0}>
                   <Tabs.List px="md" pt="xs">
                     <Tabs.Tab value="details" leftSection={<IconBed size={14} />}>
@@ -220,146 +197,122 @@ export function BookingPage() {
 
                   {/* Details tab */}
                   <Tabs.Panel value="details" p="lg">
-                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-                      <Stack gap="sm">
-                        <Paper
-                          radius="lg"
-                          p="sm"
-                          style={{
-                            background: 'var(--mantine-color-blue-light)',
-                            border: '1px solid var(--mantine-color-blue-2)',
-                          }}
-                        >
-                          <Group gap="sm" align="flex-start" wrap="nowrap">
-                            <ThemeIcon
-                              size={30}
-                              radius="md"
-                              variant="light"
-                              color="blue"
-                              style={{ flexShrink: 0 }}
-                            >
-                              <IconBed size={15} />
-                            </ThemeIcon>
-                            <Box>
-                              <Text size="xs" c="dimmed">
-                                {t('portal.room_bed')}
-                              </Text>
-                              <Text size="sm" fw={600}>
-                                {booking.roomName} —{' '}
-                                {t('portal.bed_label', { label: booking.bedLabel })}
-                              </Text>
-                              <Text size="xs" c="dimmed">
-                                {booking.locationPath}
-                              </Text>
-                            </Box>
-                          </Group>
-                        </Paper>
-
-                        <Paper
-                          radius="lg"
-                          p="sm"
-                          style={{
-                            background: 'var(--mantine-color-teal-light)',
-                            border: '1px solid var(--mantine-color-teal-2)',
-                          }}
-                        >
-                          <Group gap="sm" align="flex-start" wrap="nowrap">
-                            <ThemeIcon
-                              size={30}
-                              radius="md"
-                              variant="light"
-                              color="teal"
-                              style={{ flexShrink: 0 }}
-                            >
-                              <IconCalendar size={15} />
-                            </ThemeIcon>
-                            <Box>
-                              <Text size="xs" c="dimmed">
-                                {t('portal.period')}
-                              </Text>
-                              <Text size="sm" fw={500}>
-                                {new Date(booking.startDate).toLocaleDateString()} –{' '}
-                                {new Date(booking.endDate).toLocaleDateString()}
-                              </Text>
-                            </Box>
-                          </Group>
-                        </Paper>
-                      </Stack>
-
-                      <Stack gap="sm">
-                        {isActive && booking.accessCardNumber && (
-                          <Paper
-                            radius="lg"
-                            p="sm"
-                            style={{
-                              background: 'var(--mantine-color-grape-light)',
-                              border: '1px solid var(--mantine-color-grape-2)',
-                            }}
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                      <Paper radius="lg" p="sm" withBorder>
+                        <Group gap="sm" align="flex-start" wrap="nowrap">
+                          <ThemeIcon
+                            size={30}
+                            radius="md"
+                            variant="light"
+                            color="blue"
+                            style={{ flexShrink: 0 }}
                           >
-                            <Group gap="sm" align="flex-start" wrap="nowrap">
-                              <ThemeIcon
-                                size={30}
-                                radius="md"
-                                variant="light"
-                                color="grape"
-                                style={{ flexShrink: 0 }}
-                              >
-                                <IconKey size={15} />
-                              </ThemeIcon>
-                              <Box>
-                                <Text size="xs" c="dimmed">
-                                  {t('portal.access_card')}
-                                </Text>
-                                <Text size="sm" fw={600}>
-                                  #{booking.accessCardNumber}
-                                </Text>
-                              </Box>
-                            </Group>
-                          </Paper>
-                        )}
-
-                        {booking.checkedInAt && (
-                          <Paper
-                            radius="lg"
-                            p="sm"
-                            style={{
-                              background: 'var(--mantine-color-green-light)',
-                              border: '1px solid var(--mantine-color-green-2)',
-                            }}
-                          >
-                            <Group gap="sm" align="flex-start" wrap="nowrap">
-                              <ThemeIcon
-                                size={30}
-                                radius="md"
-                                variant="light"
-                                color="green"
-                                style={{ flexShrink: 0 }}
-                              >
-                                <IconDoor size={15} />
-                              </ThemeIcon>
-                              <Box>
-                                <Text size="xs" c="dimmed">
-                                  {t('portal.checked_in_label')}
-                                </Text>
-                                <Text size="sm" fw={500}>
-                                  {new Date(booking.checkedInAt).toLocaleDateString()}
-                                </Text>
-                              </Box>
-                            </Group>
-                          </Paper>
-                        )}
-
-                        {booking.checkedOutAt && (
-                          <Alert icon={<IconDoor size={14} />} color="gray" radius="lg" p="sm">
-                            <Text size="xs">
-                              {t('portal.checked_out_label', {
-                                date: new Date(booking.checkedOutAt).toLocaleDateString(),
-                              })}
+                            <IconBed size={15} />
+                          </ThemeIcon>
+                          <Box>
+                            <Text size="xs" c="dimmed">
+                              {t('portal.room_bed')}
                             </Text>
-                          </Alert>
-                        )}
-                      </Stack>
+                            <Text size="sm" fw={600}>
+                              {booking.roomName} —{' '}
+                              {t('portal.bed_label', { label: booking.bedLabel })}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {booking.locationPath}
+                            </Text>
+                          </Box>
+                        </Group>
+                      </Paper>
+
+                      <Paper radius="lg" p="sm" withBorder>
+                        <Group gap="sm" align="flex-start" wrap="nowrap">
+                          <ThemeIcon
+                            size={30}
+                            radius="md"
+                            variant="light"
+                            color="blue"
+                            style={{ flexShrink: 0 }}
+                          >
+                            <IconKey size={15} />
+                          </ThemeIcon>
+                          <Box>
+                            <Text size="xs" c="dimmed">
+                              {t('portal.access_card')}
+                            </Text>
+                            {booking.accessCardNumber ? (
+                              <Text size="sm" fw={600}>
+                                #{booking.accessCardNumber}
+                              </Text>
+                            ) : (
+                              <Text size="sm" c="dimmed">
+                                —
+                              </Text>
+                            )}
+                          </Box>
+                        </Group>
+                      </Paper>
+
+                      <Paper radius="lg" p="sm" withBorder>
+                        <Group gap="sm" align="flex-start" wrap="nowrap">
+                          <ThemeIcon
+                            size={30}
+                            radius="md"
+                            variant="light"
+                            color="blue"
+                            style={{ flexShrink: 0 }}
+                          >
+                            <IconCalendar size={15} />
+                          </ThemeIcon>
+                          <Box>
+                            <Text size="xs" c="dimmed">
+                              {t('portal.period')}
+                            </Text>
+                            <Text size="sm" fw={500}>
+                              {new Date(booking.startDate).toLocaleDateString()} –{' '}
+                              {new Date(booking.endDate).toLocaleDateString()}
+                            </Text>
+                          </Box>
+                        </Group>
+                      </Paper>
+
+                      <Paper radius="lg" p="sm" withBorder>
+                        <Group gap="sm" align="flex-start" wrap="nowrap">
+                          <ThemeIcon
+                            size={30}
+                            radius="md"
+                            variant="light"
+                            color="blue"
+                            style={{ flexShrink: 0 }}
+                          >
+                            <IconDoor size={15} />
+                          </ThemeIcon>
+                          <Box>
+                            <Text size="xs" c="dimmed">
+                              {t('portal.checked_in_label')}
+                            </Text>
+                            {booking.checkedInAt ? (
+                              <Text size="sm" fw={500}>
+                                {new Date(booking.checkedInAt).toLocaleDateString()}
+                              </Text>
+                            ) : (
+                              <Text size="sm" c="dimmed">
+                                —
+                              </Text>
+                            )}
+                          </Box>
+                        </Group>
+                      </Paper>
                     </SimpleGrid>
+
+                    {booking.checkedOutAt && (
+                      <Alert icon={<IconDoor size={14} />} color="gray" radius="lg" p="sm" mt="sm">
+                        <Text size="xs">
+                          {t('portal.checked_out_label', {
+                            date: new Date(booking.checkedOutAt).toLocaleDateString(),
+                          })}
+                        </Text>
+                      </Alert>
+                    )}
                   </Tabs.Panel>
 
                   {/* Room tab */}
@@ -379,7 +332,7 @@ export function BookingPage() {
                             {t('portal.payment_status')}
                           </Text>
                         </Group>
-                        <Badge color={pmtInfo.color} variant="filled" radius="xl">
+                        <Badge color={pmtInfo.color} variant="light" radius="xl">
                           {pmtInfo.label}
                         </Badge>
                       </Group>
@@ -422,8 +375,8 @@ export function BookingPage() {
                         </Button>
                         {booking.contractSigned && (
                           <Button
-                            variant="gradient"
-                            gradient={{ from: 'blue', to: 'cyan' }}
+                            variant="filled"
+                            color="blue"
                             size="sm"
                             leftSection={<IconFileDownload size={14} />}
                             onClick={() => portalBookings.downloadContract(booking.id)}

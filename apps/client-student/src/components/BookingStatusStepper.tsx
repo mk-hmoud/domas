@@ -11,110 +11,61 @@ interface Step {
   status: StepStatus;
 }
 
-function stepColor(status: StepStatus): string {
-  if (status === 'done') return 'green';
-  if (status === 'error') return 'red';
-  if (status === 'active') return 'blue';
-  return 'gray';
-}
-
 function StepItem({ step, isLast }: { step: Step; isLast: boolean }) {
-  const color = stepColor(step.status);
-  const isPending = step.status === 'pending';
   const isDone = step.status === 'done';
   const isActive = step.status === 'active';
   const isError = step.status === 'error';
+  const isPending = step.status === 'pending';
 
-  const connectorColor = isDone
-    ? 'linear-gradient(180deg, var(--mantine-color-green-5), var(--mantine-color-green-4))'
-    : isActive
-      ? 'linear-gradient(180deg, var(--mantine-color-blue-4), var(--mantine-color-gray-3))'
-      : 'var(--mantine-color-gray-3)';
+  const iconColor = isDone ? 'blue' : isActive ? 'blue' : isError ? 'red' : 'gray';
+  const iconVariant = isPending ? 'outline' : 'filled';
+
+  const connectorColor =
+    isDone || isActive ? 'var(--mantine-color-blue-5)' : 'var(--mantine-color-gray-3)';
 
   return (
-    <Box style={{ position: 'relative' }}>
+    <Box>
       <Group gap="sm" align="flex-start" wrap="nowrap">
-        {/* Circle + connector */}
+        {/* Icon + connector */}
         <Box
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}
         >
-          <ThemeIcon
-            size={32}
-            radius="xl"
-            variant={isPending ? 'light' : isDone ? 'gradient' : isError ? 'filled' : 'gradient'}
-            gradient={
-              isDone
-                ? { from: 'green', to: 'teal' }
-                : isActive
-                  ? { from: 'blue', to: 'cyan' }
-                  : undefined
-            }
-            color={isPending ? 'gray' : color}
-            style={{
-              boxShadow: isActive
-                ? '0 4px 12px rgba(34,139,230,0.35)'
-                : isDone
-                  ? '0 2px 8px rgba(64,192,87,0.25)'
-                  : undefined,
-              transition: 'all 0.2s ease',
-            }}
-          >
+          <ThemeIcon size={28} radius="xl" variant={iconVariant} color={iconColor}>
             {isDone ? (
-              <IconCheck size={15} />
+              <IconCheck size={13} />
             ) : isError ? (
-              <IconX size={15} />
+              <IconX size={13} />
             ) : isActive ? (
-              <IconClockHour4 size={15} />
+              <IconClockHour4 size={13} />
             ) : null}
           </ThemeIcon>
 
           {!isLast && (
             <Box
               style={{
-                width: 2,
+                width: 1,
                 flex: 1,
-                minHeight: 28,
+                minHeight: 24,
                 background: connectorColor,
-                margin: '4px 0',
-                borderRadius: 2,
-                transition: 'background 0.3s ease',
+                margin: '3px 0',
               }}
             />
           )}
         </Box>
 
         {/* Text */}
-        <Stack gap={2} pb={isLast ? 0 : 'sm'} style={{ flex: 1, paddingTop: 4 }}>
+        <Stack gap={1} pb={isLast ? 0 : 'sm'} style={{ flex: 1, paddingTop: 3 }}>
           <Text
             size="sm"
-            fw={isActive ? 700 : isDone ? 600 : 400}
+            fw={isActive ? 600 : isDone ? 500 : 400}
             c={isPending ? 'dimmed' : isError ? 'red' : undefined}
             lh={1.3}
           >
             {step.label}
           </Text>
-          <Text size="xs" c="dimmed" lh={1.3}>
+          <Text size="xs" c="dimmed" lh={1.4}>
             {step.description}
           </Text>
-
-          {isActive && (
-            <Box mt={4}>
-              <Box
-                style={{
-                  height: 3,
-                  background:
-                    'linear-gradient(90deg, var(--mantine-color-blue-5), var(--mantine-color-cyan-5))',
-                  borderRadius: 2,
-                  width: '50%',
-                }}
-              />
-            </Box>
-          )}
         </Stack>
       </Group>
     </Box>
