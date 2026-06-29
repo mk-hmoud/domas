@@ -413,7 +413,7 @@
     "room": "Oda",
     "bed": "Yatak"
   },
-  "is_guest_zone_label": "Misafir Bölgesi mi?",
+  "is_guest_zone_label": "Misafir",
   "create": "Oluştur",
   "edit": "Düzenle",
   "delete": "Sil",

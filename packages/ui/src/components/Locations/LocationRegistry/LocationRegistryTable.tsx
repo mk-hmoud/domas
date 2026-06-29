@@ -14,6 +14,7 @@ import {
   Box,
   ActionIcon,
   rem,
+  Pill,
 } from "@mantine/core";
 import {
   IconHierarchy,
@@ -186,46 +187,65 @@ export function LocationRegistryTable({
   );
 
   // Active filter chips
-  const activeChips: { label: string; key: string; value?: any }[] = [
-    filters.q && { key: "q", label: `"${filters.q}"` },
+  const activeChips: { prefix: string; label: string; key: string }[] = [
+    filters.q && {
+      key: "q",
+      prefix: t("search", "Search"),
+      label: `"${filters.q}"`,
+    },
     filters.type && {
       key: "type",
-      label: t(`location_type.${filters.type}`, filters.type),
+      prefix: t("type", "Type"),
+      label: t(`location_type.${filters.type}`, filters.type) as string,
     },
     filters.genderLock && {
       key: "genderLock",
-      label: t(`gender.${filters.genderLock}`, filters.genderLock),
+      prefix: t("gender_lock", "Gender"),
+      label: t(`gender.${filters.genderLock}`, filters.genderLock) as string,
     },
     filters.roomTypeId && {
       key: "roomTypeId",
+      prefix: t("room_type", "Room Type"),
       label:
         (isTr
           ? roomTypes.find((rt) => rt.id === Number(filters.roomTypeId))?.nameTr
           : undefined) ||
         roomTypes.find((rt) => rt.id === Number(filters.roomTypeId))?.name ||
-        `Type #${filters.roomTypeId}`,
+        `#${filters.roomTypeId}`,
     },
-    filters.isTrOnly && { key: "isTrOnly", label: "TR Only" },
-    filters.isForeignerOnly && { key: "isForeignerOnly", label: "INT Only" },
+    filters.isTrOnly && {
+      key: "isTrOnly",
+      prefix: t("flags", "Flag"),
+      label: "TR Only",
+    },
+    filters.isForeignerOnly && {
+      key: "isForeignerOnly",
+      prefix: t("flags", "Flag"),
+      label: "INT Only",
+    },
     filters.isGuestZone && {
       key: "isGuestZone",
+      prefix: t("flags", "Flag"),
       label: t("is_guest_zone_label", "Guest Zone"),
     },
     filters.isRectorate !== undefined && {
       key: "isRectorate",
+      prefix: t("flags", "Flag"),
       label: filters.isRectorate
         ? t("rectorate", "Rectorate")
         : t("dorm", "Dorm"),
     },
     filters.onlyVacant && {
       key: "onlyVacant",
+      prefix: t("availability", "Availability"),
       label: t("only_vacant", "Vacant Only"),
     },
     filters.status && {
       key: "status",
-      label: t(`bed_status.${filters.status}`, filters.status),
+      prefix: t("status", "Status"),
+      label: t(`bed_status.${filters.status}`, filters.status) as string,
     },
-  ].filter(Boolean) as { label: string; key: string }[];
+  ].filter(Boolean) as { prefix: string; label: string; key: string }[];
 
   const roomTypeOptions = roomTypes.map((rt) => ({
     value: String(rt.id),
@@ -487,26 +507,24 @@ export function LocationRegistryTable({
     <>
       {/* Active filter chips */}
       {activeChips.length > 0 && (
-        <Group gap="xs" mb="xs" wrap="wrap">
+        <Group gap="xs" mb="xs" wrap="wrap" align="center">
+          <Text size="xs" c="dimmed" fw={500}>
+            {t("filters", "Filters")}:
+          </Text>
           {activeChips.map((chip) => (
-            <Badge
+            <Pill
               key={chip.key}
+              withRemoveButton
+              onRemove={() => onFilterChange(chip.key, undefined)}
               size="sm"
-              variant="light"
-              color="blue"
-              rightSection={
-                <ActionIcon
-                  size="xs"
-                  variant="transparent"
-                  color="blue"
-                  onClick={() => onFilterChange(chip.key, undefined)}
-                >
-                  <IconX size={10} />
-                </ActionIcon>
-              }
             >
-              {chip.label}
-            </Badge>
+              <Text component="span" size="xs" c="dimmed">
+                {chip.prefix}:{" "}
+              </Text>
+              <Text component="span" size="xs" fw={500}>
+                {chip.label}
+              </Text>
+            </Pill>
           ))}
           <Button
             size="compact-xs"

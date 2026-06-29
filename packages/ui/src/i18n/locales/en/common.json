@@ -415,7 +415,7 @@
     "room": "Room",
     "bed": "Bed"
   },
-  "is_guest_zone_label": "Is Guest Zone?",
+  "is_guest_zone_label": "Guest",
   "create": "Create",
   "edit": "Edit",
   "delete": "Delete",
