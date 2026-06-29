@@ -393,6 +393,86 @@ export class LocationsRepository implements ILocationsRepository {
     return result.rows.map((row) => new Location(row));
   }
 
+  async findRoomHistory(
+    locationId: number,
+    client?: PoolClient,
+  ): Promise<{ flagChanges: any[]; residents: any[] }> {
+    const TRACKED_FLAGS = [
+      'gender_lock',
+      'room_type_id',
+      'is_tr_only',
+      'is_foreigner_only',
+      'is_rectorate',
+      'is_guest_zone',
+      'student_year_lock',
+      'name',
+      'name_tr',
+    ];
+
+    const [flagResult, residentResult] = await Promise.all([
+      this.getClient(client).query(
+        `SELECT event_timestamp, username, changed_fields, old_values, new_values
+         FROM audit.event_log
+         WHERE table_name = 'locations'
+           AND record_id = $1
+           AND action = 'U'
+           AND changed_fields && $2
+         ORDER BY event_timestamp DESC
+         LIMIT 200`,
+        [locationId.toString(), TRACKED_FLAGS],
+      ),
+      this.getClient(client).query(
+        `SELECT b.id as "bookingId", b.start_date as "startDate", b.end_date as "endDate",
+                b.status as "bookingStatus", b.checked_in_at as "checkedInAt",
+                b.checked_out_at as "checkedOutAt",
+                s.id as "studentId",
+                s.first_name as "firstName", s.last_name as "lastName",
+                s.student_number as "studentNumber",
+                s.nationality_code as "nationalityCode",
+                s.gender,
+                sem.display_name as "semesterName",
+                bd.label as "bedLabel"
+         FROM bookings b
+         JOIN students s ON s.id = b.student_id
+         JOIN beds bd ON bd.id = b.bed_id
+         JOIN semesters sem ON sem.id = b.semester_id
+         WHERE bd.location_id = $1
+         ORDER BY b.start_date DESC`,
+        [locationId],
+      ),
+    ]);
+
+    const flagChanges = flagResult.rows.map((row) => ({
+      eventTimestamp: row.event_timestamp,
+      performedBy: row.username,
+      changedFields: (row.changed_fields as string[])
+        .filter((f) => TRACKED_FLAGS.includes(f))
+        .map((f) => ({
+          field: f,
+          oldValue: row.old_values?.[f] ?? null,
+          newValue: row.new_values?.[f] ?? null,
+        })),
+    }));
+
+    const residents = residentResult.rows.map((row) => ({
+      bookingId: row.bookingId,
+      bedLabel: row.bedLabel,
+      studentId: row.studentId,
+      studentName: `${row.firstName} ${row.lastName}`,
+      studentNumber: row.studentNumber,
+      nationalityCode: row.nationalityCode,
+      gender: row.gender,
+      semesterName: row.semesterName,
+      bookingStatus: row.bookingStatus,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      checkedInAt: row.checkedInAt ?? undefined,
+      checkedOutAt: row.checkedOutAt ?? undefined,
+    }));
+
+    return { flagChanges, residents };
+  }
+
   async update(id: number, data: Partial<Location>, client?: PoolClient): Promise<Location> {
     const updates: string[] = [];
     const values: any[] = [];

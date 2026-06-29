@@ -6,10 +6,11 @@ import {
   Stack,
   Divider,
   Avatar,
+  ActionIcon,
   rem,
 } from "@mantine/core";
 import { useHover } from "@mantine/hooks";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconHistory } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
 import { PaymentStatus, RoomPlanRoom, RoomPlanBed } from "@domas/ts-types";
@@ -20,6 +21,7 @@ interface RoomPlanCardProps {
   room: RoomPlanRoom;
   onCreateBooking: (bedId: number) => void;
   onViewStudent: (studentId: string, kind: RoomPlanStudentViewKind) => void;
+  onViewHistory?: (roomId: number) => void;
   isHistorical?: boolean;
 }
 
@@ -108,6 +110,7 @@ export function RoomPlanCard({
   room,
   onCreateBooking,
   onViewStudent,
+  onViewHistory,
   isHistorical,
 }: RoomPlanCardProps) {
   const { t, i18n } = useTranslation();
@@ -143,6 +146,17 @@ export function RoomPlanCard({
           <Badge size="sm" variant="light" color={color}>
             {occupiedCount}/{room.capacity}
           </Badge>
+          {onViewHistory && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              onClick={() => onViewHistory(room.id)}
+              title={t("view_room_history", { defaultValue: "View history" })}
+            >
+              <IconHistory size={14} />
+            </ActionIcon>
+          )}
         </Group>
       </Group>
 

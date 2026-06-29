@@ -115,6 +115,7 @@ export * from "./interfaces/dorm-certificate.interface";
 export * from "./interfaces/message.interface";
 export * from "./dtos/message.dto";
 export * from "./interfaces/room-plan.interface";
+export * from "./interfaces/room-history.interface";
 export * from "./interfaces/work-order.interface";
 export * from "./dtos/work-order.dto";
 export * from "./interfaces/ticket.interface";

@@ -351,6 +351,15 @@ export class LocationsService {
     return this.studentsRepository.findActiveResidentsByLocation(locationId);
   }
 
+  async getRoomHistory(locationId: number, context: AuditUserContext) {
+    const location = await this.locationsRepository.findById(locationId);
+    if (!location) {
+      throw new NotFoundException(`Location with ID ${locationId} not found`);
+    }
+    this.locationScopeService.assertAccess(context.locationScope, location.treePath);
+    return this.locationsRepository.findRoomHistory(locationId);
+  }
+
   async getRoomPlan(locationId: number, context: AuditUserContext, semesterId?: number) {
     const location = await this.locationsRepository.findById(locationId);
     if (!location) {

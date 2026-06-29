@@ -49,6 +49,7 @@ import {
 } from "@domas/api-client";
 import {
   RoomPlanRoom,
+  RoomHistory,
   Student,
   Semester,
   CreateBookingDto,
@@ -99,6 +100,11 @@ export function SharedRoomPlanPage() {
   const [messageSubject, setMessageSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [messageSending, setMessageSending] = useState(false);
+
+  const [historyRoomId, setHistoryRoomId] = useState<number | null>(null);
+  const [historyRoomName, setHistoryRoomName] = useState<string>("");
+  const [roomHistory, setRoomHistory] = useState<RoomHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchRoomPlan = async (id: number, semId?: number | null) => {
     setLoading(true);
@@ -201,6 +207,26 @@ export function SharedRoomPlanPage() {
     const room = rooms.find((r) => r.beds.some((b) => b.id === bedId));
     setBookingRoomGenderLock(room?.genderLock ?? null);
     setBookingModalOpened(true);
+  };
+
+  const handleViewHistory = async (roomId: number) => {
+    const room = rooms.find((r) => r.id === roomId);
+    setHistoryRoomId(roomId);
+    setHistoryRoomName(isTr && room?.nameTr ? room.nameTr : (room?.name ?? ""));
+    setRoomHistory(null);
+    setHistoryLoading(true);
+    try {
+      const data = await locations.getRoomHistory(roomId);
+      setRoomHistory(data);
+    } catch {
+      notifications.show({
+        title: t("error"),
+        message: t("failed_to_fetch_data"),
+        color: "red",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   const handleSubmitBooking = async (values: CreateBookingDto) => {
@@ -384,6 +410,7 @@ export function SharedRoomPlanPage() {
                     rooms={group.rooms}
                     onCreateBooking={handleCreateBooking}
                     onViewStudent={handleViewStudent}
+                    onViewHistory={handleViewHistory}
                     isHistorical={isHistorical}
                   />
                 </Stack>
@@ -394,6 +421,7 @@ export function SharedRoomPlanPage() {
               rooms={filteredRooms}
               onCreateBooking={handleCreateBooking}
               onViewStudent={handleViewStudent}
+              onViewHistory={handleViewHistory}
               isHistorical={isHistorical}
             />
           )}
@@ -664,6 +692,146 @@ export function SharedRoomPlanPage() {
             </Group>
           </Stack>
         </Modal>
+
+        <Drawer
+          opened={!!historyRoomId}
+          onClose={() => {
+            setHistoryRoomId(null);
+            setRoomHistory(null);
+          }}
+          title={
+            historyRoomName ||
+            t("room_history", { defaultValue: "Room History" })
+          }
+          position="right"
+          size="lg"
+        >
+          <Stack gap="md">
+            <Alert
+              icon={<IconClockHour4 size={16} />}
+              color="yellow"
+              variant="light"
+            >
+              {t("flag_history_limit_notice", {
+                defaultValue:
+                  "Flag change history is available for up to 3 years. Older changes may not appear.",
+              })}
+            </Alert>
+
+            {historyLoading ? (
+              <Center h={200}>
+                <Loader />
+              </Center>
+            ) : roomHistory ? (
+              <>
+                <Text fw={700} size="sm">
+                  {t("flag_changes", { defaultValue: "Flag Changes" })}
+                </Text>
+                {roomHistory.flagChanges.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    {t("no_flag_changes", {
+                      defaultValue: "No flag changes recorded.",
+                    })}
+                  </Text>
+                ) : (
+                  <Stack gap="xs">
+                    {roomHistory.flagChanges.map((entry, i) => (
+                      <Paper key={i} withBorder p="xs" radius="md">
+                        <Group justify="space-between" mb={4}>
+                          <Text size="xs" c="dimmed">
+                            {new Date(entry.eventTimestamp).toLocaleString()}
+                          </Text>
+                          {entry.performedBy && (
+                            <Badge size="xs" variant="light" color="gray">
+                              {entry.performedBy}
+                            </Badge>
+                          )}
+                        </Group>
+                        <Stack gap={2}>
+                          {entry.changedFields.map((cf) => (
+                            <Text key={cf.field} size="xs">
+                              <Text span fw={600}>
+                                {cf.field}
+                              </Text>
+                              {": "}
+                              <Text span c="red">
+                                {String(cf.oldValue ?? "—")}
+                              </Text>
+                              {" → "}
+                              <Text span c="green">
+                                {String(cf.newValue ?? "—")}
+                              </Text>
+                            </Text>
+                          ))}
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+
+                <Divider />
+
+                <Text fw={700} size="sm">
+                  {t("resident_history", { defaultValue: "Resident History" })}
+                </Text>
+                {roomHistory.residents.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    {t("no_resident_history", {
+                      defaultValue: "No residents recorded.",
+                    })}
+                  </Text>
+                ) : (
+                  <Stack gap="xs">
+                    {roomHistory.residents.map((entry) => (
+                      <Paper
+                        key={entry.bookingId}
+                        withBorder
+                        p="xs"
+                        radius="md"
+                      >
+                        <Group justify="space-between" wrap="nowrap" mb={4}>
+                          <Group gap={6} wrap="nowrap">
+                            <Avatar
+                              size={28}
+                              radius="xl"
+                              color="initials"
+                              name={entry.studentName}
+                            />
+                            <div>
+                              <Text size="sm" fw={600}>
+                                {entry.studentName}
+                              </Text>
+                              <Text size="xs" c="dimmed">
+                                {entry.studentNumber} · {entry.nationalityCode}
+                              </Text>
+                            </div>
+                          </Group>
+                          <Stack gap={2} align="flex-end">
+                            <Badge size="xs" variant="light" color="blue">
+                              {t("bed_word", { defaultValue: "Bed" })}{" "}
+                              {entry.bedLabel}
+                            </Badge>
+                            <Badge size="xs" variant="light" color="gray">
+                              {entry.semesterName}
+                            </Badge>
+                          </Stack>
+                        </Group>
+                        <Text size="xs" c="dimmed">
+                          {new Date(entry.startDate).toLocaleDateString()} –{" "}
+                          {new Date(entry.endDate).toLocaleDateString()}
+                          {entry.checkedInAt &&
+                            ` · ${t("checked_in", { defaultValue: "Checked in" })}: ${new Date(entry.checkedInAt).toLocaleDateString()}`}
+                          {entry.checkedOutAt &&
+                            ` · ${t("checked_out", { defaultValue: "Checked out" })}: ${new Date(entry.checkedOutAt).toLocaleDateString()}`}
+                        </Text>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+              </>
+            ) : null}
+          </Stack>
+        </Drawer>
       </PageShell>
     </>
   );

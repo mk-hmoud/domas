@@ -164,6 +164,12 @@ export class LocationsController {
     return this.locationsService.findActiveResidents(id, context);
   }
 
+  @Get(':id/room-history')
+  @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
+  getRoomHistory(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
+    return this.locationsService.getRoomHistory(id, context);
+  }
+
   @Get(':id/room-plan')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
   getRoomPlan(
