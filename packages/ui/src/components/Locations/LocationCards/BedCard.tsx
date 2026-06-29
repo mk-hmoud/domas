@@ -7,7 +7,6 @@ import {
   Badge,
   ThemeIcon,
   Checkbox,
-  Box,
   rem,
   Stack,
 } from "@mantine/core";

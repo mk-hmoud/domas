@@ -7,7 +7,6 @@ import {
   Text,
   Badge,
   ThemeIcon,
-  Box,
   rem,
   Stack,
 } from "@mantine/core";

@@ -350,7 +350,7 @@ export function LocationDetailPanel({
                     variant="dot"
                     size="sm"
                   >
-                    {t(`gender.${node.genderLock}`, node.genderLock)}
+                    {t(`gender.${node.genderLock}`, node.genderLock) as string}
                   </Badge>
                 )}
                 {subSummaryParts.length > 0 && (
@@ -531,7 +531,7 @@ export function LocationDetailPanel({
                 fontWeight: 700,
               }}
             >
-              {t(`bed_status.${node.status}`, node.status || "—")}
+              {t(`bed_status.${node.status}`, node.status || "—") as string}
             </Badge>
             {node.status === "occupied" && node.residentName && (
               <Group gap="xs">

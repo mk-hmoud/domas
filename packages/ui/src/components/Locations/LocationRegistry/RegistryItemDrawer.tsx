@@ -130,12 +130,6 @@ export function RegistryItemDrawer({
 
   const isBed = item.type === "bed";
   const color = itemTypeColor(item.type);
-  const displayName = isBed
-    ? `${item.locationName ? item.locationName + " — " : ""}${item.label}`
-    : isTr && item.nameTr
-      ? item.nameTr
-      : item.name;
-
   const total = item.totalBeds ?? 0;
   const occupied = item.occupiedBeds ?? 0;
   const available = Math.max(0, total - occupied);
@@ -216,9 +210,14 @@ export function RegistryItemDrawer({
               </Title>
               <Group gap="xs" wrap="wrap">
                 <Badge color={color} variant="light" size="sm">
-                  {isBed
-                    ? t("bed", "Bed")
-                    : t(`location_type.${item.type}`, item.type?.toUpperCase())}
+                  {
+                    (isBed
+                      ? t("bed", "Bed")
+                      : t(
+                          `location_type.${item.type}`,
+                          item.type?.toUpperCase(),
+                        )) as string
+                  }
                 </Badge>
                 {item.genderLock && (
                   <Badge
@@ -228,7 +227,7 @@ export function RegistryItemDrawer({
                     variant="dot"
                     size="sm"
                   >
-                    {t(`gender.${item.genderLock}`, item.genderLock)}
+                    {t(`gender.${item.genderLock}`, item.genderLock) as string}
                   </Badge>
                 )}
                 {item.roomTypeName && (
@@ -311,7 +310,7 @@ export function RegistryItemDrawer({
                 fontWeight: 700,
               }}
             >
-              {t(`bed_status.${item.status}`, item.status || "—")}
+              {t(`bed_status.${item.status}`, item.status || "—") as string}
             </Badge>
             {item.status === "occupied" && item.residentName && (
               <Group gap="xs">

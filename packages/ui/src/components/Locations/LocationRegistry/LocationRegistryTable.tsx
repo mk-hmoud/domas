@@ -11,9 +11,7 @@ import {
   TextInput,
   Select,
   UnstyledButton,
-  Box,
   ActionIcon,
-  rem,
 } from "@mantine/core";
 import {
   IconHierarchy,
@@ -302,7 +300,7 @@ export function LocationRegistryTable({
         {mode === "locations" && (
           <Table.Td style={{ width: 100 }}>
             <Badge size="xs" variant="light" color="gray">
-              {t(`location_type.${item.type}`, item.type)}
+              {t(`location_type.${item.type}`, item.type) as string}
             </Badge>
           </Table.Td>
         )}
@@ -315,7 +313,7 @@ export function LocationRegistryTable({
               color={getGenderColor(item.genderLock)}
               variant="dot"
             >
-              {t(`gender.${item.genderLock}`, item.genderLock)}
+              {t(`gender.${item.genderLock}`, item.genderLock) as string}
             </Badge>
           ) : (
             <Text size="xs" c="dimmed">
@@ -384,7 +382,7 @@ export function LocationRegistryTable({
                 color={getBedStatusColor(item.status)}
                 variant="light"
               >
-                {t(`bed_status.${item.status}`, item.status || "—")}
+                {t(`bed_status.${item.status}`, item.status || "—") as string}
               </Badge>
               {item.residentName && (
                 <Text size="xs" c="dimmed" truncate style={{ maxWidth: 130 }}>
