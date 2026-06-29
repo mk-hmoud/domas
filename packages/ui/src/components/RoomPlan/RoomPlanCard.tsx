@@ -20,6 +20,7 @@ interface RoomPlanCardProps {
   room: RoomPlanRoom;
   onCreateBooking: (bedId: number) => void;
   onViewStudent: (studentId: string, kind: RoomPlanStudentViewKind) => void;
+  isHistorical?: boolean;
 }
 
 export type RoomPlanComputedStatus =
@@ -60,12 +61,13 @@ const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
 interface EmptyBedRowProps {
   bed: RoomPlanBed;
   onCreateBooking: (bedId: number) => void;
+  isHistorical?: boolean;
 }
 
-function EmptyBedRow({ bed, onCreateBooking }: EmptyBedRowProps) {
+function EmptyBedRow({ bed, onCreateBooking, isHistorical }: EmptyBedRowProps) {
   const { t } = useTranslation();
   const { hovered, ref } = useHover<HTMLDivElement>();
-  const bookable = bed.status === "available";
+  const bookable = bed.status === "available" && !isHistorical;
 
   return (
     <Group
@@ -106,6 +108,7 @@ export function RoomPlanCard({
   room,
   onCreateBooking,
   onViewStudent,
+  isHistorical,
 }: RoomPlanCardProps) {
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === "tr";
@@ -237,7 +240,11 @@ export function RoomPlanCard({
             )}
 
             {!bed.occupant && !bed.pendingBooking && (
-              <EmptyBedRow bed={bed} onCreateBooking={onCreateBooking} />
+              <EmptyBedRow
+                bed={bed}
+                onCreateBooking={onCreateBooking}
+                isHistorical={isHistorical}
+              />
             )}
           </div>
         ))}

@@ -276,9 +276,61 @@ export class LocationsRepository implements ILocationsRepository {
 
   // Flat bed-level rows for every room in the subtree under `locationId`.
   // The service groups these into nested room/bed/occupant shapes.
-  async findRoomPlan(locationId: number, client?: PoolClient): Promise<any[]> {
+  async findRoomPlan(locationId: number, semesterId?: number, client?: PoolClient): Promise<any[]> {
     const parent = await this.findById(locationId, client);
     if (!parent) return [];
+
+    const historical = semesterId !== undefined;
+    const params: any[] = [parent.treePath];
+    if (historical) params.push(semesterId);
+
+    const curJoin = historical
+      ? `LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
+               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
+               s.email, s.phone_number, s.whatsapp_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id AND b.semester_id = $2
+          AND b.status IN ('active', 'completed', 'transferred')
+        ORDER BY b.start_date DESC
+        LIMIT 1
+      ) cur ON true`
+      : `LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
+               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
+               s.email, s.phone_number, s.whatsapp_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id AND b.status = 'active'
+        ORDER BY b.start_date DESC
+        LIMIT 1
+      ) cur ON true`;
+
+    const pendJoin = historical
+      ? ``
+      : `LEFT JOIN LATERAL (
+        SELECT b.id as booking_id, b.student_id, b.start_date, b.status,
+               s.first_name, s.last_name, s.student_number
+        FROM bookings b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.bed_id = bd.id
+          AND b.status IN ('pending_accounting', 'ready_for_checkin', 'confirmed')
+        ORDER BY b.start_date ASC
+        LIMIT 1
+      ) pend ON true`;
+
+    const pendColumns = historical
+      ? `NULL as "pendingBookingId", NULL as "pendingStudentId", NULL as "pendingFirstName",
+         NULL as "pendingLastName", NULL as "pendingStudentNumber", NULL as "pendingStartDate",
+         NULL as "pendingStatus"`
+      : `pend.booking_id as "pendingBookingId",
+        pend.student_id as "pendingStudentId",
+        pend.first_name as "pendingFirstName",
+        pend.last_name as "pendingLastName",
+        pend.student_number as "pendingStudentNumber",
+        pend.start_date as "pendingStartDate",
+        pend.status as "pendingStatus"`;
 
     const query = `
       SELECT
@@ -313,41 +365,17 @@ export class LocationsRepository implements ILocationsRepository {
         cur.whatsapp_number as "currentWhatsappNumber",
         cur.payment_status as "currentPaymentStatus",
         cur.checked_in_at as "currentCheckedInAt",
-        pend.booking_id as "pendingBookingId",
-        pend.student_id as "pendingStudentId",
-        pend.first_name as "pendingFirstName",
-        pend.last_name as "pendingLastName",
-        pend.student_number as "pendingStudentNumber",
-        pend.start_date as "pendingStartDate",
-        pend.status as "pendingStatus"
+        ${pendColumns}
       FROM locations l
       JOIN room_types rt ON rt.id = l.room_type_id
       LEFT JOIN locations parent ON parent.tree_path = subpath(l.tree_path, 0, nlevel(l.tree_path) - 1)
       LEFT JOIN beds bd ON bd.location_id = l.id AND bd.deleted_at IS NULL
-      LEFT JOIN LATERAL (
-        SELECT b.id as booking_id, b.student_id, b.payment_status, b.checked_in_at,
-               s.first_name, s.last_name, s.student_number, s.gender, s.nationality_code,
-               s.email, s.phone_number, s.whatsapp_number
-        FROM bookings b
-        JOIN students s ON s.id = b.student_id
-        WHERE b.bed_id = bd.id AND b.status = 'active'
-        ORDER BY b.start_date DESC
-        LIMIT 1
-      ) cur ON true
-      LEFT JOIN LATERAL (
-        SELECT b.id as booking_id, b.student_id, b.start_date, b.status,
-               s.first_name, s.last_name, s.student_number
-        FROM bookings b
-        JOIN students s ON s.id = b.student_id
-        WHERE b.bed_id = bd.id
-          AND b.status IN ('pending_accounting', 'ready_for_checkin', 'confirmed')
-        ORDER BY b.start_date ASC
-        LIMIT 1
-      ) pend ON true
+      ${curJoin}
+      ${pendJoin}
       WHERE l.type = 'room' AND l.deleted_at IS NULL AND l.tree_path <@ $1
       ORDER BY l.tree_path ASC, bd.label ASC
     `;
-    const result = await this.getClient(client).query(query, [parent.treePath]);
+    const result = await this.getClient(client).query(query, params);
     return result.rows;
   }
 

@@ -166,8 +166,16 @@ export class LocationsController {
 
   @Get(':id/room-plan')
   @RequirePermissions(PERMISSIONS.LOCATIONS_VIEW)
-  getRoomPlan(@Param('id', ParseIntPipe) id: number, @UserContext() context: AuditUserContext) {
-    return this.locationsService.getRoomPlan(id, context);
+  getRoomPlan(
+    @Param('id', ParseIntPipe) id: number,
+    @UserContext() context: AuditUserContext,
+    @Query('semesterId') semesterId?: string,
+  ) {
+    return this.locationsService.getRoomPlan(
+      id,
+      context,
+      semesterId ? parseInt(semesterId, 10) : undefined,
+    );
   }
 
   @Get(':id/children')

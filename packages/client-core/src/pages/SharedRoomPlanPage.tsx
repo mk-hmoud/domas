@@ -16,6 +16,8 @@ import {
   Modal,
   TextInput,
   Textarea,
+  Select,
+  Alert,
 } from "@mantine/core";
 import {
   IconBrandWhatsapp,
@@ -24,6 +26,7 @@ import {
   IconLogout,
   IconArrowsExchange,
   IconMessageCircle,
+  IconClockHour4,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -50,6 +53,7 @@ import {
   Semester,
   CreateBookingDto,
   CreateStudentDto,
+  SemesterStatus,
 } from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../context/AuthContext";
@@ -81,6 +85,9 @@ export function SharedRoomPlanPage() {
   >(null);
   const [studentList, setStudentList] = useState<Student[]>([]);
   const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(
+    null,
+  );
 
   const [studentDetailId, setStudentDetailId] = useState<string | null>(null);
   const [studentDetailKind, setStudentDetailKind] =
@@ -93,10 +100,10 @@ export function SharedRoomPlanPage() {
   const [messageBody, setMessageBody] = useState("");
   const [messageSending, setMessageSending] = useState(false);
 
-  const fetchRoomPlan = async (id: number) => {
+  const fetchRoomPlan = async (id: number, semId?: number | null) => {
     setLoading(true);
     try {
-      const data = await locations.getRoomPlan(id);
+      const data = await locations.getRoomPlan(id, semId ?? undefined);
       setRooms(data);
     } catch (error) {
       notifications.show({
@@ -111,11 +118,11 @@ export function SharedRoomPlanPage() {
 
   useEffect(() => {
     if (locationId) {
-      fetchRoomPlan(locationId);
+      fetchRoomPlan(locationId, selectedSemesterId);
     } else {
       setRooms([]);
     }
-  }, [locationId]);
+  }, [locationId, selectedSemesterId]);
 
   useEffect(() => {
     const fetchBookingData = async () => {
@@ -126,6 +133,10 @@ export function SharedRoomPlanPage() {
         ]);
         setStudentList(studentsRes.data);
         setAllSemesters(semestersRes.data);
+        const active = semestersRes.data.find(
+          (s) => s.status === SemesterStatus.ACTIVE,
+        );
+        if (active) setSelectedSemesterId(active.id);
       } catch (error) {
         console.error("Failed to fetch booking data:", error);
       }
@@ -203,7 +214,7 @@ export function SharedRoomPlanPage() {
         color: "green",
       });
       setBookingModalOpened(false);
-      if (locationId) await fetchRoomPlan(locationId);
+      if (locationId) await fetchRoomPlan(locationId, selectedSemesterId);
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -298,14 +309,55 @@ export function SharedRoomPlanPage() {
     }
   };
 
+  const selectedSemester = allSemesters.find(
+    (s) => s.id === selectedSemesterId,
+  );
+  const isHistorical = selectedSemester
+    ? selectedSemester.status !== SemesterStatus.ACTIVE
+    : false;
+
   return (
     <>
       <PageHeader title={t("room_plan", { defaultValue: "Room Plan" })} />
       <PageShell size="xl">
         <Stack gap="md">
           <Paper withBorder p="sm" radius="md">
-            <RoomPlanLocationPicker onChange={setLocationId} />
+            <Group align="flex-end" gap="sm" wrap="wrap">
+              <Select
+                label={t("semester_label")}
+                placeholder={t("select_semester")}
+                data={allSemesters.map((s) => ({
+                  value: s.id.toString(),
+                  label: s.displayName,
+                }))}
+                value={selectedSemesterId?.toString() ?? null}
+                onChange={(val) => {
+                  setSelectedSemesterId(val ? parseInt(val, 10) : null);
+                  setLocationId(null);
+                }}
+                w={220}
+              />
+              <RoomPlanLocationPicker
+                onChange={setLocationId}
+                key={selectedSemesterId ?? "none"}
+              />
+            </Group>
           </Paper>
+
+          {isHistorical && selectedSemester && (
+            <Alert
+              icon={<IconClockHour4 size={16} />}
+              color="blue"
+              variant="light"
+              radius="md"
+            >
+              {t("viewing_historical_semester", {
+                defaultValue:
+                  "Viewing historical data for {{name}} — read only",
+                name: selectedSemester.displayName,
+              })}
+            </Alert>
+          )}
 
           {locationId && (
             <RoomPlanFilters value={filters} onChange={setFilters} />
@@ -332,6 +384,7 @@ export function SharedRoomPlanPage() {
                     rooms={group.rooms}
                     onCreateBooking={handleCreateBooking}
                     onViewStudent={handleViewStudent}
+                    isHistorical={isHistorical}
                   />
                 </Stack>
               ))}
@@ -341,12 +394,13 @@ export function SharedRoomPlanPage() {
               rooms={filteredRooms}
               onCreateBooking={handleCreateBooking}
               onViewStudent={handleViewStudent}
+              isHistorical={isHistorical}
             />
           )}
         </Stack>
 
         <CreateBookingModal
-          opened={bookingModalOpened}
+          opened={bookingModalOpened && !isHistorical}
           onClose={() => setBookingModalOpened(false)}
           onSubmit={handleSubmitBooking}
           onCreateStudent={handleCreateStudent}
