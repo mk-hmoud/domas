@@ -127,8 +127,11 @@ export function BulkEditLocationModal({
               checked={updateTrOnly}
               onChange={(e) => {
                 setUpdateTrOnly(e.currentTarget.checked);
-                if (e.currentTarget.checked)
+                if (e.currentTarget.checked) {
                   form.setFieldValue("isTrOnly", true);
+                  setUpdateForeignerOnly(false);
+                  form.setFieldValue("isForeignerOnly", false);
+                }
               }}
               label={t("is_tr_only")}
               style={{ width: 150 }}
@@ -136,6 +139,13 @@ export function BulkEditLocationModal({
             <Switch
               disabled={!updateTrOnly}
               {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+              onChange={(e) => {
+                form.setFieldValue("isTrOnly", e.currentTarget.checked);
+                if (e.currentTarget.checked) {
+                  setUpdateForeignerOnly(false);
+                  form.setFieldValue("isForeignerOnly", false);
+                }
+              }}
             />
           </Group>
 
@@ -144,8 +154,11 @@ export function BulkEditLocationModal({
               checked={updateForeignerOnly}
               onChange={(e) => {
                 setUpdateForeignerOnly(e.currentTarget.checked);
-                if (e.currentTarget.checked)
+                if (e.currentTarget.checked) {
                   form.setFieldValue("isForeignerOnly", true);
+                  setUpdateTrOnly(false);
+                  form.setFieldValue("isTrOnly", false);
+                }
               }}
               label={t("is_foreigner_only")}
               style={{ width: 150 }}
@@ -153,6 +166,13 @@ export function BulkEditLocationModal({
             <Switch
               disabled={!updateForeignerOnly}
               {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+              onChange={(e) => {
+                form.setFieldValue("isForeignerOnly", e.currentTarget.checked);
+                if (e.currentTarget.checked) {
+                  setUpdateTrOnly(false);
+                  form.setFieldValue("isTrOnly", false);
+                }
+              }}
             />
           </Group>
 

@@ -33,7 +33,9 @@ CREATE TABLE locations (
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ DEFAULT NULL
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
+
+    CONSTRAINT locations_no_tr_and_foreigner CHECK (NOT (is_tr_only = TRUE AND is_foreigner_only = TRUE))
 );
 
 CREATE INDEX idx_locations_path ON locations USING GIST (tree_path);
@@ -242,8 +244,9 @@ CREATE TABLE beds (
 
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL,
-    
-    CONSTRAINT fk_bed_room_check CHECK (location_id IS NOT NULL)
+
+    CONSTRAINT fk_bed_room_check CHECK (location_id IS NOT NULL),
+    CONSTRAINT beds_no_tr_and_foreigner CHECK (NOT (is_tr_only = TRUE AND is_foreigner_only = TRUE))
 );
 
 CREATE INDEX idx_beds_deleted_at ON beds(deleted_at) WHERE deleted_at IS NULL;
@@ -760,7 +763,9 @@ CREATE TABLE room_types (
     is_foreigner_only BOOLEAN    NOT NULL DEFAULT FALSE,
     is_rectorate    BOOLEAN      NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ  DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ  DEFAULT NOW()
+    updated_at   TIMESTAMPTZ  DEFAULT NOW(),
+
+    CONSTRAINT room_types_no_tr_and_foreigner CHECK (NOT (is_tr_only = TRUE AND is_foreigner_only = TRUE))
 );
 
 ALTER TABLE locations
