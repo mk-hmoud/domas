@@ -99,10 +99,17 @@ export class BedsService {
   }
 
   async findAll(filters: FindAllBedsDto, context: AuditUserContext): Promise<PaginatedResult<Bed>> {
-    const effectiveFilters = this.canAccessRectorate(context)
-      ? filters
-      : { ...filters, isRectorate: false };
-    return this.bedsRepository.findAll(effectiveFilters, undefined, context.locationScope);
+    if (!this.canAccessRectorate(context)) {
+      if (filters.isRectorate === true) {
+        return { data: [], total: 0, page: filters.page ?? 1, limit: filters.limit ?? 10 };
+      }
+      return this.bedsRepository.findAll(
+        { ...filters, isRectorate: false },
+        undefined,
+        context.locationScope,
+      );
+    }
+    return this.bedsRepository.findAll(filters, undefined, context.locationScope);
   }
 
   async create(
