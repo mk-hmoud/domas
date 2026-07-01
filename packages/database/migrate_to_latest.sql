@@ -140,6 +140,22 @@ ALTER TABLE access_card_logs
 ALTER TABLE tickets
     ADD COLUMN IF NOT EXISTS photo_keys TEXT[] NOT NULL DEFAULT '{}';
 
+-- ── 12. Mutual exclusion: is_tr_only vs is_foreigner_only ─────────────────
+ALTER TABLE locations
+    DROP CONSTRAINT IF EXISTS locations_no_tr_and_foreigner,
+    ADD CONSTRAINT locations_no_tr_and_foreigner
+        CHECK (NOT (is_tr_only = TRUE AND is_foreigner_only = TRUE));
+
+ALTER TABLE beds
+    DROP CONSTRAINT IF EXISTS beds_no_tr_and_foreigner,
+    ADD CONSTRAINT beds_no_tr_and_foreigner
+        CHECK (NOT (is_tr_only = TRUE AND is_foreigner_only = TRUE));
+
+ALTER TABLE room_types
+    DROP CONSTRAINT IF EXISTS room_types_no_tr_and_foreigner,
+    ADD CONSTRAINT room_types_no_tr_and_foreigner
+        CHECK (NOT (is_tr_only = TRUE AND is_foreigner_only = TRUE));
+
 COMMIT;
 
 -- ── POST-MIGRATION CHECKLIST ───────────────────────────────────────────────
