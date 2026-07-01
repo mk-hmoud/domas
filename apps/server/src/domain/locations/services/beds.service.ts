@@ -165,11 +165,16 @@ export class BedsService {
   }
 
   async update(id: number, data: UpdateBedDto, context: AuditUserContext): Promise<Bed> {
-    if (data.isRectorate !== undefined && !this.canAccessRectorate(context)) {
-      throw new ForbiddenException('You do not have permission to modify the rectorate flag');
-    }
     return this.db.transaction(async (client) => {
       const existing = await this.assertBedInScope(id, context, client);
+
+      if (
+        data.isRectorate !== undefined &&
+        data.isRectorate !== existing.isRectorate &&
+        !this.canAccessRectorate(context)
+      ) {
+        throw new ForbiddenException('You do not have permission to modify the rectorate flag');
+      }
 
       if (data.locationId !== undefined && data.locationId !== existing.locationId) {
         const targetRoom = await this.locationsRepository.findById(data.locationId, client);
