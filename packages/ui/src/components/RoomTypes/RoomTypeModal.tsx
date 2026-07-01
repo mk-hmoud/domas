@@ -323,12 +323,22 @@ export function RoomTypeModal({
             <Switch
               label={t("is_tr_only", { defaultValue: "TR Only" })}
               {...form.getInputProps("isTrOnly", { type: "checkbox" })}
+              onChange={(e) => {
+                form.setFieldValue("isTrOnly", e.currentTarget.checked);
+                if (e.currentTarget.checked)
+                  form.setFieldValue("isForeignerOnly", false);
+              }}
             />
             <Switch
               label={t("is_foreigner_only", {
                 defaultValue: "Foreigners Only",
               })}
               {...form.getInputProps("isForeignerOnly", { type: "checkbox" })}
+              onChange={(e) => {
+                form.setFieldValue("isForeignerOnly", e.currentTarget.checked);
+                if (e.currentTarget.checked)
+                  form.setFieldValue("isTrOnly", false);
+              }}
             />
             <Switch
               label={t("is_rectorate", { defaultValue: "Rectorate" })}

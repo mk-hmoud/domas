@@ -720,6 +720,11 @@ export class LocationsService {
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
       this.assertNotRoomTypeLocked(location, context);
 
+      if (isTrOnly && location.isForeignerOnly)
+        throw new BadRequestException(
+          'A location cannot be both TR-only and Foreigner-only at the same time.',
+        );
+
       const updated = await this.locationsRepository.updateTrOnly(id, isTrOnly, cascade, client);
 
       await this.undoService.registerUndo(
@@ -832,6 +837,11 @@ export class LocationsService {
       if (!location) throw new NotFoundException(`Location with ID ${id} not found`);
       this.locationScopeService.assertAccess(context.locationScope, location.treePath);
       this.assertNotRoomTypeLocked(location, context);
+
+      if (isForeignerOnly && location.isTrOnly)
+        throw new BadRequestException(
+          'A location cannot be both TR-only and Foreigner-only at the same time.',
+        );
 
       const updated = await this.locationsRepository.updateForeignerOnly(
         id,

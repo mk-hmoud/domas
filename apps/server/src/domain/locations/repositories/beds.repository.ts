@@ -76,10 +76,10 @@ export class BedsRepository implements IBedsRepository {
 
     let query = `
       SELECT 
-        b.id, 
-        b.location_id as "locationId", 
-        b.label, 
-        b.status, 
+        b.id,
+        b.location_id as "locationId",
+        b.label,
+        b.status,
         b.is_tr_only as "isTrOnly",
         b.is_foreigner_only as "isForeignerOnly",
         b.is_guest_zone as "isGuestZone",
@@ -87,6 +87,7 @@ export class BedsRepository implements IBedsRepository {
         b.updated_at as "updatedAt",
         'bed' as "type",
         l.name as "locationName",
+        l.gender_lock as "genderLock",
         (SELECT string_agg(name, ' > ' ORDER BY tree_path) FROM locations WHERE tree_path @> l.tree_path) as "locationPath",
         (SELECT s.first_name || ' ' || s.last_name 
          FROM bookings bo 

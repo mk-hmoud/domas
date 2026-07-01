@@ -254,6 +254,11 @@ export class BedsService {
     return this.db.transaction(async (client) => {
       const bed = await this.assertBedInScope(id, context, client);
 
+      if (isTrOnly && bed.isForeignerOnly)
+        throw new BadRequestException(
+          'A bed cannot be both TR-only and Foreigner-only at the same time.',
+        );
+
       const updated = await this.bedsRepository.updateTrOnly(id, isTrOnly, client);
 
       await this.undoService.registerUndo(
@@ -279,6 +284,11 @@ export class BedsService {
   ): Promise<Bed> {
     return this.db.transaction(async (client) => {
       const bed = await this.assertBedInScope(id, context, client);
+
+      if (isForeignerOnly && bed.isTrOnly)
+        throw new BadRequestException(
+          'A bed cannot be both TR-only and Foreigner-only at the same time.',
+        );
 
       const updated = await this.bedsRepository.updateForeignerOnly(id, isForeignerOnly, client);
 

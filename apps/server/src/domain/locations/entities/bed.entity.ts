@@ -9,6 +9,7 @@ export class Bed {
   isForeignerOnly!: boolean;
   isGuestZone!: boolean;
   isRectorate!: boolean;
+  genderLock?: string | null;
   updatedAt!: Date;
 
   constructor(partial: Partial<Bed>) {

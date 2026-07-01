@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { RoomTypesRepository } from '../repositories/room-types.repository';
 import { StorageService } from '../../../common/storage/storage.service';
@@ -38,6 +43,11 @@ export class RoomTypesService {
   }
 
   async create(data: CreateRoomTypeDto, userId?: string): Promise<RoomType> {
+    if (data.isTrOnly && data.isForeignerOnly)
+      throw new BadRequestException(
+        'A room type cannot be both TR-only and Foreigner-only at the same time.',
+      );
+
     const result = await this.repo.create(data);
     if (userId) {
       await this.undoService.registerUndo({
@@ -55,6 +65,14 @@ export class RoomTypesService {
   async update(id: number, data: UpdateRoomTypeDto, context?: AuditUserContext): Promise<RoomType> {
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundException(`Room type ${id} not found`);
+
+    const effectiveTrOnly = 'isTrOnly' in data ? data.isTrOnly : existing.isTrOnly;
+    const effectiveForeignerOnly =
+      'isForeignerOnly' in data ? data.isForeignerOnly : existing.isForeignerOnly;
+    if (effectiveTrOnly && effectiveForeignerOnly)
+      throw new BadRequestException(
+        'A room type cannot be both TR-only and Foreigner-only at the same time.',
+      );
 
     // Block capacity change if any linked room has a different bed count
     if (data.capacity !== undefined && data.capacity !== existing.capacity) {
