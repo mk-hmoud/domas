@@ -9,6 +9,7 @@ export interface Bed {
   isForeignerOnly: boolean;
   isGuestZone: boolean;
   isRectorate: boolean;
+  genderLock?: string | null;
   updatedAt: Date;
   locationName?: string;
   locationPath?: string;
