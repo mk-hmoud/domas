@@ -388,7 +388,11 @@ export class BedsService {
   async updateTrOnlyMany(dto: BulkUpdateBedTrOnlyDto, context: AuditUserContext): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
-        await this.assertBedInScope(id, context, client);
+        const bed = await this.assertBedInScope(id, context, client);
+        if (dto.isTrOnly && bed.isForeignerOnly)
+          throw new BadRequestException(
+            'A bed cannot be both TR-only and Foreigner-only at the same time.',
+          );
         await this.bedsRepository.updateTrOnly(id, dto.isTrOnly, client);
       }
     }, context);
@@ -400,7 +404,11 @@ export class BedsService {
   ): Promise<void> {
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
-        await this.assertBedInScope(id, context, client);
+        const bed = await this.assertBedInScope(id, context, client);
+        if (dto.isForeignerOnly && bed.isTrOnly)
+          throw new BadRequestException(
+            'A bed cannot be both TR-only and Foreigner-only at the same time.',
+          );
         await this.bedsRepository.updateForeignerOnly(id, dto.isForeignerOnly, client);
       }
     }, context);
