@@ -1,7 +1,6 @@
 import { apiClient } from "../client";
 import {
   RecentChange,
-  SuspiciousActivity,
   BulkOperation,
   SearchAuditDto,
   PaginatedResult,
@@ -33,13 +32,6 @@ export const audit = {
     const response = await apiClient.get<RecentChange[]>(
       "/audit/recent-changes",
       { params: { limit } },
-    );
-    return response.data;
-  },
-
-  getSuspiciousActivity: async (): Promise<SuspiciousActivity[]> => {
-    const response = await apiClient.get<SuspiciousActivity[]>(
-      "/audit/suspicious-activity",
     );
     return response.data;
   },

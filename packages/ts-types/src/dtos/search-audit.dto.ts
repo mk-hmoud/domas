@@ -7,4 +7,5 @@ export interface SearchAuditDto extends PaginationDto {
   userId?: string;
   tableName?: string;
   search?: string;
+  operationContext?: string;
 }

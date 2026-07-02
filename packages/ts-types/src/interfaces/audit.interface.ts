@@ -30,14 +30,6 @@ export interface RecentChange {
   ip_address: string;
 }
 
-export interface SuspiciousActivity {
-  user_id: string;
-  username: string;
-  failure_count: number;
-  ip_addresses: string[];
-  last_attempt: string;
-}
-
 export interface BulkOperation {
   op_id: string;
   event_timestamp: string;

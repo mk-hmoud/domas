@@ -13,7 +13,17 @@ export class AuditLogsRepository {
     dto: SearchAuditDto,
     context?: AuditUserContext,
   ): Promise<PaginatedResult<AuditLogEntry>> {
-    const { page = 1, limit = 20, startDate, endDate, actions, userId, tableName, search } = dto;
+    const {
+      page = 1,
+      limit = 20,
+      startDate,
+      endDate,
+      actions,
+      userId,
+      tableName,
+      search,
+      operationContext,
+    } = dto;
     const offset = (page - 1) * limit;
 
     const isAdmin =
@@ -71,8 +81,13 @@ export class AuditLogsRepository {
     }
 
     if (tableName) {
-      conditions.push(`a.table_name = $${values.length + 1}`);
-      values.push(tableName);
+      conditions.push(`a.table_name ILIKE $${values.length + 1}`);
+      values.push(`%${tableName}%`);
+    }
+
+    if (operationContext) {
+      conditions.push(`a.operation_context = $${values.length + 1}`);
+      values.push(operationContext);
     }
 
     if (conditions.length > 0) {
@@ -100,12 +115,6 @@ export class AuditLogsRepository {
   async getRecentChanges(limit: number = 50): Promise<any[]> {
     const query = `SELECT * FROM audit.recent_changes LIMIT $1`;
     const result = await this.db.query(query, [limit]);
-    return result.rows;
-  }
-
-  async getSuspiciousActivity(): Promise<any[]> {
-    const query = `SELECT * FROM audit.suspicious_activity`;
-    const result = await this.db.query(query);
     return result.rows;
   }
 

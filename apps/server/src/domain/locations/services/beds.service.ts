@@ -369,35 +369,39 @@ export class BedsService {
   }
 
   async createMany(dto: BulkCreateBedDto, context: AuditUserContext): Promise<Bed[]> {
+    const ctx = { ...context, operationContext: `bulk:beds:create:${Date.now()}` };
     return this.db.transaction(async (client) => {
       const results: Bed[] = [];
       for (const bed of dto.beds) {
         results.push(await this.create(bed, context, client));
       }
       return results;
-    }, context);
+    }, ctx);
   }
 
   async deleteMany(dto: BulkDeleteBedDto, context: AuditUserContext): Promise<void> {
+    const ctx = { ...context, operationContext: `bulk:beds:delete:${Date.now()}` };
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.assertBedInScope(id, context, client);
       }
       await this.bedsRepository.deleteMany(dto.ids, client);
-    }, context);
+    }, ctx);
   }
 
   async updateStatusMany(dto: BulkUpdateBedStatusDto, context: AuditUserContext): Promise<void> {
+    const ctx = { ...context, operationContext: `bulk:beds:status-update:${Date.now()}` };
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         const bed = await this.assertBedInScope(id, context, client);
         this.validateStatusTransition(bed.status, dto.status);
         await this.bedsRepository.updateStatus(id, dto.status, client);
       }
-    }, context);
+    }, ctx);
   }
 
   async updateTrOnlyMany(dto: BulkUpdateBedTrOnlyDto, context: AuditUserContext): Promise<void> {
+    const ctx = { ...context, operationContext: `bulk:beds:tr-only:${Date.now()}` };
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         const bed = await this.assertBedInScope(id, context, client);
@@ -407,13 +411,14 @@ export class BedsService {
           );
         await this.bedsRepository.updateTrOnly(id, dto.isTrOnly, client);
       }
-    }, context);
+    }, ctx);
   }
 
   async updateForeignerOnlyMany(
     dto: BulkUpdateBedForeignerOnlyDto,
     context: AuditUserContext,
   ): Promise<void> {
+    const ctx = { ...context, operationContext: `bulk:beds:foreigner-only:${Date.now()}` };
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         const bed = await this.assertBedInScope(id, context, client);
@@ -423,31 +428,33 @@ export class BedsService {
           );
         await this.bedsRepository.updateForeignerOnly(id, dto.isForeignerOnly, client);
       }
-    }, context);
+    }, ctx);
   }
 
   async updateIsRectorateMany(
     dto: BulkUpdateBedIsRectorateDto,
     context: AuditUserContext,
   ): Promise<void> {
+    const ctx = { ...context, operationContext: `bulk:beds:rectorate:${Date.now()}` };
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.assertBedInScope(id, context, client);
         await this.bedsRepository.updateIsRectorate(id, dto.isRectorate, client);
       }
-    }, context);
+    }, ctx);
   }
 
   async updateGuestZoneMany(
     dto: BulkUpdateBedGuestZoneDto,
     context: AuditUserContext,
   ): Promise<void> {
+    const ctx = { ...context, operationContext: `bulk:beds:guest-zone:${Date.now()}` };
     return this.db.transaction(async (client) => {
       for (const id of dto.ids) {
         await this.assertBedInScope(id, context, client);
         await this.bedsRepository.updateGuestZone(id, dto.isGuestZone, client);
       }
-    }, context);
+    }, ctx);
   }
 
   async findEligibleBeds(studentId: string): Promise<Bed[]> {

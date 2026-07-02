@@ -35,4 +35,8 @@ export class SearchAuditDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  operationContext?: string;
 }

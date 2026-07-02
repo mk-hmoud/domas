@@ -230,11 +230,12 @@ export class StudentsService {
 
   async deleteMany(ids: string[], context: AuditUserContext): Promise<void> {
     this.logger.log({ count: ids.length }, 'Bulk deleting students');
+    const ctx = { ...context, operationContext: `bulk:students:delete:${Date.now()}` };
     await this.db.transaction(async (client) => {
       for (const id of ids) {
         await this.delete(id, context, client);
       }
-    }, context);
+    }, ctx);
   }
 
   async updateStatusMany(
@@ -243,12 +244,13 @@ export class StudentsService {
     context: AuditUserContext,
   ): Promise<void> {
     this.logger.log({ count: ids.length, isActive }, 'Bulk updating student status');
+    const ctx = { ...context, operationContext: `bulk:students:status-update:${Date.now()}` };
     await this.db.transaction(async (client) => {
       for (const id of ids) {
         await this.assertStudentInScope(id, context, client);
       }
       await this.studentsRepository.updateStatusMany(ids, isActive, client);
-    }, context);
+    }, ctx);
   }
 
   async resolveContacts(dto: ResolveContactsDto): Promise<ResolvedContact[]> {
