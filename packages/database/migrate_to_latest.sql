@@ -246,6 +246,110 @@ CREATE TRIGGER audit_conversations_change
 AFTER INSERT OR UPDATE OR DELETE ON conversations
 FOR EACH ROW EXECUTE FUNCTION audit.log_change();
 
+-- ── 14. Audit: capture operation_context + fix bulk_operations view ───────
+-- The trigger function previously did not read or write operation_context.
+-- The server now sets app.operation_context for bulk operations so we can
+-- group related audit rows together in the bulk_operations view.
+
+CREATE OR REPLACE FUNCTION audit.log_change()
+RETURNS TRIGGER AS $$
+DECLARE
+    current_user_id UUID;
+    current_username TEXT;
+    current_ip INET;
+    current_user_agent TEXT;
+    current_operation_context TEXT;
+    changed_fields TEXT[] := ARRAY[]::TEXT[];
+    col TEXT;
+    pk_column TEXT;
+    changed BOOLEAN;
+BEGIN
+    pk_column := COALESCE(TG_ARGV[0], 'id');
+
+    BEGIN
+        current_user_id := current_setting('app.user_id')::UUID;
+        current_username := current_setting('app.username', true);
+        current_ip := current_setting('app.ip_address', true)::INET;
+        current_user_agent := current_setting('app.user_agent', true);
+        current_operation_context := current_setting('app.operation_context', true);
+    EXCEPTION WHEN OTHERS THEN
+        current_user_id := '00000000-0000-0000-0000-000000000000'::UUID;
+        current_username := 'system';
+    END;
+
+    IF TG_OP = 'UPDATE' THEN
+        FOR col IN
+            SELECT column_name::TEXT
+            FROM information_schema.columns
+            WHERE table_schema = TG_TABLE_SCHEMA
+            AND table_name = TG_TABLE_NAME
+            AND column_name NOT IN ('created_at', 'updated_at')
+        LOOP
+            EXECUTE format('SELECT ($1).%I IS DISTINCT FROM ($2).%I', col, col)
+            USING OLD, NEW
+            INTO changed;
+
+            IF changed THEN
+                changed_fields := array_append(changed_fields, col);
+            END IF;
+        END LOOP;
+    END IF;
+
+    INSERT INTO audit.event_log (
+        user_id,
+        username,
+        ip_address,
+        user_agent,
+        event_type,
+        action,
+        schema_name,
+        table_name,
+        record_id,
+        old_values,
+        new_values,
+        changed_fields,
+        operation_context,
+        query_text
+    ) VALUES (
+        current_user_id,
+        current_username,
+        current_ip,
+        current_user_agent,
+        'DATA_CHANGE',
+        LEFT(TG_OP, 1),
+        TG_TABLE_SCHEMA,
+        TG_TABLE_NAME,
+        CASE
+            WHEN TG_OP = 'DELETE' THEN (to_jsonb(OLD) ->> pk_column)
+            ELSE (to_jsonb(NEW) ->> pk_column)
+        END,
+        CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) ELSE NULL END,
+        CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) ELSE NULL END,
+        CASE WHEN TG_OP = 'UPDATE' THEN changed_fields ELSE NULL END,
+        NULLIF(current_operation_context, ''),
+        current_query()
+    );
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Replace the bulk_operations view: the old version queried sensitive_operations
+-- (a table nothing ever wrote to). The new version groups event_log rows by
+-- operation_context, which is now stamped by the server on every bulk call.
+CREATE OR REPLACE VIEW audit.bulk_operations AS
+SELECT
+    operation_context AS op_id,
+    MIN(event_timestamp) AS event_timestamp,
+    username,
+    action AS operation_type,
+    COUNT(*) AS affected_count,
+    table_name AS resource_type
+FROM audit.event_log
+WHERE operation_context IS NOT NULL
+GROUP BY operation_context, username, action, table_name
+ORDER BY MIN(event_timestamp) DESC;
+
 -- ── POST-MIGRATION CHECKLIST ───────────────────────────────────────────────
 -- 1. Update departments.name_tr values (seeded with name_en as placeholder).
 -- 2. Update countries.name_tr values (seeded as NULL — must fill before adding NOT NULL).
