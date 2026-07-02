@@ -302,10 +302,17 @@ export class LocationsService {
     filters: FindAllLocationsDto,
     context: AuditUserContext,
   ): Promise<PaginatedResult<Location & { totalBeds?: number; occupiedBeds?: number }>> {
-    const effectiveFilters = this.canAccessRectorate(context)
-      ? filters
-      : { ...filters, isRectorate: false };
-    return this.locationsRepository.findAll(effectiveFilters, undefined, context.locationScope);
+    if (!this.canAccessRectorate(context)) {
+      if (filters.isRectorate === true) {
+        return { data: [], total: 0, page: filters.page ?? 1, limit: filters.limit ?? 10 };
+      }
+      return this.locationsRepository.findAll(
+        { ...filters, isRectorate: false },
+        undefined,
+        context.locationScope,
+      );
+    }
+    return this.locationsRepository.findAll(filters, undefined, context.locationScope);
   }
 
   async findById(id: number, context: AuditUserContext): Promise<Location> {
@@ -439,15 +446,20 @@ export class LocationsService {
 
   async update(id: number, data: UpdateLocationDto, context: AuditUserContext): Promise<Location> {
     this.logger.log({ locationId: id, data }, 'Updating location');
-    if (data.isRectorate !== undefined && !this.canAccessRectorate(context)) {
-      throw new ForbiddenException('You do not have permission to modify the rectorate flag');
-    }
     const location = await this.db.transaction(async (client) => {
       const existing = await this.locationsRepository.findById(id, client);
       if (!existing) {
         throw new NotFoundException(`Location with ID ${id} not found`);
       }
       this.locationScopeService.assertAccess(context.locationScope, existing.treePath);
+
+      if (
+        data.isRectorate !== undefined &&
+        data.isRectorate !== existing.isRectorate &&
+        !this.canAccessRectorate(context)
+      ) {
+        throw new ForbiddenException('You do not have permission to modify the rectorate flag');
+      }
 
       // When changing a room's type, ensure bed count matches new type's capacity
       if (
