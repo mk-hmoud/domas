@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, PageShell } from "@domas/ui";
 import {
@@ -202,32 +202,40 @@ export function SharedRoomPlanPage() {
     );
   }, [filteredRooms]);
 
-  const handleCreateBooking = (bedId: number) => {
-    setBookingBedId(bedId);
-    const room = rooms.find((r) => r.beds.some((b) => b.id === bedId));
-    setBookingRoomGenderLock(room?.genderLock ?? null);
-    setBookingModalOpened(true);
-  };
+  const handleCreateBooking = useCallback(
+    (bedId: number) => {
+      setBookingBedId(bedId);
+      const room = rooms.find((r) => r.beds.some((b) => b.id === bedId));
+      setBookingRoomGenderLock(room?.genderLock ?? null);
+      setBookingModalOpened(true);
+    },
+    [rooms],
+  );
 
-  const handleViewHistory = async (roomId: number) => {
-    const room = rooms.find((r) => r.id === roomId);
-    setHistoryRoomId(roomId);
-    setHistoryRoomName(isTr && room?.nameTr ? room.nameTr : (room?.name ?? ""));
-    setRoomHistory(null);
-    setHistoryLoading(true);
-    try {
-      const data = await locations.getRoomHistory(roomId);
-      setRoomHistory(data);
-    } catch {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_fetch_data"),
-        color: "red",
-      });
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+  const handleViewHistory = useCallback(
+    async (roomId: number) => {
+      const room = rooms.find((r) => r.id === roomId);
+      setHistoryRoomId(roomId);
+      setHistoryRoomName(
+        isTr && room?.nameTr ? room.nameTr : (room?.name ?? ""),
+      );
+      setRoomHistory(null);
+      setHistoryLoading(true);
+      try {
+        const data = await locations.getRoomHistory(roomId);
+        setRoomHistory(data);
+      } catch {
+        notifications.show({
+          title: t("error"),
+          message: t("failed_to_fetch_data"),
+          color: "red",
+        });
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    [rooms, isTr, t],
+  );
 
   const handleSubmitBooking = async (values: CreateBookingDto) => {
     try {
@@ -252,26 +260,26 @@ export function SharedRoomPlanPage() {
     }
   };
 
-  const handleViewStudent = async (
-    studentId: string,
-    kind: RoomPlanStudentViewKind,
-  ) => {
-    setStudentDetailId(studentId);
-    setStudentDetailKind(kind);
-    setStudentDetailLoading(true);
-    try {
-      const detail = await students.findOne(studentId);
-      setStudentDetail(detail);
-    } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_fetch_data"),
-        color: "red",
-      });
-    } finally {
-      setStudentDetailLoading(false);
-    }
-  };
+  const handleViewStudent = useCallback(
+    async (studentId: string, kind: RoomPlanStudentViewKind) => {
+      setStudentDetailId(studentId);
+      setStudentDetailKind(kind);
+      setStudentDetailLoading(true);
+      try {
+        const detail = await students.findOne(studentId);
+        setStudentDetail(detail);
+      } catch (error) {
+        notifications.show({
+          title: t("error"),
+          message: t("failed_to_fetch_data"),
+          color: "red",
+        });
+      } finally {
+        setStudentDetailLoading(false);
+      }
+    },
+    [t],
+  );
 
   const handleSendMessage = async () => {
     if (!studentDetail || !messageBody.trim()) return;

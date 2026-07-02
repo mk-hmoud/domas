@@ -1,7 +1,9 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   ReactNode,
 } from "react";
@@ -37,30 +39,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (credentials: LoginCredentials) => {
-    const user = await auth.login(credentials);
-    setUser(user);
-  };
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    const loggedInUser = await auth.login(credentials);
+    setUser(loggedInUser);
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await auth.logout();
     setUser(null);
-  };
+  }, []);
 
-  const hasPermission = (permission?: string) => {
-    if (!permission) return true;
-    if (!user) return false;
-    if (user.isRecoveryAdmin) return true;
-    return user.permissions?.includes(permission) || false;
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{ user, isLoading, login, logout, hasPermission }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const hasPermission = useCallback(
+    (permission?: string) => {
+      if (!permission) return true;
+      if (!user) return false;
+      if (user.isRecoveryAdmin) return true;
+      return user.permissions?.includes(permission) || false;
+    },
+    [user],
   );
+
+  const value = useMemo(
+    () => ({ user, isLoading, login, logout, hasPermission }),
+    [user, isLoading, login, logout, hasPermission],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

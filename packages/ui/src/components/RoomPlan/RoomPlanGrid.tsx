@@ -1,4 +1,5 @@
 import { SimpleGrid } from "@mantine/core";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { RoomPlanRoom } from "@domas/ts-types";
 import { EmptyState } from "../EmptyState/EmptyState";
@@ -12,7 +13,7 @@ interface RoomPlanGridProps {
   isHistorical?: boolean;
 }
 
-export function RoomPlanGrid({
+export const RoomPlanGrid = memo(function RoomPlanGrid({
   rooms,
   onCreateBooking,
   onViewStudent,
@@ -47,4 +48,4 @@ export function RoomPlanGrid({
       ))}
     </SimpleGrid>
   );
-}
+});

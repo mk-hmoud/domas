@@ -19,4 +19,22 @@ export default defineConfig({
     port: 5174,
     host: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'mantine-vendor': [
+            '@mantine/core',
+            '@mantine/hooks',
+            '@mantine/notifications',
+            '@mantine/dates',
+            '@mantine/modals',
+          ],
+          'icons-vendor': ['@tabler/icons-react'],
+          'dayjs-vendor': ['dayjs'],
+        },
+      },
+    },
+  },
 });
