@@ -337,7 +337,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Replace the bulk_operations view: the old version queried sensitive_operations
 -- (a table nothing ever wrote to). The new version groups event_log rows by
 -- operation_context, which is now stamped by the server on every bulk call.
-CREATE OR REPLACE VIEW audit.bulk_operations AS
+DROP VIEW IF EXISTS audit.bulk_operations;
+CREATE VIEW audit.bulk_operations AS
 SELECT
     operation_context AS op_id,
     MIN(event_timestamp) AS event_timestamp,
