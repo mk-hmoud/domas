@@ -205,8 +205,9 @@ export class ImportsService {
       throw new BadRequestException('Validation failed. Fix errors in Excel and re-upload.');
     }
 
+    const batchId = crypto.randomUUID();
+    const ctx = { ...context, operationContext: `bulk:students:import:${batchId}` };
     return this.db.transaction(async (client) => {
-      const batchId = crypto.randomUUID();
       await this.importsRepository.createBatch(
         {
           id: batchId,
@@ -356,6 +357,6 @@ export class ImportsService {
         },
         results,
       };
-    }, context);
+    }, ctx);
   }
 }

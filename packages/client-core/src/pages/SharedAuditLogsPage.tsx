@@ -14,20 +14,17 @@ import {
   Tooltip,
   Code,
   ScrollArea,
-  Timeline,
   SegmentedControl,
   TextInput,
-  Button,
   SimpleGrid,
   MultiSelect,
   Pagination,
   LoadingOverlay,
   Drawer,
   Stack,
-  Alert,
+  Divider,
 } from "@mantine/core";
 import {
-  IconAlertTriangle,
   IconDatabase,
   IconUser,
   IconTable,
@@ -39,12 +36,7 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { audit } from "@domas/api-client";
-import {
-  SuspiciousActivity,
-  BulkOperation,
-  PaginatedResult,
-  AuditLogEntry,
-} from "@domas/ts-types";
+import { BulkOperation, PaginatedResult, AuditLogEntry } from "@domas/ts-types";
 import { notifications } from "@mantine/notifications";
 
 export function SharedAuditLogsPage() {
@@ -52,50 +44,81 @@ export function SharedAuditLogsPage() {
   const [activeTab, setActiveTab] = useState<string | null>("search");
   const [loading, setLoading] = useState(false);
 
-  // Data states
+  // Search tab
   const [searchResults, setSearchResults] = useState<
     PaginatedResult<AuditLogEntry>
   >({ data: [], total: 0, page: 1, limit: 50 });
-  const [suspiciousActivity, setSuspiciousActivity] = useState<
-    SuspiciousActivity[]
-  >([]);
-  const [bulkOperations, setBulkOperations] = useState<BulkOperation[]>([]);
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
-
-  // Filter states
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<string>("50");
   const [datePreset, setDatePreset] = useState<string>("this_week");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableNameFilter, setTableNameFilter] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedTableName, setDebouncedTableName] = useState("");
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
-  // Initialize dates on mount based on default preset
+  // Bulk operations tab
+  const [bulkOperations, setBulkOperations] = useState<BulkOperation[]>([]);
+  const [selectedBulkOp, setSelectedBulkOp] = useState<BulkOperation | null>(
+    null,
+  );
+  const [bulkDetailLogs, setBulkDetailLogs] = useState<AuditLogEntry[]>([]);
+  const [bulkDetailLoading, setBulkDetailLoading] = useState(false);
+
   useEffect(() => {
     applyDatePreset("this_week");
   }, []);
 
-  // Debounce search query
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const h = setTimeout(() => {
       setDebouncedSearch(searchQuery);
       setPage(1);
     }, 300);
-    return () => clearTimeout(handler);
+    return () => clearTimeout(h);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const h = setTimeout(() => {
+      setDebouncedTableName(tableNameFilter);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(h);
+  }, [tableNameFilter]);
+
+  // Fetch individual entries when a bulk op is selected
+  useEffect(() => {
+    if (!selectedBulkOp) {
+      setBulkDetailLogs([]);
+      return;
+    }
+    const fetchDetail = async () => {
+      setBulkDetailLoading(true);
+      try {
+        const result = await audit.search({
+          operationContext: selectedBulkOp.op_id,
+          limit: 200,
+          page: 1,
+        });
+        setBulkDetailLogs(result.data);
+      } catch {
+        // silent — drawer shows empty state
+      } finally {
+        setBulkDetailLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [selectedBulkOp]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const limitNum = parseInt(limit);
-
       if (activeTab === "search") {
-        // Fix: Append end of day time to endDate to ensure "Today" includes logs from today
         const formattedEndDate = dateRange.end
           ? `${dateRange.end}T23:59:59`
           : undefined;
-
         const result = await audit.search({
           page,
           limit: limitNum,
@@ -103,16 +126,14 @@ export function SharedAuditLogsPage() {
           endDate: formattedEndDate,
           actions: selectedActions.length > 0 ? selectedActions : undefined,
           search: debouncedSearch || undefined,
+          tableName: debouncedTableName || undefined,
         });
         setSearchResults(result);
-      } else if (activeTab === "suspicious") {
-        const data = await audit.getSuspiciousActivity();
-        setSuspiciousActivity(data);
       } else if (activeTab === "bulk") {
-        const data = await audit.getBulkOperations(limitNum);
+        const data = await audit.getBulkOperations(200);
         setBulkOperations(data);
       }
-    } catch (error) {
+    } catch {
       notifications.show({
         title: t("error"),
         message: t("failed_to_fetch_data"),
@@ -125,14 +146,16 @@ export function SharedAuditLogsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, page, limit, dateRange, selectedActions, debouncedSearch]);
+  }, [
+    activeTab,
+    page,
+    limit,
+    dateRange,
+    selectedActions,
+    debouncedSearch,
+    debouncedTableName,
+  ]);
 
-  const handleSearchClick = () => {
-    setPage(1);
-    fetchData();
-  };
-
-  // Helper to format date as YYYY-MM-DD in local time to avoid timezone shifts
   const toLocalDateString = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -144,7 +167,6 @@ export function SharedAuditLogsPage() {
     setDatePreset(preset);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
     let start = new Date();
     let end = new Date();
 
@@ -158,17 +180,12 @@ export function SharedAuditLogsPage() {
         end = new Date(today);
         end.setDate(today.getDate() - 1);
         break;
-      case "this_week":
+      case "this_week": {
         const day = today.getDay() || 7;
         start = new Date(today);
         if (day !== 1) start.setHours(-24 * (day - 1));
         break;
-      case "last_week":
-        start = new Date(today);
-        start.setDate(today.getDate() - 7 - (today.getDay() || 7) + 1);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
+      }
       case "this_month":
         start = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
@@ -187,12 +204,10 @@ export function SharedAuditLogsPage() {
     setPage(1);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("en-GB");
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleString("en-GB");
 
   const getActionColor = (action?: string) => {
-    if (!action) return "gray";
     switch (action) {
       case "I":
         return "green";
@@ -208,7 +223,6 @@ export function SharedAuditLogsPage() {
   };
 
   const getActionLabel = (action?: string) => {
-    if (!action) return action;
     switch (action) {
       case "I":
         return t("audit.actions.insert", { defaultValue: "Insert" });
@@ -223,54 +237,140 @@ export function SharedAuditLogsPage() {
     }
   };
 
-  const renderDrawerContent = (log: AuditLogEntry) => {
-    if (log.action === "I") {
-      return (
-        <Stack gap="md">
-          <Alert
-            color="green"
-            title={t("audit.new_data", { defaultValue: "New Data" })}
-          >
-            <Code block>{JSON.stringify(log.new_values, null, 2)}</Code>
-          </Alert>
-        </Stack>
-      );
-    }
-
-    if (log.action === "D") {
-      return (
-        <Stack gap="md">
-          <Alert
-            color="red"
-            title={t("audit.deleted_data", { defaultValue: "Deleted Data" })}
-          >
-            <Code block>{JSON.stringify(log.old_values, null, 2)}</Code>
-          </Alert>
-        </Stack>
-      );
-    }
-
-    if (log.action === "U") {
-      return (
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-          <Alert
-            color="red"
-            title={t("audit.before", { defaultValue: "Before" })}
-          >
-            <Code block>{JSON.stringify(log.old_values, null, 2)}</Code>
-          </Alert>
-          <Alert
-            color="green"
-            title={t("audit.after", { defaultValue: "After" })}
-          >
-            <Code block>{JSON.stringify(log.new_values, null, 2)}</Code>
-          </Alert>
-        </SimpleGrid>
-      );
-    }
-
-    return <Code block>{JSON.stringify(log, null, 2)}</Code>;
+  const renderFieldValue = (val: unknown): string => {
+    if (val === null || val === undefined) return "—";
+    if (typeof val === "object") return JSON.stringify(val);
+    return String(val);
   };
+
+  const renderDrawerContent = (log: AuditLogEntry) => {
+    if (log.action === "U") {
+      const changedFields = log.changed_fields ?? [];
+      const oldVals = log.old_values ?? {};
+      const newVals = log.new_values ?? {};
+      const allFields = Array.from(
+        new Set([...Object.keys(oldVals), ...Object.keys(newVals)]),
+      );
+      const displayFields =
+        changedFields.length > 0 ? changedFields : allFields;
+      const unchangedFields = allFields.filter(
+        (f) => !displayFields.includes(f),
+      );
+
+      return (
+        <Stack gap="sm">
+          <Text fw={600} size="sm">
+            {t("audit.changed_fields", { defaultValue: "Changed Fields" })}
+          </Text>
+          <Paper withBorder radius="md">
+            <Table fz="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>
+                    {t("audit.field", { defaultValue: "Field" })}
+                  </Table.Th>
+                  <Table.Th c="red">
+                    {t("audit.before", { defaultValue: "Before" })}
+                  </Table.Th>
+                  <Table.Th c="green">
+                    {t("audit.after", { defaultValue: "After" })}
+                  </Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {displayFields.map((field) => (
+                  <Table.Tr key={field}>
+                    <Table.Td w={160}>
+                      <Code>{field}</Code>
+                    </Table.Td>
+                    <Table.Td c="red" style={{ wordBreak: "break-all" }}>
+                      {renderFieldValue(oldVals[field])}
+                    </Table.Td>
+                    <Table.Td c="green" style={{ wordBreak: "break-all" }}>
+                      {renderFieldValue(newVals[field])}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+
+          {unchangedFields.length > 0 && changedFields.length > 0 && (
+            <>
+              <Text fw={600} size="sm" c="dimmed" mt="xs">
+                {t("audit.context_fields", {
+                  defaultValue: "Context (unchanged)",
+                })}
+              </Text>
+              <Paper withBorder radius="md">
+                <Table fz="xs">
+                  <Table.Tbody>
+                    {unchangedFields.map((field) => (
+                      <Table.Tr key={field}>
+                        <Table.Td w={160} c="dimmed">
+                          <Code>{field}</Code>
+                        </Table.Td>
+                        <Table.Td c="dimmed" style={{ wordBreak: "break-all" }}>
+                          {renderFieldValue(newVals[field])}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Paper>
+            </>
+          )}
+        </Stack>
+      );
+    }
+
+    const values =
+      log.action === "I" ? (log.new_values ?? {}) : (log.old_values ?? {});
+    const accentColor = log.action === "I" ? "green" : "red";
+    const label =
+      log.action === "I"
+        ? t("audit.new_data", { defaultValue: "New Data" })
+        : t("audit.deleted_data", { defaultValue: "Deleted Data" });
+
+    return (
+      <Stack gap="sm">
+        <Text fw={600} size="sm" c={accentColor}>
+          {label}
+        </Text>
+        <Paper withBorder radius="md">
+          <Table fz="sm">
+            <Table.Tbody>
+              {Object.entries(values).map(([key, val]) => (
+                <Table.Tr key={key}>
+                  <Table.Td w={160}>
+                    <Code>{key}</Code>
+                  </Table.Td>
+                  <Table.Td style={{ wordBreak: "break-all" }}>
+                    {renderFieldValue(val)}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Paper>
+      </Stack>
+    );
+  };
+
+  const ChangedFieldsBadges = ({ fields }: { fields?: string[] }) => (
+    <Group gap={4}>
+      {fields?.slice(0, 3).map((f) => (
+        <Badge key={f} size="sm" variant="outline" color="gray">
+          {f}
+        </Badge>
+      ))}
+      {fields && fields.length > 3 && (
+        <Badge size="sm" variant="outline" color="gray">
+          +{fields.length - 3}
+        </Badge>
+      )}
+    </Group>
+  );
 
   return (
     <>
@@ -310,20 +410,12 @@ export function SharedAuditLogsPage() {
             <Tabs.Tab value="search" leftSection={<IconSearch size={16} />}>
               {t("audit.search_logs", { defaultValue: "Search Logs" })}
             </Tabs.Tab>
-            <Tabs.Tab
-              value="suspicious"
-              leftSection={<IconAlertTriangle size={16} />}
-              color="red"
-            >
-              {t("audit.suspicious_activity", {
-                defaultValue: "Suspicious Activity",
-              })}
-            </Tabs.Tab>
             <Tabs.Tab value="bulk" leftSection={<IconDatabase size={16} />}>
               {t("audit.bulk_operations", { defaultValue: "Bulk Operations" })}
             </Tabs.Tab>
           </Tabs.List>
 
+          {/* ── SEARCH TAB ─────────────────────────────────────────── */}
           <Tabs.Panel value="search">
             <Card withBorder padding="md" radius="md" mb="md">
               <Text fw={600} mb="sm" c="dimmed">
@@ -332,12 +424,19 @@ export function SharedAuditLogsPage() {
               <SimpleGrid cols={{ base: 1, md: 2, lg: 4 }} spacing="md">
                 <TextInput
                   placeholder={t("audit.search_placeholder", {
-                    defaultValue: "Search table or User UUID...",
+                    defaultValue: "Search by username or context…",
                   })}
                   leftSection={<IconSearch size={16} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearchClick()}
+                />
+                <TextInput
+                  placeholder={t("audit.table_filter_placeholder", {
+                    defaultValue: "Filter by table name…",
+                  })}
+                  leftSection={<IconTable size={16} />}
+                  value={tableNameFilter}
+                  onChange={(e) => setTableNameFilter(e.currentTarget.value)}
                 />
                 <MultiSelect
                   placeholder={t("audit.filter_by_action", {
@@ -370,77 +469,64 @@ export function SharedAuditLogsPage() {
                   }}
                   leftSection={<IconFilter size={16} />}
                 />
-                <TextInput
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => {
-                    setDateRange((prev) => ({
-                      ...prev,
-                      start: e.target.value,
-                    }));
-                    setDatePreset("custom");
-                    setPage(1);
-                  }}
-                  leftSection={<IconCalendar size={16} />}
-                />
-                <TextInput
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => {
-                    setDateRange((prev) => ({ ...prev, end: e.target.value }));
-                    setDatePreset("custom");
-                    setPage(1);
-                  }}
-                />
-              </SimpleGrid>
-              <Group mt="md" justify="space-between">
-                <Group>
-                  <SegmentedControl
-                    value={datePreset}
-                    onChange={applyDatePreset}
-                    size="xs"
-                    data={[
-                      {
-                        label: t("audit.presets.all", { defaultValue: "All" }),
-                        value: "all",
-                      },
-                      {
-                        label: t("audit.presets.today", {
-                          defaultValue: "Today",
-                        }),
-                        value: "today",
-                      },
-                      {
-                        label: t("audit.presets.this_week", {
-                          defaultValue: "This Week",
-                        }),
-                        value: "this_week",
-                      },
-                      {
-                        label: t("audit.presets.this_month", {
-                          defaultValue: "This Month",
-                        }),
-                        value: "this_month",
-                      },
-                    ]}
+                <Group gap="xs" grow>
+                  <TextInput
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) => {
+                      setDateRange((prev) => ({
+                        ...prev,
+                        start: e.target.value,
+                      }));
+                      setDatePreset("custom");
+                      setPage(1);
+                    }}
+                    leftSection={<IconCalendar size={16} />}
                   />
-                  {datePreset !== "all" && (
-                    <Button
-                      variant="subtle"
-                      size="xs"
-                      color="gray"
-                      onClick={() => applyDatePreset("all")}
-                    >
-                      {t("audit.clear_dates", { defaultValue: "Clear Dates" })}
-                    </Button>
-                  )}
+                  <TextInput
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) => {
+                      setDateRange((prev) => ({
+                        ...prev,
+                        end: e.target.value,
+                      }));
+                      setDatePreset("custom");
+                      setPage(1);
+                    }}
+                  />
                 </Group>
-                <Button
-                  onClick={handleSearchClick}
-                  leftSection={<IconSearch size={16} />}
-                >
-                  {t("audit.search", { defaultValue: "Search" })}
-                </Button>
+              </SimpleGrid>
+              <Group mt="md">
+                <SegmentedControl
+                  value={datePreset}
+                  onChange={applyDatePreset}
+                  size="xs"
+                  data={[
+                    {
+                      label: t("audit.presets.all", { defaultValue: "All" }),
+                      value: "all",
+                    },
+                    {
+                      label: t("audit.presets.today", {
+                        defaultValue: "Today",
+                      }),
+                      value: "today",
+                    },
+                    {
+                      label: t("audit.presets.this_week", {
+                        defaultValue: "This Week",
+                      }),
+                      value: "this_week",
+                    },
+                    {
+                      label: t("audit.presets.this_month", {
+                        defaultValue: "This Month",
+                      }),
+                      value: "this_month",
+                    },
+                  ]}
+                />
               </Group>
             </Card>
 
@@ -463,7 +549,7 @@ export function SharedAuditLogsPage() {
                         {t("audit.action", { defaultValue: "Action" })}
                       </Table.Th>
                       <Table.Th className={tableClasses.th}>
-                        {t("audit.record_id", { defaultValue: "Record ID" })}
+                        {t("audit.context", { defaultValue: "Context" })}
                       </Table.Th>
                       <Table.Th className={tableClasses.th}>
                         {t("audit.changed_fields", {
@@ -502,13 +588,7 @@ export function SharedAuditLogsPage() {
                           </Group>
                         </Table.Td>
                         <Table.Td>
-                          <Group gap={4}>
-                            <IconTable
-                              size={14}
-                              color="var(--mantine-color-gray-5)"
-                            />
-                            <Code>{log.table_name}</Code>
-                          </Group>
+                          <Code>{log.table_name}</Code>
                         </Table.Td>
                         <Table.Td>
                           <Badge
@@ -519,29 +599,23 @@ export function SharedAuditLogsPage() {
                           </Badge>
                         </Table.Td>
                         <Table.Td>
-                          <Code>{log.record_id}</Code>
+                          {log.operation_context && (
+                            <Badge
+                              size="sm"
+                              variant="dot"
+                              color="violet"
+                              style={{ maxWidth: 180 }}
+                            >
+                              <Text size="xs" truncate>
+                                {log.operation_context}
+                              </Text>
+                            </Badge>
+                          )}
                         </Table.Td>
                         <Table.Td>
-                          <Group gap={4}>
-                            {log.changed_fields
-                              ?.slice(0, 3)
-                              .map((field: string) => (
-                                <Badge
-                                  key={field}
-                                  size="sm"
-                                  variant="outline"
-                                  color="gray"
-                                >
-                                  {field}
-                                </Badge>
-                              ))}
-                            {log.changed_fields &&
-                              log.changed_fields.length > 3 && (
-                                <Badge size="sm" variant="outline" color="gray">
-                                  +{log.changed_fields.length - 3}
-                                </Badge>
-                              )}
-                          </Group>
+                          <ChangedFieldsBadges
+                            fields={log.changed_fields ?? undefined}
+                          />
                         </Table.Td>
                       </Table.Tr>
                     ))}
@@ -555,7 +629,6 @@ export function SharedAuditLogsPage() {
                   })}
                 />
               )}
-
               <Group justify="flex-end" mt="md" p="sm">
                 <Pagination
                   total={Math.ceil(searchResults.total / parseInt(limit))}
@@ -566,95 +639,94 @@ export function SharedAuditLogsPage() {
             </Paper>
           </Tabs.Panel>
 
-          <Tabs.Panel value="suspicious">
-            <Card withBorder padding="md" radius="md">
-              <Timeline
-                active={suspiciousActivity.length - 1}
-                bulletSize={24}
-                lineWidth={2}
-              >
-                {suspiciousActivity.map((item, index) => (
-                  <Timeline.Item
-                    key={index}
-                    bullet={<IconAlertTriangle size={12} />}
-                    title={
-                      <Text fw={700} c="red">
-                        {item.username} - Multiple Failures
-                      </Text>
-                    }
-                    color="red"
-                  >
-                    <Text c="dimmed" size="sm">
-                      {t("audit.failed_login_attempts", {
-                        defaultValue: "Failed login attempts",
-                      })}
-                      :{" "}
-                      <Text span fw={700}>
-                        {item.failure_count}
-                      </Text>
-                    </Text>
-                    <Text size="xs" mt={4}>
-                      {t("audit.last_attempt", {
-                        defaultValue: "Last attempt",
-                      })}
-                      : {formatDate(item.last_attempt)}
-                    </Text>
-                    <Group mt={4}>
-                      {item.ip_addresses?.map((ip) => (
-                        <Code key={ip}>{ip}</Code>
-                      ))}
-                    </Group>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-              {suspiciousActivity.length === 0 && !loading && (
-                <EmptyState
-                  title={t("audit.no_suspicious_activity", {
-                    defaultValue: "No suspicious activity detected",
-                  })}
-                />
-              )}
-            </Card>
-          </Tabs.Panel>
-
+          {/* ── BULK OPERATIONS TAB ────────────────────────────────── */}
           <Tabs.Panel value="bulk">
-            <Paper withBorder radius="md">
-              <Table highlightOnHover>
-                <Table.Thead className={tableClasses.thead}>
-                  <Table.Tr>
-                    <Table.Th className={tableClasses.th}>
-                      {t("audit.timestamp", { defaultValue: "Timestamp" })}
-                    </Table.Th>
-                    <Table.Th className={tableClasses.th}>
-                      {t("audit.operation", { defaultValue: "Operation" })}
-                    </Table.Th>
-                    <Table.Th className={tableClasses.th}>
-                      {t("audit.user", { defaultValue: "User" })}
-                    </Table.Th>
-                    <Table.Th className={tableClasses.th}>
-                      {t("audit.resource", { defaultValue: "Resource" })}
-                    </Table.Th>
-                    <Table.Th className={tableClasses.th}>
-                      {t("audit.affected", { defaultValue: "Affected" })}
-                    </Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {bulkOperations.map((op, index) => (
-                    <Table.Tr key={index}>
-                      <Table.Td>{formatDate(op.event_timestamp)}</Table.Td>
-                      <Table.Td>
-                        <Badge>{op.operation_type}</Badge>
-                      </Table.Td>
-                      <Table.Td>{op.username}</Table.Td>
-                      <Table.Td>{op.resource_type}</Table.Td>
-                      <Table.Td>
-                        <Text fw={700}>{op.affected_count}</Text>
-                      </Table.Td>
+            <Paper withBorder radius="md" style={{ position: "relative" }}>
+              <LoadingOverlay visible={loading} />
+              <ScrollArea>
+                <Table highlightOnHover>
+                  <Table.Thead className={tableClasses.thead}>
+                    <Table.Tr>
+                      <Table.Th className={tableClasses.th}>
+                        {t("audit.timestamp", { defaultValue: "Timestamp" })}
+                      </Table.Th>
+                      <Table.Th className={tableClasses.th}>
+                        {t("audit.user", { defaultValue: "User" })}
+                      </Table.Th>
+                      <Table.Th className={tableClasses.th}>
+                        {t("audit.resource", { defaultValue: "Resource" })}
+                      </Table.Th>
+                      <Table.Th className={tableClasses.th}>
+                        {t("audit.operation", { defaultValue: "Operation" })}
+                      </Table.Th>
+                      <Table.Th className={tableClasses.th}>
+                        {t("audit.context", { defaultValue: "Context" })}
+                      </Table.Th>
+                      <Table.Th className={tableClasses.th}>
+                        {t("audit.affected", { defaultValue: "Affected" })}
+                      </Table.Th>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {bulkOperations.map((op, index) => (
+                      <Table.Tr
+                        key={index}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setSelectedBulkOp(op)}
+                      >
+                        <Table.Td style={{ whiteSpace: "nowrap" }}>
+                          <Group gap={4}>
+                            <IconClock
+                              size={14}
+                              color="var(--mantine-color-gray-5)"
+                            />
+                            <Text size="sm">
+                              {formatDate(op.event_timestamp)}
+                            </Text>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4}>
+                            <IconUser
+                              size={14}
+                              color="var(--mantine-color-gray-5)"
+                            />
+                            <Text size="sm" fw={500}>
+                              {op.username}
+                            </Text>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Code>{op.resource_type}</Code>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge
+                            color={getActionColor(op.operation_type)}
+                            variant="light"
+                          >
+                            {getActionLabel(op.operation_type)}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            style={{ maxWidth: 220 }}
+                            truncate
+                          >
+                            {op.op_id}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color="blue" variant="filled" size="sm">
+                            {op.affected_count}
+                          </Badge>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </ScrollArea>
               {bulkOperations.length === 0 && !loading && (
                 <EmptyState
                   title={t("audit.no_bulk_operations", {
@@ -666,6 +738,7 @@ export function SharedAuditLogsPage() {
           </Tabs.Panel>
         </Tabs>
 
+        {/* ── LOG DETAIL DRAWER ──────────────────────────────────────── */}
         <Drawer
           opened={!!selectedLog}
           onClose={() => setSelectedLog(null)}
@@ -674,8 +747,13 @@ export function SharedAuditLogsPage() {
               <Text fw={700} size="lg">
                 {t("audit.log_details", { defaultValue: "Log Details" })}
               </Text>
-              <Badge>{selectedLog?.action}</Badge>
-              <Code>{selectedLog?.event_id}</Code>
+              <Badge
+                color={getActionColor(selectedLog?.action)}
+                variant="light"
+              >
+                {getActionLabel(selectedLog?.action)}
+              </Badge>
+              <Code>{selectedLog?.table_name}</Code>
             </Group>
           }
           position="right"
@@ -683,27 +761,188 @@ export function SharedAuditLogsPage() {
         >
           {selectedLog && (
             <Stack gap="md">
-              <Group grow>
+              <SimpleGrid cols={2}>
                 <LabelValue label={t("audit.user", { defaultValue: "User" })}>
-                  {selectedLog.username}
+                  {selectedLog.username || "System"}
+                </LabelValue>
+                <LabelValue
+                  label={t("audit.timestamp", { defaultValue: "Timestamp" })}
+                >
+                  {formatDate(selectedLog.event_timestamp)}
                 </LabelValue>
                 <LabelValue label={t("audit.table", { defaultValue: "Table" })}>
-                  {selectedLog.table_name}
+                  <Code>{selectedLog.table_name}</Code>
                 </LabelValue>
                 <LabelValue
                   label={t("audit.record_id", { defaultValue: "Record ID" })}
                 >
                   <Code>{selectedLog.record_id}</Code>
                 </LabelValue>
-              </Group>
+              </SimpleGrid>
 
-              <LabelValue
-                label={t("audit.timestamp", { defaultValue: "Timestamp" })}
-              >
-                {formatDate(selectedLog.event_timestamp)}
-              </LabelValue>
+              {selectedLog.operation_context && (
+                <LabelValue
+                  label={t("audit.context", { defaultValue: "Context" })}
+                >
+                  <Code>{selectedLog.operation_context}</Code>
+                </LabelValue>
+              )}
+
+              {selectedLog.ip_address && (
+                <LabelValue
+                  label={t("audit.ip_address", { defaultValue: "IP Address" })}
+                >
+                  <Code>{selectedLog.ip_address}</Code>
+                </LabelValue>
+              )}
+
+              <Divider />
 
               {renderDrawerContent(selectedLog)}
+
+              {selectedLog.query_text && (
+                <>
+                  <Divider />
+                  <LabelValue
+                    label={t("audit.query", { defaultValue: "Query" })}
+                  >
+                    <Code block style={{ fontSize: 11 }}>
+                      {selectedLog.query_text}
+                    </Code>
+                  </LabelValue>
+                </>
+              )}
+            </Stack>
+          )}
+        </Drawer>
+
+        {/* ── BULK DETAIL DRAWER ─────────────────────────────────────── */}
+        <Drawer
+          opened={!!selectedBulkOp}
+          onClose={() => setSelectedBulkOp(null)}
+          title={
+            <Group>
+              <Text fw={700} size="lg">
+                {t("audit.bulk_detail", { defaultValue: "Bulk Operation" })}
+              </Text>
+              {selectedBulkOp && (
+                <Badge color="blue" variant="filled">
+                  {selectedBulkOp.affected_count}{" "}
+                  {t("audit.records", { defaultValue: "records" })}
+                </Badge>
+              )}
+            </Group>
+          }
+          position="right"
+          size="xl"
+        >
+          {selectedBulkOp && (
+            <Stack gap="md">
+              <SimpleGrid cols={2}>
+                <LabelValue label={t("audit.user", { defaultValue: "User" })}>
+                  {selectedBulkOp.username}
+                </LabelValue>
+                <LabelValue
+                  label={t("audit.timestamp", { defaultValue: "Timestamp" })}
+                >
+                  {formatDate(selectedBulkOp.event_timestamp)}
+                </LabelValue>
+                <LabelValue
+                  label={t("audit.resource", { defaultValue: "Resource" })}
+                >
+                  <Code>{selectedBulkOp.resource_type}</Code>
+                </LabelValue>
+                <LabelValue
+                  label={t("audit.operation", { defaultValue: "Operation" })}
+                >
+                  <Badge
+                    color={getActionColor(selectedBulkOp.operation_type)}
+                    variant="light"
+                  >
+                    {getActionLabel(selectedBulkOp.operation_type)}
+                  </Badge>
+                </LabelValue>
+              </SimpleGrid>
+
+              <Divider />
+
+              <Text fw={600} size="sm">
+                {t("audit.affected_records", {
+                  defaultValue: "Affected Records",
+                })}
+              </Text>
+
+              <Paper withBorder radius="md" style={{ position: "relative" }}>
+                <LoadingOverlay
+                  visible={bulkDetailLoading}
+                  overlayProps={{ blur: 2 }}
+                />
+                <ScrollArea mah={500}>
+                  <Table fz="sm" highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>
+                          {t("audit.record_id", { defaultValue: "Record ID" })}
+                        </Table.Th>
+                        <Table.Th>
+                          {t("audit.action", { defaultValue: "Action" })}
+                        </Table.Th>
+                        <Table.Th>
+                          {t("audit.changed_fields", {
+                            defaultValue: "Changed Fields",
+                          })}
+                        </Table.Th>
+                        <Table.Th>
+                          {t("audit.timestamp", { defaultValue: "Timestamp" })}
+                        </Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {bulkDetailLogs.map((log, i) => (
+                        <Table.Tr
+                          key={i}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => {
+                            setSelectedBulkOp(null);
+                            setSelectedLog(log);
+                          }}
+                        >
+                          <Table.Td>
+                            <Code>{log.record_id}</Code>
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge
+                              color={getActionColor(log.action)}
+                              variant="light"
+                              size="sm"
+                            >
+                              {getActionLabel(log.action)}
+                            </Badge>
+                          </Table.Td>
+                          <Table.Td>
+                            <ChangedFieldsBadges
+                              fields={log.changed_fields ?? undefined}
+                            />
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="xs" c="dimmed">
+                              {formatDate(log.event_timestamp)}
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </ScrollArea>
+                {bulkDetailLogs.length === 0 && !bulkDetailLoading && (
+                  <Text ta="center" c="dimmed" py="lg" size="sm">
+                    {t("audit.no_detail_entries", {
+                      defaultValue:
+                        "No individual entries found for this operation",
+                    })}
+                  </Text>
+                )}
+              </Paper>
             </Stack>
           )}
         </Drawer>

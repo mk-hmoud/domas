@@ -53,10 +53,6 @@ export class AuditService implements OnModuleInit {
     return this.auditLogsRepository.getRecentChanges(limit);
   }
 
-  async getSuspiciousActivity() {
-    return this.auditLogsRepository.getSuspiciousActivity();
-  }
-
   async getBulkOperations(limit?: number) {
     return this.auditLogsRepository.getBulkOperations(limit);
   }

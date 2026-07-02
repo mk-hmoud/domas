@@ -104,6 +104,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
             userContext.userAgent,
           ]);
         }
+        if (userContext.operationContext) {
+          await client.query(`SELECT set_config('app.operation_context', $1, true)`, [
+            userContext.operationContext,
+          ]);
+        }
       }
 
       const result = await callback(client);

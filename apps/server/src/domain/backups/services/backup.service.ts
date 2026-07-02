@@ -73,6 +73,13 @@ export class BackupService {
     });
 
     const stat = fs.statSync(filePath);
+    const MIN_BACKUP_BYTES = 10 * 1024; // 10 KB — a valid dump is always larger
+    if (stat.size < MIN_BACKUP_BYTES) {
+      fs.unlinkSync(filePath);
+      throw new Error(
+        `Backup file suspiciously small (${stat.size} bytes) — pg_dump may have failed silently`,
+      );
+    }
     this.logger.log(`Backup created: ${filename} (${stat.size} bytes)`);
 
     await this.pruneOldBackups();

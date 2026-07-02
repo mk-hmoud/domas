@@ -9,4 +9,5 @@ export interface AuditUserContext {
   locationScope?: LocationScope;
   ipAddress: string;
   userAgent?: string;
+  operationContext?: string;
 }

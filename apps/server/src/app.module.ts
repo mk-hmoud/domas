@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppLoggerModule } from './core/logger/logger.module';
@@ -43,6 +45,9 @@ import { BackupsModule } from './domain/backups/backups.module';
       isGlobal: true,
       load: [databaseConfig],
     }),
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 300 }, // general API: 300 req/min
+    ]),
     ScheduleModule.forRoot(),
     AppLoggerModule,
     DatabaseModule,
@@ -78,6 +83,6 @@ import { BackupsModule } from './domain/backups/backups.module';
     BackupsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PageHeader, PageShell } from "@domas/ui";
 import {
   Text,
+  Anchor,
   Group,
   Pagination,
   LoadingOverlay,
@@ -20,14 +21,10 @@ import {
   Textarea,
   Tabs,
   Select,
-  ScrollArea,
-  Table,
   Modal,
   ThemeIcon,
   Skeleton,
   SimpleGrid,
-  FileInput,
-  Switch,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -41,32 +38,24 @@ import {
   IconEye,
   IconCheck,
   IconX,
-  IconFileDescription,
-  IconExternalLink,
   IconBed,
   IconArrowsExchange,
   IconCalendar,
   IconInfoCircle,
   IconDownload,
   IconUpload,
+  IconFileDescription,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import {
-  students,
-  conversations,
-  imports as importsApi,
-} from "@domas/api-client";
+import { students, conversations } from "@domas/api-client";
 import {
   Student,
   CreateStudentDto,
   PaginatedResult,
   EnrollmentVerification,
-  ApplicationStatus,
-  StudentApplication,
   StudentHistoryBooking,
   StudentNationalityStats,
   GenderType,
-  ImportResultDto,
 } from "@domas/ts-types";
 import {
   StudentModal,
@@ -79,12 +68,8 @@ import { notifications } from "@mantine/notifications";
 import { useCountries, useDepartments } from "../hooks/useLookups";
 import { modals } from "@mantine/modals";
 import { useAuth } from "../context/AuthContext";
-
-const STATUS_COLORS: Record<ApplicationStatus, string> = {
-  pending: "yellow",
-  approved: "green",
-  rejected: "red",
-};
+import { StudentImportModal } from "./StudentImportModal";
+import { StudentApplicationsPanel } from "./StudentApplicationsPanel";
 
 function bookingStatusColor(status: string): string {
   switch (status) {
@@ -323,6 +308,7 @@ export function SharedStudentsPage() {
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [allMatchingSelected, setAllMatchingSelected] = useState(false);
   const [composeEmailOpened, setComposeEmailOpened] = useState(false);
 
   // Filter states
@@ -340,32 +326,13 @@ export function SharedStudentsPage() {
 
   // Import/Export state
   const [importModalOpened, setImportModalOpened] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importDryRun, setImportDryRun] = useState(true);
-  const [importUpdateExisting, setImportUpdateExisting] = useState(false);
-  const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResultDto | null>(
-    null,
-  );
   const [exportLoading, setExportLoading] = useState(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<string | null>("students");
 
-  // Applications state
-  const [applications, setApplications] = useState<
-    (StudentApplication & { documentUrl: string })[]
-  >([]);
-  const [appLoading, setAppLoading] = useState(false);
-  const [appActionLoading, setAppActionLoading] = useState(false);
-  const [appStatusFilter, setAppStatusFilter] = useState<
-    ApplicationStatus | "all"
-  >("pending");
-  const [appSelected, setAppSelected] = useState<
-    (StudentApplication & { documentUrl: string }) | null
-  >(null);
-  const [appRejectReason, setAppRejectReason] = useState("");
-  const [appShowRejectInput, setAppShowRejectInput] = useState(false);
+  // Applications pending count (for tab badge — updated by StudentApplicationsPanel)
+  const [pendingAppCount, setPendingAppCount] = useState(0);
 
   const getCountryName = (code?: string) => {
     if (!code) return "-";
@@ -382,11 +349,16 @@ export function SharedStudentsPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Reset to first page whenever a filter (other than search, which has its
-  // own debounce above) changes.
+  // Reset to first page and clear selection when filters change.
   useEffect(() => {
     setPage(1);
-  }, [limit, nationalityFilter, genderFilter]);
+    setSelectedIds([]);
+    setAllMatchingSelected(false);
+  }, [debouncedSearch, nationalityFilter, genderFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [limit]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -399,7 +371,6 @@ export function SharedStudentsPage() {
         gender: (genderFilter as GenderType) || undefined,
       });
       setData(result);
-      setSelectedIds([]); // Clear selection on fetch
     } catch (error) {
       notifications.show({
         title: t("error"),
@@ -427,119 +398,6 @@ export function SharedStudentsPage() {
   useEffect(() => {
     fetchStats();
   }, []);
-
-  const fetchApplications = async () => {
-    setAppLoading(true);
-    try {
-      const result = await students.listApplications(
-        appStatusFilter !== "all" ? appStatusFilter : undefined,
-      );
-      setApplications(result);
-    } catch {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_fetch_data"),
-        color: "red",
-      });
-    } finally {
-      setAppLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "applications") fetchApplications();
-  }, [activeTab, appStatusFilter]);
-
-  const handleAppApprove = (
-    app: StudentApplication & { documentUrl: string },
-  ) => {
-    modals.openConfirmModal({
-      title: t("approve_application", "Approve Application"),
-      children: (
-        <Text size="sm">
-          {t(
-            "approve_application_confirm",
-            "Approve the application for {{name}} ({{number}})? A student account will be created automatically.",
-            {
-              name: `${app.firstName} ${app.lastName}`,
-              number: app.studentNumber,
-            },
-          )}
-        </Text>
-      ),
-      labels: { confirm: t("approve", "Approve"), cancel: t("cancel") },
-      confirmProps: { color: "green" },
-      onConfirm: async () => {
-        setAppActionLoading(true);
-        try {
-          await students.reviewApplication(app.id, "approve");
-          notifications.show({
-            title: t("success"),
-            message: t(
-              "application_approved",
-              "Application approved — student account created",
-            ),
-            color: "green",
-          });
-          setAppSelected(null);
-          fetchApplications();
-          fetchData();
-          fetchStats();
-        } catch (err: any) {
-          notifications.show({
-            title: t("error"),
-            message:
-              err?.response?.data?.message ??
-              t("action_failed", "Action failed"),
-            color: "red",
-          });
-        } finally {
-          setAppActionLoading(false);
-        }
-      },
-    });
-  };
-
-  const handleAppReject = async (
-    app: StudentApplication & { documentUrl: string },
-  ) => {
-    if (!appRejectReason.trim()) return;
-    setAppActionLoading(true);
-    try {
-      await students.reviewApplication(
-        app.id,
-        "reject",
-        appRejectReason.trim(),
-      );
-      notifications.show({
-        title: t("success"),
-        message: t("application_rejected", "Application rejected"),
-        color: "orange",
-      });
-      setAppSelected(null);
-      setAppRejectReason("");
-      setAppShowRejectInput(false);
-      fetchApplications();
-    } catch (err: any) {
-      notifications.show({
-        title: t("error"),
-        message:
-          err?.response?.data?.message ?? t("action_failed", "Action failed"),
-        color: "red",
-      });
-    } finally {
-      setAppActionLoading(false);
-    }
-  };
-
-  const closeAppDrawer = () => {
-    setAppSelected(null);
-    setAppRejectReason("");
-    setAppShowRejectInput(false);
-  };
-
-  const pendingAppCount =
-    appStatusFilter === "pending" ? applications.length : 0;
 
   const handleCreate = async (
     values: CreateStudentDto,
@@ -645,6 +503,27 @@ export function SharedStudentsPage() {
       setSelectedIds((current) => current.filter((id) => !allIds.includes(id)));
     } else {
       setSelectedIds((current) => Array.from(new Set([...current, ...allIds])));
+    }
+  };
+
+  const handleSelectAllMatching = async () => {
+    if (allMatchingSelected) {
+      setSelectedIds([]);
+      setAllMatchingSelected(false);
+      return;
+    }
+    try {
+      const all = await students.findAll({
+        search: debouncedSearch || undefined,
+        nationalityCode: nationalityFilter || undefined,
+        gender: (genderFilter as GenderType) || undefined,
+        limit: 99999,
+        page: 1,
+      });
+      setSelectedIds(all.data.map((s) => s.id));
+      setAllMatchingSelected(true);
+    } catch {
+      // keep current selection
     }
   };
 
@@ -869,51 +748,6 @@ export function SharedStudentsPage() {
     }
   };
 
-  const handleImport = async () => {
-    if (!importFile) return;
-    setImportLoading(true);
-    try {
-      const result = await importsApi.bulkImport({
-        file: importFile,
-        dryRun: importDryRun,
-        updateExisting: importUpdateExisting,
-      });
-      setImportResult(result);
-      if (!importDryRun && result.success) {
-        notifications.show({
-          title: t("success"),
-          message: t("import_complete", {
-            defaultValue: "Import complete: {{count}} students imported",
-            count: result.summary.successful,
-          }),
-          color: "green",
-        });
-        fetchData();
-        fetchStats();
-      }
-    } catch {
-      notifications.show({
-        title: t("error"),
-        message: t("import_failed", { defaultValue: "Import failed" }),
-        color: "red",
-      });
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const handleDownloadTemplate = async () => {
-    try {
-      await students.downloadImportTemplate();
-    } catch {
-      notifications.show({
-        title: t("error"),
-        message: t("action_failed", { defaultValue: "Action failed" }),
-        color: "red",
-      });
-    }
-  };
-
   const handleSendMessage = async () => {
     const s = detailStudent ?? selectedStudent;
     if (!s || !messageBody.trim()) return;
@@ -980,12 +814,7 @@ export function SharedStudentsPage() {
               <Button
                 variant="default"
                 leftSection={<IconUpload size={16} />}
-                onClick={() => {
-                  setImportResult(null);
-                  setImportFile(null);
-                  setImportDryRun(true);
-                  setImportModalOpened(true);
-                }}
+                onClick={() => setImportModalOpened(true)}
               >
                 {t("import", { defaultValue: "Import" })}
               </Button>
@@ -1117,6 +946,36 @@ export function SharedStudentsPage() {
               />
             </Paper>
 
+            {selectedIds.length > 0 &&
+              selectedIds.length >= data.data.length &&
+              data.total > limit && (
+                <Text size="sm" ta="center" py="xs" c="dimmed">
+                  {allMatchingSelected
+                    ? t("all_x_students_selected", {
+                        defaultValue:
+                          "All {{count}} matching students are selected.",
+                        count: data.total,
+                      })
+                    : t("all_page_selected", {
+                        defaultValue:
+                          "All {{count}} students on this page are selected.",
+                        count: data.data.length,
+                      })}{" "}
+                  <Anchor
+                    component="button"
+                    size="sm"
+                    onClick={handleSelectAllMatching}
+                  >
+                    {allMatchingSelected
+                      ? t("clear_selection", "Clear selection")
+                      : t("select_all_matching", {
+                          defaultValue: "Select all {{count}} students",
+                          count: data.total,
+                        })}
+                  </Anchor>
+                </Text>
+              )}
+
             <Group justify="space-between" mt="md">
               <Text size="sm" c="dimmed">
                 {t("showing_of_total", {
@@ -1138,117 +997,19 @@ export function SharedStudentsPage() {
               onActivate={() => handleBulkStatusUpdate(true)}
               onDeactivate={() => handleBulkStatusUpdate(false)}
               onSendEmail={() => setComposeEmailOpened(true)}
-              onClear={() => setSelectedIds([])}
+              onClear={() => {
+                setSelectedIds([]);
+                setAllMatchingSelected(false);
+              }}
             />
           </Tabs.Panel>
 
           <Tabs.Panel value="applications">
-            <Group mb="md">
-              <Select
-                value={appStatusFilter}
-                onChange={(v) =>
-                  setAppStatusFilter((v as ApplicationStatus | "all") ?? "all")
-                }
-                data={[
-                  { value: "all", label: t("all", "All") },
-                  { value: "pending", label: t("pending", "Pending") },
-                  { value: "approved", label: t("approved", "Approved") },
-                  { value: "rejected", label: t("rejected", "Rejected") },
-                ]}
-                w={160}
-              />
-            </Group>
-
-            <Paper withBorder radius="md" style={{ position: "relative" }}>
-              <LoadingOverlay visible={appLoading} overlayProps={{ blur: 2 }} />
-              <ScrollArea>
-                <Table highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>{t("student_number")}</Table.Th>
-                      <Table.Th>{t("name")}</Table.Th>
-                      <Table.Th>{t("department")}</Table.Th>
-                      <Table.Th>{t("nationality")}</Table.Th>
-                      <Table.Th>{t("submitted_at", "Submitted")}</Table.Th>
-                      <Table.Th>{t("status")}</Table.Th>
-                      <Table.Th />
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {applications.length === 0 && !appLoading && (
-                      <Table.Tr>
-                        <Table.Td colSpan={7}>
-                          <Text ta="center" c="dimmed" py="lg" size="sm">
-                            {t("no_applications", "No applications found")}
-                          </Text>
-                        </Table.Td>
-                      </Table.Tr>
-                    )}
-                    {applications.map((app) => (
-                      <Table.Tr
-                        key={app.id}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => setAppSelected(app)}
-                      >
-                        <Table.Td>
-                          <Text size="sm" fw={500}>
-                            {app.studentNumber}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          {app.firstName} {app.lastName}
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm" lineClamp={1}>
-                            {app.department}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>{app.nationalityCode}</Table.Td>
-                        <Table.Td>
-                          {new Date(app.submittedAt).toLocaleDateString(
-                            "en-GB",
-                          )}
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge color={STATUS_COLORS[app.status]} size="sm">
-                            {t(`app_status_${app.status}`, app.status)}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td onClick={(e) => e.stopPropagation()}>
-                          {app.status === "pending" && canReview && (
-                            <Group gap={4} wrap="nowrap">
-                              <Tooltip label={t("approve", "Approve")}>
-                                <ActionIcon
-                                  color="green"
-                                  variant="light"
-                                  size="sm"
-                                  onClick={() => handleAppApprove(app)}
-                                >
-                                  <IconCheck size={14} />
-                                </ActionIcon>
-                              </Tooltip>
-                              <Tooltip label={t("reject", "Reject")}>
-                                <ActionIcon
-                                  color="red"
-                                  variant="light"
-                                  size="sm"
-                                  onClick={() => {
-                                    setAppSelected(app);
-                                    setAppShowRejectInput(true);
-                                  }}
-                                >
-                                  <IconX size={14} />
-                                </ActionIcon>
-                              </Tooltip>
-                            </Group>
-                          )}
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </ScrollArea>
-            </Paper>
+            <StudentApplicationsPanel
+              active={activeTab === "applications"}
+              canReview={canReview}
+              onPendingCountChange={setPendingAppCount}
+            />
           </Tabs.Panel>
         </Tabs>
 
@@ -1733,308 +1494,14 @@ export function SharedStudentsPage() {
         />
       </PageShell>
 
-      <Modal
+      <StudentImportModal
         opened={importModalOpened}
         onClose={() => setImportModalOpened(false)}
-        title={t("import_students", { defaultValue: "Import Students" })}
-        size="xl"
-      >
-        <Stack gap="md">
-          <Group justify="flex-end">
-            <Button
-              variant="subtle"
-              size="xs"
-              leftSection={<IconDownload size={14} />}
-              onClick={handleDownloadTemplate}
-            >
-              {t("download_template", { defaultValue: "Download Template" })}
-            </Button>
-          </Group>
-
-          <FileInput
-            label={t("select_excel_file", {
-              defaultValue: "Select Excel file (.xlsx)",
-            })}
-            placeholder={t("click_to_browse", {
-              defaultValue: "Click to browse…",
-            })}
-            accept=".xlsx,.xls"
-            value={importFile}
-            onChange={(f) => {
-              setImportFile(f);
-              setImportResult(null);
-            }}
-            leftSection={<IconUpload size={16} />}
-            clearable
-          />
-
-          <Group>
-            <Switch
-              label={t("dry_run_label", {
-                defaultValue: "Validate only (dry run)",
-              })}
-              checked={importDryRun}
-              onChange={(e) => {
-                setImportDryRun(e.currentTarget.checked);
-                setImportResult(null);
-              }}
-            />
-            <Switch
-              label={t("update_existing_label", {
-                defaultValue: "Update existing students",
-              })}
-              checked={importUpdateExisting}
-              onChange={(e) => setImportUpdateExisting(e.currentTarget.checked)}
-            />
-          </Group>
-
-          {importResult && (
-            <Stack gap="xs">
-              <Group gap="xs">
-                <Badge color="blue">
-                  {t("total")}: {importResult.summary.total}
-                </Badge>
-                <Badge color="green">
-                  {t("success")}: {importResult.summary.successful}
-                </Badge>
-                {importResult.summary.failed > 0 && (
-                  <Badge color="red">
-                    {t("failed")}: {importResult.summary.failed}
-                  </Badge>
-                )}
-                {importResult.summary.skipped > 0 && (
-                  <Badge color="gray">
-                    {t("skipped")}: {importResult.summary.skipped}
-                  </Badge>
-                )}
-              </Group>
-
-              {importResult.results.some((r) => r.status !== "success") && (
-                <Paper withBorder radius="md">
-                  <ScrollArea mah={280}>
-                    <Table fz="xs">
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>
-                            {t("row", { defaultValue: "Row" })}
-                          </Table.Th>
-                          <Table.Th>{t("student_number")}</Table.Th>
-                          <Table.Th>{t("name")}</Table.Th>
-                          <Table.Th>{t("status")}</Table.Th>
-                          <Table.Th>{t("error")}</Table.Th>
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {importResult.results
-                          .filter((r) => r.status !== "success")
-                          .map((r) => (
-                            <Table.Tr key={r.row}>
-                              <Table.Td>{r.row}</Table.Td>
-                              <Table.Td>{r.data.studentNumber}</Table.Td>
-                              <Table.Td>
-                                {r.data.firstName} {r.data.lastName}
-                              </Table.Td>
-                              <Table.Td>
-                                <Badge
-                                  size="xs"
-                                  color={
-                                    r.status === "skipped" ? "gray" : "red"
-                                  }
-                                >
-                                  {r.status}
-                                </Badge>
-                              </Table.Td>
-                              <Table.Td c="red">{r.error ?? "—"}</Table.Td>
-                            </Table.Tr>
-                          ))}
-                      </Table.Tbody>
-                    </Table>
-                  </ScrollArea>
-                </Paper>
-              )}
-            </Stack>
-          )}
-
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              onClick={() => setImportModalOpened(false)}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              leftSection={
-                importDryRun ? <IconEye size={16} /> : <IconUpload size={16} />
-              }
-              onClick={handleImport}
-              loading={importLoading}
-              disabled={!importFile}
-              color={importDryRun ? "blue" : "green"}
-            >
-              {importDryRun
-                ? t("validate", { defaultValue: "Validate" })
-                : t("import", { defaultValue: "Import" })}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      {/* Application detail drawer */}
-      <Drawer
-        opened={!!appSelected}
-        onClose={closeAppDrawer}
-        title={t("application_details", "Application Details")}
-        position="right"
-        size="md"
-      >
-        {appSelected && (
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Text fw={700} size="lg">
-                {appSelected.firstName} {appSelected.lastName}
-              </Text>
-              <Badge color={STATUS_COLORS[appSelected.status]}>
-                {t(`app_status_${appSelected.status}`, appSelected.status)}
-              </Badge>
-            </Group>
-
-            {appSelected.rejectionReason && (
-              <Paper
-                withBorder
-                p="sm"
-                radius="md"
-                style={{ borderColor: "var(--mantine-color-red-4)" }}
-              >
-                <Text size="xs" fw={600} c="red" mb={4}>
-                  {t("rejection_reason", "Rejection Reason")}
-                </Text>
-                <Text size="sm">{appSelected.rejectionReason}</Text>
-              </Paper>
-            )}
-
-            <Group grow>
-              <LabelValue label={t("student_number")}>
-                {appSelected.studentNumber}
-              </LabelValue>
-              <LabelValue label={t("gender")}>
-                {t(appSelected.gender)}
-              </LabelValue>
-            </Group>
-
-            <Group grow>
-              <LabelValue label={t("nationality")}>
-                {appSelected.nationalityCode}
-              </LabelValue>
-              <LabelValue label={t("national_id")}>
-                {appSelected.nationalId}
-              </LabelValue>
-            </Group>
-
-            <Group grow>
-              <LabelValue label={t("birth_date")}>
-                {new Date(appSelected.birthDate).toLocaleDateString("en-GB")}
-              </LabelValue>
-              <LabelValue label={t("birth_place")}>
-                {appSelected.birthPlace}
-              </LabelValue>
-            </Group>
-
-            <LabelValue label={t("department")}>
-              {appSelected.department}
-            </LabelValue>
-
-            {appSelected.email && (
-              <LabelValue label={t("email")}>{appSelected.email}</LabelValue>
-            )}
-
-            {appSelected.phoneNumber && (
-              <LabelValue label={t("phone_number")}>
-                {appSelected.phoneNumber}
-              </LabelValue>
-            )}
-
-            <LabelValue label={t("submitted_at", "Submitted")}>
-              {new Date(appSelected.submittedAt).toLocaleString("en-GB")}
-            </LabelValue>
-
-            <Divider />
-
-            <Button
-              leftSection={<IconFileDescription size={16} />}
-              rightSection={<IconExternalLink size={14} />}
-              variant="light"
-              onClick={() => window.open(appSelected.documentUrl, "_blank")}
-            >
-              {appSelected.documentType === "returning"
-                ? t("view_student_certificate", "View Student Certificate")
-                : t("view_acceptance_letter", "View Acceptance Letter")}
-            </Button>
-
-            {appSelected.status === "pending" && canReview && (
-              <>
-                <Divider />
-
-                {!appShowRejectInput ? (
-                  <Group grow>
-                    <Button
-                      color="green"
-                      leftSection={<IconCheck size={16} />}
-                      loading={appActionLoading}
-                      onClick={() => handleAppApprove(appSelected)}
-                    >
-                      {t("approve", "Approve")}
-                    </Button>
-                    <Button
-                      color="red"
-                      variant="light"
-                      leftSection={<IconX size={16} />}
-                      onClick={() => setAppShowRejectInput(true)}
-                    >
-                      {t("reject", "Reject")}
-                    </Button>
-                  </Group>
-                ) : (
-                  <Stack gap="xs">
-                    <Textarea
-                      label={t("rejection_reason", "Rejection Reason")}
-                      placeholder={t(
-                        "rejection_reason_placeholder",
-                        "Explain why this application is being rejected…",
-                      )}
-                      value={appRejectReason}
-                      onChange={(e) =>
-                        setAppRejectReason(e.currentTarget.value)
-                      }
-                      autosize
-                      minRows={3}
-                      required
-                    />
-                    <Group gap="xs">
-                      <Button
-                        color="red"
-                        loading={appActionLoading}
-                        disabled={!appRejectReason.trim()}
-                        onClick={() => handleAppReject(appSelected)}
-                      >
-                        {t("confirm_reject", "Confirm Reject")}
-                      </Button>
-                      <Button
-                        variant="default"
-                        onClick={() => {
-                          setAppShowRejectInput(false);
-                          setAppRejectReason("");
-                        }}
-                      >
-                        {t("cancel")}
-                      </Button>
-                    </Group>
-                  </Stack>
-                )}
-              </>
-            )}
-          </Stack>
-        )}
-      </Drawer>
+        onSuccess={() => {
+          fetchData();
+          fetchStats();
+        }}
+      />
     </>
   );
 }

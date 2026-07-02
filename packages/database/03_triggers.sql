@@ -25,6 +25,7 @@ DECLARE
     current_username TEXT;
     current_ip INET;
     current_user_agent TEXT;
+    current_operation_context TEXT;
     changed_fields TEXT[] := ARRAY[]::TEXT[];
     col TEXT;
     pk_column TEXT;
@@ -39,6 +40,7 @@ BEGIN
         current_username := current_setting('app.username', true);
         current_ip := current_setting('app.ip_address', true)::INET;
         current_user_agent := current_setting('app.user_agent', true);
+        current_operation_context := current_setting('app.operation_context', true);
     EXCEPTION WHEN OTHERS THEN
         current_user_id := '00000000-0000-0000-0000-000000000000'::UUID; -- System UUID
         current_username := 'system';
@@ -77,6 +79,7 @@ BEGIN
         old_values,
         new_values,
         changed_fields,
+        operation_context,
         query_text
     ) VALUES (
         current_user_id,
@@ -87,13 +90,14 @@ BEGIN
         LEFT(TG_OP, 1),
         TG_TABLE_SCHEMA,
         TG_TABLE_NAME,
-        CASE 
+        CASE
             WHEN TG_OP = 'DELETE' THEN (to_jsonb(OLD) ->> pk_column)
             ELSE (to_jsonb(NEW) ->> pk_column)
         END,
         CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) ELSE NULL END,
         CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) ELSE NULL END,
         CASE WHEN TG_OP = 'UPDATE' THEN changed_fields ELSE NULL END,
+        NULLIF(current_operation_context, ''),
         current_query()
     );
     
@@ -251,17 +255,19 @@ WHERE success = false
 GROUP BY user_id, username
 HAVING COUNT(*) >= 5;
 
--- Bulk operations log
+-- Bulk operations: groups of audit events sharing an operation_context
 CREATE VIEW audit.bulk_operations AS
-SELECT 
-    op_id,
-    event_timestamp,
+SELECT
+    operation_context AS op_id,
+    MIN(event_timestamp) AS event_timestamp,
     username,
-    operation_type,
-    affected_count,
-    resource_type
-FROM audit.sensitive_operations
-ORDER BY event_timestamp DESC;
+    action AS operation_type,
+    COUNT(*) AS affected_count,
+    table_name AS resource_type
+FROM audit.event_log
+WHERE operation_context IS NOT NULL
+GROUP BY operation_context, username, action, table_name
+ORDER BY MIN(event_timestamp) DESC;
 
 -- =============================================
 -- BUSINESS LOGIC TRIGGERS

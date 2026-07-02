@@ -100,7 +100,7 @@ export class BookingsService {
 
       // 2. Constraints Check
       const isTrOnly = room.isTrOnly || bed.isTrOnly;
-      if (isTrOnly && student.nationalityCode !== 'TR') {
+      if (isTrOnly && !isTurkishNational(student.nationalityCode)) {
         throw new BadRequestException('This location is reserved for Turkish citizens only');
       }
 

@@ -9,6 +9,7 @@ import {
   Res,
   Body,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { LocalAuthGuard } from '../guards/local-auth.guard';
 import { AuthenticatedGuard } from '../guards/authenticated.guard';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
@@ -16,6 +17,7 @@ import { LoginDto } from '../dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)

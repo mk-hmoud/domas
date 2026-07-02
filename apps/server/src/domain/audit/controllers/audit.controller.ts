@@ -24,11 +24,6 @@ export class AuditController {
     return this.auditService.getRecentChanges(limit);
   }
 
-  @Get('suspicious-activity')
-  getSuspiciousActivity() {
-    return this.auditService.getSuspiciousActivity();
-  }
-
   @Get('bulk-operations')
   getBulkOperations(@Query('limit', new ParseIntPipe({ optional: true })) limit?: number) {
     return this.auditService.getBulkOperations(limit);
