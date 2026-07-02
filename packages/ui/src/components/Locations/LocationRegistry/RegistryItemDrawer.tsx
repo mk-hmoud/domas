@@ -162,6 +162,11 @@ export function RegistryItemDrawer({
       position="right"
       size={500}
       withCloseButton={false}
+      transitionProps={{
+        transition: "slide-left",
+        duration: 200,
+        timingFunction: "ease",
+      }}
       styles={{
         body: {
           padding: 0,

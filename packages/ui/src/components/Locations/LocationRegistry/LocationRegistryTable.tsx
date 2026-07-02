@@ -1,3 +1,4 @@
+import { memo, useMemo, useRef } from "react";
 import {
   Table,
   Badge,
@@ -11,9 +12,7 @@ import {
   TextInput,
   Select,
   UnstyledButton,
-  Box,
   ActionIcon,
-  rem,
   Pill,
 } from "@mantine/core";
 import {
@@ -60,6 +59,20 @@ interface LocationRegistryTableProps {
   roomTypes?: RoomType[];
 }
 
+interface TableHandlers {
+  onFilterChange: (key: string, value: any) => void;
+  onBatchFilterChange: (updates: Record<string, any>) => void;
+  onClearFilters: () => void;
+  onOpenDetail: (item: any) => void;
+  onView: (item: any) => void;
+  onEdit: (item: any) => void;
+  onDelete: (item: any) => void;
+  onEmailResidents?: (locationId: number) => void;
+  onToggleSelection: (id: number | string) => void;
+  onToggleSelectAll: () => void;
+  onSelectAllMatching?: () => void;
+}
+
 function globalId(item: any): string {
   return item.type === "bed" ? `bed-${item.id}` : `loc-${item.id}`;
 }
@@ -89,7 +102,251 @@ const thFilterStyle: React.CSSProperties = {
   letterSpacing: 0,
 };
 
-export function LocationRegistryTable({
+// ── Memoized row — only re-renders when isSelected or item reference changes ──
+
+const RegistryRow = memo(
+  function RegistryRow({
+    item,
+    isSelected,
+    mode,
+    handlersRef,
+  }: {
+    item: any;
+    isSelected: boolean;
+    mode: "locations" | "beds";
+    handlersRef: React.MutableRefObject<TableHandlers>;
+  }) {
+    const { t, i18n } = useTranslation();
+    const isTr = i18n.language === "tr";
+    const gId = globalId(item);
+    const isBed = item.type === "bed";
+    const total = item.totalBeds || 0;
+    const occupied = item.occupiedBeds || 0;
+    const occupancyRate = total > 0 ? (occupied / total) * 100 : 0;
+
+    return (
+      <Table.Tr
+        style={{ cursor: "pointer" }}
+        bg={isSelected ? "var(--mantine-color-blue-light)" : undefined}
+        onClick={() => handlersRef.current.onOpenDetail(item)}
+      >
+        <Table.Td onClick={(e) => e.stopPropagation()} style={{ width: 40 }}>
+          <Checkbox
+            size="xs"
+            checked={isSelected}
+            onChange={() => handlersRef.current.onToggleSelection(gId)}
+          />
+        </Table.Td>
+
+        <Table.Td>
+          <Group gap="xs" wrap="nowrap">
+            <LocationIcon type={item.type as any} />
+            <Stack gap={0} style={{ minWidth: 0 }}>
+              <Text size="sm" fw={500} truncate>
+                {isBed
+                  ? `${item.locationName} — ${item.label}`
+                  : isTr && item.nameTr
+                    ? item.nameTr
+                    : item.name}
+              </Text>
+              {item.locationPath && (
+                <Text size="xs" c="dimmed" truncate>
+                  {item.locationPath}
+                </Text>
+              )}
+            </Stack>
+          </Group>
+        </Table.Td>
+
+        {mode === "locations" && (
+          <Table.Td style={{ width: 100 }}>
+            <Badge size="xs" variant="light" color="gray">
+              {t(`location_type.${item.type}`, item.type) as string}
+            </Badge>
+          </Table.Td>
+        )}
+
+        <Table.Td style={{ width: 90 }}>
+          {item.genderLock ? (
+            <Badge
+              size="xs"
+              color={getGenderColor(item.genderLock)}
+              variant="dot"
+            >
+              {t(`gender.${item.genderLock}`, item.genderLock) as string}
+            </Badge>
+          ) : (
+            <Text size="xs" c="dimmed">
+              —
+            </Text>
+          )}
+        </Table.Td>
+
+        {mode === "locations" && (
+          <Table.Td style={{ width: 140 }}>
+            {item.roomTypeName ? (
+              <Text size="xs" c="teal" fw={500} truncate>
+                {isTr && item.roomTypeNameTr
+                  ? item.roomTypeNameTr
+                  : item.roomTypeName}
+              </Text>
+            ) : (
+              <Text size="xs" c="dimmed">
+                —
+              </Text>
+            )}
+          </Table.Td>
+        )}
+
+        <Table.Td style={{ width: 130 }}>
+          <Group gap={4} wrap="wrap">
+            {item.isTrOnly && (
+              <Badge size="xs" variant="dot" color="red">
+                TR
+              </Badge>
+            )}
+            {item.isForeignerOnly && (
+              <Badge size="xs" variant="dot" color="grape">
+                INT
+              </Badge>
+            )}
+            {item.isGuestZone && (
+              <Badge size="xs" variant="dot" color="orange">
+                {t("is_guest_zone_label", "Guest")}
+              </Badge>
+            )}
+            {item.isRectorate && (
+              <Badge size="xs" variant="dot" color="violet">
+                {t("rectorate", "Rect")}
+              </Badge>
+            )}
+            {!item.isTrOnly &&
+              !item.isForeignerOnly &&
+              !item.isGuestZone &&
+              !item.isRectorate && (
+                <Text size="xs" c="dimmed">
+                  —
+                </Text>
+              )}
+          </Group>
+        </Table.Td>
+
+        <Table.Td style={{ width: 150 }}>
+          {isBed ? (
+            <Stack gap={2}>
+              <Badge
+                size="xs"
+                color={getBedStatusColor(item.status)}
+                variant="light"
+              >
+                {t(`bed_status.${item.status}`, item.status || "—") as string}
+              </Badge>
+              {item.residentName && (
+                <Text size="xs" c="dimmed" truncate style={{ maxWidth: 130 }}>
+                  {item.residentName}
+                </Text>
+              )}
+            </Stack>
+          ) : total > 0 ? (
+            <Stack gap={4}>
+              <Group justify="space-between" gap={4}>
+                <Text size="xs" c="dimmed">
+                  {occupied}/{total}
+                </Text>
+                <Text
+                  size="xs"
+                  fw={700}
+                  c={
+                    occupancyRate === 100
+                      ? "red"
+                      : occupancyRate > 80
+                        ? "orange"
+                        : "blue"
+                  }
+                >
+                  {Math.round(occupancyRate)}%
+                </Text>
+              </Group>
+              <Progress
+                value={occupancyRate}
+                size="xs"
+                color={
+                  occupancyRate === 100
+                    ? "red"
+                    : occupancyRate > 80
+                      ? "orange"
+                      : "blue"
+                }
+                radius="xl"
+              />
+            </Stack>
+          ) : (
+            <Text size="xs" c="dimmed">
+              —
+            </Text>
+          )}
+        </Table.Td>
+
+        <Table.Td onClick={(e) => e.stopPropagation()} style={{ width: 140 }}>
+          <Group gap={4} justify="flex-end" wrap="nowrap">
+            {!isBed && handlersRef.current.onEmailResidents && (
+              <Tooltip label={t("email_residents", "Email Residents")}>
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="blue"
+                  onClick={() =>
+                    handlersRef.current.onEmailResidents!(item.id as number)
+                  }
+                >
+                  <IconMail size={14} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+            <Tooltip label={t("locate_in_structure", "Locate in Structure")}>
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                color="gray"
+                onClick={() => handlersRef.current.onView(item)}
+              >
+                <IconHierarchy size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label={t("edit", "Edit")}>
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                color="blue"
+                onClick={() => handlersRef.current.onEdit(item)}
+              >
+                <IconEdit size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label={t("delete", "Delete")}>
+              <ActionIcon
+                variant="subtle"
+                size="sm"
+                color="red"
+                onClick={() => handlersRef.current.onDelete(item)}
+              >
+                <IconTrash size={14} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Table.Td>
+      </Table.Tr>
+    );
+  },
+  (prev, next) =>
+    prev.isSelected === next.isSelected &&
+    prev.item === next.item &&
+    prev.mode === next.mode,
+);
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+function LocationRegistryTableInner({
   mode,
   data,
   filters,
@@ -112,15 +369,44 @@ export function LocationRegistryTable({
   const { t, i18n } = useTranslation();
   const isTr = i18n.language === "tr";
 
+  // Always-current handlers — rows read from this ref so they never hold stale closures
+  const handlersRef = useRef<TableHandlers>({
+    onFilterChange,
+    onBatchFilterChange,
+    onClearFilters,
+    onOpenDetail,
+    onView,
+    onEdit,
+    onDelete,
+    onEmailResidents,
+    onToggleSelection,
+    onToggleSelectAll,
+    onSelectAllMatching,
+  });
+  handlersRef.current = {
+    onFilterChange,
+    onBatchFilterChange,
+    onClearFilters,
+    onOpenDetail,
+    onView,
+    onEdit,
+    onDelete,
+    onEmailResidents,
+    onToggleSelection,
+    onToggleSelectAll,
+    onSelectAllMatching,
+  };
+
+  // O(1) selection lookup instead of O(n) array.includes per row
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
   const allSelected =
-    data.length > 0 &&
-    data.every((item) => selectedIds.includes(globalId(item)));
+    data.length > 0 && data.every((item) => selectedSet.has(globalId(item)));
   const someSelected =
-    data.some((item) => selectedIds.includes(globalId(item))) && !allSelected;
+    data.some((item) => selectedSet.has(globalId(item))) && !allSelected;
 
   const colCount = mode === "locations" ? 8 : 7;
 
-  // Sort helpers
   const handleSort = (field: string) => {
     if (filters.orderBy === field) {
       if (filters.orderDir !== "desc") {
@@ -161,7 +447,6 @@ export function LocationRegistryTable({
     </UnstyledButton>
   );
 
-  // Flag filter toggle helper
   const toggleFlag = (key: string) => {
     onFilterChange(key, filters[key] ? undefined : true);
   };
@@ -186,7 +471,6 @@ export function LocationRegistryTable({
     </Badge>
   );
 
-  // Active filter chips
   const activeChips: { prefix: string; label: string; key: string }[] = [
     filters.q && {
       key: "q",
@@ -270,242 +554,8 @@ export function LocationRegistryTable({
     label: t(`bed_status.${s}`, s),
   }));
 
-  // Render a single data row
-  const renderRow = (item: any) => {
-    const gId = globalId(item);
-    const isBed = item.type === "bed";
-    const total = item.totalBeds || 0;
-    const occupied = item.occupiedBeds || 0;
-    const occupancyRate = total > 0 ? (occupied / total) * 100 : 0;
-
-    return (
-      <Table.Tr
-        key={gId}
-        style={{ cursor: "pointer" }}
-        bg={
-          selectedIds.includes(gId)
-            ? "var(--mantine-color-blue-light)"
-            : undefined
-        }
-        onClick={() => onOpenDetail(item)}
-      >
-        <Table.Td onClick={(e) => e.stopPropagation()} style={{ width: 40 }}>
-          <Checkbox
-            size="xs"
-            checked={selectedIds.includes(gId)}
-            onChange={() => onToggleSelection(gId)}
-          />
-        </Table.Td>
-
-        {/* Name / Bed label */}
-        <Table.Td>
-          <Group gap="xs" wrap="nowrap">
-            <LocationIcon type={item.type as any} />
-            <Stack gap={0} style={{ minWidth: 0 }}>
-              <Text size="sm" fw={500} truncate>
-                {isBed
-                  ? `${item.locationName} — ${item.label}`
-                  : isTr && item.nameTr
-                    ? item.nameTr
-                    : item.name}
-              </Text>
-              {item.locationPath && (
-                <Text size="xs" c="dimmed" truncate>
-                  {item.locationPath}
-                </Text>
-              )}
-            </Stack>
-          </Group>
-        </Table.Td>
-
-        {/* Type (locations only) */}
-        {mode === "locations" && (
-          <Table.Td style={{ width: 100 }}>
-            <Badge size="xs" variant="light" color="gray">
-              {t(`location_type.${item.type}`, item.type)}
-            </Badge>
-          </Table.Td>
-        )}
-
-        {/* Gender */}
-        <Table.Td style={{ width: 90 }}>
-          {item.genderLock ? (
-            <Badge
-              size="xs"
-              color={getGenderColor(item.genderLock)}
-              variant="dot"
-            >
-              {t(`gender.${item.genderLock}`, item.genderLock)}
-            </Badge>
-          ) : (
-            <Text size="xs" c="dimmed">
-              —
-            </Text>
-          )}
-        </Table.Td>
-
-        {/* Room Type (locations only) */}
-        {mode === "locations" && (
-          <Table.Td style={{ width: 140 }}>
-            {item.roomTypeName ? (
-              <Text size="xs" c="teal" fw={500} truncate>
-                {isTr && item.roomTypeNameTr
-                  ? item.roomTypeNameTr
-                  : item.roomTypeName}
-              </Text>
-            ) : (
-              <Text size="xs" c="dimmed">
-                —
-              </Text>
-            )}
-          </Table.Td>
-        )}
-
-        {/* Flags */}
-        <Table.Td style={{ width: 130 }}>
-          <Group gap={4} wrap="wrap">
-            {item.isTrOnly && (
-              <Badge size="xs" variant="dot" color="red">
-                TR
-              </Badge>
-            )}
-            {item.isForeignerOnly && (
-              <Badge size="xs" variant="dot" color="grape">
-                INT
-              </Badge>
-            )}
-            {item.isGuestZone && (
-              <Badge size="xs" variant="dot" color="orange">
-                {t("is_guest_zone_label", "Guest")}
-              </Badge>
-            )}
-            {item.isRectorate && (
-              <Badge size="xs" variant="dot" color="violet">
-                {t("rectorate", "Rect")}
-              </Badge>
-            )}
-            {!item.isTrOnly &&
-              !item.isForeignerOnly &&
-              !item.isGuestZone &&
-              !item.isRectorate && (
-                <Text size="xs" c="dimmed">
-                  —
-                </Text>
-              )}
-          </Group>
-        </Table.Td>
-
-        {/* Occupancy (locations) or Status (beds) */}
-        <Table.Td style={{ width: 150 }}>
-          {isBed ? (
-            <Stack gap={2}>
-              <Badge
-                size="xs"
-                color={getBedStatusColor(item.status)}
-                variant="light"
-              >
-                {t(`bed_status.${item.status}`, item.status || "—")}
-              </Badge>
-              {item.residentName && (
-                <Text size="xs" c="dimmed" truncate style={{ maxWidth: 130 }}>
-                  {item.residentName}
-                </Text>
-              )}
-            </Stack>
-          ) : total > 0 ? (
-            <Stack gap={4}>
-              <Group justify="space-between" gap={4}>
-                <Text size="xs" c="dimmed">
-                  {occupied}/{total}
-                </Text>
-                <Text
-                  size="xs"
-                  fw={700}
-                  c={
-                    occupancyRate === 100
-                      ? "red"
-                      : occupancyRate > 80
-                        ? "orange"
-                        : "blue"
-                  }
-                >
-                  {Math.round(occupancyRate)}%
-                </Text>
-              </Group>
-              <Progress
-                value={occupancyRate}
-                size="xs"
-                color={
-                  occupancyRate === 100
-                    ? "red"
-                    : occupancyRate > 80
-                      ? "orange"
-                      : "blue"
-                }
-                radius="xl"
-              />
-            </Stack>
-          ) : (
-            <Text size="xs" c="dimmed">
-              —
-            </Text>
-          )}
-        </Table.Td>
-
-        {/* Actions */}
-        <Table.Td onClick={(e) => e.stopPropagation()} style={{ width: 140 }}>
-          <Group gap={4} justify="flex-end" wrap="nowrap">
-            {!isBed && onEmailResidents && (
-              <Tooltip label={t("email_residents", "Email Residents")}>
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="blue"
-                  onClick={() => onEmailResidents(item.id as number)}
-                >
-                  <IconMail size={14} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-            <Tooltip label={t("locate_in_structure", "Locate in Structure")}>
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                color="gray"
-                onClick={() => onView(item)}
-              >
-                <IconHierarchy size={14} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label={t("edit", "Edit")}>
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                color="blue"
-                onClick={() => onEdit(item)}
-              >
-                <IconEdit size={14} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label={t("delete", "Delete")}>
-              <ActionIcon
-                variant="subtle"
-                size="sm"
-                color="red"
-                onClick={() => onDelete(item)}
-              >
-                <IconTrash size={14} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        </Table.Td>
-      </Table.Tr>
-    );
-  };
-
   return (
     <>
-      {/* Active filter chips */}
       {activeChips.length > 0 && (
         <Group gap="xs" mb="xs" wrap="wrap" align="center">
           <Text size="xs" c="dimmed" fw={500}>
@@ -541,7 +591,6 @@ export function LocationRegistryTable({
       <Table.ScrollContainer minWidth={860} type="native">
         <Table stickyHeader highlightOnHover verticalSpacing="xs">
           <Table.Thead>
-            {/* ── Row 1: Column labels + sort ── */}
             <Table.Tr className={classes.thead}>
               <Table.Th className={classes.th} style={{ width: 40 }}>
                 <Checkbox
@@ -551,31 +600,25 @@ export function LocationRegistryTable({
                   onChange={onToggleSelectAll}
                 />
               </Table.Th>
-
               <Table.Th className={classes.th}>
                 <SortableHeader field="name">{t("name")}</SortableHeader>
               </Table.Th>
-
               {mode === "locations" && (
                 <Table.Th className={classes.th} style={{ width: 100 }}>
                   {t("type", "Type")}
                 </Table.Th>
               )}
-
               <Table.Th className={classes.th} style={{ width: 90 }}>
                 {t("gender_lock", "Gender")}
               </Table.Th>
-
               {mode === "locations" && (
                 <Table.Th className={classes.th} style={{ width: 140 }}>
                   {t("room_type", "Room Type")}
                 </Table.Th>
               )}
-
               <Table.Th className={classes.th} style={{ width: 130 }}>
                 {t("flags", "Flags")}
               </Table.Th>
-
               <Table.Th className={classes.th} style={{ width: 150 }}>
                 <SortableHeader field="occupancy">
                   {mode === "locations"
@@ -583,15 +626,11 @@ export function LocationRegistryTable({
                     : t("status", "Status")}
                 </SortableHeader>
               </Table.Th>
-
               <Table.Th className={classes.th} style={{ width: 120 }} />
             </Table.Tr>
 
-            {/* ── Row 2: Filter inputs ── */}
             <Table.Tr style={filterRowStyle}>
               <Table.Th style={thFilterStyle} />
-
-              {/* Name filter */}
               <Table.Th style={thFilterStyle}>
                 <TextInput
                   size="xs"
@@ -603,8 +642,6 @@ export function LocationRegistryTable({
                   styles={{ input: { minWidth: 120 } }}
                 />
               </Table.Th>
-
-              {/* Type filter */}
               {mode === "locations" && (
                 <Table.Th style={thFilterStyle}>
                   <Select
@@ -618,8 +655,6 @@ export function LocationRegistryTable({
                   />
                 </Table.Th>
               )}
-
-              {/* Gender filter */}
               <Table.Th style={thFilterStyle}>
                 <Select
                   size="xs"
@@ -631,8 +666,6 @@ export function LocationRegistryTable({
                   styles={{ input: { minWidth: 80 } }}
                 />
               </Table.Th>
-
-              {/* Room Type filter */}
               {mode === "locations" && (
                 <Table.Th style={thFilterStyle}>
                   <Select
@@ -650,8 +683,6 @@ export function LocationRegistryTable({
                   />
                 </Table.Th>
               )}
-
-              {/* Flags filter */}
               <Table.Th style={thFilterStyle}>
                 <Group gap={4} wrap="wrap">
                   <FlagToggle filterKey="isTrOnly" label="TR" color="red" />
@@ -672,8 +703,6 @@ export function LocationRegistryTable({
                   />
                 </Group>
               </Table.Th>
-
-              {/* Occupancy / Status filter */}
               <Table.Th style={thFilterStyle}>
                 {mode === "locations" ? (
                   <Checkbox
@@ -699,13 +728,11 @@ export function LocationRegistryTable({
                   />
                 )}
               </Table.Th>
-
               <Table.Th style={thFilterStyle} />
             </Table.Tr>
           </Table.Thead>
 
           <Table.Tbody>
-            {/* Select-all-matching banner */}
             {allSelected && data.length > 0 && totalCount > data.length && (
               <Table.Tr>
                 <Table.Td
@@ -770,7 +797,15 @@ export function LocationRegistryTable({
                 </Table.Td>
               </Table.Tr>
             ) : (
-              data.map((item) => renderRow(item))
+              data.map((item) => (
+                <RegistryRow
+                  key={globalId(item)}
+                  item={item}
+                  isSelected={selectedSet.has(globalId(item))}
+                  mode={mode}
+                  handlersRef={handlersRef}
+                />
+              ))
             )}
           </Table.Tbody>
         </Table>
@@ -778,3 +813,18 @@ export function LocationRegistryTable({
     </>
   );
 }
+
+// Only re-render when table data, filters, or selection actually change.
+// Callback prop reference changes (from parent re-renders) are ignored since
+// all handlers are accessed through handlersRef at call time.
+export const LocationRegistryTable = memo(
+  LocationRegistryTableInner,
+  (prev, next) =>
+    prev.data === next.data &&
+    prev.filters === next.filters &&
+    prev.totalCount === next.totalCount &&
+    prev.selectedIds === next.selectedIds &&
+    prev.allMatchingSelected === next.allMatchingSelected &&
+    prev.roomTypes === next.roomTypes &&
+    prev.mode === next.mode,
+);
