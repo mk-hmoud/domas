@@ -35,6 +35,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.0",
+    "@nestjs/throttler": "^6.5.0",
     "@types/pg": "^8.15.6",
     "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",
@@ -46,9 +47,9 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pdfkit": "^0.17.2",
-    "puppeteer": "^24.43.1",
     "pg": "^8.16.3",
     "pino-http": "^11.0.0",
+    "puppeteer": "^24.43.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "xlsx": "^0.18.5"
