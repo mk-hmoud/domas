@@ -158,6 +158,94 @@ ALTER TABLE room_types
 
 COMMIT;
 
+-- ── 13. Audit triggers: drop undo_log, add 14 new tables ─────────────────
+-- Undo log was previously audited; now intentionally excluded (internal infra).
+DROP TRIGGER IF EXISTS audit_undo_log_change ON audit.undo_log;
+
+-- Guests
+DROP TRIGGER IF EXISTS audit_guests_change ON guests;
+CREATE TRIGGER audit_guests_change
+AFTER INSERT OR UPDATE OR DELETE ON guests
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Guest Stays
+DROP TRIGGER IF EXISTS audit_guest_stays_change ON guest_stays;
+CREATE TRIGGER audit_guest_stays_change
+AFTER INSERT OR UPDATE OR DELETE ON guest_stays
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Room Change Requests
+DROP TRIGGER IF EXISTS audit_room_change_requests_change ON room_change_requests;
+CREATE TRIGGER audit_room_change_requests_change
+AFTER INSERT OR UPDATE OR DELETE ON room_change_requests
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Pre-Reservations
+DROP TRIGGER IF EXISTS audit_pre_reservations_change ON pre_reservations;
+CREATE TRIGGER audit_pre_reservations_change
+AFTER INSERT OR UPDATE OR DELETE ON pre_reservations
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Document Templates
+DROP TRIGGER IF EXISTS audit_document_templates_change ON document_templates;
+CREATE TRIGGER audit_document_templates_change
+AFTER INSERT OR UPDATE OR DELETE ON document_templates
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Inventory Templates
+DROP TRIGGER IF EXISTS audit_inventory_templates_change ON inventory_templates;
+CREATE TRIGGER audit_inventory_templates_change
+AFTER INSERT OR UPDATE OR DELETE ON inventory_templates
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Inventory Template Items
+DROP TRIGGER IF EXISTS audit_inventory_template_items_change ON inventory_template_items;
+CREATE TRIGGER audit_inventory_template_items_change
+AFTER INSERT OR UPDATE OR DELETE ON inventory_template_items
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Room Types
+DROP TRIGGER IF EXISTS audit_room_types_change ON room_types;
+CREATE TRIGGER audit_room_types_change
+AFTER INSERT OR UPDATE OR DELETE ON room_types
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Semester Room Pricing
+DROP TRIGGER IF EXISTS audit_semester_room_pricing_change ON semester_room_pricing;
+CREATE TRIGGER audit_semester_room_pricing_change
+AFTER INSERT OR UPDATE OR DELETE ON semester_room_pricing
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Student Applications
+DROP TRIGGER IF EXISTS audit_student_applications_change ON student_applications;
+CREATE TRIGGER audit_student_applications_change
+AFTER INSERT OR UPDATE OR DELETE ON student_applications
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Student Enrollment Verifications
+DROP TRIGGER IF EXISTS audit_student_enrollment_verifications_change ON student_enrollment_verifications;
+CREATE TRIGGER audit_student_enrollment_verifications_change
+AFTER INSERT OR UPDATE OR DELETE ON student_enrollment_verifications
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Dorm Certificate Requests
+DROP TRIGGER IF EXISTS audit_dorm_certificate_requests_change ON dorm_certificate_requests;
+CREATE TRIGGER audit_dorm_certificate_requests_change
+AFTER INSERT OR UPDATE OR DELETE ON dorm_certificate_requests
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Announcements
+DROP TRIGGER IF EXISTS audit_announcements_change ON announcements;
+CREATE TRIGGER audit_announcements_change
+AFTER INSERT OR UPDATE OR DELETE ON announcements
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
+-- Conversations
+DROP TRIGGER IF EXISTS audit_conversations_change ON conversations;
+CREATE TRIGGER audit_conversations_change
+AFTER INSERT OR UPDATE OR DELETE ON conversations
+FOR EACH ROW EXECUTE FUNCTION audit.log_change();
+
 -- ── POST-MIGRATION CHECKLIST ───────────────────────────────────────────────
 -- 1. Update departments.name_tr values (seeded with name_en as placeholder).
 -- 2. Update countries.name_tr values (seeded as NULL — must fill before adding NOT NULL).
