@@ -9,6 +9,7 @@ import {
   ActionIcon,
   rem,
 } from "@mantine/core";
+import { memo } from "react";
 import { useHover } from "@mantine/hooks";
 import { IconPlus, IconHistory } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -66,7 +67,11 @@ interface EmptyBedRowProps {
   isHistorical?: boolean;
 }
 
-function EmptyBedRow({ bed, onCreateBooking, isHistorical }: EmptyBedRowProps) {
+const EmptyBedRow = memo(function EmptyBedRow({
+  bed,
+  onCreateBooking,
+  isHistorical,
+}: EmptyBedRowProps) {
   const { t } = useTranslation();
   const { hovered, ref } = useHover<HTMLDivElement>();
   const bookable = bed.status === "available" && !isHistorical;
@@ -104,9 +109,9 @@ function EmptyBedRow({ bed, onCreateBooking, isHistorical }: EmptyBedRowProps) {
       )}
     </Group>
   );
-}
+});
 
-export function RoomPlanCard({
+export const RoomPlanCard = memo(function RoomPlanCard({
   room,
   onCreateBooking,
   onViewStudent,
@@ -265,4 +270,4 @@ export function RoomPlanCard({
       </Stack>
     </Card>
   );
-}
+});

@@ -462,11 +462,7 @@ export class LocationsService {
       }
 
       // When changing a room's type, ensure bed count matches new type's capacity
-      if (
-        'roomTypeId' in data &&
-        data.roomTypeId !== null &&
-        data.roomTypeId !== existing.roomTypeId
-      ) {
+      if (data.roomTypeId != null && data.roomTypeId !== existing.roomTypeId) {
         const rtResult = await client.query<{
           capacity: number;
           genderLock: string | null;

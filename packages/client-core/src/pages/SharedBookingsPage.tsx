@@ -1,4 +1,12 @@
-import { useEffect, useState, useMemo, Fragment } from "react";
+import {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  memo,
+  Fragment,
+  ReactNode,
+} from "react";
 import { PageHeader, PageShell } from "@domas/ui";
 import {
   Button,
@@ -61,6 +69,263 @@ import { DatePickerInput } from "@mantine/dates";
 import { useAuth } from "../context/AuthContext";
 import { useCountries, useDepartments } from "../hooks/useLookups";
 import dayjs from "dayjs";
+
+interface BedRoom {
+  roomId: number;
+  roomName: string;
+  beds: StaffAvailableBed[];
+}
+
+interface MBTreeNode {
+  name: string;
+  nodeKey: string;
+  children: MBTreeNode[];
+  rooms: BedRoom[];
+}
+
+interface MoveBedTreeViewProps {
+  tree: MBTreeNode[];
+  expanded: Set<string>;
+  selectedId: string | null;
+  onToggle: (key: string) => void;
+  onSelect: (id: string | null) => void;
+}
+
+const MoveBedTreeView = memo(function MoveBedTreeView({
+  tree,
+  expanded,
+  selectedId,
+  onToggle,
+  onSelect,
+}: MoveBedTreeViewProps) {
+  const countBeds = (node: MBTreeNode): number =>
+    node.rooms.reduce((s, r) => s + r.beds.length, 0) +
+    node.children.reduce((s, c) => s + countBeds(c), 0);
+  const countRooms = (node: MBTreeNode): number =>
+    node.rooms.length + node.children.reduce((s, c) => s + countRooms(c), 0);
+  const hasSelected = (node: MBTreeNode): boolean =>
+    node.rooms.some((r) => r.beds.some((b) => String(b.id) === selectedId)) ||
+    node.children.some((c) => hasSelected(c));
+
+  const renderNode = (node: MBTreeNode, depth: number): ReactNode => {
+    const isExpanded = expanded.has(node.nodeKey);
+    const sel = hasSelected(node);
+    const beds = countBeds(node);
+    const rooms = countRooms(node);
+    const indent = 16 + depth * 20;
+
+    const nodeHeader = (
+      <Group
+        px="md"
+        py={depth === 0 ? "sm" : "xs"}
+        justify="space-between"
+        wrap="nowrap"
+        style={{
+          cursor: "pointer",
+          paddingLeft: indent,
+          background: sel
+            ? "var(--mantine-color-teal-light)"
+            : depth === 0
+              ? "var(--mantine-color-gray-light)"
+              : undefined,
+        }}
+        onClick={() => onToggle(node.nodeKey)}
+      >
+        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
+          <ThemeIcon
+            size={depth === 0 ? 32 : 26}
+            radius="md"
+            variant={sel ? "gradient" : "light"}
+            gradient={sel ? { from: "teal", to: "cyan" } : undefined}
+            color={sel ? "teal" : depth === 0 ? "gray" : "blue"}
+            style={{ flexShrink: 0 }}
+          >
+            <IconBuilding size={depth === 0 ? 16 : 13} />
+          </ThemeIcon>
+          <Box style={{ minWidth: 0 }}>
+            <Text size="sm" fw={depth === 0 ? 700 : 600} lineClamp={1}>
+              {node.name}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {rooms} {rooms === 1 ? "room" : "rooms"} · {beds}{" "}
+              {beds === 1 ? "bed" : "beds"}
+            </Text>
+          </Box>
+        </Group>
+        <ActionIcon variant="subtle" color={sel ? "teal" : "gray"} size="sm">
+          {isExpanded ? (
+            <IconChevronUp size={13} />
+          ) : (
+            <IconChevronDown size={13} />
+          )}
+        </ActionIcon>
+      </Group>
+    );
+
+    const nodeBody = (
+      <Collapse in={isExpanded}>
+        <Stack gap={0}>
+          {node.children.map((child) => (
+            <Fragment key={child.nodeKey}>
+              <Divider />
+              {renderNode(child, depth + 1)}
+            </Fragment>
+          ))}
+          {node.rooms.map((room) => {
+            const roomKey = `room::${room.roomId}`;
+            const roomExpanded = expanded.has(roomKey);
+            const roomSel = room.beds.some((b) => String(b.id) === selectedId);
+            const roomIndent = indent + 20;
+            return (
+              <Fragment key={room.roomId}>
+                <Divider />
+                <Group
+                  px="md"
+                  py="xs"
+                  justify="space-between"
+                  wrap="nowrap"
+                  style={{
+                    cursor: "pointer",
+                    paddingLeft: roomIndent,
+                    background: roomSel
+                      ? "var(--mantine-color-teal-0)"
+                      : undefined,
+                  }}
+                  onClick={() => onToggle(roomKey)}
+                >
+                  <Group
+                    gap="sm"
+                    wrap="nowrap"
+                    style={{ minWidth: 0, flex: 1 }}
+                  >
+                    <ThemeIcon
+                      size={22}
+                      radius="md"
+                      variant={roomSel ? "filled" : "light"}
+                      color="teal"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <IconArrowsExchange size={11} />
+                    </ThemeIcon>
+                    <Text size="sm" fw={600} lineClamp={1}>
+                      {room.roomName}
+                    </Text>
+                  </Group>
+                  <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
+                    <Text size="xs" c="dimmed">
+                      {room.beds.length}{" "}
+                      {room.beds.length === 1 ? "bed" : "beds"}
+                    </Text>
+                    <ActionIcon
+                      variant="subtle"
+                      color={roomSel ? "teal" : "gray"}
+                      size="xs"
+                    >
+                      {roomExpanded ? (
+                        <IconChevronUp size={11} />
+                      ) : (
+                        <IconChevronDown size={11} />
+                      )}
+                    </ActionIcon>
+                  </Group>
+                </Group>
+                <Collapse in={roomExpanded}>
+                  <Divider />
+                  <SimpleGrid
+                    cols={Math.min(room.beds.length, 4) as any}
+                    p="sm"
+                    spacing="xs"
+                    style={{ paddingLeft: roomIndent }}
+                  >
+                    {room.beds.map((bed) => {
+                      const isSel = selectedId === String(bed.id);
+                      return (
+                        <Paper
+                          key={bed.id}
+                          radius="md"
+                          p="sm"
+                          style={{
+                            cursor: "pointer",
+                            textAlign: "center",
+                            background: isSel
+                              ? "linear-gradient(135deg, var(--mantine-color-teal-6) 0%, var(--mantine-color-teal-5) 100%)"
+                              : "var(--mantine-color-body)",
+                            border: `2px solid ${isSel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
+                            boxShadow: isSel
+                              ? "0 4px 14px rgba(18,184,134,0.35)"
+                              : undefined,
+                            transition: "all 0.18s ease",
+                          }}
+                          onClick={() =>
+                            onSelect(isSel ? null : String(bed.id))
+                          }
+                        >
+                          <Stack gap={4} align="center">
+                            <ThemeIcon
+                              size={24}
+                              radius="md"
+                              variant={isSel ? "filled" : "light"}
+                              color={isSel ? "white" : "teal"}
+                              style={
+                                isSel
+                                  ? {
+                                      background: "rgba(255,255,255,0.25)",
+                                      color: "white",
+                                    }
+                                  : undefined
+                              }
+                            >
+                              <IconBed size={12} />
+                            </ThemeIcon>
+                            <Text
+                              size="xs"
+                              fw={700}
+                              c={isSel ? "white" : undefined}
+                            >
+                              {bed.label}
+                            </Text>
+                          </Stack>
+                        </Paper>
+                      );
+                    })}
+                  </SimpleGrid>
+                </Collapse>
+              </Fragment>
+            );
+          })}
+        </Stack>
+      </Collapse>
+    );
+
+    return depth === 0 ? (
+      <Paper
+        key={node.nodeKey}
+        radius="lg"
+        style={{
+          overflow: "hidden",
+          border: `2px solid ${sel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
+          transition: "border-color 0.2s ease",
+        }}
+      >
+        {nodeHeader}
+        {nodeBody}
+      </Paper>
+    ) : (
+      <>
+        {nodeHeader}
+        {nodeBody}
+      </>
+    );
+  };
+
+  return (
+    <ScrollArea h={460} type="scroll" scrollbarSize={6}>
+      <Stack gap="xs" pr={4}>
+        {tree.map((top) => renderNode(top, 0))}
+      </Stack>
+    </ScrollArea>
+  );
+});
 
 function bookingStatusColor(status: string): string {
   switch (status) {
@@ -134,19 +399,7 @@ export function SharedBookingsPage() {
   const [moveBedSearch, setMoveBedSearch] = useState("");
 
   const moveBedTree = useMemo(() => {
-    interface BedRoom {
-      roomId: number;
-      roomName: string;
-      beds: StaffAvailableBed[];
-    }
-    interface TreeNode {
-      name: string;
-      nodeKey: string;
-      children: TreeNode[];
-      rooms: BedRoom[];
-    }
-
-    const getOrCreate = (parent: TreeNode, name: string): TreeNode => {
+    const getOrCreate = (parent: MBTreeNode, name: string): MBTreeNode => {
       let child = parent.children.find((c) => c.name === name);
       if (!child) {
         child = {
@@ -160,7 +413,7 @@ export function SharedBookingsPage() {
       return child;
     };
 
-    const root: TreeNode = {
+    const root: MBTreeNode = {
       name: "__root__",
       nodeKey: "",
       children: [],
@@ -202,7 +455,7 @@ export function SharedBookingsPage() {
       });
     });
 
-    const sort = (n: TreeNode) => {
+    const sort = (n: MBTreeNode) => {
       n.children.sort((a, b) => a.name.localeCompare(b.name));
       n.rooms.sort((a, b) => a.roomName.localeCompare(b.roomName));
       n.children.forEach(sort);
@@ -280,10 +533,7 @@ export function SharedBookingsPage() {
   }, [filterSemesterId, filterStatus, filterPaymentStatus]);
 
   useEffect(() => {
-    if (modalOpened) {
-      fetchModalData();
-    } else {
-      // Clear edit info when modal closes
+    if (!modalOpened) {
       setIsEditMode(false);
       setBookingToEdit(null);
     }
@@ -458,6 +708,33 @@ export function SharedBookingsPage() {
     setFilterPaymentStatus(null);
   };
 
+  const handleToggleExpanded = useCallback((key: string) => {
+    setMoveBedExpanded((prev) => {
+      const n = new Set(prev);
+      n.has(key) ? n.delete(key) : n.add(key);
+      return n;
+    });
+  }, []);
+
+  const handleSelectBed = useCallback((id: string | null) => {
+    setMoveBedSelectedId(id);
+  }, []);
+
+  const semesterSelectOptions = useMemo(
+    () =>
+      allSemesters.map((s) => ({ value: String(s.id), label: s.displayName })),
+    [allSemesters],
+  );
+
+  const studentSelectOptions = useMemo(
+    () =>
+      studentList.map((s) => ({
+        value: s.id,
+        label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
+      })),
+    [studentList],
+  );
+
   const filteredData = useMemo(() => {
     if (!debouncedSearch) return data;
     const lowerQuery = debouncedSearch.toLowerCase();
@@ -498,10 +775,7 @@ export function SharedBookingsPage() {
             <Group grow wrap="nowrap">
               <Select
                 placeholder={t("all_semesters", "All Semesters")}
-                data={allSemesters.map((s) => ({
-                  value: String(s.id),
-                  label: s.displayName,
-                }))}
+                data={semesterSelectOptions}
                 value={filterSemesterId}
                 onChange={setFilterSemesterId}
                 clearable
@@ -559,10 +833,7 @@ export function SharedBookingsPage() {
           onClose={() => setModalOpened(false)}
           onSubmit={handleCreateBooking}
           onCreateStudent={handleCreateStudent}
-          students={studentList.map((s) => ({
-            value: s.id,
-            label: `${s.firstName} ${s.lastName} (${s.studentNumber})`,
-          }))}
+          students={studentSelectOptions}
           semesters={allSemesters}
           countries={countries}
           departments={departments}
@@ -764,283 +1035,13 @@ export function SharedBookingsPage() {
                   : t("move_bed.no_available_beds")}
               </Alert>
             ) : (
-              (() => {
-                interface BedRoom {
-                  roomId: number;
-                  roomName: string;
-                  beds: StaffAvailableBed[];
-                }
-                interface TreeNode {
-                  name: string;
-                  nodeKey: string;
-                  children: TreeNode[];
-                  rooms: BedRoom[];
-                }
-
-                const toggle = (key: string) =>
-                  setMoveBedExpanded((prev) => {
-                    const n = new Set(prev);
-                    n.has(key) ? n.delete(key) : n.add(key);
-                    return n;
-                  });
-
-                const countBeds = (node: TreeNode): number =>
-                  node.rooms.reduce((s, r) => s + r.beds.length, 0) +
-                  node.children.reduce((s, c) => s + countBeds(c), 0);
-                const countRooms = (node: TreeNode): number =>
-                  node.rooms.length +
-                  node.children.reduce((s, c) => s + countRooms(c), 0);
-                const hasSelected = (node: TreeNode): boolean =>
-                  node.rooms.some((r) =>
-                    r.beds.some((b) => String(b.id) === moveBedSelectedId),
-                  ) || node.children.some((c) => hasSelected(c));
-
-                const renderNode = (
-                  node: TreeNode,
-                  depth: number,
-                ): React.ReactNode => {
-                  const expanded = moveBedExpanded.has(node.nodeKey);
-                  const sel = hasSelected(node);
-                  const beds = countBeds(node);
-                  const rooms = countRooms(node);
-                  const indent = 16 + depth * 20;
-
-                  const nodeHeader = (
-                    <Group
-                      px="md"
-                      py={depth === 0 ? "sm" : "xs"}
-                      justify="space-between"
-                      wrap="nowrap"
-                      style={{
-                        cursor: "pointer",
-                        paddingLeft: indent,
-                        background: sel
-                          ? "var(--mantine-color-teal-light)"
-                          : depth === 0
-                            ? "var(--mantine-color-gray-light)"
-                            : undefined,
-                      }}
-                      onClick={() => toggle(node.nodeKey)}
-                    >
-                      <Group
-                        gap="sm"
-                        wrap="nowrap"
-                        style={{ minWidth: 0, flex: 1 }}
-                      >
-                        <ThemeIcon
-                          size={depth === 0 ? 32 : 26}
-                          radius="md"
-                          variant={sel ? "gradient" : "light"}
-                          gradient={
-                            sel ? { from: "teal", to: "cyan" } : undefined
-                          }
-                          color={sel ? "teal" : depth === 0 ? "gray" : "blue"}
-                          style={{ flexShrink: 0 }}
-                        >
-                          <IconBuilding size={depth === 0 ? 16 : 13} />
-                        </ThemeIcon>
-                        <Box style={{ minWidth: 0 }}>
-                          <Text
-                            size="sm"
-                            fw={depth === 0 ? 700 : 600}
-                            lineClamp={1}
-                          >
-                            {node.name}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            {rooms} {rooms === 1 ? "room" : "rooms"} · {beds}{" "}
-                            {beds === 1 ? "bed" : "beds"}
-                          </Text>
-                        </Box>
-                      </Group>
-                      <ActionIcon
-                        variant="subtle"
-                        color={sel ? "teal" : "gray"}
-                        size="sm"
-                      >
-                        {expanded ? (
-                          <IconChevronUp size={13} />
-                        ) : (
-                          <IconChevronDown size={13} />
-                        )}
-                      </ActionIcon>
-                    </Group>
-                  );
-
-                  const nodeBody = (
-                    <Collapse in={expanded}>
-                      <Stack gap={0}>
-                        {node.children.map((child) => (
-                          <Fragment key={child.nodeKey}>
-                            <Divider />
-                            {renderNode(child, depth + 1)}
-                          </Fragment>
-                        ))}
-                        {node.rooms.map((room) => {
-                          const roomKey = `room::${room.roomId}`;
-                          const roomExpanded = moveBedExpanded.has(roomKey);
-                          const roomSel = room.beds.some(
-                            (b) => String(b.id) === moveBedSelectedId,
-                          );
-                          const roomIndent = indent + 20;
-                          return (
-                            <Fragment key={room.roomId}>
-                              <Divider />
-                              <Group
-                                px="md"
-                                py="xs"
-                                justify="space-between"
-                                wrap="nowrap"
-                                style={{
-                                  cursor: "pointer",
-                                  paddingLeft: roomIndent,
-                                  background: roomSel
-                                    ? "var(--mantine-color-teal-0)"
-                                    : undefined,
-                                }}
-                                onClick={() => toggle(roomKey)}
-                              >
-                                <Group
-                                  gap="sm"
-                                  wrap="nowrap"
-                                  style={{ minWidth: 0, flex: 1 }}
-                                >
-                                  <ThemeIcon
-                                    size={22}
-                                    radius="md"
-                                    variant={roomSel ? "filled" : "light"}
-                                    color="teal"
-                                    style={{ flexShrink: 0 }}
-                                  >
-                                    <IconArrowsExchange size={11} />
-                                  </ThemeIcon>
-                                  <Text size="sm" fw={600} lineClamp={1}>
-                                    {room.roomName}
-                                  </Text>
-                                </Group>
-                                <Group
-                                  gap={6}
-                                  wrap="nowrap"
-                                  style={{ flexShrink: 0 }}
-                                >
-                                  <Text size="xs" c="dimmed">
-                                    {room.beds.length}{" "}
-                                    {room.beds.length === 1 ? "bed" : "beds"}
-                                  </Text>
-                                  <ActionIcon
-                                    variant="subtle"
-                                    color={roomSel ? "teal" : "gray"}
-                                    size="xs"
-                                  >
-                                    {roomExpanded ? (
-                                      <IconChevronUp size={11} />
-                                    ) : (
-                                      <IconChevronDown size={11} />
-                                    )}
-                                  </ActionIcon>
-                                </Group>
-                              </Group>
-                              <Collapse in={roomExpanded}>
-                                <Divider />
-                                <SimpleGrid
-                                  cols={Math.min(room.beds.length, 4) as any}
-                                  p="sm"
-                                  spacing="xs"
-                                  style={{ paddingLeft: roomIndent }}
-                                >
-                                  {room.beds.map((bed) => {
-                                    const isSel =
-                                      moveBedSelectedId === String(bed.id);
-                                    return (
-                                      <Paper
-                                        key={bed.id}
-                                        radius="md"
-                                        p="sm"
-                                        style={{
-                                          cursor: "pointer",
-                                          textAlign: "center",
-                                          background: isSel
-                                            ? "linear-gradient(135deg, var(--mantine-color-teal-6) 0%, var(--mantine-color-teal-5) 100%)"
-                                            : "var(--mantine-color-body)",
-                                          border: `2px solid ${isSel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
-                                          boxShadow: isSel
-                                            ? "0 4px 14px rgba(18,184,134,0.35)"
-                                            : undefined,
-                                          transition: "all 0.18s ease",
-                                        }}
-                                        onClick={() =>
-                                          setMoveBedSelectedId(
-                                            isSel ? null : String(bed.id),
-                                          )
-                                        }
-                                      >
-                                        <Stack gap={4} align="center">
-                                          <ThemeIcon
-                                            size={24}
-                                            radius="md"
-                                            variant={isSel ? "filled" : "light"}
-                                            color={isSel ? "white" : "teal"}
-                                            style={
-                                              isSel
-                                                ? {
-                                                    background:
-                                                      "rgba(255,255,255,0.25)",
-                                                    color: "white",
-                                                  }
-                                                : undefined
-                                            }
-                                          >
-                                            <IconBed size={12} />
-                                          </ThemeIcon>
-                                          <Text
-                                            size="xs"
-                                            fw={700}
-                                            c={isSel ? "white" : undefined}
-                                          >
-                                            {bed.label}
-                                          </Text>
-                                        </Stack>
-                                      </Paper>
-                                    );
-                                  })}
-                                </SimpleGrid>
-                              </Collapse>
-                            </Fragment>
-                          );
-                        })}
-                      </Stack>
-                    </Collapse>
-                  );
-
-                  return depth === 0 ? (
-                    <Paper
-                      key={node.nodeKey}
-                      radius="lg"
-                      style={{
-                        overflow: "hidden",
-                        border: `2px solid ${sel ? "var(--mantine-color-teal-5)" : "var(--mantine-color-default-border)"}`,
-                        transition: "border-color 0.2s ease",
-                      }}
-                    >
-                      {nodeHeader}
-                      {nodeBody}
-                    </Paper>
-                  ) : (
-                    <>
-                      {nodeHeader}
-                      {nodeBody}
-                    </>
-                  );
-                };
-
-                return (
-                  <ScrollArea h={460} type="scroll" scrollbarSize={6}>
-                    <Stack gap="xs" pr={4}>
-                      {moveBedTree.map((top) => renderNode(top, 0))}
-                    </Stack>
-                  </ScrollArea>
-                );
-              })()
+              <MoveBedTreeView
+                tree={moveBedTree}
+                expanded={moveBedExpanded}
+                selectedId={moveBedSelectedId}
+                onToggle={handleToggleExpanded}
+                onSelect={handleSelectBed}
+              />
             )}
 
             <Group justify="flex-end" mt="xs">

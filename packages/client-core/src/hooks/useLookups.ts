@@ -5,20 +5,30 @@ import {
 } from "@domas/api-client";
 import { Country, Department } from "@domas/ts-types";
 
+// Module-level cache: these are static reference data that never change during a session.
+let cachedCountries: Country[] | null = null;
+let countriesPromise: Promise<Country[]> | null = null;
+
+let cachedDepartments: Department[] | null = null;
+let departmentsPromise: Promise<Department[]> | null = null;
+
 export function useCountries() {
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [countries, setCountries] = useState<Country[]>(cachedCountries ?? []);
+  const [loading, setLoading] = useState(!cachedCountries);
 
   useEffect(() => {
+    if (cachedCountries) return;
+    if (!countriesPromise) {
+      countriesPromise = countriesApi.findAll();
+    }
     let active = true;
-    countriesApi
-      .findAll()
-      .then((data) => {
-        if (active) setCountries(data);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    countriesPromise.then((data) => {
+      cachedCountries = data;
+      if (active) {
+        setCountries(data);
+        setLoading(false);
+      }
+    });
     return () => {
       active = false;
     };
@@ -28,19 +38,24 @@ export function useCountries() {
 }
 
 export function useDepartments() {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState<Department[]>(
+    cachedDepartments ?? [],
+  );
+  const [loading, setLoading] = useState(!cachedDepartments);
 
   useEffect(() => {
+    if (cachedDepartments) return;
+    if (!departmentsPromise) {
+      departmentsPromise = departmentsApi.findAll();
+    }
     let active = true;
-    departmentsApi
-      .findAll()
-      .then((data) => {
-        if (active) setDepartments(data);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    departmentsPromise.then((data) => {
+      cachedDepartments = data;
+      if (active) {
+        setDepartments(data);
+        setLoading(false);
+      }
+    });
     return () => {
       active = false;
     };

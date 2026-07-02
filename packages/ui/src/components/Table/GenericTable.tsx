@@ -1,5 +1,5 @@
 import { Table, LoadingOverlay, Paper, ScrollArea } from "@mantine/core";
-import { ReactNode } from "react";
+import { memo, ReactNode } from "react";
 import { EmptyState } from "../EmptyState";
 import classes from "./table.module.css";
 
@@ -22,7 +22,7 @@ interface GenericTableProps<T> {
   maxHeight?: number;
 }
 
-export function GenericTable<T>({
+function GenericTableInner<T>({
   data,
   columns,
   loading = false,
@@ -96,3 +96,6 @@ export function GenericTable<T>({
     </Paper>
   );
 }
+
+// memo cast preserves the generic type parameter
+export const GenericTable = memo(GenericTableInner) as typeof GenericTableInner;

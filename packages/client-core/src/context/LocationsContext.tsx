@@ -1,10 +1,11 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   ReactNode,
-  useMemo,
 } from "react";
 import { Location, CreateLocationDto } from "@domas/ts-types";
 import { locations, beds } from "@domas/api-client";
@@ -59,7 +60,6 @@ function buildTree(flatList: Location[]): LocationNode[] {
   return treeRoots;
 }
 
-// Helper to find a node deep in the tree to restore selection
 function findInTree(
   nodes: LocationNode[],
   id: number | string,
@@ -74,6 +74,53 @@ function findInTree(
   return undefined;
 }
 
+// Module-level beds cache — beds don't change during location CRUD so we fetch once per session.
+type BedsResult = Awaited<ReturnType<typeof beds.findAll>>;
+let bedsCache: BedsResult | null = null;
+let bedsCachePromise: Promise<BedsResult> | null = null;
+
+function getCachedBeds(): Promise<BedsResult> {
+  if (bedsCache) return Promise.resolve(bedsCache);
+  if (!bedsCachePromise) {
+    bedsCachePromise = beds.findAll({ limit: 10000 }).then((res) => {
+      bedsCache = res;
+      return res;
+    });
+  }
+  return bedsCachePromise;
+}
+
+function attachBedsToTree(builtTree: LocationNode[], bedsRes: BedsResult) {
+  const bedsByRoom = new Map<number, any[]>();
+  bedsRes.data.forEach((bed) => {
+    if (!bedsByRoom.has(bed.locationId)) bedsByRoom.set(bed.locationId, []);
+    bedsByRoom.get(bed.locationId)?.push({
+      ...bed,
+      id: `bed-${bed.id}`,
+      name: bed.label,
+      type: LocationType.BED,
+      treePath: "",
+      children: [],
+      status: bed.status,
+    });
+  });
+
+  const addBedsToTree = (nodes: LocationNode[]) => {
+    for (const node of nodes) {
+      if (node.type === LocationType.ROOM) {
+        const roomBeds = bedsByRoom.get(Number(node.id));
+        if (roomBeds) {
+          roomBeds.sort((a, b) => a.name.localeCompare(b.name));
+          node.children = [...(node.children || []), ...roomBeds];
+        }
+      }
+      if (node.children) addBedsToTree(node.children);
+    }
+  };
+
+  addBedsToTree(builtTree);
+}
+
 export function LocationsProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [treeData, setTreeData] = useState<LocationNode[]>([]);
@@ -81,158 +128,136 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
   const [childNodes, setChildren] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshTree = async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const [locsRes, bedsRes] = await Promise.all([
-        locations.findAll({ limit: 1000 }),
-        beds.findAll({ limit: 10000 }),
-      ]);
+  const selectNode = useCallback((node: LocationNode) => {
+    setSelectedNode(node);
+    setChildren((node.children as unknown as Location[]) || []);
+  }, []);
 
-      const builtTree = buildTree(locsRes.data);
+  const getFirstSelectable = useCallback(
+    (nodes: LocationNode[]): LocationNode | null => {
+      for (const n of nodes) {
+        if (n.type !== LocationType.UNIVERSITY) return n;
+        const child = getFirstSelectable(n.children ?? []);
+        if (child) return child;
+      }
+      return null;
+    },
+    [],
+  );
 
-      // Attach beds to rooms
-      const bedsByRoom = new Map<number, any[]>();
-      bedsRes.data.forEach((bed) => {
-        if (!bedsByRoom.has(bed.locationId)) bedsByRoom.set(bed.locationId, []);
-        bedsByRoom.get(bed.locationId)?.push({
-          ...bed, // Include other bed props first
-          id: `bed-${bed.id}`, // Unique ID for tree
-          name: bed.label,
-          type: LocationType.BED,
-          treePath: "",
-          children: [],
-          status: bed.status, // Pass status for color coding
+  const refreshTree = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const [locsRes, bedsRes] = await Promise.all([
+          locations.findAll({ limit: 1000 }),
+          getCachedBeds(),
+        ]);
+
+        const builtTree = buildTree(locsRes.data);
+        attachBedsToTree(builtTree, bedsRes);
+        setTreeData(builtTree);
+
+        // Restore selection or auto-select first node
+        setSelectedNode((prev) => {
+          if (prev) {
+            const freshNode = findInTree(builtTree, prev.id);
+            const target =
+              freshNode ?? getFirstSelectable(builtTree) ?? builtTree[0];
+            if (target) {
+              setChildren((target.children as unknown as Location[]) || []);
+              return target;
+            }
+            return null;
+          }
+          const first = getFirstSelectable(builtTree) ?? builtTree[0];
+          if (first) {
+            setChildren((first.children as unknown as Location[]) || []);
+            return first;
+          }
+          return null;
         });
-      });
+      } catch (error) {
+        notifications.show({
+          title: t("error"),
+          message: t("failed_to_fetch_data"),
+          color: "red",
+        });
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [t, getFirstSelectable],
+  );
 
-      const addBedsToTree = (nodes: LocationNode[]) => {
-        for (const node of nodes) {
-          if (node.type === LocationType.ROOM) {
-            const roomBeds = bedsByRoom.get(Number(node.id));
-            if (roomBeds) {
-              // Sort beds by label
-              roomBeds.sort((a, b) => a.name.localeCompare(b.name));
-              node.children = [...(node.children || []), ...roomBeds];
+  const createLocation = useCallback(
+    async (data: CreateLocationDto) => {
+      try {
+        await locations.create(data);
+        await refreshTree();
+      } catch (error) {
+        notifications.show({
+          title: t("error"),
+          message: t("failed_to_save_role"),
+          color: "red",
+        });
+      }
+    },
+    [refreshTree, t],
+  );
+
+  const removeNodeFromTree = useCallback(
+    (nodes: LocationNode[], id: number): LocationNode[] => {
+      return nodes
+        .filter((node) => Number(node.id) !== id)
+        .map((node) => {
+          if (node.children && node.children.length > 0) {
+            const updatedChildren = removeNodeFromTree(node.children, id);
+            if (updatedChildren.length !== node.children.length) {
+              return { ...node, children: updatedChildren };
             }
           }
-          if (node.children) addBedsToTree(node.children);
+          return node;
+        });
+    },
+    [],
+  );
+
+  const deleteLocation = useCallback(
+    async (id: number) => {
+      const oldTree = [...treeData];
+      setTreeData((prev) => removeNodeFromTree([...prev], id));
+
+      setSelectedNode((prev) => {
+        if (prev && Number(prev.id) === id) {
+          setChildren([]);
+          return null;
         }
-      };
+        return prev;
+      });
 
-      addBedsToTree(builtTree);
-
-      setTreeData(builtTree);
-
-      // Skip university on auto-select — start from first campus
-      const getFirstSelectable = (
-        nodes: LocationNode[],
-      ): LocationNode | null => {
-        for (const n of nodes) {
-          if (n.type !== LocationType.UNIVERSITY) return n;
-          const child = getFirstSelectable(n.children ?? []);
-          if (child) return child;
-        }
-        return null;
-      };
-
-      // Restore selection if possible
-      if (selectedNode) {
-        const freshNode = findInTree(builtTree, selectedNode.id);
-        if (freshNode) {
-          selectNode(freshNode);
-        } else {
-          const first = getFirstSelectable(builtTree) ?? builtTree[0];
-          if (first) selectNode(first);
-        }
-      } else {
-        const first = getFirstSelectable(builtTree) ?? builtTree[0];
-        if (first) selectNode(first);
+      try {
+        await locations.delete(id);
+        notifications.show({
+          title: t("success"),
+          message: t("location_delete_success"),
+          color: "green",
+        });
+      } catch (error) {
+        setTreeData(oldTree);
+        notifications.show({
+          title: t("error"),
+          message: t("location_delete_error"),
+          color: "red",
+        });
       }
-    } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_fetch_data"),
-        color: "red",
-      });
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
 
-  const selectNode = (node: LocationNode) => {
-    setSelectedNode(node);
-    // Use local children from the tree instead of fetching
-    // The tree is built from a flat list where we attach children arrays
-    // However, the original 'Location' type might not have them populated
-    // but our 'LocationNode' (from buildTree) definitely does.
-    setChildren((node.children as unknown as Location[]) || []);
-  };
+      await refreshTree(true);
+    },
+    [treeData, removeNodeFromTree, refreshTree, t],
+  );
 
-  const createLocation = async (data: CreateLocationDto) => {
-    try {
-      await locations.create(data);
-      await refreshTree();
-    } catch (error) {
-      notifications.show({
-        title: t("error"),
-        message: t("failed_to_save_role"), // Generic error
-        color: "red",
-      });
-    }
-  };
-
-  // Helper to remove a node immutably from the tree
-  const removeNodeFromTree = (
-    nodes: LocationNode[],
-    id: number,
-  ): LocationNode[] => {
-    return nodes
-      .filter((node) => Number(node.id) !== id)
-      .map((node) => {
-        if (node.children && node.children.length > 0) {
-          const updatedChildren = removeNodeFromTree(node.children, id);
-          if (updatedChildren.length !== node.children.length) {
-            return { ...node, children: updatedChildren };
-          }
-        }
-        return node;
-      });
-  };
-
-  const deleteLocation = async (id: number) => {
-    // 1. Optimistic Update: Remove it from UI immediately
-    const oldTree = [...treeData];
-    setTreeData((prev) => removeNodeFromTree([...prev], id));
-
-    if (selectedNode && Number(selectedNode.id) === id) {
-      setSelectedNode(null);
-      setChildren([]);
-    }
-
-    try {
-      // 2. Call API in background
-      await locations.delete(id);
-      notifications.show({
-        title: t("success"),
-        message: t("location_delete_success"),
-        color: "green",
-      });
-    } catch (error) {
-      // Rollback on error
-      setTreeData(oldTree);
-      notifications.show({
-        title: t("error"),
-        message: t("location_delete_error"),
-        color: "red",
-      });
-    }
-
-    // 3. Silent Refresh
-    await refreshTree(true);
-  };
-
-  // Initial load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     refreshTree();
   }, []);
@@ -248,7 +273,16 @@ export function LocationsProvider({ children }: { children: ReactNode }) {
       deleteLocation,
       refreshTree,
     }),
-    [treeData, selectedNode, childNodes, loading],
+    [
+      treeData,
+      selectedNode,
+      childNodes,
+      loading,
+      selectNode,
+      createLocation,
+      deleteLocation,
+      refreshTree,
+    ],
   );
 
   return (
