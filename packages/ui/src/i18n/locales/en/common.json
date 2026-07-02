@@ -135,7 +135,7 @@
   "all_statuses": "All Statuses",
   "all_priorities": "All Priorities",
   "assigned_to": "Assigned To",
-  "created_by": "Created By",
+  "created_by": "By",
   "work_order_created": "Work order created",
   "work_order_assigned": "Technician assigned",
   "work_order_updated": "Work order updated",
@@ -357,7 +357,6 @@
   "locations_management": "Locations Management",
   "search_placeholder": "Search...",
   "search_by_name": "Search by name...",
-  "filters": "Filters",
   "clear": "Clear",
   "type": "Type",
   "resident": "Resident",
@@ -403,7 +402,6 @@
   "capacity_description": "Max number of occupants (mainly for Rooms)",
   "gender_lock_label": "Gender Lock",
   "none": "None",
-  "locations": "Locations",
   "beds": "Beds",
   "location_selection": "Housing Selection",
   "location_type": {
@@ -444,7 +442,6 @@
   "create_new_booking": "Create New Booking",
   "create_booking": "Create Booking",
   "all_semesters": "All Semesters",
-  "all_statuses": "All Statuses",
   "all_payment_statuses": "All Payment Statuses",
   "clear_filters": "Clear",
   "create_template": "Create Blueprint",
@@ -462,7 +459,6 @@
   "warning_destructive_action": "Warning: This action is destructive and will remove current items!",
   "select_target": "Select Target",
   "target_location": "Target Location",
-  "next": "Next",
   "apply_now": "Apply Now",
   "stay_period": "Stay Period",
   "modify_stay_period": "Modify Stay Period",
@@ -471,7 +467,58 @@
   "select_semester": "Select Semester",
   "select_bed": "Select Bed",
   "bed": "Bed",
-  "semester": "Semester",
+  "semester": {
+    "active_warning_title": "Active Semester",
+    "active_warning_text": "This semester is currently active. Some core identity and financial fields are locked to maintain data integrity.",
+    "duration": "Duration",
+    "financials": "Financials",
+    "type": "Type",
+    "academic_year": "Academic Year",
+    "booking_start": "Booking Start",
+    "booking_end": "Booking End",
+    "deposit_try": "Deposit (TRY)",
+    "deposit_foreign": "Deposit (Foreign)",
+    "currency": "Currency",
+    "auto_activate": "Auto Activate",
+    "auto_close": "Auto Close",
+    "max_room_changes": "Max Room Changes",
+    "max_room_changes_hint": "Leave empty for unlimited changes",
+    "types": {
+      "fall": "Fall",
+      "spring": "Spring",
+      "summer": "Summer"
+    },
+    "statuses": {
+      "planned": "Planned",
+      "open": "Open",
+      "active": "Active",
+      "closed": "Closed",
+      "archived": "Archived"
+    },
+    "actions": {
+      "set_active": "Set Active",
+      "close": "Close",
+      "archive": "Archive"
+    },
+    "confirm_status_change": "Confirm Status Change",
+    "status_change_active_message": "Are you sure you want to activate this semester? This will automatically close any other active semester.",
+    "status_change_close_message": "Are you sure you want to close this semester? This will prevent new bookings.",
+    "status_change_archive_message": "Are you sure you want to archive this semester? This action is generally irreversible and for historical records only.",
+    "status_change_message": "Are you sure you want to change the status to {{status}}?",
+    "status_updated_successfully": "Semester status updated successfully",
+    "failed_to_update_status": "Failed to update status",
+    "error": {
+      "archived_immutable": "Archived semesters cannot be modified or change status.",
+      "invalid_transition": "Invalid status transition.",
+      "open_to_planned_bookings": "Cannot revert to PLANNED because bookings exist.",
+      "identity_locked": "Cannot change Type or Academic Year once semester is Open/Active.",
+      "financials_locked": "Cannot change financials for Active/Closed semesters.",
+      "financials_locked_bookings": "Cannot change financials: bookings already exist for this semester.",
+      "start_date_locked": "Cannot change Start Date of an Active semester.",
+      "delete_planned_only": "Only PLANNED semesters can be deleted.",
+      "delete_has_bookings": "Cannot delete semester: bookings depend on it."
+    }
+  },
   "check_in": "Check-In",
   "check_in_description": "Process student check-ins for ready bookings.",
   "check_out": "Check-Out",
@@ -543,7 +590,8 @@
     "audit_logs": "Audit Logs",
     "dorm_certificates": "Dorm Certificates",
     "pre_reservations": "Pre-Reservations",
-    "lookups": "Countries & Departments"
+    "lookups": "Countries & Departments",
+    "backups": "Backups"
   },
   "recent_history": "Recent History",
   "no_recent_history": "No recent actions found",
@@ -623,58 +671,6 @@
     "before": "Before",
     "after": "After"
   },
-  "semester": {
-    "active_warning_title": "Active Semester",
-    "active_warning_text": "This semester is currently active. Some core identity and financial fields are locked to maintain data integrity.",
-    "duration": "Duration",
-    "financials": "Financials",
-    "type": "Type",
-    "academic_year": "Academic Year",
-    "booking_start": "Booking Start",
-    "booking_end": "Booking End",
-    "deposit_try": "Deposit (TRY)",
-    "deposit_foreign": "Deposit (Foreign)",
-    "currency": "Currency",
-    "auto_activate": "Auto Activate",
-    "auto_close": "Auto Close",
-    "max_room_changes": "Max Room Changes",
-    "max_room_changes_hint": "Leave empty for unlimited changes",
-    "types": {
-      "fall": "Fall",
-      "spring": "Spring",
-      "summer": "Summer"
-    },
-    "statuses": {
-      "planned": "Planned",
-      "open": "Open",
-      "active": "Active",
-      "closed": "Closed",
-      "archived": "Archived"
-    },
-    "actions": {
-      "set_active": "Set Active",
-      "close": "Close",
-      "archive": "Archive"
-    },
-    "confirm_status_change": "Confirm Status Change",
-    "status_change_active_message": "Are you sure you want to activate this semester? This will automatically close any other active semester.",
-    "status_change_close_message": "Are you sure you want to close this semester? This will prevent new bookings.",
-    "status_change_archive_message": "Are you sure you want to archive this semester? This action is generally irreversible and for historical records only.",
-    "status_change_message": "Are you sure you want to change the status to {{status}}?",
-    "status_updated_successfully": "Semester status updated successfully",
-    "failed_to_update_status": "Failed to update status",
-    "error": {
-      "archived_immutable": "Archived semesters cannot be modified or change status.",
-      "invalid_transition": "Invalid status transition.",
-      "open_to_planned_bookings": "Cannot revert to PLANNED because bookings exist.",
-      "identity_locked": "Cannot change Type or Academic Year once semester is Open/Active.",
-      "financials_locked": "Cannot change financials for Active/Closed semesters.",
-      "financials_locked_bookings": "Cannot change financials: bookings already exist for this semester.",
-      "start_date_locked": "Cannot change Start Date of an Active semester.",
-      "delete_planned_only": "Only PLANNED semesters can be deleted.",
-      "delete_has_bookings": "Cannot delete semester: bookings depend on it."
-    }
-  },
   "student_number": "Student Number",
   "national_id": "National ID / Passport ID",
   "birth_date": "Birth Date",
@@ -741,7 +737,6 @@
   "out_of_bounds_warning": "Note: Custom dates fall outside the standard semester period.",
   "auto_create_beds": "Auto Create Beds (A, B, C...)",
   "bed_count": "Bed Count",
-
   "portal": {
     "nav_menu": "Menu",
     "nav_home": "Home",
@@ -835,7 +830,7 @@
     "review_hint": "Review your selection before submitting.",
     "accommodation_label": "Accommodation",
     "submit_notice": "By submitting, your application will be sent for review by the accounting office. You will be notified once it is processed.",
-    "submitting": "Submitting\u2026",
+    "submitting": "Submitting…",
     "submit_application": "Submit Application",
     "submit_error": "Failed to submit application. Please try again.",
     "my_booking": "My Booking",
@@ -1035,8 +1030,6 @@
     "success": "Bed moved successfully.",
     "error": "Failed to move bed."
   },
-  "all_semesters": "All Semesters",
-
   "title": "Title",
   "message": "Message",
   "attachments": "Attachments",
@@ -1058,7 +1051,6 @@
   "saved_successfully": "Saved successfully",
   "deleted_successfully": "Deleted successfully",
   "no_announcements_yet": "No announcements yet.",
-
   "guest_stays": "Guest Stays",
   "new_guest_stay": "New Guest Stay",
   "edit_guest_stay": "Edit Stay",
@@ -1082,7 +1074,6 @@
   "payment_paid": "Paid",
   "payment_partial": "Partial",
   "payment_unpaid": "Unpaid",
-  "created_by": "By",
   "check_in_confirm": "Mark guest as checked in?",
   "check_out_confirm": "Mark guest as checked out?",
   "cancel_stay": "Cancel Stay",
@@ -1093,7 +1084,6 @@
     "completed": "Completed",
     "cancelled": "Cancelled"
   },
-
   "student_applications": "Applications",
   "submitted_at": "Submitted",
   "approve_application": "Approve Application",
@@ -1127,7 +1117,6 @@
   "app_status_rejected": "Rejected",
   "confirm_reject": "Confirm Reject",
   "rejection_reason": "Rejection Reason",
-
   "dorm_certificates": "Dorm Certificates",
   "requested_at": "Requested",
   "no_requests": "No requests found",
@@ -1135,7 +1124,6 @@
   "request_rejected": "Request rejected",
   "request_details": "Request Details",
   "view_enrollment_cert": "View Enrollment Certificate",
-
   "all_cards": "All Cards",
   "card_marked_lost": "Card marked as lost.",
   "cards": "Cards",
@@ -1143,7 +1131,6 @@
   "no_batches_found": "No card batches found",
   "range": "Range",
   "validation_range_order": "End must be greater than start",
-
   "inventory_blueprints": "Inventory Blueprints",
   "template_created": "Blueprint created successfully",
   "template_updated": "Blueprint updated successfully",
@@ -1152,7 +1139,6 @@
   "delete_template_confirm": "Are you sure you want to delete this blueprint? This action cannot be undone.",
   "failed_to_save": "Failed to save",
   "failed_to_delete": "Failed to delete",
-
   "capacity": "Capacity",
   "amenities": "Amenities",
   "gallery_photos": "Gallery Photos",
@@ -1165,14 +1151,12 @@
   "amenities_placeholder": "Type and press Enter — e.g. WiFi, AC, Mini Fridge",
   "click_to_upload_photo": "Click to upload a photo",
   "capacity_placeholder": "e.g. 2",
-
   "room_change_payments": "Room Change Fees",
   "reject_payment": "Reject Payment",
   "reject_room_change_payment_confirm": "Are you sure you want to reject this room change payment?",
   "no_pending_room_change_payments": "No pending room change payments",
   "requested_bed": "Requested Bed",
   "processed": "Processed",
-
   "pre_reservation": {
     "page_title": "Pre-Reservations",
     "tab_pending": "Pending",
@@ -1210,7 +1194,6 @@
   "message_sent": "Message sent",
   "failed_to_send_message": "Failed to send message",
   "message_student": "Message {{name}}",
-
   "messages": "Messages",
   "new_conversation": "New Conversation",
   "no_conversations": "No conversations.",
@@ -1223,7 +1206,6 @@
   "search_students_placeholder": "Search students…",
   "no_students_found": "No students found",
   "type_to_search": "Type to search",
-
   "document_templates": "Document Templates",
   "document_templates_description": "Edit the layout and content of generated contracts and certificates.",
   "document_type": "Document Type",
@@ -1270,7 +1252,6 @@
   "delete_department": "Delete Department",
   "delete_department_confirm": "Delete «{{name}}»? Students with this department will block the deletion.",
   "department_rename_hint": "Renaming updates this department on all students that have it.",
-
   "assigned_locations": "Assigned Locations",
   "add_location_placeholder": "Search to assign a location...",
   "no_locations_found": "No locations found",
@@ -1280,7 +1261,6 @@
   "failed_to_fetch_staff_locations": "Failed to fetch assigned locations",
   "failed_to_assign_location": "Failed to assign location",
   "failed_to_revoke_location": "Failed to remove location",
-
   "mark_lost": "Mark as Lost",
   "report_lost_card": "Report Lost Card",
   "report_lost_card_warning": "Card #{{cardNumber}} will be marked as lost and can no longer be used.",
@@ -1289,7 +1269,6 @@
   "issue_replacement_card": "Issue a replacement card",
   "card_batch_optional": "Card batch (optional)",
   "any_available_batch": "Any available batch",
-
   "mark_broken": "Mark as Broken",
   "report_broken_card": "Report Broken Card",
   "report_broken_card_warning": "Card #{{cardNumber}} will be marked as broken and quarantined until a supervisor reinstates it.",
@@ -1329,5 +1308,23 @@
   "total_rooms": "Total rooms",
   "total_beds": "Total beds",
   "mixed": "Mixed",
-  "no_gender_restriction": "No restriction"
+  "no_gender_restriction": "No restriction",
+  "backups": {
+    "subtitle": "Backups are created automatically every night at 2:00 AM. The last 14 are retained.",
+    "info": "Backups are stored on the server. Download them and store them offsite for disaster recovery.",
+    "create_now": "Create Backup Now",
+    "refresh": "Refresh list",
+    "no_backups": "No backups yet. Create one now or wait for the nightly schedule.",
+    "latest": "latest",
+    "col_name": "File",
+    "col_size": "Size",
+    "col_created": "Created",
+    "load_error": "Failed to load backups",
+    "created": "Backup created: {{name}}",
+    "create_error": "Failed to create backup",
+    "deleted": "Backup deleted",
+    "delete_error": "Failed to delete backup",
+    "delete_confirm_title": "Delete backup?",
+    "delete_confirm_body": "This will permanently delete {{name}}."
+  }
 }

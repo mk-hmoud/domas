@@ -135,7 +135,7 @@
   "all_statuses": "Tüm Durumlar",
   "all_priorities": "Tüm Öncelikler",
   "assigned_to": "Atanan Kişi",
-  "created_by": "Oluşturan",
+  "created_by": "Kaydeden",
   "work_order_created": "İş emri oluşturuldu",
   "work_order_assigned": "Teknisyen atandı",
   "work_order_updated": "İş emri güncellendi",
@@ -355,7 +355,6 @@
   "locations_management": "Lokasyon Yönetimi",
   "search_placeholder": "Ara...",
   "search_by_name": "İsme göre ara...",
-  "filters": "Filtreler",
   "clear": "Temizle",
   "type": "Tür",
   "resident": "Sakin",
@@ -401,7 +400,6 @@
   "capacity_description": "Maksimum kişi sayısı (özellikle odalar için)",
   "gender_lock_label": "Cinsiyet Kısıtlaması",
   "none": "Hiçbiri",
-  "locations": "Lokasyonlar",
   "beds": "Yataklar",
   "location_selection": "Konaklama Seçimi",
   "location_type": {
@@ -442,7 +440,6 @@
   "create_new_booking": "Yeni Rezervasyon Oluştur",
   "create_booking": "Rezervasyon Oluştur",
   "all_semesters": "Tüm Dönemler",
-  "all_statuses": "Tüm Durumlar",
   "all_payment_statuses": "Tüm Ödeme Durumları",
   "clear_filters": "Temizle",
   "create_template": "Şablon Oluştur",
@@ -460,7 +457,6 @@
   "warning_destructive_action": "Uyarı: Bu işlem geri alınamaz ve mevcut öğeleri kaldırır!",
   "select_target": "Hedef Seç",
   "target_location": "Hedef Lokasyon",
-  "next": "İleri",
   "apply_now": "Şimdi Uygula",
   "stay_period": "Konaklama Süresi",
   "modify_stay_period": "Süreyi Düzenle",
@@ -469,7 +465,58 @@
   "select_semester": "Dönem Seç",
   "select_bed": "Yatak Seç",
   "bed": "Yatak",
-  "semester": "Dönem",
+  "semester": {
+    "active_warning_title": "Aktif Dönem",
+    "active_warning_text": "Bu dönem şu anda aktiftir. Veri bütünlüğünü korumak için bazı temel kimlik ve finansal alanlar kilitlenmiştir.",
+    "duration": "Süre",
+    "financials": "Finansal",
+    "type": "Tür",
+    "academic_year": "Akademik Yıl",
+    "booking_start": "Rezervasyon Başlangıcı",
+    "booking_end": "Rezervasyon Bitişi",
+    "deposit_try": "Depozito (TRY)",
+    "deposit_foreign": "Depozito (Döviz)",
+    "currency": "Para Birimi",
+    "auto_activate": "Otomatik Etkinleştir",
+    "auto_close": "Otomatik Kapat",
+    "max_room_changes": "Maks. Oda Değişikliği",
+    "max_room_changes_hint": "Sınırsız değişim için boş bırakın",
+    "types": {
+      "fall": "Güz",
+      "spring": "Bahar",
+      "summer": "Yaz"
+    },
+    "statuses": {
+      "planned": "Planlanan",
+      "open": "Açık",
+      "active": "Aktif",
+      "closed": "Kapalı",
+      "archived": "Arşivlendi"
+    },
+    "actions": {
+      "set_active": "Aktif Et",
+      "close": "Kapat",
+      "archive": "Arşivle"
+    },
+    "confirm_status_change": "Durum Değişikliğini Onayla",
+    "status_change_active_message": "Bu dönemi aktif etmek istediğinize emin misiniz? Bu işlem diğer aktif dönemleri otomatik olarak kapatacaktır.",
+    "status_change_close_message": "Bu dönemi kapatmak istediğinize emin misiniz? Bu işlem yeni rezervasyonları engelleyecektir.",
+    "status_change_archive_message": "Bu dönemi arşivlemek istediğinize emin misiniz? Bu işlem genellikle geri alınamaz ve sadece geçmiş kayıtlar içindir.",
+    "status_change_message": "Durumu {{status}} olarak değiştirmek istediğinize emin misiniz?",
+    "status_updated_successfully": "Dönem durumu başarıyla güncellendi",
+    "failed_to_update_status": "Durum güncellenemedi",
+    "error": {
+      "archived_immutable": "Arşivlenmiş dönemler değiştirilemez veya durumları değiştirilemez.",
+      "invalid_transition": "Geçersiz durum değişikliği.",
+      "open_to_planned_bookings": "Rezervasyonlar mevcut olduğu için PLANLANAN durumuna geri dönülemez.",
+      "identity_locked": "Dönem Açık/Aktif olduğunda Tür veya Akademik Yıl değiştirilemez.",
+      "financials_locked": "Aktif/Kapalı dönemler için finansal bilgiler değiştirilemez.",
+      "financials_locked_bookings": "Finansal bilgiler değiştirilemez: bu dönem için rezervasyonlar mevcut.",
+      "start_date_locked": "Aktif bir dönemin Başlangıç Tarihi değiştirilemez.",
+      "delete_planned_only": "Sadece PLANLANAN dönemler silinebilir.",
+      "delete_has_bookings": "Dönem silinemez: buna bağlı rezervasyonlar var."
+    }
+  },
   "check_in": "Giriş İşlemi",
   "check_in_description": "Hazır rezervasyonlar için öğrenci giriş işlemlerini gerçekleştirin.",
   "check_out": "Çıkış İşlemi",
@@ -541,7 +588,8 @@
     "audit_logs": "Denetim Kayıtları",
     "dorm_certificates": "Yurt Belgesi",
     "pre_reservations": "Ön Rezervasyonlar",
-    "lookups": "Ülkeler ve Bölümler"
+    "lookups": "Ülkeler ve Bölümler",
+    "backups": "Yedekler"
   },
   "recent_history": "Son İşlemler",
   "no_recent_history": "Son işlem bulunamadı",
@@ -620,58 +668,6 @@
     "deleted_data": "Silinen Veri",
     "before": "Önce",
     "after": "Sonra"
-  },
-  "semester": {
-    "active_warning_title": "Aktif Dönem",
-    "active_warning_text": "Bu dönem şu anda aktiftir. Veri bütünlüğünü korumak için bazı temel kimlik ve finansal alanlar kilitlenmiştir.",
-    "duration": "Süre",
-    "financials": "Finansal",
-    "type": "Tür",
-    "academic_year": "Akademik Yıl",
-    "booking_start": "Rezervasyon Başlangıcı",
-    "booking_end": "Rezervasyon Bitişi",
-    "deposit_try": "Depozito (TRY)",
-    "deposit_foreign": "Depozito (Döviz)",
-    "currency": "Para Birimi",
-    "auto_activate": "Otomatik Etkinleştir",
-    "auto_close": "Otomatik Kapat",
-    "max_room_changes": "Maks. Oda Değişikliği",
-    "max_room_changes_hint": "Sınırsız değişim için boş bırakın",
-    "types": {
-      "fall": "Güz",
-      "spring": "Bahar",
-      "summer": "Yaz"
-    },
-    "statuses": {
-      "planned": "Planlanan",
-      "open": "Açık",
-      "active": "Aktif",
-      "closed": "Kapalı",
-      "archived": "Arşivlendi"
-    },
-    "actions": {
-      "set_active": "Aktif Et",
-      "close": "Kapat",
-      "archive": "Arşivle"
-    },
-    "confirm_status_change": "Durum Değişikliğini Onayla",
-    "status_change_active_message": "Bu dönemi aktif etmek istediğinize emin misiniz? Bu işlem diğer aktif dönemleri otomatik olarak kapatacaktır.",
-    "status_change_close_message": "Bu dönemi kapatmak istediğinize emin misiniz? Bu işlem yeni rezervasyonları engelleyecektir.",
-    "status_change_archive_message": "Bu dönemi arşivlemek istediğinize emin misiniz? Bu işlem genellikle geri alınamaz ve sadece geçmiş kayıtlar içindir.",
-    "status_change_message": "Durumu {{status}} olarak değiştirmek istediğinize emin misiniz?",
-    "status_updated_successfully": "Dönem durumu başarıyla güncellendi",
-    "failed_to_update_status": "Durum güncellenemedi",
-    "error": {
-      "archived_immutable": "Arşivlenmiş dönemler değiştirilemez veya durumları değiştirilemez.",
-      "invalid_transition": "Geçersiz durum değişikliği.",
-      "open_to_planned_bookings": "Rezervasyonlar mevcut olduğu için PLANLANAN durumuna geri dönülemez.",
-      "identity_locked": "Dönem Açık/Aktif olduğunda Tür veya Akademik Yıl değiştirilemez.",
-      "financials_locked": "Aktif/Kapalı dönemler için finansal bilgiler değiştirilemez.",
-      "financials_locked_bookings": "Finansal bilgiler değiştirilemez: bu dönem için rezervasyonlar mevcut.",
-      "start_date_locked": "Aktif bir dönemin Başlangıç Tarihi değiştirilemez.",
-      "delete_planned_only": "Sadece PLANLANAN dönemler silinebilir.",
-      "delete_has_bookings": "Dönem silinemez: buna bağlı rezervasyonlar var."
-    }
   },
   "student_number": "Öğrenci Numarası",
   "national_id": "Kimlik No / Pasaport No",
@@ -824,7 +820,7 @@
     "review_hint": "Göndermeden önce seçiminizi gözden geçirin.",
     "accommodation_label": "Konaklama",
     "submit_notice": "Göndererek başvurunuz muhasebe ofisi tarafından incelenmek üzere iletilecektir. İşlendiğinde bildirim alacaksınız.",
-    "submitting": "Gönderiliyor\u2026",
+    "submitting": "Gönderiliyor…",
     "submit_application": "Başvuruyu Gönder",
     "submit_error": "Başvuru gönderilemedi. Lütfen tekrar deneyin.",
     "my_booking": "Rezervasyonum",
@@ -1024,7 +1020,6 @@
     "success": "Yatak başarıyla değiştirildi.",
     "error": "Yatak değiştirilemedi."
   },
-
   "title": "Başlık",
   "message": "Mesaj",
   "attachments": "Ekler",
@@ -1046,7 +1041,6 @@
   "saved_successfully": "Başarıyla kaydedildi",
   "deleted_successfully": "Başarıyla silindi",
   "no_announcements_yet": "Henüz duyuru bulunmamaktadır.",
-
   "guest_stays": "Misafir Konaklamaları",
   "new_guest_stay": "Yeni Misafir Konaklaması",
   "edit_guest_stay": "Konaklamayı Düzenle",
@@ -1070,7 +1064,6 @@
   "payment_paid": "Ödendi",
   "payment_partial": "Kısmi",
   "payment_unpaid": "Ödenmedi",
-  "created_by": "Kaydeden",
   "check_in_confirm": "Misafir girişi onaylanacak?",
   "check_out_confirm": "Misafir çıkışı onaylanacak?",
   "cancel_stay": "Konaklamayı İptal Et",
@@ -1081,7 +1074,6 @@
     "completed": "Tamamlandı",
     "cancelled": "İptal Edildi"
   },
-
   "student_applications": "Başvurular",
   "submitted_at": "Gönderilme Tarihi",
   "approve_application": "Başvuruyu Onayla",
@@ -1115,7 +1107,6 @@
   "app_status_rejected": "Reddedildi",
   "confirm_reject": "Reddi Onayla",
   "rejection_reason": "Red Nedeni",
-
   "dorm_certificates": "Yurt Belgeleri",
   "requested_at": "Talep Tarihi",
   "no_requests": "Talep bulunamadı",
@@ -1123,7 +1114,6 @@
   "request_rejected": "Talep reddedildi",
   "request_details": "Talep Detayları",
   "view_enrollment_cert": "Öğrenci Belgesini Görüntüle",
-
   "all_cards": "Tüm Kartlar",
   "card_marked_lost": "Kart kayıp olarak işaretlendi.",
   "cards": "Kart",
@@ -1131,7 +1121,6 @@
   "no_batches_found": "Kart grubu bulunamadı",
   "range": "Aralık",
   "validation_range_order": "Bitiş değeri başlangıçtan büyük olmalıdır",
-
   "inventory_blueprints": "Envanter Şablonları",
   "template_created": "Şablon başarıyla oluşturuldu",
   "template_updated": "Şablon başarıyla güncellendi",
@@ -1140,7 +1129,6 @@
   "delete_template_confirm": "Bu şablonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
   "failed_to_save": "Kaydedilemedi",
   "failed_to_delete": "Silinemedi",
-
   "capacity": "Kapasite",
   "amenities": "Olanaklar",
   "gallery_photos": "Galeri Fotoğrafları",
@@ -1153,14 +1141,12 @@
   "amenities_placeholder": "Yazıp Enter'a basın — örn. WiFi, Klima, Mini Buzdolabı",
   "click_to_upload_photo": "Fotoğraf yüklemek için tıklayın",
   "capacity_placeholder": "örn. 2",
-
   "room_change_payments": "Oda Değişikliği Ücretleri",
   "reject_payment": "Ödemeyi Reddet",
   "reject_room_change_payment_confirm": "Bu oda değişikliği ödemesini reddetmek istediğinize emin misiniz?",
   "no_pending_room_change_payments": "Bekleyen oda değişikliği ödemesi yok",
   "requested_bed": "Talep Edilen Yatak",
   "processed": "İşlendi",
-
   "pre_reservation": {
     "page_title": "Ön Rezervasyonlar",
     "tab_pending": "Bekleyen",
@@ -1198,7 +1184,6 @@
   "message_sent": "Mesaj gönderildi",
   "failed_to_send_message": "Mesaj gönderilemedi",
   "message_student": "{{name}} kişisine mesaj gönder",
-
   "messages": "Mesajlar",
   "new_conversation": "Yeni Konuşma",
   "no_conversations": "Konuşma yok.",
@@ -1211,7 +1196,6 @@
   "search_students_placeholder": "Öğrenci ara…",
   "no_students_found": "Öğrenci bulunamadı",
   "type_to_search": "Aramak için yazın",
-
   "document_templates": "Belge Şablonları",
   "document_templates_description": "Oluşturulan sözleşme ve belgelerin düzenini ve içeriğini düzenleyin.",
   "document_type": "Belge Türü",
@@ -1258,7 +1242,6 @@
   "delete_department": "Bölümü Sil",
   "delete_department_confirm": "«{{name}}» silinsin mi? Bu bölüme sahip öğrenciler varsa silme işlemi engellenir.",
   "department_rename_hint": "Yeniden adlandırma, bu bölüme sahip tüm öğrencilerde güncellenir.",
-
   "assigned_locations": "Atanan Konumlar",
   "add_location_placeholder": "Konum atamak için arayın...",
   "no_locations_found": "Konum bulunamadı",
@@ -1268,7 +1251,6 @@
   "failed_to_fetch_staff_locations": "Atanan konumlar alınamadı",
   "failed_to_assign_location": "Konum atanamadı",
   "failed_to_revoke_location": "Konum kaldırılamadı",
-
   "mark_lost": "Kayıp Olarak İşaretle",
   "report_lost_card": "Kayıp Kart Bildir",
   "report_lost_card_warning": "#{{cardNumber}} numaralı kart kayıp olarak işaretlenecek ve artık kullanılamayacak.",
@@ -1277,7 +1259,6 @@
   "issue_replacement_card": "Yedek kart ver",
   "card_batch_optional": "Kart grubu (isteğe bağlı)",
   "any_available_batch": "Herhangi bir mevcut grup",
-
   "mark_broken": "Arızalı Olarak İşaretle",
   "report_broken_card": "Arızalı Kart Bildir",
   "report_broken_card_warning": "#{{cardNumber}} numaralı kart arızalı olarak işaretlenecek ve bir yetkili yeniden etkinleştirene kadar kullanım dışı kalacak.",
@@ -1317,5 +1298,23 @@
   "total_rooms": "Toplam oda",
   "total_beds": "Toplam yatak",
   "mixed": "Karma",
-  "no_gender_restriction": "Kısıtlama yok"
+  "no_gender_restriction": "Kısıtlama yok",
+  "backups": {
+    "subtitle": "Yedekler her gece saat 02:00'de otomatik olarak oluşturulur. Son 14 yedek saklanır.",
+    "info": "Yedekler sunucuda depolanır. Felaket kurtarma için bunları indirip sunucu dışında saklayın.",
+    "create_now": "Şimdi Yedek Al",
+    "refresh": "Listeyi yenile",
+    "no_backups": "Henüz yedek yok. Şimdi oluşturun veya gece zamanlamasını bekleyin.",
+    "latest": "son",
+    "col_name": "Dosya",
+    "col_size": "Boyut",
+    "col_created": "Oluşturulma",
+    "load_error": "Yedekler yüklenemedi",
+    "created": "Yedek oluşturuldu: {{name}}",
+    "create_error": "Yedek oluşturulamadı",
+    "deleted": "Yedek silindi",
+    "delete_error": "Yedek silinemedi",
+    "delete_confirm_title": "Yedek silinsin mi?",
+    "delete_confirm_body": "{{name}} kalıcı olarak silinecek."
+  }
 }

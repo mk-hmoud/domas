@@ -28,3 +28,4 @@ export * from "./endpoints/tickets";
 export * from "./endpoints/document-templates";
 export * from "./endpoints/countries";
 export * from "./endpoints/departments";
+export * from "./endpoints/backups";
