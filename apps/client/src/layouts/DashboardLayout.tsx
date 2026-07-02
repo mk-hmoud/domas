@@ -251,6 +251,11 @@ export function DashboardLayout() {
             link: '/dashboard/logs/audit',
             requiredPermission: 'audit.view',
           },
+          {
+            label: t('nav.backups', { defaultValue: 'Backups' }),
+            link: '/dashboard/backups',
+            requiredPermission: 'backups.view',
+          },
         ],
       },
     ];

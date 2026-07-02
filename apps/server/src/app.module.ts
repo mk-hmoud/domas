@@ -35,6 +35,7 @@ import { TicketsModule } from './domain/tickets/tickets.module';
 import { DocumentTemplatesModule } from './domain/document-templates/document-templates.module';
 import { CountriesModule } from './domain/countries/countries.module';
 import { DepartmentsModule } from './domain/departments/departments.module';
+import { BackupsModule } from './domain/backups/backups.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { DepartmentsModule } from './domain/departments/departments.module';
     DocumentTemplatesModule,
     CountriesModule,
     DepartmentsModule,
+    BackupsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -96,6 +96,9 @@ const DocumentTemplatesPage = lazy(() =>
 const LookupsPage = lazy(() =>
   import('./pages/LookupsPage').then((m) => ({ default: m.LookupsPage })),
 );
+const BackupsPage = lazy(() =>
+  import('./pages/BackupsPage').then((m) => ({ default: m.BackupsPage })),
+);
 
 function App() {
   return (
@@ -327,6 +330,14 @@ function App() {
               element={
                 <PermissionRoute permission="audit.view">
                   <AuditLogsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="backups"
+              element={
+                <PermissionRoute permission="backups.view">
+                  <BackupsPage />
                 </PermissionRoute>
               }
             />

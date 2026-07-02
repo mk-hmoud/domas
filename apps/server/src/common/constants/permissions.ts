@@ -105,6 +105,10 @@ export const PERMISSIONS = {
 
   // Lookups (admin-editable Countries & Departments lists - read is public, see controllers)
   LOOKUPS_MANAGE: 'lookups.manage',
+
+  // Backups
+  BACKUPS_VIEW: 'backups.view',
+  BACKUPS_MANAGE: 'backups.manage',
 } as const;
 
 export type PermissionType = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
