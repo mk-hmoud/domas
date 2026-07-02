@@ -484,16 +484,17 @@ export class LocationsRepository implements ILocationsRepository {
     };
 
     if (data.name !== undefined) addUpdate('name', data.name);
-    if ('nameTr' in data) addUpdate('name_tr', data.nameTr ?? null);
+    if (data.nameTr !== undefined) addUpdate('name_tr', data.nameTr ?? null);
     if (data.treePath !== undefined) addUpdate('tree_path', data.treePath);
     if (data.type !== undefined) addUpdate('type', data.type);
     if (data.genderLock !== undefined) addUpdate('gender_lock', data.genderLock);
-    if ('studentYearLock' in data) addUpdate('student_year_lock', data.studentYearLock ?? null);
+    if (data.studentYearLock !== undefined)
+      addUpdate('student_year_lock', data.studentYearLock ?? null);
     if (data.isGuestZone !== undefined) addUpdate('is_guest_zone', data.isGuestZone);
     if (data.isTrOnly !== undefined) addUpdate('is_tr_only', data.isTrOnly);
     if (data.isForeignerOnly !== undefined) addUpdate('is_foreigner_only', data.isForeignerOnly);
     if (data.isRectorate !== undefined) addUpdate('is_rectorate', data.isRectorate);
-    if ('roomTypeId' in data) addUpdate('room_type_id', data.roomTypeId ?? null);
+    if (data.roomTypeId !== undefined) addUpdate('room_type_id', data.roomTypeId ?? null);
 
     if (updates.length === 0) {
       const loc = await this.findById(id, client);
