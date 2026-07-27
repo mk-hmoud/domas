@@ -73,10 +73,10 @@ async function run() {
       '00_roles.sql',
       '01_infrastructure.sql',
       '02_domain_schema.sql',
+      '06_notifications.sql',
       '03_triggers.sql',
       '04_apply_triggers.sql',
       '05_session_store.sql',
-      '06_notifications.sql',
     ];
 
     for (const file of files) {
